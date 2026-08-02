@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Evidence uploads are scoped only by caseId (never the reporter's
+    // identity - see src/services/caseThreadService.js). There's no
+    // reporter Firebase Auth to gate this behind, so - same as
+    // companies/{companyId} in firestore.rules - it's left open for now as
+    // an accepted no-auth-yet tradeoff. Revisit once reporter sessions
+    // exist to scope this properly.
+    match /case-evidence/{caseId}/{fileName} {
+      allow read, write: if true;
+    }
+  }
+}

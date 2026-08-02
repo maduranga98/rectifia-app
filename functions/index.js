@@ -1,4 +1,15 @@
 const { generateCaseAccess, validateCaseAccess } = require('./src/intake/generateCaseAccess')
+const { scoreCase } = require('./src/intake/scoreCase')
+const { routeCase, reassignCase } = require('./src/intake/routeCase')
+const { getCaseThread, postReporterMessage, postInvestigatorMessage } = require('./src/intake/caseThread')
+const { aiFollowUp } = require('./src/intake/aiFollowUp')
 
 exports.generateCaseAccess = generateCaseAccess
 exports.validateCaseAccess = validateCaseAccess
+exports.scoreCase = scoreCase
+exports.routeCase = routeCase
+exports.reassignCase = reassignCase
+exports.getCaseThread = getCaseThread
+exports.postReporterMessage = postReporterMessage
+exports.postInvestigatorMessage = postInvestigatorMessage
+exports.aiFollowUp = aiFollowUp
