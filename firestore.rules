@@ -11,7 +11,12 @@ service cloud.firestore {
     // access is never allowed - not even by a correct Case ID. Reads and
     // writes only ever happen through the Cloud Functions in
     // functions/src/intake/generateCaseAccess.js, which run with the Admin
-    // SDK and bypass these rules entirely.
+    // SDK and bypass these rules entirely. That includes the investigation
+    // checklist (module 9's `checklist` field, written by
+    // generateChecklist.js / updateChecklistItem.js) and the consistency
+    // flag (module 10's `consistencyCheck` field, written by
+    // checkConsistency.js) - both live on this same locked-down document,
+    // read and written only through their respective callables.
     match /cases/{caseId} {
       allow read, write: if false;
 
@@ -40,6 +45,16 @@ service cloud.firestore {
     // module that doesn't exist yet - written only by Cloud Functions
     // (routeCase.js, aiFollowUp.js) with the Admin SDK.
     match /notifications/{notificationId} {
+      allow read, write: if false;
+    }
+
+    // Module 10's cross-case consistency pool: scores + coarse metadata
+    // only (see storeReferenceCase.js) about closed cases, from every
+    // company. Written only by storeReferenceCase.js and read only by
+    // checkConsistency.js, both with the Admin SDK - never exposed to any
+    // client, since even metadata-only records about other companies'
+    // closed cases have no business being client-readable.
+    match /referenceCases/{referenceCaseId} {
       allow read, write: if false;
     }
   }
