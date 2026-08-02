@@ -85,6 +85,11 @@ async function scoreWithClaude(category, responses) {
   }
 }
 
+// Exported so aiFollowUp.js can re-run the same scoring call (original
+// responses plus the thread transcript) to recalculate evidenceScore as the
+// conversation develops, without duplicating the Claude call or schema.
+exports.scoreWithClaude = scoreWithClaude
+
 // Scores a newly created case in isolation and writes the result back to the
 // same document. Triggered only by Firestore onCreate - there is no callable
 // or HTTP entry point, so a client can never invoke scoring directly.

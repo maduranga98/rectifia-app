@@ -14,6 +14,33 @@ service cloud.firestore {
     // SDK and bypass these rules entirely.
     match /cases/{caseId} {
       allow read, write: if false;
+
+      // The message thread (module 8) inherits the same lockdown as its
+      // parent case - reporters have no Firebase Auth identity, so access
+      // is gated by re-checking the Case ID + passcode inside the
+      // getCaseThread / postReporterMessage / postInvestigatorMessage
+      // Cloud Functions (functions/src/intake/caseThread.js), not by rules.
+      match /messages/{messageId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Case routing configuration (module 7). Left open for now, matching
+    // the same no-auth tradeoff already accepted for companies/{companyId}
+    // above - there's no staff auth yet to gate this behind. Revisit once
+    // Company Admin / Case Handler accounts exist.
+    match /companies/{companyId}/routingRules/{ruleId} {
+      allow read, write: if true;
+    }
+    match /companies/{companyId}/staff/{staffId} {
+      allow read, write: if true;
+    }
+
+    // Routing/crisis notifications are metadata queued for a delivery
+    // module that doesn't exist yet - written only by Cloud Functions
+    // (routeCase.js, aiFollowUp.js) with the Admin SDK.
+    match /notifications/{notificationId} {
+      allow read, write: if false;
     }
   }
 }
