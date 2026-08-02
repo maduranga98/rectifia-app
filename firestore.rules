@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pre-existing, unrelated to the intake module: kept open to match the
+    // app's current no-auth company onboarding flow.
+    match /companies/{companyId} {
+      allow read, write: if true;
+    }
+
+    // Case documents are gated by a passcode, not by auth, so client SDK
+    // access is never allowed - not even by a correct Case ID. Reads and
+    // writes only ever happen through the Cloud Functions in
+    // functions/src/intake/generateCaseAccess.js, which run with the Admin
+    // SDK and bypass these rules entirely.
+    match /cases/{caseId} {
+      allow read, write: if false;
+    }
+  }
+}
