@@ -2,6 +2,7 @@ const { onDocumentUpdated } = require('firebase-functions/v2/firestore')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { deriveDepartmentTier } = require('./departmentTier')
+const { normalizeAction, actionRank } = require('./actionVocabulary')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -12,31 +13,6 @@ const REFERENCE_CASES_COLLECTION = 'referenceCases'
 
 const DEFAULT_SEVERITY_BAND = 15
 const MIN_REFERENCE_CASES = 5
-
-// A controlled vocabulary, not free text - proposedAction and actionTaken
-// are expected to be one of these keys so "harsher" vs. "lenient" can be
-// read off a fixed escalation ladder rather than guessed at from strings.
-// An action outside this list can still be compared for equality, but
-// never gets a direction - see below.
-const ACTION_SEVERITY_RANK = {
-  no_action: 0,
-  coaching: 1,
-  verbal_warning: 2,
-  written_warning: 3,
-  performance_improvement_plan: 4,
-  suspension: 5,
-  demotion: 6,
-  termination: 7,
-}
-
-function normalizeAction(value) {
-  return String(value ?? '').trim().toLowerCase().replace(/\s+/g, '_')
-}
-
-function actionRank(value) {
-  const rank = ACTION_SEVERITY_RANK[normalizeAction(value)]
-  return typeof rank === 'number' ? rank : null
-}
 
 function severityWithinBand(a, b, band) {
   return Math.abs(a - b) <= band
