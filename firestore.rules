@@ -148,5 +148,15 @@ service cloud.firestore {
       allow read: if isManager(resource.data.companyId) || isHrCoordinator(resource.data.companyId) || isPulseReviewer(resource.data.companyId);
       allow write: if false;
     }
+
+    // Audit trail for functions/src/utils/identityVault.js's decryptIdentity
+    // calls - every attempt to decrypt a confidential-tier reporter identity
+    // or burner email, granted or denied, lands here with who/when/case/
+    // reason. Written only by identityVault.js with the Admin SDK; no client
+    // role, including Super Admin, gets a rules path to read or write it
+    // directly, since a mutable audit trail isn't an audit trail.
+    match /identityAccessAuditLog/{entryId} {
+      allow read, write: if false;
+    }
   }
 }
