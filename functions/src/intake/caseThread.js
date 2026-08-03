@@ -42,6 +42,10 @@ async function verifyReporterAccess(firestore, caseId, passcode) {
 
   return snapshot
 }
+// Exported so other reporter-facing callables (e.g.
+// functions/src/notifications/sendCaseUpdate.js's registerPushSubscription)
+// can reuse the exact same passcode check instead of duplicating it.
+exports.verifyReporterAccess = verifyReporterAccess
 
 function serializeMessage(doc) {
   const data = doc.data()

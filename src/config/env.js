@@ -10,4 +10,5 @@ export const env = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
   },
   useEmulators: import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true",
+  vapidPublicKey: import.meta.env.VITE_VAPID_PUBLIC_KEY,
 };
