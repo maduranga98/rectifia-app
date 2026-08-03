@@ -1,8 +1,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Role + company identity come from Firebase Auth custom claims, set
+    // once (functions/src/staff/inviteStaff.js) when a Company Admin invites
+    // someone and never writable by the client. Every role check below reads
+    // request.auth.token, never a Firestore doc, so a compromised staff doc
+    // can't be used to escalate privilege.
+    function hasRole(companyId, role) {
+      return request.auth != null
+        && request.auth.token.companyId == companyId
+        && request.auth.token.role == role;
+    }
+    function isCompanyStaff(companyId) {
+      return request.auth != null && request.auth.token.companyId == companyId;
+    }
+    function isCompanyAdmin(companyId) { return hasRole(companyId, 'companyAdmin'); }
+    function isHrCoordinator(companyId) { return hasRole(companyId, 'hrCoordinator'); }
+    function isPulseReviewer(companyId) { return hasRole(companyId, 'pulseCheckReviewer'); }
+    function isManager(companyId) { return hasRole(companyId, 'manager'); }
+
     // Pre-existing, unrelated to the intake module: kept open to match the
-    // app's current no-auth company onboarding flow.
+    // app's current no-auth company onboarding flow (a company is created
+    // before any staff account, hence any custom claim, exists).
     match /companies/{companyId} {
       allow read, write: if true;
     }
@@ -40,20 +59,49 @@ service cloud.firestore {
       }
     }
 
-    // Case routing configuration (module 7). Left open for now, matching
-    // the same no-auth tradeoff already accepted for companies/{companyId}
-    // above - there's no staff auth yet to gate this behind. Revisit once
-    // Company Admin / Case Handler accounts exist.
+    // Case routing configuration (module 7). Company Admin accounts now
+    // exist (see functions/src/staff/inviteStaff.js), so this is gated by
+    // custom claims instead of the earlier no-auth placeholder. Any staff
+    // member of the company can read the rules (Case Handlers need to know
+    // who they route to); only a Company Admin edits them.
     match /companies/{companyId}/routingRules/{ruleId} {
-      allow read, write: if true;
+      allow read: if isCompanyStaff(companyId);
+      allow write: if isCompanyAdmin(companyId);
     }
+    // Staff docs are created only by inviteStaff.js (Admin SDK), never by a
+    // direct client write - that's the boundary that stops someone minting
+    // their own companyAdmin/hrCoordinator staff record. A Company Admin can
+    // still edit an existing staff doc directly (e.g. deactivating someone).
     match /companies/{companyId}/staff/{staffId} {
-      allow read, write: if true;
+      allow read: if isCompanyStaff(companyId);
+      allow create: if false;
+      allow update, delete: if isCompanyAdmin(companyId);
     }
 
-    // Routing/crisis notifications are metadata queued for a delivery
-    // module that doesn't exist yet - written only by Cloud Functions
-    // (routeCase.js, aiFollowUp.js) with the Admin SDK.
+    // Company-wide, metadata-only mirror of cases/{caseId} for the HR
+    // Coordinator dashboard (module 13) - maintained by
+    // functions/src/intake/syncCaseMetadata.js, which copies over only
+    // category/severityScore/evidenceScore/status/assignedHandlerId/
+    // department/priority/companyId/deadlines/timestamps. It deliberately
+    // never includes `responses` (questionnaire free text) or anything from
+    // the messages subcollection, so unlike cases/{caseId} this document CAN
+    // be safely opened up for read: there's no free-text field on it a rule
+    // would need to hide. This is what makes the "metadata only" constraint
+    // a server-side guarantee rather than a client-side filter - the
+    // HR Coordinator role never gets a rules path to the real case doc at
+    // all, no matter what the dashboard code does.
+    // Company Admin deliberately has no read path here (or to cases/ or
+    // messages/ above) - the module 2 role design keeps Company Admin to
+    // settings and structure only, never case content.
+    match /caseMetadata/{caseId} {
+      allow read: if isHrCoordinator(resource.data.companyId);
+      allow write: if false;
+    }
+
+    // Routing/crisis/compliance/staff-invite notifications are metadata
+    // queued for functions/src/notifications/sendCaseUpdate.js and staff
+    // delivery - written only by Cloud Functions (routeCase.js,
+    // checkOverdueDeadlines.js, inviteStaff.js) with the Admin SDK.
     match /notifications/{notificationId} {
       allow read, write: if false;
     }
@@ -66,6 +114,39 @@ service cloud.firestore {
     // closed cases have no business being client-readable.
     match /referenceCases/{referenceCaseId} {
       allow read, write: if false;
+    }
+
+    // Anonymous reporter push subscriptions (device token only). Doc ID is
+    // the Case ID itself and the doc holds nothing but the push endpoint/keys
+    // and template-rotation bookkeeping - no reporter identity, no case
+    // content. Only Cloud Functions (registerPushSubscription, sendCaseUpdate
+    // in functions/src/notifications/sendCaseUpdate.js) ever touch it; a
+    // reporter has no Firebase Auth identity to write with directly, same as
+    // every other case-scoped action in this app.
+    match /pushSubscriptions/{caseId} {
+      allow read, write: if false;
+    }
+
+    // Pulse Check (module 14) is structurally separate from the anonymous
+    // case system: responses are tied to a named, authenticated employee.
+    // Individual responses + their AI analysis are readable only by HR
+    // Coordinator / Pulse Check Reviewer for that company - never by
+    // Manager, and never written directly by a client (submission goes
+    // through submitPulseResponse in functions/src/intake/
+    // analyzePulseResponse.js so the employeeId can't be spoofed).
+    match /pulseResponses/{responseId} {
+      allow read: if isHrCoordinator(resource.data.companyId) || isPulseReviewer(resource.data.companyId);
+      allow write: if false;
+    }
+    // Pre-aggregated, department/period-level summaries with no individual
+    // attribution - written only by the aggregation step inside
+    // analyzePulseResponse.js. This is the ONLY pulse-check collection a
+    // Manager can read; there is no rules path from the manager role to
+    // pulseResponses above, so a manager can never reach an individual
+    // record no matter how the client queries.
+    match /pulseSummaries/{summaryId} {
+      allow read: if isManager(resource.data.companyId) || isHrCoordinator(resource.data.companyId) || isPulseReviewer(resource.data.companyId);
+      allow write: if false;
     }
   }
 }
