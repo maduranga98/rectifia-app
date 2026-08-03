@@ -18,13 +18,23 @@ service cloud.firestore {
     // checkConsistency.js) - both live on this same locked-down document,
     // read and written only through their respective callables.
     match /cases/{caseId} {
-      allow read, write: if false;
+      // Writes still only ever happen through Cloud Functions with the
+      // Admin SDK (generateCaseAccess.js, scoreCase.js, routeCase.js,
+      // caseActions.js, etc). Reads are opened up in exactly one case: the
+      // Case Handler dashboard (module 12) needs to list and view only the
+      // cases assigned to the logged-in handler, enforced here rather than
+      // just in the UI. This assumes a Case Handler's Firebase Auth uid
+      // equals their staff doc id / assignedHandlerId - the same
+      // no-full-staff-auth placeholder other modules already lean on until
+      // real Case Handler accounts exist.
+      allow read: if request.auth != null && request.auth.uid == resource.data.assignedHandlerId;
+      allow write: if false;
 
-      // The message thread (module 8) inherits the same lockdown as its
-      // parent case - reporters have no Firebase Auth identity, so access
-      // is gated by re-checking the Case ID + passcode inside the
-      // getCaseThread / postReporterMessage / postInvestigatorMessage
-      // Cloud Functions (functions/src/intake/caseThread.js), not by rules.
+      // The message thread (module 8) stays fully locked down even for the
+      // assigned handler - access is through getCaseThread /
+      // postInvestigatorMessage (functions/src/intake/caseThread.js), not
+      // direct reads, so the poll-based client in CaseThread.jsx keeps
+      // working unchanged.
       match /messages/{messageId} {
         allow read, write: if false;
       }
