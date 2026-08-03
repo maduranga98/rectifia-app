@@ -3,6 +3,9 @@ const { scoreCase } = require('./src/intake/scoreCase')
 const { routeCase, reassignCase } = require('./src/intake/routeCase')
 const { getCaseThread, postReporterMessage, postInvestigatorMessage } = require('./src/intake/caseThread')
 const { aiFollowUp } = require('./src/intake/aiFollowUp')
+const { generateChecklist, updateChecklistItem } = require('./src/intake/generateChecklist')
+const { storeReferenceCase } = require('./src/consistency/storeReferenceCase')
+const { checkConsistency } = require('./src/consistency/checkConsistency')
 
 exports.generateCaseAccess = generateCaseAccess
 exports.validateCaseAccess = validateCaseAccess
@@ -13,3 +16,7 @@ exports.getCaseThread = getCaseThread
 exports.postReporterMessage = postReporterMessage
 exports.postInvestigatorMessage = postInvestigatorMessage
 exports.aiFollowUp = aiFollowUp
+exports.generateChecklist = generateChecklist
+exports.updateChecklistItem = updateChecklistItem
+exports.storeReferenceCase = storeReferenceCase
+exports.checkConsistency = checkConsistency
