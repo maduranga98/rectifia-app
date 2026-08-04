@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 
 const TABS = [
+  { to: '/admin/overview', label: 'Overview' },
   { to: '/admin/departments', label: 'Departments' },
   { to: '/admin/staff', label: 'Staff' },
   { to: '/admin/routing', label: 'Routing rules' },

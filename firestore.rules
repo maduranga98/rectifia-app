@@ -104,6 +104,18 @@ service cloud.firestore {
       allow update, delete: if isCompanyAdmin(companyId);
     }
 
+    // Case-count rollup for the Company Admin overview page (module 15),
+    // maintained by functions/src/company/syncCompanyStats.js from
+    // caseMetadata - counts and breakdowns only (byStatus/byPriority/
+    // byCategory, overdue/approaching-deadline counts), never a case id,
+    // category-of-one, or anything else that could re-identify a case. This
+    // is the only case-derived collection Company Admin can read; it still
+    // has no rules path to cases/, messages/, or caseMetadata/ itself.
+    match /companies/{companyId}/stats/{statId} {
+      allow read: if isCompanyAdmin(companyId);
+      allow write: if false;
+    }
+
     // Company-wide, metadata-only mirror of cases/{caseId} for the HR
     // Coordinator dashboard (module 13) - maintained by
     // functions/src/intake/syncCaseMetadata.js, which copies over only
@@ -116,9 +128,10 @@ service cloud.firestore {
     // a server-side guarantee rather than a client-side filter - the
     // HR Coordinator role never gets a rules path to the real case doc at
     // all, no matter what the dashboard code does.
-    // Company Admin deliberately has no read path here (or to cases/ or
-    // messages/ above) - the module 2 role design keeps Company Admin to
-    // settings and structure only, never case content.
+    // Company Admin still has no read path here (or to cases/ or messages/
+    // above) - the module 2 role design keeps Company Admin to settings and
+    // structure only, never case content. Its one case-derived read is the
+    // aggregate-only companies/{companyId}/stats/{statId} rollup above.
     match /caseMetadata/{caseId} {
       allow read: if isHrCoordinator(resource.data.companyId);
       allow write: if false;
