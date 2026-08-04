@@ -35,8 +35,17 @@ service cloud.firestore {
     // it exactly once, while it is still absent (the self-service "Generate
     // reporting link" action on the overview page); after that only a Super
     // Admin can touch it.
-    function slugUnchanged() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['slug']);
+    // The only company-doc fields a Company Admin may write directly, edited
+    // in place from the Company Admin panel: pulse-check cadence (Settings
+    // page), jurisdictions (Settings page) and departments (Departments page).
+    // hasOnly() is an allowlist, not a blocklist - a write that touches any
+    // other field (subscriptionTier, billingStatus, name, slug, case-count
+    // rollups, ...) fails outright, so this is deliberately NOT a blanket
+    // "can write their own company doc" grant. Slug is handled by its own
+    // one-time path (claimsMissingSlug) below and is not in this set.
+    function companyAdminEditableFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments']);
     }
     function claimsMissingSlug() {
       return (!('slug' in resource.data) || resource.data.slug == null)
@@ -61,8 +70,9 @@ service cloud.firestore {
     // CompanySetup), so this is no longer the world-writable placeholder it
     // was when a company had to be created before any account existed:
     // anyone could previously create, rewrite, or delete any company doc.
-    // A Company Admin keeps write access to their own company because
-    // CompanyAdminPanel edits departments and jurisdictions in place.
+    // A Company Admin keeps write access to their own company, but only to an
+    // explicit field allowlist (pulseCheckCadence, jurisdictions, departments -
+    // see companyAdminEditableFields above), never a blanket company-doc write.
     //
     // Reading someone else's company doc stays off-limits: `get` is still the
     // requester's own company (or any, for a Super Admin). `list` is opened up
@@ -70,17 +80,18 @@ service cloud.firestore {
     // allocateUniqueSlug can ask "is this candidate slug taken?" before
     // claiming one - the query it issues carries limit(1), and a
     // collection-wide dump of the company list has no such limit, so it is
-    // still denied. Slug writes are narrower still: see slugUnchanged() /
-    // claimsMissingSlug() above - any other role has no update path here at
-    // all, so a company's reporting slug is only ever writable by its own
-    // Company Admin (once) or a Super Admin.
+    // still denied. Slug writes are narrower still: they fall outside the
+    // companyAdminEditableFields allowlist, so the only Company Admin path that
+    // can touch slug is claimsMissingSlug() above - any other role has no update
+    // path here at all, so a company's reporting slug is only ever writable by
+    // its own Company Admin (once) or a Super Admin.
     match /companies/{companyId} {
       allow get: if isSuperAdmin() || isCompanyStaff(companyId);
       allow list: if isSuperAdmin()
         || (isAnyCompanyAdmin() && request.query.limit <= 1);
       allow create: if isSuperAdmin();
       allow update: if isSuperAdmin()
-        || (isCompanyAdmin(companyId) && (slugUnchanged() || claimsMissingSlug()));
+        || (isCompanyAdmin(companyId) && (companyAdminEditableFields() || claimsMissingSlug()));
       allow delete: if isSuperAdmin();
     }
 

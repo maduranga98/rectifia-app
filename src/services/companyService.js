@@ -15,6 +15,13 @@ import { firestore, functions } from './firebase'
 
 export const JURISDICTIONS = ['EU', 'UK', 'US', 'LK']
 
+// Pulse-check cadences the Company Admin can pick. The three sending cadences
+// must match the keys of CADENCE_DAYS in
+// functions/src/intake/schedulePulseChecks.js exactly - the scheduler looks
+// the stored value up in that map, so a mismatched string reads as "do not
+// send". 'off' is the UI-only option that maps to null on write.
+export const PULSE_CADENCES = ['off', 'weekly', 'biweekly', 'monthly']
+
 // Billing plans a Super Admin can put a newly registered company on. Lives
 // here rather than in the form component so createCompany can validate what
 // it's given instead of writing an arbitrary string into the doc.
@@ -206,6 +213,26 @@ export async function updateCompanyJurisdictions(companyId, jurisdictions) {
   }
   await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
     jurisdictions,
+  })
+}
+
+// Writes companies/{companyId}.pulseCheckCadence, the cadence
+// schedulePulseChecks.js reads. Only 'weekly' | 'biweekly' | 'monthly' - the
+// exact CADENCE_DAYS keys - are ever persisted as a string; 'off' (or anything
+// unrecognised) is stored as null. That matters: the scheduler treats an
+// unknown cadence as "do not send", so null is the one explicit, deliberate way
+// to turn pulse checks off, rather than leaving a stray string the scheduler
+// would silently ignore and a future map change might accidentally revive.
+//
+// lastPulseCheckSentAt is deliberately never touched here - only
+// schedulePulseChecks.js writes that field, when a send actually goes out.
+export async function updateCompanyPulseCadence(companyId, cadence) {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  const value = ['weekly', 'biweekly', 'monthly'].includes(cadence) ? cadence : null
+  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
+    pulseCheckCadence: value,
   })
 }
 
