@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   listCaseHandlers,
-  listCasesNeedingManualAssignment,
+  listCasesForSuperAdminAssignment,
   reassignCase,
 } from '../../services/routingService'
 import { auth } from '../../services/firebase'
@@ -12,21 +12,16 @@ import Card from '../ui/Card'
 import EmptyState from '../ui/EmptyState'
 import { SkeletonList } from '../ui/Loading'
 
-// Why routeCase.js gave up and asked for a human, in the Super Admin's terms.
-// The keys are the exact reasons sendToManualAssignment() writes - anything
-// else falls through to a neutral row rather than rendering a raw enum.
+// Why routeCase.js escalated this case to the platform operator, in the Super
+// Admin's terms. Only the two reasons MANUAL_ASSIGNMENT_AUDIENCE routes here
+// appear - a case stuck on 'no_routing_rule' belongs to its own company's
+// admin (RoutingRulesPage), and this role has no read path to it at all.
 const ROUTING_REASONS = {
   missing_company_id: {
     label: 'No company on the case',
     tone: 'tone-critical',
     description:
       'This report was submitted without a company, so there was nothing to route it against. Pick the company it belongs to, then a Case Handler.',
-  },
-  no_routing_rule: {
-    label: 'No routing rule',
-    tone: 'tone-high',
-    description:
-      'The company has no routing rule for this category and department, so there was no handler to send it to.',
   },
   conflict_of_interest: {
     label: 'Conflict of interest',
@@ -46,13 +41,19 @@ function humanize(value) {
   return typeof value === 'string' ? value.replace(/_/g, ' ') : value
 }
 
-// The queue of cases routeCase.js could not route automatically. Everything
-// rendered here - caseId, companyId, category, department, priority,
-// routingReason - comes from caseMetadata/{caseId}, the metadata-only mirror;
-// Super Admin's read of it is narrowed by firestore.rules to exactly this
-// status. No case content, no questionnaire responses, no messages appear
-// here, and there is no rules path from this role to any of them, so that
-// stays true no matter what this component asks for.
+// The cases only the platform operator can place: a conflict of interest,
+// which the company must never resolve for itself, and the rare
+// missing_company_id system error. Cases waiting on a routing rule are the
+// company's own configuration gap and are handled on RoutingRulesPage
+// instead, so they never reach this queue.
+//
+// Everything rendered here - caseId, companyId, category, department,
+// priority, routingReason - comes from caseMetadata/{caseId}, the
+// metadata-only mirror; Super Admin's read of it is narrowed by
+// firestore.rules to exactly these reasons. No case content, no questionnaire
+// responses, no messages appear here, and there is no rules path from this
+// role to any of them, so that stays true no matter what this component asks
+// for.
 //
 // Assignment goes through the existing reassignCase callable (module 7's
 // admin-facing reassignment), not a second write path: cases/{caseId} is not
@@ -77,7 +78,7 @@ function ManualAssignmentQueue({ companies = [], onCountChange }) {
     setLoading(true)
     setError(null)
     try {
-      setCases(await listCasesNeedingManualAssignment())
+      setCases(await listCasesForSuperAdminAssignment())
     } catch (err) {
       setError(err.message || 'Could not load the manual-assignment queue')
     } finally {
@@ -160,8 +161,9 @@ function ManualAssignmentQueue({ companies = [], onCountChange }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-muted">
-          Cases automatic routing could not place. Metadata only - the report itself stays with the
-          handler you assign it to.
+          Cases only the platform can place - a conflict of interest inside the company, or a
+          report that arrived without one. Metadata only: the report itself stays with the handler
+          you assign it to.
         </p>
         <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
           Refresh
@@ -176,7 +178,7 @@ function ManualAssignmentQueue({ companies = [], onCountChange }) {
           <EmptyState
             icon="check"
             title="Nothing waiting on you"
-            description="Every case has routed to a handler. Cases land here only when routing has no rule to follow, hits a conflict of interest, or arrives without a company."
+            description="No case is waiting on the platform. Cases land here only when routing hits a conflict of interest or a report arrives with no company attached - a company's own missing routing rules are resolved by its Company Admin."
           />
         </Card>
       ) : (
@@ -237,19 +239,6 @@ function ManualAssignmentQueue({ companies = [], onCountChange }) {
                 </dl>
 
                 <p className="mt-3 text-xs text-muted">{reason.description}</p>
-
-                {/* The routing rule itself is a Company Admin setting (module
-                    7), so the fix for a repeat offender isn't another manual
-                    assignment - it's the company configuring the rule once. */}
-                {caseRow.routingReason === 'no_routing_rule' && (
-                  <Alert variant="info" className="mt-3">
-                    Ask {companyName ?? 'this company'}&apos;s Company Admin to add a routing rule
-                    for <span className="font-medium">{humanize(caseRow.category) ?? 'this category'}</span>
-                    {' / '}
-                    <span className="font-medium">{humanize(caseRow.department) ?? 'unspecified'}</span>{' '}
-                    so future reports route without landing here.
-                  </Alert>
-                )}
 
                 <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-line-soft pt-4">
                   {!caseRow.companyId && (

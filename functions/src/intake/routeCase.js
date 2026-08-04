@@ -112,6 +112,7 @@ async function findConflictedStaff(firestore, companyId, accusedProfile, candida
 async function notifySuperAdmin({ firestore, companyId, caseId, category, department, reason }) {
   await firestore.collection(NOTIFICATIONS_COLLECTION).add({
     type: 'superAdminReview',
+    audience: 'superAdmin',
     companyId: companyId ?? null,
     caseId,
     category: category ?? null,
@@ -122,14 +123,72 @@ async function notifySuperAdmin({ firestore, companyId, caseId, category, depart
   })
 }
 
+// The company-side counterpart, for the one manual-assignment reason the
+// company can actually fix: a missing routing rule is their configuration, so
+// escalating it to the platform operator only to have them assign one case by
+// hand leaves the same gap open for the next case. Same notifications
+// collection, same metadata-only shape as notifySuperAdmin above; recipient
+// emails come from the company's own companyAdmin staff records, the same
+// place inviteStaff.js writes them.
+async function notifyCompanyAdmin({ firestore, companyId, caseId, category, department, reason }) {
+  let recipientEmails = []
+  if (companyId) {
+    const adminsSnapshot = await firestore
+      .collection(COMPANIES_COLLECTION)
+      .doc(companyId)
+      .collection(STAFF_SUBCOLLECTION)
+      .where('role', '==', 'companyAdmin')
+      .get()
+    recipientEmails = adminsSnapshot.docs.map((d) => d.data().email).filter(Boolean)
+  }
+
+  if (recipientEmails.length === 0) {
+    logger.error('routeCase: no Company Admin to notify about an unrouted case', { caseId, companyId })
+  }
+
+  await firestore.collection(NOTIFICATIONS_COLLECTION).add({
+    type: 'companyAdminReview',
+    audience: 'companyAdmin',
+    companyId: companyId ?? null,
+    caseId,
+    category: category ?? null,
+    department: department ?? null,
+    reason,
+    recipientEmails,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    status: 'pending',
+  })
+}
+
+// Which desk a stuck case lands on, keyed by the reason routing gave up.
+// The reason values themselves are unchanged - 'no_routing_rule' just stops
+// going to the platform operator:
+//   no_routing_rule      -> the company's own configuration gap, fixed on
+//                           RoutingRulesPage by writing the missing rule (or
+//                           assigning this one case by hand).
+//   conflict_of_interest -> deliberately never the company's own call; the
+//                           people who would resolve it are the ones the
+//                           conflict check just implicated.
+//   missing_company_id   -> no company to route to at all, so nobody but the
+//                           platform operator can place it.
+const MANUAL_ASSIGNMENT_AUDIENCE = {
+  no_routing_rule: 'companyAdmin',
+  conflict_of_interest: 'superAdmin',
+  missing_company_id: 'superAdmin',
+}
+
 async function sendToManualAssignment(firestore, caseRef, { companyId, caseId, category, department, reason, priority }) {
   await caseRef.update({
     status: 'needs_manual_assignment',
     routingReason: reason,
     priority,
   })
-  await notifySuperAdmin({ firestore, companyId, caseId, category, department, reason })
-  logger.info('routeCase: sent to manual assignment', { caseId, companyId, reason })
+
+  const audience = MANUAL_ASSIGNMENT_AUDIENCE[reason] ?? 'superAdmin'
+  const notify = audience === 'companyAdmin' ? notifyCompanyAdmin : notifySuperAdmin
+  await notify({ firestore, companyId, caseId, category, department, reason })
+
+  logger.info('routeCase: sent to manual assignment', { caseId, companyId, reason, audience })
 }
 
 // Notifies the company's designated crisis contact (module 3's company
@@ -270,11 +329,14 @@ async function isSuperAdminUid(firestore, uid) {
   return snapshot.exists
 }
 
-// Closes out the queued superAdminReview signals for a case once a human has
-// actually assigned it, so notifySuperAdmin's 'pending' rows don't pile up
-// forever. Filtered on caseId alone and narrowed in memory - three equality
-// filters would be a composite index for a handful of docs.
-async function resolveSuperAdminReviewNotifications(firestore, caseId, actorUid) {
+const MANUAL_ASSIGNMENT_NOTIFICATION_TYPES = ['superAdminReview', 'companyAdminReview']
+
+// Closes out the queued manual-assignment signals for a case once a human has
+// actually assigned it, so the 'pending' rows notifySuperAdmin /
+// notifyCompanyAdmin write don't pile up forever. Filtered on caseId alone
+// and narrowed in memory - three equality filters would be a composite index
+// for a handful of docs.
+async function resolveManualAssignmentNotifications(firestore, caseId, actorUid) {
   const snapshot = await firestore
     .collection(NOTIFICATIONS_COLLECTION)
     .where('caseId', '==', caseId)
@@ -284,7 +346,7 @@ async function resolveSuperAdminReviewNotifications(firestore, caseId, actorUid)
   let pendingCount = 0
   snapshot.docs.forEach((notificationDoc) => {
     const data = notificationDoc.data()
-    if (data.type !== 'superAdminReview' || data.status !== 'pending') return
+    if (!MANUAL_ASSIGNMENT_NOTIFICATION_TYPES.includes(data.type) || data.status !== 'pending') return
     pendingCount += 1
     batch.update(notificationDoc.ref, {
       status: 'resolved',
@@ -346,10 +408,29 @@ exports.reassignCase = onCall(async (request) => {
     throw new HttpsError('not-found', 'No such case')
   }
 
+  const caseData = caseSnapshot.data()
+
+  // A conflict-of-interest case is one where the company's own routing target
+  // (or a Company Admin) matched the department and role of the person being
+  // reported on. Letting anyone inside that company resolve it - Company
+  // Admin or HR Coordinator, deliberately or by accident through the ordinary
+  // reassign control - would hand the case back to the people the check just
+  // implicated, so the only caller who can place it is the platform operator.
+  if (
+    caseData.status === 'needs_manual_assignment' &&
+    caseData.routingReason === 'conflict_of_interest' &&
+    !superAdmin
+  ) {
+    throw new HttpsError(
+      'permission-denied',
+      'This case is flagged for conflict of interest and can only be assigned by a Super Admin'
+    )
+  }
+
   // The caller's authority was established against `companyId`, so that had
   // better be the company this case actually belongs to - otherwise a Company
   // Admin could hand another tenant's case to one of their own staff.
-  const caseCompanyId = caseSnapshot.data().companyId ?? null
+  const caseCompanyId = caseData.companyId ?? null
   if (caseCompanyId && caseCompanyId !== companyId) {
     throw new HttpsError('permission-denied', 'This case belongs to a different company')
   }
@@ -375,7 +456,7 @@ exports.reassignCase = onCall(async (request) => {
   }
 
   await firestore.collection(CASES_COLLECTION).doc(caseId).update(update)
-  await resolveSuperAdminReviewNotifications(firestore, caseId, actorUid)
+  await resolveManualAssignmentNotifications(firestore, caseId, actorUid)
 
   return { success: true }
 })

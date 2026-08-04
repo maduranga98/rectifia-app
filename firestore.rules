@@ -206,15 +206,31 @@ service cloud.firestore {
     // structure only, never case content. Its one case-derived read is the
     // aggregate-only companies/{companyId}/stats/{statId} rollup above.
     //
-    // Super Admin gets a deliberately narrower slice of the same mirror: only
-    // documents still sitting in 'needs_manual_assignment', which is exactly
-    // the queue SuperAdminDashboardPage renders. Because the condition is on
-    // resource.data, a list query only succeeds if it filters on that status
-    // itself (listCasesNeedingManualAssignment does) - so this is not a path
-    // to the platform's whole case table, and it is still metadata only.
+    // Two roles get a deliberately narrower slice of the same mirror, split by
+    // why routeCase.js could not place the case (see MANUAL_ASSIGNMENT_AUDIENCE
+    // there). Both conditions are on resource.data, so a list query only
+    // succeeds if it carries the matching equality filters itself - neither is
+    // a path to the platform's or the company's whole case table, and both are
+    // still metadata only.
+    //
+    // - Company Admin: their own company's cases stuck on 'no_routing_rule',
+    //   the one reason they can actually fix (RoutingRulesPage's "Needs
+    //   attention" section). This is their second case-derived read after the
+    //   aggregate stats rollup, and it stops at ids and routing metadata.
+    // - Super Admin: 'conflict_of_interest' and 'missing_company_id' only.
+    //   Conflict-of-interest cases are excluded from the Company Admin clause
+    //   above on purpose - the company's own admins are exactly who the
+    //   conflict check may have implicated, so they get no read path to those
+    //   cases at all, not merely no button for them.
     match /caseMetadata/{caseId} {
       allow read: if isHrCoordinator(resource.data.companyId)
-        || (isSuperAdmin() && resource.data.status == 'needs_manual_assignment');
+        || (isCompanyAdmin(resource.data.companyId)
+          && resource.data.status == 'needs_manual_assignment'
+          && resource.data.routingReason == 'no_routing_rule')
+        || (isSuperAdmin()
+          && resource.data.status == 'needs_manual_assignment'
+          && (resource.data.routingReason == 'conflict_of_interest'
+            || resource.data.routingReason == 'missing_company_id'));
       allow write: if false;
     }
 

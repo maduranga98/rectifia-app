@@ -26,9 +26,9 @@ const BILLING_TONE = {
 // company-level metadata (name, subscriptionTier, case-count) from the
 // `companies` doc, and the manual-assignment queue below reads only
 // caseMetadata/{caseId} - the metadata-only mirror, narrowed by
-// firestore.rules to cases still sitting in 'needs_manual_assignment'.
-// Neither ever touches `cases`, a messages subcollection, or questionnaire
-// responses.
+// firestore.rules to the two manual-assignment reasons only the platform can
+// resolve (conflict_of_interest, missing_company_id). Neither ever touches
+// `cases`, a messages subcollection, or questionnaire responses.
 //
 // Registering a company is a Super Admin action and this is the only place
 // it happens: the CompanySetup form below already existed but was not
@@ -139,7 +139,7 @@ function SuperAdminDashboardPage() {
           />
           <StatTile
             label="Needs manual assignment"
-            hint="Cases automatic routing could not place"
+            hint="Conflicts of interest and cases with no company"
             value={manualAssignmentCount ?? '—'}
             tone={manualAssignmentCount > 0 ? 'tone-high' : 'tone-low'}
             icon="routing"
