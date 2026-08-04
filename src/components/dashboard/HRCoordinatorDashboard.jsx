@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listCompanyCaseMetadata } from '../../services/caseMetadataService'
 import { listCaseHandlers, reassignCase } from '../../services/routingService'
 import { auth } from '../../services/firebase'
+import CaseTriageModal from './CaseTriageModal'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
@@ -61,6 +62,23 @@ function humanize(value) {
   return typeof value === 'string' ? value.replace(/_/g, ' ') : value
 }
 
+// Which rows offer "View". Triage is reading an unassigned case in order to
+// place it, so the button appears only while there is nothing else to read
+// it for: no handler yet, a status getCaseForTriage will still answer on,
+// and not a conflict-of-interest case - those are the platform operator's,
+// and the callable refuses this role outright. Gating the button here is
+// presentation; the same three conditions are enforced server-side, so a
+// row that slips through gets a permission-denied rather than a case.
+const TRIAGE_STATUSES = ['open', 'needs_manual_assignment']
+
+function isTriageable(caseRow) {
+  return (
+    !caseRow.assignedHandlerId &&
+    TRIAGE_STATUSES.includes(caseRow.status) &&
+    caseRow.routingReason !== 'conflict_of_interest'
+  )
+}
+
 // Company-wide case table for the HR Coordinator role. Every column here -
 // category, severityScore, evidenceScore, status, assignedHandler,
 // daysUntilDeadline, priority - comes from caseMetadata/{caseId}, the
@@ -74,6 +92,7 @@ function HRCoordinatorDashboard({ companyId }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [reassigningId, setReassigningId] = useState(null)
+  const [triageCaseId, setTriageCaseId] = useState(null)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -201,6 +220,7 @@ function HRCoordinatorDashboard({ companyId }) {
                     <th>Evidence</th>
                     <th>Assigned handler</th>
                     <th>Next deadline</th>
+                    <th>Triage</th>
                     <th>Reassign</th>
                   </tr>
                 </thead>
@@ -235,6 +255,20 @@ function HRCoordinatorDashboard({ companyId }) {
                           <Badge tone={deadline.tone}>{deadline.label}</Badge>
                         </td>
                         <td>
+                          {isTriageable(c) ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon="document"
+                              onClick={() => setTriageCaseId(c.id)}
+                            >
+                              View
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-subtle">—</span>
+                          )}
+                        </td>
+                        <td>
                           <select
                             aria-label={`Reassign case ${c.caseId ?? c.id}`}
                             className="field w-44 py-1 text-xs"
@@ -260,6 +294,15 @@ function HRCoordinatorDashboard({ companyId }) {
             </div>
           )}
         </Card>
+      )}
+
+      {triageCaseId && (
+        <CaseTriageModal
+          caseId={triageCaseId}
+          companyId={companyId}
+          onClose={() => setTriageCaseId(null)}
+          onAssigned={refresh}
+        />
       )}
     </div>
   )
