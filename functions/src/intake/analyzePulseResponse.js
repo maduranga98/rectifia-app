@@ -6,6 +6,7 @@ const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
 const { notifyCrisisContact } = require('./routeCase')
 const { PULSE_INVITES_COLLECTION, verifyInviteToken } = require('./pulseInvites')
+const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -74,8 +75,13 @@ function currentPeriod() {
 // 'pending' invite 'used' and both write a response. employeeId stored here is
 // the roster doc id (companies/{companyId}/employees), never a uid - roster
 // employees don't have one.
-exports.submitPulseResponse = onCall(async (request) => {
+exports.submitPulseResponse = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { inviteId, token, answers } = request.data || {}
+
+  // A submitted response fires analyzePulseResponse below, which is a paid
+  // Claude call. The invite is single-use, so this limit is really a guard on
+  // repeated failed attempts rather than on successful submissions.
+  await enforceRateLimit(admin.firestore(), 'submitPulseResponse', request)
   if (typeof inviteId !== 'string' || typeof token !== 'string' || !inviteId || !token) {
     throw new HttpsError('invalid-argument', 'A valid pulse-check invite is required')
   }

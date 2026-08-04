@@ -1,14 +1,37 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Evidence uploads are scoped only by caseId (never the reporter's
-    // identity - see src/services/caseThreadService.js). There's no
-    // reporter Firebase Auth to gate this behind, so - same as
-    // companies/{companyId} in firestore.rules - it's left open for now as
-    // an accepted no-auth-yet tradeoff. Revisit once reporter sessions
-    // exist to scope this properly.
+    // Case evidence is closed to every client, unconditionally.
+    //
+    // This used to be `allow read, write: if true`, on the reasoning that a
+    // reporter has no Firebase Auth identity to gate against. The consequence
+    // was that every uploaded evidence file was readable by anyone who could
+    // guess a Case ID and writable by anyone at all, and that the download
+    // URLs handed out were permanent.
+    //
+    // Access now runs entirely through the Admin SDK:
+    // functions/src/intake/evidenceAccess.js validates the caller the same way
+    // the rest of the case does - Case ID + passcode for a reporter,
+    // Firebase Auth + case assignment for a handler - and returns a signed URL
+    // valid for at most 15 minutes. Every issued URL is written to
+    // evidenceAccessLog. The absence of an auth identity was never a reason to
+    // leave the bucket open; it is a reason for the check to happen on a
+    // server that can perform it.
+    //
+    // Signed URLs are generated with the service account's own credentials and
+    // bypass these rules, so denying everything here does not affect them.
+    // Files uploaded under the old open rule are no longer reachable by their
+    // old URLs. That is intended and there is no compatibility path for them.
     match /case-evidence/{caseId}/{fileName} {
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    // Nothing else in this bucket is client-accessible either. Stated
+    // explicitly rather than left to the implicit default, so a future path
+    // added under a new prefix is denied by this rule rather than by nobody
+    // having remembered to write one.
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }

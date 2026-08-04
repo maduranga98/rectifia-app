@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   addManualLogEntry,
   getCaseThread,
+  getEvidenceDownloadUrl,
   sendInvestigatorMessage,
   sendReporterMessage,
   uploadCaseEvidence,
@@ -34,6 +35,63 @@ function bubbleClasses(message, mine) {
   if (mine) return 'bg-navy text-white border border-navy'
   if (message.sender === 'ai') return 'border border-navy-200 bg-navy-50 text-charcoal'
   return 'border border-line bg-surface text-charcoal'
+}
+
+function formatSize(bytes) {
+  if (!bytes) return null
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+// An attachment row. There is no stored URL to link to any more - the message
+// document holds only { fileName, label, contentType, sizeBytes } - so opening
+// one asks the server for a signed URL that lives about 15 minutes, and that
+// URL is used immediately and never kept. Rendering a link would mean minting
+// a credential for every attachment on screen whether or not anyone opens it.
+//
+// The anchor is created and clicked rather than window.open'd because the
+// signed URL only exists after an await, and a popup blocker will stop an
+// async window.open that is no longer attributable to the click.
+function AttachmentLink({ caseId, passcode, attachment, tone }) {
+  const [opening, setOpening] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  async function open() {
+    setOpening(true)
+    setFailed(false)
+    try {
+      const url = await getEvidenceDownloadUrl(caseId, attachment.fileName, passcode)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.target = '_blank'
+      anchor.rel = 'noreferrer'
+      anchor.click()
+    } catch {
+      setFailed(true)
+    } finally {
+      setOpening(false)
+    }
+  }
+
+  const size = formatSize(attachment.sizeBytes)
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={open}
+        disabled={opening || !attachment.fileName}
+        className={`inline-flex items-center gap-1.5 text-xs underline disabled:no-underline disabled:opacity-60 ${tone}`}
+      >
+        <Icon name="document" className="h-3.5 w-3.5" />
+        {attachment.label}
+        {size && <span className="opacity-70">({size})</span>}
+        {opening && <span className="opacity-70">opening…</span>}
+      </button>
+      {failed && <span className="block text-xs opacity-80">Could not open this file.</span>}
+    </>
+  )
 }
 
 // The single ongoing communication channel for a case. Reporter messages,
@@ -82,7 +140,10 @@ function CaseThread({ caseId, mode, passcode }) {
     try {
       let attachments = []
       if (pendingFile) {
-        const uploaded = await uploadCaseEvidence(caseId, pendingFile)
+        // The passcode is what authorizes the upload for a reporter; in
+        // investigator mode it is undefined and the callable falls back to the
+        // caller's Firebase Auth identity plus the case assignment check.
+        const uploaded = await uploadCaseEvidence(caseId, pendingFile, passcode)
         attachments = [uploaded]
       }
 
@@ -155,18 +216,13 @@ function CaseThread({ caseId, mode, passcode }) {
                 {message.attachments?.length > 0 && (
                   <ul className="mt-2 flex flex-col gap-1">
                     {message.attachments.map((attachment) => (
-                      <li key={attachment.path}>
-                        <a
-                          href={attachment.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={`inline-flex items-center gap-1.5 text-xs underline ${
-                            mine ? 'text-white' : 'text-navy'
-                          }`}
-                        >
-                          <Icon name="document" className="h-3.5 w-3.5" />
-                          {attachment.filename}
-                        </a>
+                      <li key={attachment.fileName ?? attachment.label}>
+                        <AttachmentLink
+                          caseId={caseId}
+                          passcode={passcode}
+                          attachment={attachment}
+                          tone={mine ? 'text-white' : 'text-navy'}
+                        />
                       </li>
                     ))}
                   </ul>

@@ -12,6 +12,22 @@ function toMillis(value) {
   return typeof value?.toMillis === 'function' ? value.toMillis() : value ?? null
 }
 
+// Metadata only, same allowlist caseThread.js applies on read. In particular
+// no URL is emitted: attachments are opened by asking
+// requestEvidenceDownloadUrl for a fresh short-lived signed URL, so a report
+// (or an exported PDF of one) is a list of what evidence exists rather than a
+// set of live links to it. Documents written before the storage lockdown may
+// still carry `url`/`path`; those URLs no longer work and are dropped here.
+function serializeAttachment(attachment) {
+  return {
+    fileName: attachment?.fileName ?? null,
+    label: attachment?.label ?? attachment?.filename ?? attachment?.fileName ?? 'Attachment',
+    contentType: attachment?.contentType ?? null,
+    sizeBytes: attachment?.sizeBytes ?? null,
+    uploadedAt: toMillis(attachment?.uploadedAt),
+  }
+}
+
 function serializeMessage(doc) {
   const data = doc.data()
   return {
@@ -19,7 +35,7 @@ function serializeMessage(doc) {
     sender: data.sender,
     type: data.type ?? 'message',
     text: data.text ?? '',
-    attachments: data.attachments ?? [],
+    attachments: Array.isArray(data.attachments) ? data.attachments.map(serializeAttachment) : [],
     investigatorId: data.investigatorId ?? null,
     timestamp: toMillis(data.timestamp),
   }

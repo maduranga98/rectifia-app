@@ -424,5 +424,35 @@ service cloud.firestore {
     match /staffIntakeAuditLog/{entryId} {
       allow read, write: if false;
     }
+
+    // The fourth audited surface. Evidence files are no longer reachable by a
+    // direct Storage URL (storage.rules denies all client access to
+    // case-evidence/**); every upload and every download now goes through a
+    // short-lived signed URL minted by
+    // functions/src/intake/evidenceAccess.js, and every one of those, granted
+    // or denied, is recorded here: who (a staff uid, or the literal 'reporter'
+    // - a reporter has no identity to record and recording one would undo the
+    // anonymity the rest of this file protects), which case, which file, when.
+    //
+    // Same discipline as the three logs above: Admin SDK writes only, no
+    // client path for any role. Whoever read a piece of evidence must not be
+    // able to edit the record that they read it.
+    match /evidenceAccessLog/{entryId} {
+      allow read, write: if false;
+    }
+
+    // Rate-limit counters (functions/src/utils/rateLimit.js). Written only by
+    // the Admin SDK inside the limiter's transaction; a client that could
+    // read these could measure how close it is to a limit, and one that could
+    // write them could reset its own counter, so neither is allowed.
+    //
+    // Documents here hold a salted, coarsened, daily-rotating fingerprint - no
+    // IP, no reporter identity - and carry expiresAt for a Firestore TTL
+    // policy. Set that policy on rateLimits.expiresAt at deploy time: without
+    // it the collection grows without bound and the "short-lived" half of the
+    // fingerprint's privacy argument stops being true.
+    match /rateLimits/{counterId} {
+      allow read, write: if false;
+    }
   }
 }

@@ -2,6 +2,12 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const crypto = require('crypto')
 const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
+const { buildAttachmentRecords } = require('../utils/evidenceStorage')
+const {
+  PUBLIC_CALLABLE_OPTIONS,
+  enforceRateLimit,
+  enforceCaseMessageCap,
+} = require('../utils/rateLimit')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -48,6 +54,27 @@ async function verifyReporterAccess(firestore, caseId, passcode) {
 // can reuse the exact same passcode check instead of duplicating it.
 exports.verifyReporterAccess = verifyReporterAccess
 
+// An attachment on a message is metadata only - { fileName, contentType,
+// sizeBytes, uploadedAt, label } - and never a URL. Evidence is fetched by
+// calling requestEvidenceDownloadUrl (functions/src/intake/evidenceAccess.js)
+// for a fresh 15-minute signed URL at the moment it is opened. A stored URL
+// would be a permanent bearer credential sitting in Firestore, which is
+// exactly what the storage lockdown removed.
+//
+// Documents written before that change may still carry `url`/`path` fields;
+// they are dropped here on read rather than migrated, because the URLs they
+// hold stopped working the moment storage.rules closed the bucket.
+function serializeAttachment(attachment) {
+  return {
+    fileName: attachment?.fileName ?? null,
+    label: attachment?.label ?? attachment?.filename ?? attachment?.fileName ?? 'Attachment',
+    contentType: attachment?.contentType ?? null,
+    sizeBytes: attachment?.sizeBytes ?? null,
+    uploadedAt:
+      typeof attachment?.uploadedAt?.toMillis === 'function' ? attachment.uploadedAt.toMillis() : null,
+  }
+}
+
 function serializeMessage(doc) {
   const data = doc.data()
   return {
@@ -55,7 +82,7 @@ function serializeMessage(doc) {
     sender: data.sender,
     type: data.type ?? 'message',
     text: data.text ?? '',
-    attachments: data.attachments ?? [],
+    attachments: Array.isArray(data.attachments) ? data.attachments.map(serializeAttachment) : [],
     timestamp: data.timestamp ? data.timestamp.toMillis() : null,
   }
 }
@@ -63,9 +90,12 @@ function serializeMessage(doc) {
 // Every message - AI, investigator, or reporter - lives in this one
 // timeline, and reading it back is the whole audit trail; there's no
 // separate log to reconcile against.
-exports.getCaseThread = onCall(async (request) => {
+exports.getCaseThread = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { caseId, passcode } = request.data || {}
   const firestore = admin.firestore()
+  // Rate limited before the passcode is checked, so the limiter itself cannot
+  // be used to distinguish a real Case ID from an invented one.
+  await enforceRateLimit(firestore, 'getCaseThread', request)
   await verifyReporterAccess(firestore, caseId, passcode)
 
   const messagesSnapshot = await firestore
@@ -81,7 +111,7 @@ exports.getCaseThread = onCall(async (request) => {
 // Posts a reporter message. This write is what aiFollowUp.js's onCreate
 // trigger reacts to - it's the only path through which new evidence reaches
 // a case after the original questionnaire submission.
-exports.postReporterMessage = onCall(async (request) => {
+exports.postReporterMessage = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { caseId, passcode, text, attachments } = request.data || {}
   if (!text?.trim() && !(Array.isArray(attachments) && attachments.length > 0)) {
     throw new HttpsError('invalid-argument', 'Message text or an attachment is required')
@@ -90,17 +120,28 @@ exports.postReporterMessage = onCall(async (request) => {
   const firestore = admin.firestore()
   await verifyReporterAccess(firestore, caseId, passcode)
 
-  const messageRef = await firestore
-    .collection(CASES_COLLECTION)
-    .doc(caseId)
-    .collection(MESSAGES_SUBCOLLECTION)
-    .add({
-      sender: 'reporter',
-      type: 'message',
-      text: text?.trim() ?? '',
-      attachments: Array.isArray(attachments) ? attachments : [],
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    })
+  // Scoped to the case rather than the caller: this write is what fires
+  // aiFollowUp.js's onCreate trigger and therefore what spends money on a
+  // Claude call, and the cost belongs to the case. Limiting by caller instead
+  // would let one case be driven from many networks, and would throttle
+  // unrelated reporters who happen to share one.
+  //
+  // Both limits run only after the passcode has been verified, so a caller
+  // who does not hold the case can never observe them at all - the generic
+  // 'permission-denied' from verifyReporterAccess comes first either way.
+  const caseRef = firestore.collection(CASES_COLLECTION).doc(caseId)
+  await enforceRateLimit(firestore, 'postReporterMessage', request, { scope: `case:${caseId}` })
+  await enforceCaseMessageCap(caseRef)
+
+  const attachmentRecords = await buildAttachmentRecords(firestore, caseId, attachments, 'reporter')
+
+  const messageRef = await caseRef.collection(MESSAGES_SUBCOLLECTION).add({
+    sender: 'reporter',
+    type: 'message',
+    text: text?.trim() ?? '',
+    attachments: attachmentRecords,
+    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+  })
 
   return { messageId: messageRef.id }
 })
@@ -123,6 +164,11 @@ exports.postInvestigatorMessage = onCall(async (request) => {
   const firestore = admin.firestore()
   await loadCaseForHandler(firestore, caseId, uid)
 
+  // Same server-side verification a reporter's attachments get: the handler is
+  // authenticated, but their browser is not, and an attachment record is only
+  // ever built from what is genuinely in the bucket.
+  const attachmentRecords = await buildAttachmentRecords(firestore, caseId, attachments, uid)
+
   const messageRef = await firestore
     .collection(CASES_COLLECTION)
     .doc(caseId)
@@ -132,7 +178,7 @@ exports.postInvestigatorMessage = onCall(async (request) => {
       type,
       text: text.trim(),
       investigatorId: uid,
-      attachments: Array.isArray(attachments) ? attachments : [],
+      attachments: attachmentRecords,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     })
 
