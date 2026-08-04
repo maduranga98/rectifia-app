@@ -6,7 +6,12 @@
  * so components reference brand names (bg-navy, text-muted, border-line)
  * rather than Tailwind's stock palette. Adding a raw blue-600/gray-500 back
  * into a component re-introduces the off-brand default palette - use a token
- * below, or add one here if something genuinely new is needed. */
+ * below, or add one here if something genuinely new is needed.
+ *
+ * Layout vocabulary lives in @layer components at the bottom: `card`,
+ * `field`, `btn-*`, `pill`, `data-table`. Pages compose those through the
+ * primitives in src/components/ui, they don't re-spell the border/bg/shadow
+ * triple at every call site. */
 @theme {
   /* Inter across the portfolio; Noto Sans Sinhala carries the `si` locale,
    * whose glyphs Inter does not cover. */
@@ -19,7 +24,9 @@
   --color-navy-50: #f2f6fa;
   --color-navy-100: #e7edf3;
   --color-navy-200: #c8d6e3;
+  --color-navy-300: #9db4c9;
   --color-navy-600: #14456f;
+  --color-navy-700: #0d3355;
   --color-navy-800: #071d30;
   --color-navy-900: #051523;
 
@@ -33,11 +40,13 @@
 
   /* Surfaces and text. The page sits on off-white rather than stark white -
    * this is a dashboard-heavy app and cards need to read as raised. */
-  --color-canvas: #f7f8fa;
+  --color-canvas: #f4f6f9;
   --color-surface: #ffffff;
   --color-charcoal: #1e2a38;
   --color-muted: #6b7684;
+  --color-subtle: #8d97a4;
   --color-line: #e2e5e9;
+  --color-line-soft: #eef0f3;
 
   /* Severity / status. Deliberately distinct from the brand amber except at
    * "high", which reuses it on purpose so the accent doubles as the
@@ -50,6 +59,16 @@
   --color-medium: #d4a72c;
   --color-low: #3b7a57;
   --color-info: #3e6b96;
+
+  /* Elevation. Two steps only: cards rest, overlays float. Shadows are
+   * navy-tinted rather than neutral black so they sit in the palette. */
+  --shadow-card: 0 1px 2px rgba(11, 44, 73, 0.04),
+    0 1px 3px rgba(11, 44, 73, 0.06);
+  --shadow-raised: 0 2px 4px rgba(11, 44, 73, 0.06),
+    0 8px 24px -8px rgba(11, 44, 73, 0.16);
+  --shadow-overlay: 0 12px 40px -8px rgba(11, 44, 73, 0.28);
+
+  --radius-card: 0.75rem;
 }
 
 @layer base {
@@ -58,6 +77,15 @@
     color: var(--color-charcoal);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Headings carry the tighter tracking the brand face is drawn for; set
+   * once here so no page has to remember `tracking-tight`. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.011em;
   }
 
   /* Inputs and selects inherit the brand face rather than the UA default. */
@@ -92,8 +120,8 @@
   .tone-low,
   .tone-info,
   .tone-neutral {
-    border-color: color-mix(in srgb, var(--tone) 32%, white);
-    background-color: color-mix(in srgb, var(--tone) 8%, white);
+    border-color: color-mix(in srgb, var(--tone) 26%, white);
+    background-color: color-mix(in srgb, var(--tone) 7%, white);
     color: color-mix(in srgb, var(--tone) 88%, black);
   }
   .tone-critical {
@@ -115,23 +143,77 @@
     --tone: var(--color-muted);
   }
 
-  /* Text inputs, selects and textareas. */
-  .field {
+  /* The one raised surface in the app. Everything that used to be a bare
+   * `rounded border border-line bg-surface` is this instead, so card edges
+   * and elevation stay identical across every screen. */
+  .card {
     border: 1px solid var(--color-line);
+    border-radius: var(--radius-card);
     background-color: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Text inputs, selects and textareas. Sizing lives here too - a field is
+   * a control, and controls in one app should not be five different
+   * heights. */
+  .field {
+    width: 100%;
+    border: 1px solid var(--color-line);
+    border-radius: 0.5rem;
+    background-color: var(--color-surface);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
     color: var(--color-charcoal);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
   }
   .field::placeholder {
-    color: var(--color-muted);
+    color: var(--color-subtle);
+  }
+  .field:hover:not(:disabled) {
+    border-color: var(--color-navy-200);
   }
   .field:focus {
     border-color: var(--color-navy);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-navy) 12%, transparent);
+    outline: none;
+  }
+  .field:disabled {
+    background-color: var(--color-canvas);
+    color: var(--color-muted);
+    cursor: not-allowed;
+  }
+  /* Native selects keep the UA arrow but need room for it. */
+  select.field {
+    padding-right: 2rem;
+  }
+
+  /* Buttons. `btn` carries shape/size/behaviour, the variant carries
+   * colour, so a variant never has to restate padding. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    transition: background-color 120ms ease, border-color 120ms ease,
+      color 120ms ease, box-shadow 120ms ease;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   /* Solid navy primary action. */
   .btn-primary {
     background-color: var(--color-navy);
     color: var(--color-surface);
+    box-shadow: var(--shadow-card);
   }
   .btn-primary:hover:not(:disabled) {
     background-color: var(--color-navy-800);
@@ -141,6 +223,7 @@
   .btn-accent {
     background-color: var(--color-gold);
     color: var(--color-navy-900);
+    box-shadow: var(--shadow-card);
   }
   .btn-accent:hover:not(:disabled) {
     background-color: var(--color-gold-600);
@@ -151,17 +234,127 @@
     border: 1px solid var(--color-line);
     background-color: var(--color-surface);
     color: var(--color-charcoal);
+    box-shadow: var(--shadow-card);
   }
   .btn-secondary:hover:not(:disabled) {
     background-color: var(--color-navy-50);
+    border-color: var(--color-navy-200);
+  }
+
+  /* Borderless tertiary action - table row actions, inline toggles. */
+  .btn-ghost {
+    color: var(--color-muted);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--color-navy-50);
+    color: var(--color-charcoal);
   }
 
   /* Destructive action (case closure, deletion). */
   .btn-danger {
     background-color: var(--color-critical);
     color: var(--color-surface);
+    box-shadow: var(--shadow-card);
   }
   .btn-danger:hover:not(:disabled) {
     background-color: color-mix(in srgb, var(--color-critical) 85%, black);
+  }
+
+  /* Quiet destructive - the same intent as btn-danger where a solid red
+   * block would be too loud (a Delete beside a list row). */
+  .btn-danger-ghost {
+    color: var(--color-critical);
+  }
+  .btn-danger-ghost:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-critical) 8%, white);
+  }
+
+  /* Small status/label chip. Pairs with a tone-* class for colour. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.125rem;
+    white-space: nowrap;
+  }
+
+  /* Data tables. Row rules are soft and the header is a quiet uppercase
+   * band, so a dense table reads as structure rather than as a grid. */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .data-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: var(--color-navy-50);
+    padding: 0.625rem 1rem;
+    text-align: left;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+  .data-table tbody td {
+    border-top: 1px solid var(--color-line-soft);
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+  }
+  .data-table tbody tr:hover {
+    background-color: color-mix(in srgb, var(--color-navy-50) 60%, white);
+  }
+
+  /* Placeholder block for content that hasn't loaded yet. */
+  .skeleton {
+    border-radius: 0.5rem;
+    background: linear-gradient(
+      90deg,
+      var(--color-line-soft) 25%,
+      var(--color-line) 37%,
+      var(--color-line-soft) 63%
+    );
+    background-size: 400% 100%;
+    animation: skeleton-sweep 1.4s ease infinite;
+  }
+
+  @keyframes skeleton-sweep {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
+  }
+
+  /* Signed-out surfaces (sign in, reset password, accept invite) sit on a
+   * navy field rather than the app canvas, so the auth boundary is visible
+   * before you read a word of it. */
+  .auth-backdrop {
+    background:
+      radial-gradient(
+        120% 90% at 15% 0%,
+        color-mix(in srgb, var(--color-navy-600) 55%, transparent) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        90% 80% at 100% 100%,
+        color-mix(in srgb, var(--color-gold) 18%, transparent) 0%,
+        transparent 60%
+      ),
+      linear-gradient(160deg, var(--color-navy-900) 0%, var(--color-navy) 100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
   }
 }

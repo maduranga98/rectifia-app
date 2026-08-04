@@ -2,6 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { getCompany } from '../../services/companyService'
 import { listCaseHandlers, listRoutingRules, removeRoutingRule, setRoutingRule } from '../../services/routingService'
 import { CATEGORIES } from '../../data/categories'
+import Alert from '../../components/ui/Alert'
+import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import EmptyState from '../../components/ui/EmptyState'
+import Icon from '../../components/ui/Icon'
+import { Select } from '../../components/ui/Field'
+import { SkeletonList } from '../../components/ui/Loading'
 
 // (category, department) -> Case Handler mappings under
 // companies/{companyId}/routingRules, which functions/src/intake/routeCase.js
@@ -15,6 +23,7 @@ function RoutingRulesPage({ companyId }) {
   const [ruleForm, setRuleForm] = useState({ category: CATEGORIES[0]?.id ?? '', department: '', caseHandlerId: '' })
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -48,6 +57,7 @@ function RoutingRulesPage({ companyId }) {
   async function handleSetRule(e) {
     e.preventDefault()
     if (!ruleForm.category || !ruleForm.department || !ruleForm.caseHandlerId) return
+    setSaving(true)
     try {
       await setRoutingRule(companyId, {
         category: ruleForm.category,
@@ -57,91 +67,142 @@ function RoutingRulesPage({ companyId }) {
       await refresh()
     } catch (err) {
       setError(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
   async function handleRemoveRule(rule) {
+    setSaving(true)
     try {
       await removeRoutingRule(companyId, rule.category, rule.department)
       await refresh()
     } catch (err) {
       setError(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
-  if (loading && rules.length === 0 && departments.length === 0) {
-    return <p className="p-6 text-sm text-muted">Loading...</p>
-  }
+  const canSubmit = Boolean(ruleForm.category && ruleForm.department && ruleForm.caseHandlerId)
+
+  // Prerequisites are stated up front rather than left to be inferred from
+  // a select with nothing in it - a rule needs both a department and a Case
+  // Handler to exist before it can be written at all.
+  const missing = []
+  if (departments.length === 0) missing.push('a department')
+  if (handlers.length === 0) missing.push('a Case Handler')
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-4 p-6">
-      <h2 className="text-lg font-semibold text-charcoal">Routing rules</h2>
-      <p className="text-xs text-muted">Maps a case category + department to the Case Handler it routes to.</p>
-      {error && <p className="text-sm text-critical">{error}</p>}
+    <div className="mx-auto flex max-w-4xl flex-col gap-5">
+      <p className="max-w-2xl text-sm text-muted">
+        Each rule maps a case category and department to the Case Handler it should be assigned
+        to. New cases are routed automatically the moment they are submitted.
+      </p>
 
-      <ul className="flex flex-col gap-2 text-sm">
-        {rules.map((rule) => (
-          <li key={rule.id} className="flex items-center justify-between rounded border border-line bg-surface px-3 py-2">
-            <span>
-              {CATEGORIES.find((c) => c.id === rule.category)?.label ?? rule.category} / {rule.department}
-            </span>
-            <span className="text-xs text-muted">
-              {handlers.find((h) => h.id === rule.caseHandlerId)?.email ?? rule.caseHandlerId}
-            </span>
-            <button type="button" onClick={() => handleRemoveRule(rule)} className="text-xs text-critical underline">
-              Remove
-            </button>
-          </li>
-        ))}
-        {rules.length === 0 && <li className="text-sm text-muted">No routing rules yet.</li>}
-      </ul>
+      {error && <Alert variant="error">{error}</Alert>}
 
-      <form onSubmit={handleSetRule} className="flex flex-wrap gap-2">
-        <select
-          value={ruleForm.category}
-          onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}
-          className="field rounded px-2 py-1 text-sm"
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={ruleForm.department}
-          onChange={(e) => setRuleForm({ ...ruleForm, department: e.target.value })}
-          className="field rounded px-2 py-1 text-sm"
-        >
-          {departments.length === 0 && (
+      {missing.length > 0 && !loading && (
+        <Alert variant="warning" title="Routing is not set up yet">
+          You need {missing.join(' and ')} before a rule can be saved. Unrouted cases fall back to
+          manual assignment.
+        </Alert>
+      )}
+
+      <Card
+        title="Add a rule"
+        description="An existing category and department pair is overwritten rather than duplicated."
+      >
+        <form onSubmit={handleSetRule} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+          <Select
+            label="Category"
+            value={ruleForm.category}
+            onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            label="Department"
+            value={ruleForm.department}
+            onChange={(e) => setRuleForm({ ...ruleForm, department: e.target.value })}
+          >
+            {departments.length === 0 && (
+              <option value="" disabled>
+                No departments yet
+              </option>
+            )}
+            {departments.map((d) => (
+              <option key={d.id} value={d.name}>
+                {d.name}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            label="Assign to"
+            value={ruleForm.caseHandlerId}
+            onChange={(e) => setRuleForm({ ...ruleForm, caseHandlerId: e.target.value })}
+          >
             <option value="" disabled>
-              No departments yet
+              {handlers.length === 0 ? 'No Case Handlers yet' : 'Select a Case Handler'}
             </option>
+            {handlers.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.email ?? h.id}
+              </option>
+            ))}
+          </Select>
+
+          <Button type="submit" variant="primary" icon="plus" disabled={!canSubmit || saving}>
+            Save rule
+          </Button>
+        </form>
+      </Card>
+
+      {loading && rules.length === 0 ? (
+        <SkeletonList rows={3} />
+      ) : (
+        <Card title="Active rules" description={`${rules.length} configured`} padded={false}>
+          {rules.length === 0 ? (
+            <EmptyState
+              icon="routing"
+              title="No routing rules yet"
+              description="Without a matching rule, an incoming case is flagged for manual assignment instead of going straight to a handler."
+            />
+          ) : (
+            <ul className="divide-y divide-line-soft">
+              {rules.map((rule) => (
+                <li key={rule.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 hover:bg-navy-50/40">
+                  <Badge tone="tone-info">
+                    {CATEGORIES.find((c) => c.id === rule.category)?.label ?? rule.category}
+                  </Badge>
+                  <span className="text-sm text-muted">{rule.department}</span>
+
+                  <Icon name="chevronRight" className="h-4 w-4 text-subtle" />
+
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-charcoal">
+                    {handlers.find((h) => h.id === rule.caseHandlerId)?.email ?? rule.caseHandlerId}
+                  </span>
+
+                  <Button
+                    variant="dangerGhost"
+                    size="sm"
+                    onClick={() => handleRemoveRule(rule)}
+                    disabled={saving}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
-          {departments.map((d) => (
-            <option key={d.id} value={d.name}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={ruleForm.caseHandlerId}
-          onChange={(e) => setRuleForm({ ...ruleForm, caseHandlerId: e.target.value })}
-          className="field rounded px-2 py-1 text-sm"
-        >
-          <option value="" disabled>
-            Case Handler...
-          </option>
-          {handlers.map((h) => (
-            <option key={h.id} value={h.id}>
-              {h.email ?? h.id}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="btn-primary rounded px-4 py-2 text-sm font-medium">
-          Save rule
-        </button>
-      </form>
+        </Card>
+      )}
     </div>
   )
 }

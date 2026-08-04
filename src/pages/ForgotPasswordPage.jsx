@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { sendPasswordReset } from '../services/authService'
+import AuthLayout from '../components/shared/AuthLayout'
+import Alert from '../components/ui/Alert'
+import Button from '../components/ui/Button'
+import { Input } from '../components/ui/Field'
 
 function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -30,41 +34,42 @@ function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="flex w-full max-w-md flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <span className="h-5 w-1.5 rounded-full bg-gold" aria-hidden="true" />
-          <span className="text-lg font-semibold tracking-tight text-navy">Rectifia</span>
-        </div>
-        <h1 className="text-xl font-semibold">Reset your password</h1>
+    <AuthLayout
+      title="Reset your password"
+      description="We'll email you a link to set a new one."
+      footer={
+        <Link to="/login" className="font-medium text-navy hover:underline">
+          Back to sign in
+        </Link>
+      }
+    >
+      <form onSubmit={handleSubmit} className="card flex flex-col gap-4 p-6">
+        <Input
+          label="Work email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="name@company.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
-          <input
-            type="email"
-            required
-            placeholder="name@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="field rounded px-3 py-2 text-sm"
-          />
+        {error && <Alert variant="error">{error}</Alert>}
+        {success && <Alert variant="success">{success}</Alert>}
 
-          {error && <p className="text-sm text-critical">{error}</p>}
-          {success && <p className="text-sm text-low">{success}</p>}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn-primary rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? 'Sending...' : 'Send reset link'}
-          </button>
-
-          <Link to="/login" className="text-xs text-navy underline">
-            Back to sign in
-          </Link>
-        </form>
-      </div>
-    </div>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="w-full"
+          icon="mail"
+          loading={submitting}
+          loadingLabel="Sending"
+        >
+          Send reset link
+        </Button>
+      </form>
+    </AuthLayout>
   )
 }
 

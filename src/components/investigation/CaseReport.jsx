@@ -1,9 +1,27 @@
 import { Fragment, useEffect, useState } from 'react'
 import { generateReport } from '../../services/reportService'
+import Alert from '../ui/Alert'
+import Badge from '../ui/Badge'
+import Button from '../ui/Button'
+import Card from '../ui/Card'
+import Logo from '../ui/Logo'
+import { SkeletonList } from '../ui/Loading'
 
 function formatTimestamp(ms) {
-  if (!ms) return '-'
+  if (!ms) return '—'
   return new Date(ms).toLocaleString()
+}
+
+function humanize(value) {
+  return typeof value === 'string' ? value.replace(/_/g, ' ') : value
+}
+
+const AUTHOR_TONE = {
+  manual_log: 'tone-high',
+  system: 'tone-neutral',
+  ai: 'tone-info',
+  investigator: 'tone-info',
+  reporter: 'tone-neutral',
 }
 
 function messageAuthorLabel(message) {
@@ -14,6 +32,24 @@ function messageAuthorLabel(message) {
   return 'Reporter'
 }
 
+// Label/value pairs. A two-column dl at every call site was the single most
+// repeated block in this file; as a component the columns stay aligned and
+// an empty value renders as an em dash instead of nothing.
+function DetailList({ items }) {
+  return (
+    <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+      {items.map(([label, value]) => (
+        <Fragment key={label}>
+          <div className="flex flex-col gap-0.5">
+            <dt className="text-xs font-medium uppercase tracking-[0.04em] text-muted">{label}</dt>
+            <dd className="text-sm text-charcoal">{value ?? '—'}</dd>
+          </div>
+        </Fragment>
+      ))}
+    </dl>
+  )
+}
+
 // No PDF/document-generation library exists anywhere else in this codebase
 // (no jsPDF, pdfmake, or puppeteer), so this uses the browser's native
 // print-to-PDF: a print stylesheet hides everything except the report body,
@@ -21,13 +57,9 @@ function messageAuthorLabel(message) {
 // a print destination in every major browser. No new dependency required.
 function ExportPdfButton() {
   return (
-    <button
-      type="button"
-      onClick={() => window.print()}
-      className="print:hidden btn-primary rounded px-4 py-2 text-sm"
-    >
+    <Button variant="primary" icon="document" onClick={() => window.print()} className="print:hidden">
       Export as PDF
-    </button>
+    </Button>
   )
 }
 
@@ -65,149 +97,152 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
     }
   }, [caseId])
 
-  if (loading) return <p className="p-6 text-sm text-muted">Loading report...</p>
-  if (error) return <p className="p-6 text-sm text-critical">{error}</p>
+  if (loading) return <SkeletonList rows={5} />
+  if (error) return <Alert variant="error">{error}</Alert>
   if (!report) return null
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-6 p-6 print:p-0">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Case report - {report.caseId}</h1>
+    <div className="mx-auto flex max-w-4xl flex-col gap-5 print:max-w-none print:gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {/* Printed copies leave the app chrome behind, so the report body
+              carries the mark itself. */}
+          <span className="hidden print:block">
+            <Logo size="sm" showWordmark={false} />
+          </span>
+          <div>
+            <h2 className="text-xl font-semibold text-charcoal">Case report</h2>
+            <p className="text-sm text-muted">{report.caseId}</p>
+          </div>
+        </div>
         <ExportPdfButton />
       </div>
 
-      <section>
-        <h2 className="text-sm font-semibold text-charcoal">Case summary</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-muted">Category</dt>
-          <dd>{report.summary.category ?? '-'}</dd>
-          <dt className="text-muted">Status</dt>
-          <dd>{report.summary.status ?? '-'}</dd>
-          <dt className="text-muted">Created</dt>
-          <dd>{formatTimestamp(report.summary.createdAt)}</dd>
-          <dt className="text-muted">Closed</dt>
-          <dd>{formatTimestamp(report.summary.closedAt)}</dd>
-          <dt className="text-muted">Severity score</dt>
-          <dd>{report.summary.severityScore ?? '-'}</dd>
-          <dt className="text-muted">Evidence score</dt>
-          <dd>{report.summary.evidenceScore ?? '-'}</dd>
-        </dl>
-      </section>
+      <Card title="Case summary">
+        <DetailList
+          items={[
+            ['Category', humanize(report.summary.category)],
+            ['Status', humanize(report.summary.status)],
+            ['Created', formatTimestamp(report.summary.createdAt)],
+            ['Closed', formatTimestamp(report.summary.closedAt)],
+            ['Severity score', report.summary.severityScore],
+            ['Evidence score', report.summary.evidenceScore],
+          ]}
+        />
+      </Card>
 
-      <section>
-        <h2 className="text-sm font-semibold text-charcoal">Message timeline</h2>
-        <ul className="mt-2 flex flex-col gap-2">
-          {report.timeline.length === 0 && <li className="text-sm text-muted">No messages.</li>}
-          {report.timeline.map((message) => (
-            <li key={message.id} className="border border-line bg-surface rounded px-3 py-2 text-sm">
-              <div className="flex items-center justify-between text-xs text-muted">
-                <span className="font-medium">{messageAuthorLabel(message)}</span>
-                <span>{formatTimestamp(message.timestamp)}</span>
-              </div>
-              <p className="mt-1 whitespace-pre-wrap">{message.text}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section>
-        <h2 className="text-sm font-semibold text-charcoal">Evidence</h2>
-        {report.evidence.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No attachments.</p>
+      <Card title="Message timeline" padded={report.timeline.length > 0}>
+        {report.timeline.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-muted">No messages.</p>
         ) : (
-          <ul className="mt-2 flex flex-col gap-1 text-sm">
-            {report.evidence.map((item) => (
-              <li key={item.path}>
-                {item.filename} - submitted by {item.postedBy} on {formatTimestamp(item.postedAt)}
+          <ul className="flex flex-col divide-y divide-line-soft">
+            {report.timeline.map((message) => (
+              <li key={message.id} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex items-center justify-between gap-3">
+                  <Badge tone={AUTHOR_TONE[message.type === 'manual_log' ? 'manual_log' : message.sender] ?? 'tone-neutral'}>
+                    {messageAuthorLabel(message)}
+                  </Badge>
+                  <span className="text-xs text-muted">{formatTimestamp(message.timestamp)}</span>
+                </div>
+                <p className="mt-1.5 whitespace-pre-wrap text-sm text-charcoal">{message.text}</p>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </Card>
 
-      <section>
-        <h2 className="text-sm font-semibold text-charcoal">Investigator manual log</h2>
-        {report.manualLogEntries.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">No manual log entries.</p>
+      <Card title="Evidence">
+        {report.evidence.length === 0 ? (
+          <p className="text-sm text-muted">No attachments.</p>
         ) : (
-          <ul className="mt-2 flex flex-col gap-2">
+          <ul className="flex flex-col gap-2 text-sm">
+            {report.evidence.map((item) => (
+              <li key={item.path} className="flex flex-wrap items-baseline gap-x-2">
+                <span className="font-medium text-charcoal">{item.filename}</span>
+                <span className="text-xs text-muted">
+                  submitted by {item.postedBy} on {formatTimestamp(item.postedAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card title="Investigator manual log">
+        {report.manualLogEntries.length === 0 ? (
+          <p className="text-sm text-muted">No manual log entries.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
             {report.manualLogEntries.map((entry) => (
-              <li key={entry.id} className="rounded border border tone-high px-3 py-2 text-sm">
-                <div className="text-xs text-muted">{formatTimestamp(entry.timestamp)}</div>
+              <li key={entry.id} className="tone-high rounded-lg border px-3.5 py-3 text-sm">
+                <div className="text-xs opacity-80">{formatTimestamp(entry.timestamp)}</div>
                 <p className="mt-1 whitespace-pre-wrap">{entry.text}</p>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </Card>
 
-      <section>
-        <h2 className="text-sm font-semibold text-charcoal">Consistency check</h2>
+      <Card title="Consistency check">
         {!report.consistencyCheck ? (
-          <p className="mt-2 text-sm text-muted">No consistency check has run for this case.</p>
+          <p className="text-sm text-muted">No consistency check has run for this case.</p>
         ) : (
-          <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-            <dt className="text-muted">Status</dt>
-            <dd>{report.consistencyCheck.status ?? '-'}</dd>
-            <dt className="text-muted">Flag</dt>
-            <dd>{report.consistencyCheck.flag?.message ?? 'None'}</dd>
-            <dt className="text-muted">Typical action</dt>
-            <dd>{report.consistencyCheck.typicalAction ?? '-'}</dd>
-            <dt className="text-muted">Resolution notes</dt>
-            <dd>{report.consistencyCheck.resolutionNotes ?? '-'}</dd>
-          </dl>
+          <DetailList
+            items={[
+              ['Status', humanize(report.consistencyCheck.status)],
+              ['Flag', report.consistencyCheck.flag?.message ?? 'None'],
+              ['Typical action', humanize(report.consistencyCheck.typicalAction)],
+              ['Resolution notes', report.consistencyCheck.resolutionNotes],
+            ]}
+          />
         )}
-      </section>
+      </Card>
 
-      <section>
-        <h2 className="text-sm font-semibold text-charcoal">Final action taken</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-muted">Action</dt>
-          <dd>{report.finalAction.actionTaken ?? report.finalAction.proposedAction ?? 'Not yet decided'}</dd>
-          <dt className="text-muted">Effective date</dt>
-          <dd>{formatTimestamp(report.finalAction.actionEffectiveDate)}</dd>
-          <dt className="text-muted">Notes</dt>
-          <dd>{report.finalAction.actionNotes ?? '-'}</dd>
-        </dl>
-      </section>
+      <Card title="Final action taken">
+        <DetailList
+          items={[
+            [
+              'Action',
+              humanize(report.finalAction.actionTaken ?? report.finalAction.proposedAction) ??
+                'Not yet decided',
+            ],
+            ['Effective date', formatTimestamp(report.finalAction.actionEffectiveDate)],
+            ['Notes', report.finalAction.actionNotes],
+          ]}
+        />
+      </Card>
 
-      <section>
-        <h2 className="text-sm font-semibold text-charcoal">Compliance deadline log</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-muted">Rule applied</dt>
-          <dd>{report.complianceDeadlineLog.complianceRuleApplied ?? '-'}</dd>
-          <dt className="text-muted">Acknowledgment due</dt>
-          <dd>{formatTimestamp(report.complianceDeadlineLog.acknowledgmentDueAt)}</dd>
-          <dt className="text-muted">Acknowledgment sent</dt>
-          <dd>{formatTimestamp(report.complianceDeadlineLog.acknowledgmentSentAt)}</dd>
-          <dt className="text-muted">Feedback due</dt>
-          <dd>{formatTimestamp(report.complianceDeadlineLog.feedbackDueAt)}</dd>
-          <dt className="text-muted">Feedback given</dt>
-          <dd>{formatTimestamp(report.complianceDeadlineLog.feedbackGivenAt)}</dd>
-        </dl>
-      </section>
+      <Card title="Compliance deadline log">
+        <DetailList
+          items={[
+            ['Rule applied', report.complianceDeadlineLog.complianceRuleApplied],
+            ['Acknowledgment due', formatTimestamp(report.complianceDeadlineLog.acknowledgmentDueAt)],
+            ['Acknowledgment sent', formatTimestamp(report.complianceDeadlineLog.acknowledgmentSentAt)],
+            ['Feedback due', formatTimestamp(report.complianceDeadlineLog.feedbackDueAt)],
+            ['Feedback given', formatTimestamp(report.complianceDeadlineLog.feedbackGivenAt)],
+          ]}
+        />
+      </Card>
 
       {report.restrictedReporterIdentity && (
-        <section className="rounded border-2 tone-critical p-4">
-          <h2 className="text-sm font-semibold text-critical">Restricted - reporter identity (confidential tier)</h2>
-          <p className="mt-1 text-xs text-critical">
-            Visible only to roles authorized to see reporter identity on confidential-tier cases.
-          </p>
+        <Card
+          title="Restricted - reporter identity"
+          description="Confidential tier. Visible only to roles authorized to see reporter identity."
+          className="border-critical/40"
+        >
           {canViewReporterIdentity ? (
-            <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-              {Object.entries(report.restrictedReporterIdentity).map(([key, value]) => (
-                <Fragment key={key}>
-                  <dt className="text-muted">{key}</dt>
-                  <dd>{String(value)}</dd>
-                </Fragment>
-              ))}
-            </dl>
+            <DetailList
+              items={Object.entries(report.restrictedReporterIdentity).map(([key, value]) => [
+                humanize(key),
+                String(value),
+              ])}
+            />
           ) : (
-            <p className="mt-2 text-sm text-critical">
+            <Alert variant="error">
               You are not authorized to view reporter identity for this case.
-            </p>
+            </Alert>
           )}
-        </section>
+        </Card>
       )}
     </div>
   )

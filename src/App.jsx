@@ -19,6 +19,10 @@ function App() {
       <Routes>
         {/* Anonymous reporter routes - deliberately not behind auth. */}
         <Route path="/submit" element={<Submit />} />
+        {/* Both forms of the tracking route: with a Case ID when the
+            reporter followed a link, without one when they arrived cold and
+            type it in. */}
+        <Route path="/case" element={<CaseDetail />} />
         <Route path="/case/:caseId" element={<CaseDetail />} />
 
         {/* Auth entry points. */}

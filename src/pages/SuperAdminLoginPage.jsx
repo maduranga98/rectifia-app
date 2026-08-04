@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { signIn, signOutUser, checkSuperAdmin } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
+import Button from '../components/ui/Button'
+import Icon from '../components/ui/Icon'
+import Logo from '../components/ui/Logo'
 
 // Platform-level login, deliberately separate from the staff LoginPage:
 // different route, different heading, dark theme so it never gets mistaken
@@ -10,6 +13,9 @@ import { useAuth } from '../contexts/AuthContext'
 // = uid, see authService.checkSuperAdmin) may proceed past this page -
 // anyone else gets an access-denied message here, never a redirect into a
 // company dashboard.
+//
+// It keeps its own dark form controls rather than the shared AuthLayout for
+// exactly that reason: the visual break from the staff sign-in is the point.
 function SuperAdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -49,42 +55,76 @@ function SuperAdminLoginPage() {
     return <Navigate to="/super-admin" replace />
   }
 
+  const darkField =
+    'w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2.5 text-sm text-white transition-colors placeholder:text-navy-300 hover:border-white/25 focus:border-gold focus:outline-none'
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-navy-900 p-6">
-      <div className="flex w-full max-w-md flex-col gap-3">
-        <h1 className="text-xl font-semibold text-white">Lumora Platform Admin</h1>
-        <p className="text-sm text-navy-200">Super Admin access only - not scoped to any company.</p>
+    <div className="auth-backdrop flex min-h-screen items-center justify-center px-5 py-12">
+      <div className="w-full max-w-md">
+        <div className="mb-7 flex flex-col items-center gap-4 text-center">
+          <Logo size="lg" showWordmark={false} onDark />
+          <div>
+            <span className="pill border-gold/30 bg-gold/15 text-gold-200">
+              <Icon name="shield" className="h-3 w-3" />
+              Platform access
+            </span>
+            <h1 className="mt-3 text-2xl font-semibold text-white">Lumora Platform Admin</h1>
+            <p className="mt-1.5 text-sm text-navy-200">
+              Super Admin access only - not scoped to any company.
+            </p>
+          </div>
+        </div>
 
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-3 rounded-lg border border-navy-600 bg-navy p-5 shadow-lg"
+          className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/[0.06] p-6 shadow-[var(--shadow-overlay)] backdrop-blur"
         >
-          <input
-            type="email"
-            required
-            placeholder="admin@lumora.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-white placeholder:text-navy-200"
-          />
-          <input
-            type="password"
-            required
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="rounded border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-white placeholder:text-navy-200"
-          />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-navy-200">Email</span>
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="admin@lumora.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={darkField}
+            />
+          </label>
 
-          {error && <p className="text-sm text-critical-200">{error}</p>}
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-navy-200">Password</span>
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={darkField}
+            />
+          </label>
 
-          <button
+          {error && (
+            <p
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-critical-200/30 bg-critical/15 px-3 py-2.5 text-sm text-critical-200"
+            >
+              <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+              {error}
+            </p>
+          )}
+
+          <Button
             type="submit"
-            disabled={submitting}
-            className="btn-accent rounded px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            variant="accent"
+            size="lg"
+            className="w-full"
+            loading={submitting}
+            loadingLabel="Signing in"
           >
-            {submitting ? 'Signing in...' : 'Sign in'}
-          </button>
+            Sign in
+          </Button>
         </form>
       </div>
     </div>

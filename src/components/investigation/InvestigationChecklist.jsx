@@ -5,6 +5,12 @@ import {
   generateChecklist,
   setChecklistItemStatus,
 } from '../../services/checklistService'
+import Alert from '../ui/Alert'
+import Badge from '../ui/Badge'
+import Button from '../ui/Button'
+import Card from '../ui/Card'
+import EmptyState from '../ui/EmptyState'
+import { Textarea } from '../ui/Field'
 
 const TYPE_LABELS = {
   [CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION]: 'Interview question',
@@ -12,7 +18,7 @@ const TYPE_LABELS = {
   [CHECKLIST_ITEM_TYPES.CONTRADICTION_FLAG]: 'Contradiction / gap',
 }
 
-const TYPE_STYLE = {
+const TYPE_TONE = {
   [CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION]: 'tone-info',
   [CHECKLIST_ITEM_TYPES.DOCUMENT_REQUEST]: 'tone-neutral',
   [CHECKLIST_ITEM_TYPES.CONTRADICTION_FLAG]: 'tone-high',
@@ -65,119 +71,117 @@ function InvestigationChecklist({ caseId, investigatorId }) {
     setEditDraft('')
   }
 
+  const generateButton = (
+    <Button
+      variant={checklist.length > 0 ? 'secondary' : 'primary'}
+      size="sm"
+      icon="sparkle"
+      onClick={handleGenerate}
+      loading={loading}
+      loadingLabel="Generating"
+    >
+      {checklist.length > 0 ? 'Regenerate' : 'Generate'}
+    </Button>
+  )
+
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Investigation checklist</h2>
-        <button
-          type="button"
-          onClick={handleGenerate}
-          disabled={loading}
-          className="btn-primary rounded px-4 py-2 text-sm disabled:opacity-50"
-        >
-          {loading ? 'Generating...' : checklist.length > 0 ? 'Regenerate' : 'Generate checklist'}
-        </button>
-      </div>
+    <Card
+      title="Investigation checklist"
+      description="AI-suggested next steps from the category, answers, and thread so far. A planning aid, not a required workflow."
+      actions={generateButton}
+      padded={checklist.length > 0 || Boolean(error)}
+    >
+      {error && <Alert variant="error" className="mb-3">{error}</Alert>}
 
-      <p className="text-xs text-muted">
-        AI-suggested next steps based on the case category, questionnaire answers, and thread so far. Check off, edit,
-        or ignore anything - this is a planning aid, not a required workflow.
-      </p>
+      {checklist.length === 0 ? (
+        !error && (
+          <EmptyState
+            compact
+            icon="sparkle"
+            title="No checklist yet"
+            description="Generate one to get suggested interview questions, documents to request, and gaps to chase."
+            action={generateButton}
+          />
+        )
+      ) : (
+        <ul className="flex flex-col divide-y divide-line-soft">
+          {checklist.map((item) => {
+            const checked = item.status === CHECKLIST_ITEM_STATUSES.CHECKED
+            const ignored = item.status === CHECKLIST_ITEM_STATUSES.IGNORED
 
-      {error && <p className="text-sm text-critical">{error}</p>}
+            return (
+              <li key={item.id} className={`py-3 first:pt-0 last:pb-0 ${ignored ? 'opacity-50' : ''}`}>
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    aria-label={`Mark "${item.item}" as done`}
+                    checked={checked}
+                    onChange={(e) =>
+                      updateItem(
+                        item.id,
+                        e.target.checked ? CHECKLIST_ITEM_STATUSES.CHECKED : CHECKLIST_ITEM_STATUSES.SUGGESTED
+                      )
+                    }
+                    className="mt-1 h-4 w-4 shrink-0"
+                  />
 
-      {checklist.length === 0 && !loading && (
-        <p className="text-sm text-muted">No checklist yet. Generate one to get started.</p>
-      )}
+                  <div className="min-w-0 flex-1">
+                    <Badge tone={TYPE_TONE[item.type] ?? 'tone-neutral'}>
+                      {TYPE_LABELS[item.type] ?? item.type}
+                    </Badge>
 
-      <ul className="flex flex-col gap-3">
-        {checklist.map((item) => (
-          <li
-            key={item.id}
-            className={`rounded border px-3 py-2 text-sm ${
-              item.status === CHECKLIST_ITEM_STATUSES.IGNORED ? 'opacity-50' : ''
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                checked={item.status === CHECKLIST_ITEM_STATUSES.CHECKED}
-                onChange={(e) =>
-                  updateItem(
-                    item.id,
-                    e.target.checked ? CHECKLIST_ITEM_STATUSES.CHECKED : CHECKLIST_ITEM_STATUSES.SUGGESTED
-                  )
-                }
-                className="mt-1"
-              />
-              <div className="flex-1">
-                <span className={`inline-block rounded border px-2 py-0.5 text-xs ${TYPE_STYLE[item.type]}`}>
-                  {TYPE_LABELS[item.type] ?? item.type}
-                </span>
-
-                {editingId === item.id ? (
-                  <div className="mt-2 flex flex-col gap-2">
-                    <textarea
-                      value={editDraft}
-                      onChange={(e) => setEditDraft(e.target.value)}
-                      rows={2}
-                      className="w-full field rounded px-2 py-1 text-sm"
-                    />
-                    <div className="flex gap-3">
-                      <button
-                        type="button"
-                        onClick={() => saveEdit(item.id)}
-                        className="btn-primary rounded px-3 py-1 text-xs"
-                      >
-                        Save
-                      </button>
-                      <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted">
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p
-                    className={`mt-1 ${
-                      item.status === CHECKLIST_ITEM_STATUSES.CHECKED ? 'line-through text-muted' : ''
-                    }`}
-                  >
-                    {item.item}
-                  </p>
-                )}
-
-                <p className="mt-1 text-xs text-muted">{item.rationale}</p>
-
-                {editingId !== item.id && (
-                  <div className="mt-2 flex gap-3 text-xs">
-                    <button type="button" onClick={() => startEdit(item)} className="text-navy underline">
-                      Edit
-                    </button>
-                    {item.status !== CHECKLIST_ITEM_STATUSES.IGNORED ? (
-                      <button
-                        type="button"
-                        onClick={() => updateItem(item.id, CHECKLIST_ITEM_STATUSES.IGNORED)}
-                        className="text-muted underline"
-                      >
-                        Ignore
-                      </button>
+                    {editingId === item.id ? (
+                      <div className="mt-2 flex flex-col gap-2">
+                        <Textarea
+                          label="Edit item"
+                          rows={2}
+                          value={editDraft}
+                          onChange={(e) => setEditDraft(e.target.value)}
+                        />
+                        <div className="flex gap-2">
+                          <Button variant="primary" size="sm" onClick={() => saveEdit(item.id)}>
+                            Save
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => updateItem(item.id, CHECKLIST_ITEM_STATUSES.SUGGESTED)}
-                        className="text-muted underline"
-                      >
-                        Unignore
-                      </button>
+                      <p className={`mt-1.5 text-sm ${checked ? 'text-muted line-through' : 'text-charcoal'}`}>
+                        {item.item}
+                      </p>
+                    )}
+
+                    {item.rationale && <p className="mt-1 text-xs text-muted">{item.rationale}</p>}
+
+                    {editingId !== item.id && (
+                      <div className="mt-1.5 flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => startEdit(item)}>
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            updateItem(
+                              item.id,
+                              ignored ? CHECKLIST_ITEM_STATUSES.SUGGESTED : CHECKLIST_ITEM_STATUSES.IGNORED
+                            )
+                          }
+                        >
+                          {ignored ? 'Unignore' : 'Ignore'}
+                        </Button>
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </Card>
   )
 }
 
