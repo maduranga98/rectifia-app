@@ -12,7 +12,7 @@ function RootRedirect() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center p-8">
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-sm text-muted">Loading...</p>
       </div>
     )
   }

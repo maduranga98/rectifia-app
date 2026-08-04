@@ -70,7 +70,7 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
   const [error, setError] = useState(null)
 
   if (!questions) {
-    return <p className="p-8 text-sm text-red-600">Unknown case category.</p>
+    return <p className="p-8 text-sm text-critical">Unknown case category.</p>
   }
 
   function setAnswer(question, value) {
@@ -128,7 +128,7 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
               id={question.id}
               value={answers[question.id] ?? ''}
               onChange={(e) => setAnswer(question, e.target.value)}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="field mt-1 w-full rounded px-3 py-2"
             >
               <option value="" disabled>
                 Select an answer
@@ -167,7 +167,7 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
                 onChange={(e) => setAnswer(question, Number(e.target.value))}
                 className="w-full"
               />
-              <div className="mt-1 flex justify-between text-xs text-gray-500">
+              <div className="mt-1 flex justify-between text-xs text-muted">
                 <span>{question.options.minLabel}</span>
                 <span>{question.options.maxLabel}</span>
               </div>
@@ -180,18 +180,18 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
               value={answers[question.id] ?? ''}
               onChange={(e) => setAnswer(question, e.target.value)}
               rows={4}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="field mt-1 w-full rounded px-3 py-2"
             />
           )}
         </div>
       ))}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
 
       <button
         type="submit"
         disabled={submitting}
-        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+        className="btn-primary rounded px-4 py-2 disabled:opacity-50"
       >
         {submitting ? 'Submitting...' : 'Continue'}
       </button>

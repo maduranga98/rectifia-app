@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLE_LABELS } from '../constants/roles'
+import AppHeader from '../components/shared/AppHeader'
 
 function Dashboard() {
   const { user, role } = useAuth()
@@ -13,21 +14,25 @@ function Dashboard() {
   }
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-4 p-8">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen">
+      <AppHeader
+        title="Rectifia"
+        subtitle={role ? ROLE_LABELS[role] ?? role : 'Staff'}
+        actions={
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded border border-navy-600 px-3 py-1.5 text-sm text-white hover:bg-navy-800"
+          >
+            Sign out
+          </button>
+        }
+      />
+
+      <div className="mx-auto flex max-w-5xl flex-col gap-4 p-6">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm"
-        >
-          Sign out
-        </button>
+        <p className="text-sm text-muted">Signed in as {user?.email}</p>
       </div>
-      <p className="text-sm text-gray-600">
-        Signed in as {user?.email}
-        {role ? ` (${ROLE_LABELS[role] ?? role})` : ''}
-      </p>
     </div>
   )
 }

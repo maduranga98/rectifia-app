@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { listPulseResponses, listPulseSummaries } from '../../services/pulseCheckService'
 
 const TREND_STYLE = {
-  improving: 'border-green-200 bg-green-50 text-green-700',
-  stable: 'border-gray-200 bg-gray-50 text-gray-600',
-  declining: 'border-red-300 bg-red-50 text-red-700',
-  insufficient_data: 'border-gray-200 bg-gray-50 text-gray-400',
+  improving: 'tone-low',
+  stable: 'tone-neutral',
+  declining: 'tone-critical',
+  insufficient_data: 'border-line bg-canvas text-muted',
 }
 
 // Manager-facing view. This ONLY ever calls listPulseSummaries -
@@ -25,19 +25,19 @@ function ManagerAggregateView({ companyId }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-700">Team wellness (aggregate)</h2>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <h2 className="text-sm font-semibold text-charcoal">Team wellness (aggregate)</h2>
+      {error && <p className="text-sm text-critical">{error}</p>}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {summaries.map((s) => (
-          <div key={s.id} className="rounded border border-gray-200 p-4">
+          <div key={s.id} className="rounded-lg border border-line bg-surface p-4">
             <p className="font-medium">{s.department}</p>
-            <p className="text-xs text-gray-500">{s.period}</p>
+            <p className="text-xs text-muted">{s.period}</p>
             <p className="mt-2 text-2xl font-semibold">{s.averageSentiment ?? '-'}</p>
-            <p className="text-xs text-gray-400">avg. sentiment - {s.responseCount} response(s)</p>
+            <p className="text-xs text-muted">avg. sentiment - {s.responseCount} response(s)</p>
           </div>
         ))}
       </div>
-      {summaries.length === 0 && !error && <p className="text-sm text-gray-500">No pulse data yet.</p>}
+      {summaries.length === 0 && !error && <p className="text-sm text-muted">No pulse data yet.</p>}
     </div>
   )
 }
@@ -65,11 +65,11 @@ function IndividualResponsesView({ companyId }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-700">Individual responses</h2>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <h2 className="text-sm font-semibold text-charcoal">Individual responses</h2>
+      {error && <p className="text-sm text-critical">{error}</p>}
       <ul className="flex flex-col gap-3">
         {responses.map((r) => (
-          <li key={r.id} className="rounded border border-gray-200 p-4 text-sm">
+          <li key={r.id} className="rounded-lg border border-line bg-surface p-4 text-sm">
             <div className="flex items-center justify-between">
               <span className="font-medium">{r.employeeId}</span>
               <span
@@ -78,18 +78,18 @@ function IndividualResponsesView({ companyId }) {
                 {r.trendFlag ?? 'pending analysis'}
               </span>
             </div>
-            <p className="mt-1 text-xs text-gray-500">{r.department ?? 'Unspecified department'}</p>
+            <p className="mt-1 text-xs text-muted">{r.department ?? 'Unspecified department'}</p>
             {r.sentimentSummary && <p className="mt-2">{r.sentimentSummary}</p>}
             {Array.isArray(r.themes) && r.themes.length > 0 && (
-              <p className="mt-1 text-xs text-gray-400">Themes: {r.themes.join(', ')}</p>
+              <p className="mt-1 text-xs text-muted">Themes: {r.themes.join(', ')}</p>
             )}
             {r.crisisFlag && (
-              <p className="mt-2 text-xs font-semibold text-red-600">Crisis flagged - contact triggered</p>
+              <p className="mt-2 text-xs font-semibold text-critical">Crisis flagged - contact triggered</p>
             )}
           </li>
         ))}
       </ul>
-      {responses.length === 0 && !error && <p className="text-sm text-gray-500">No responses yet.</p>}
+      {responses.length === 0 && !error && <p className="text-sm text-muted">No responses yet.</p>}
     </div>
   )
 }

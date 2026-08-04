@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { listAssignedCases } from '../../services/handlerService'
 
 const STATUS_STYLE = {
-  open: 'border-gray-200 bg-gray-50 text-gray-700',
-  assigned: 'border-blue-200 bg-blue-50 text-blue-700',
-  needs_manual_assignment: 'border-amber-300 bg-amber-50 text-amber-700',
-  closed: 'border-green-200 bg-green-50 text-green-700',
+  open: 'border-line bg-canvas text-charcoal',
+  assigned: 'tone-info',
+  needs_manual_assignment: 'tone-high',
+  closed: 'tone-low',
 }
 
 function formatTimestamp(value) {
@@ -45,15 +45,15 @@ function HandlerDashboard({ onSelectCase }) {
     <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">My cases</h1>
-        <button type="button" onClick={refresh} className="text-sm text-blue-600 underline">
+        <button type="button" onClick={refresh} className="text-sm text-navy underline">
           Refresh
         </button>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {loading && cases.length === 0 && <p className="text-sm text-gray-500">Loading...</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
+      {loading && cases.length === 0 && <p className="text-sm text-muted">Loading...</p>}
       {!loading && cases.length === 0 && !error && (
-        <p className="text-sm text-gray-500">No cases are currently assigned to you.</p>
+        <p className="text-sm text-muted">No cases are currently assigned to you.</p>
       )}
 
       <ul className="flex flex-col gap-3">
@@ -62,22 +62,22 @@ function HandlerDashboard({ onSelectCase }) {
             <button
               type="button"
               onClick={() => onSelectCase?.(c.id)}
-              className="flex w-full items-center justify-between rounded border border-gray-200 px-4 py-3 text-left hover:bg-gray-50"
+              className="flex w-full items-center justify-between rounded border border-line bg-surface px-4 py-3 text-left hover:bg-canvas"
             >
               <div>
                 <p className="font-medium">{c.caseId ?? c.id}</p>
-                <p className="text-xs text-gray-500">{c.category ?? 'Uncategorized'}</p>
+                <p className="text-xs text-muted">{c.category ?? 'Uncategorized'}</p>
               </div>
               <div className="flex items-center gap-3">
                 {c.priority === 'high' && (
-                  <span className="rounded border border-red-300 bg-red-50 px-2 py-0.5 text-xs text-red-700">
+                  <span className="tone-high rounded border px-2 py-0.5 text-xs">
                     High priority
                   </span>
                 )}
                 <span className={`rounded border px-2 py-0.5 text-xs ${STATUS_STYLE[c.status] ?? STATUS_STYLE.open}`}>
                   {c.status ?? 'open'}
                 </span>
-                <span className="text-xs text-gray-400">{formatTimestamp(c.assignedAt)}</span>
+                <span className="text-xs text-muted">{formatTimestamp(c.assignedAt)}</span>
               </div>
             </button>
           </li>

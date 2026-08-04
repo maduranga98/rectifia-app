@@ -87,13 +87,13 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+          className="field mt-1 w-full rounded px-3 py-2"
         />
       </div>
 
       <div>
         <span className="block text-sm font-medium">Jurisdictions</span>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-muted">
           Select every jurisdiction your company operates in. A company can
           operate across multiple jurisdictions simultaneously.
         </p>
@@ -101,7 +101,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
           {JURISDICTIONS.map((code) => (
             <label
               key={code}
-              className="flex items-center gap-2 rounded border border-gray-300 px-3 py-2"
+              className="flex items-center gap-2 rounded border border-line bg-surface px-3 py-2"
             >
               <input
                 type="checkbox"
@@ -115,7 +115,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
           ))}
         </div>
         {jurisdictions.length > 1 && strictestJurisdiction && (
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-muted">
             Default compliance timeline will follow{' '}
             <strong>{strictestJurisdiction}</strong>, the strictest of your
             selected jurisdictions, unless overridden per-jurisdiction later.
@@ -134,7 +134,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
           id="subscription-tier"
           value={subscriptionTier}
           onChange={(e) => setSubscriptionTier(e.target.value)}
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+          className="field mt-1 w-full rounded px-3 py-2"
         >
           {SUBSCRIPTION_TIERS.map((tier) => (
             <option key={tier} value={tier}>
@@ -146,7 +146,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
 
       <div>
         <span className="block text-sm font-medium">Departments</span>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-muted">
           Departments feed case routing. You can assign a department head
           later.
         </p>
@@ -156,12 +156,12 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
             value={newDepartmentName}
             onChange={(e) => setNewDepartmentName(e.target.value)}
             placeholder="Department name"
-            className="flex-1 rounded border border-gray-300 px-3 py-2"
+            className="field flex-1 rounded px-3 py-2"
           />
           <button
             type="button"
             onClick={addDepartment}
-            className="rounded border border-gray-300 px-3 py-2"
+            className="btn-secondary rounded px-3 py-2"
           >
             Add
           </button>
@@ -171,13 +171,13 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
             {departments.map((dept) => (
               <li
                 key={dept.id}
-                className="flex items-center justify-between rounded border border-gray-200 px-3 py-2"
+                className="flex items-center justify-between rounded border border-line bg-surface px-3 py-2"
               >
                 <span>{dept.name}</span>
                 <button
                   type="button"
                   onClick={() => removeDepartment(dept.id)}
-                  className="text-sm text-red-600"
+                  className="text-sm text-critical"
                 >
                   Remove
                 </button>
@@ -187,13 +187,13 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
         )}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
           disabled={submitting || !name.trim() || jurisdictions.length === 0}
-          className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+          className="btn-primary rounded px-4 py-2 disabled:opacity-50"
         >
           {submitting ? 'Creating...' : 'Create company'}
         </button>
@@ -202,7 +202,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
             type="button"
             onClick={onCancel}
             disabled={submitting}
-            className="rounded border border-gray-300 px-4 py-2 text-sm disabled:opacity-50"
+            className="btn-secondary rounded px-4 py-2 text-sm disabled:opacity-50"
           >
             Cancel
           </button>
