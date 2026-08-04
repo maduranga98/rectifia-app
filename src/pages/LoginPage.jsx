@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
-import { signIn, checkSuperAdmin } from '../services/authService'
+import { signIn } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 
 // Staff sign-in only. There is no self-signup link here on purpose - the
@@ -14,18 +14,19 @@ function LoginPage() {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
-  const { user: currentUser, isSuperAdmin: currentIsSuperAdmin, loading } = useAuth()
+  const { user: currentUser, loading } = useAuth()
 
   async function handleSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
     try {
-      const user = await signIn(email, password)
-      const isSuperAdmin = await checkSuperAdmin(user.uid)
-      const fallback = isSuperAdmin ? '/super-admin' : '/dashboard'
-      // Return the user to whatever ProtectedRoute bounced them off of.
-      navigate(location.state?.from?.pathname ?? fallback, { replace: true })
+      await signIn(email, password)
+      // Return the user to whatever ProtectedRoute bounced them off of,
+      // otherwise hand off to "/" - RootRedirect is the single place that
+      // decides which dashboard a role belongs on (a Company Admin, for
+      // one, belongs on /admin, not /dashboard).
+      navigate(location.state?.from?.pathname ?? '/', { replace: true })
     } catch (err) {
       setError(
         err?.code?.startsWith('auth/')
@@ -39,7 +40,7 @@ function LoginPage() {
 
   // Already signed in - don't show the form again, go where they belong.
   if (!loading && currentUser) {
-    return <Navigate to={currentIsSuperAdmin ? '/super-admin' : '/dashboard'} replace />
+    return <Navigate to="/" replace />
   }
 
   return (
