@@ -19,6 +19,35 @@ service cloud.firestore {
     function isPulseReviewer(companyId) { return hasRole(companyId, 'pulseCheckReviewer'); }
     function isManager(companyId) { return hasRole(companyId, 'manager'); }
 
+    // "A Company Admin of some company" - deliberately not scoped to one
+    // company, and used for exactly one thing: the slug-uniqueness probe in
+    // src/services/companyService.js's allocateUniqueSlug, which has to ask
+    // whether a candidate slug is taken platform-wide before claiming it.
+    // See the companies match block for why this is bounded to limit(1).
+    function isAnyCompanyAdmin() {
+      return request.auth != null && request.auth.token.role == 'companyAdmin';
+    }
+
+    // The public reporting slug is the one field on a company doc that an
+    // anonymous reporter's link resolves against, so once it exists it must
+    // never move: a reassigned slug silently breaks every printed QR code and
+    // could point reporters at a different company. A Company Admin may write
+    // it exactly once, while it is still absent (the self-service "Generate
+    // reporting link" action on the overview page); after that only a Super
+    // Admin can touch it.
+    function slugUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['slug']);
+    }
+    function claimsMissingSlug() {
+      return (!('slug' in resource.data) || resource.data.slug == null)
+        && request.resource.data.slug is string
+        && request.resource.data.slug.size() > 0
+        && request.resource.data.slug.size() <= 100
+        // Same shape slugifyCompanyName produces: lowercase alphanumeric
+        // groups joined by single hyphens, no leading/trailing hyphen.
+        && request.resource.data.slug.matches('^[a-z0-9]+(-[a-z0-9]+)*$');
+    }
+
     // Platform Super Admin: allowlist membership at superAdmins/{uid}, the
     // same check AuthContext/SuperAdminLoginPage make client-side. get()/
     // exists() here bypass the read rule on that collection, so this works
@@ -34,10 +63,24 @@ service cloud.firestore {
     // anyone could previously create, rewrite, or delete any company doc.
     // A Company Admin keeps write access to their own company because
     // CompanyAdminPanel edits departments and jurisdictions in place.
+    //
+    // Reading someone else's company doc stays off-limits: `get` is still the
+    // requester's own company (or any, for a Super Admin). `list` is opened up
+    // one document at a time, and only for a Company Admin, purely so
+    // allocateUniqueSlug can ask "is this candidate slug taken?" before
+    // claiming one - the query it issues carries limit(1), and a
+    // collection-wide dump of the company list has no such limit, so it is
+    // still denied. Slug writes are narrower still: see slugUnchanged() /
+    // claimsMissingSlug() above - any other role has no update path here at
+    // all, so a company's reporting slug is only ever writable by its own
+    // Company Admin (once) or a Super Admin.
     match /companies/{companyId} {
-      allow read: if isSuperAdmin() || isCompanyStaff(companyId);
+      allow get: if isSuperAdmin() || isCompanyStaff(companyId);
+      allow list: if isSuperAdmin()
+        || (isAnyCompanyAdmin() && request.query.limit <= 1);
       allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin() || isCompanyAdmin(companyId);
+      allow update: if isSuperAdmin()
+        || (isCompanyAdmin(companyId) && (slugUnchanged() || claimsMissingSlug()));
       allow delete: if isSuperAdmin();
     }
 
