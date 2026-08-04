@@ -141,8 +141,14 @@ service cloud.firestore {
     // direct client write - that's the boundary that stops someone minting
     // their own companyAdmin/hrCoordinator staff record. A Company Admin can
     // still edit an existing staff doc directly (e.g. deactivating someone).
+    // Super Admin reads staff too, for exactly one reason: the manual-
+    // assignment queue (SuperAdminDashboardPage) has to offer that company's
+    // Case Handlers to pick from when resolving a case routeCase.js could not
+    // route. A staff doc is account metadata (email, role, department, job
+    // title) - it is not case content, so this does not widen the
+    // no-case-content-access rule.
     match /companies/{companyId}/staff/{staffId} {
-      allow read: if isCompanyStaff(companyId);
+      allow read: if isCompanyStaff(companyId) || isSuperAdmin();
       allow create: if false;
       allow update, delete: if isCompanyAdmin(companyId);
     }
@@ -199,8 +205,16 @@ service cloud.firestore {
     // above) - the module 2 role design keeps Company Admin to settings and
     // structure only, never case content. Its one case-derived read is the
     // aggregate-only companies/{companyId}/stats/{statId} rollup above.
+    //
+    // Super Admin gets a deliberately narrower slice of the same mirror: only
+    // documents still sitting in 'needs_manual_assignment', which is exactly
+    // the queue SuperAdminDashboardPage renders. Because the condition is on
+    // resource.data, a list query only succeeds if it filters on that status
+    // itself (listCasesNeedingManualAssignment does) - so this is not a path
+    // to the platform's whole case table, and it is still metadata only.
     match /caseMetadata/{caseId} {
-      allow read: if isHrCoordinator(resource.data.companyId);
+      allow read: if isHrCoordinator(resource.data.companyId)
+        || (isSuperAdmin() && resource.data.status == 'needs_manual_assignment');
       allow write: if false;
     }
 

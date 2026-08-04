@@ -15,6 +15,12 @@ const COMPANIES_COLLECTION = 'companies'
 // `responses` (questionnaire free text), never anything from messages/.
 // Keeping this an explicit allowlist (not an omit-list) means a future field
 // added to cases/{caseId} doesn't leak into this mirror by accident.
+//
+// routingReason is on the list because it is what routeCase.js records when
+// it can't route a case automatically (missing_company_id / no_routing_rule /
+// conflict_of_interest) - the Super Admin manual-assignment queue needs it to
+// explain why a case is waiting. It is a fixed enum written by routing code,
+// never anything the reporter typed.
 function pickMetadata(data) {
   return {
     companyId: data.companyId ?? null,
@@ -22,6 +28,7 @@ function pickMetadata(data) {
     severityScore: data.severityScore ?? null,
     evidenceScore: data.evidenceScore ?? null,
     status: data.status ?? null,
+    routingReason: data.routingReason ?? null,
     assignedHandlerId: data.assignedHandlerId ?? null,
     department: data.department ?? null,
     priority: data.priority ?? data.queuePriority ?? null,

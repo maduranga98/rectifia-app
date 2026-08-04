@@ -4,6 +4,7 @@ import { listCompanies } from '../services/companyService'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import CompanySetup from '../components/dashboard/CompanySetup'
+import ManualAssignmentQueue from '../components/dashboard/ManualAssignmentQueue'
 import AppShell from '../components/shared/AppShell'
 import Alert from '../components/ui/Alert'
 import Badge from '../components/ui/Badge'
@@ -21,10 +22,13 @@ const BILLING_TONE = {
   unpaid: 'tone-critical',
 }
 
-// Per Module 2's no-case-content-access rule, this reads only company-level
-// metadata (name, subscriptionTier, case-count) from the `companies` doc -
-// it must never query or display anything from `cases`, `caseMetadata`, or
-// a messages/questionnaire subcollection.
+// Per Module 2's no-case-content-access rule, the companies view reads only
+// company-level metadata (name, subscriptionTier, case-count) from the
+// `companies` doc, and the manual-assignment queue below reads only
+// caseMetadata/{caseId} - the metadata-only mirror, narrowed by
+// firestore.rules to cases still sitting in 'needs_manual_assignment'.
+// Neither ever touches `cases`, a messages subcollection, or questionnaire
+// responses.
 //
 // Registering a company is a Super Admin action and this is the only place
 // it happens: the CompanySetup form below already existed but was not
@@ -35,6 +39,8 @@ function SuperAdminDashboardPage() {
   const [error, setError] = useState(null)
   const [showRegisterForm, setShowRegisterForm] = useState(false)
   const [notice, setNotice] = useState(null)
+  const [section, setSection] = useState('companies')
+  const [manualAssignmentCount, setManualAssignmentCount] = useState(null)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -83,23 +89,40 @@ function SuperAdminDashboardPage() {
     </Button>
   )
 
+  const isCompanies = section === 'companies'
+
   return (
     <AppShell
       scopeLabel="Lumora platform"
-      navItems={[{ id: 'companies', label: 'Companies', icon: 'company' }]}
-      activeId="companies"
+      navItems={[
+        { id: 'companies', label: 'Companies', icon: 'company' },
+        { id: 'manualAssignment', label: 'Manual assignment', icon: 'routing' },
+      ]}
+      activeId={section}
+      onSelect={setSection}
       userEmail={user?.email}
       roleLabel="Super Admin"
       onSignOut={handleSignOut}
       eyebrow="Platform administration"
-      title="Companies"
-      headerActions={registerButton}
+      title={isCompanies ? 'Companies' : 'Manual assignment'}
+      headerActions={isCompanies ? registerButton : null}
     >
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      {/* The queue stays mounted across sections so its count is available to
+          the stat tile on the companies view - switching sections shouldn't
+          re-run the query, and a Super Admin shouldn't have to open the
+          section to find out something is waiting there. */}
+      <div className={isCompanies ? 'hidden' : 'mx-auto flex max-w-5xl flex-col gap-6'}>
+        <ManualAssignmentQueue
+          companies={companies}
+          onCountChange={setManualAssignmentCount}
+        />
+      </div>
+
+      <div className={isCompanies ? 'mx-auto flex max-w-5xl flex-col gap-6' : 'hidden'}>
         {notice && <Alert variant="success">{notice}</Alert>}
         {error && <Alert variant="error">{error}</Alert>}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile label="Companies" value={companies.length} tone="tone-info" icon="company" />
           <StatTile
             label="Cases this period"
@@ -113,6 +136,13 @@ function SuperAdminDashboardPage() {
             value={attentionCount}
             tone={attentionCount > 0 ? 'tone-critical' : 'tone-low'}
             icon="billing"
+          />
+          <StatTile
+            label="Needs manual assignment"
+            hint="Cases automatic routing could not place"
+            value={manualAssignmentCount ?? '—'}
+            tone={manualAssignmentCount > 0 ? 'tone-high' : 'tone-low'}
+            icon="routing"
           />
         </div>
 
