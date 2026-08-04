@@ -9,11 +9,14 @@ export const ROLES = {
   CASE_HANDLER: 'caseHandler',
   MANAGER: 'manager',
   PULSE_CHECK_REVIEWER: 'pulseCheckReviewer',
-  // Platform-level role, deliberately excluded from ASSIGNABLE_ROLES below:
-  // a Super Admin account is created directly by Lumora, never issued
-  // through the inviteStaff flow, and isn't scoped to any companyId.
-  SUPER_ADMIN: 'super_admin',
 }
+
+// Super Admin is not a custom-claim role at all - it's allowlist membership
+// in the superAdmins Firestore collection (doc id = uid), checked via
+// authService.checkSuperAdmin / AuthContext's isSuperAdmin. It's not part of
+// ROLES/ASSIGNABLE_ROLES below because it's never issued through the
+// inviteStaff flow and isn't scoped to any companyId - entries are added
+// directly by Lumora via functions/scripts/addSuperAdmin.js.
 
 export const ROLE_LABELS = {
   [ROLES.COMPANY_ADMIN]: 'Company Admin',

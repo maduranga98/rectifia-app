@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signIn, signOutUser, getUserClaims } from '../services/authService'
-import { ROLES } from '../constants/roles'
+import { signIn, signOutUser, checkSuperAdmin } from '../services/authService'
 
 // Platform-level login, deliberately separate from the staff LoginPage:
 // different route, different heading, dark theme so it never gets mistaken
 // for a company-scoped sign-in. Same Firebase Auth mechanism underneath,
-// but only role === 'super_admin' may proceed past this page - anyone else
-// gets an access-denied message here, never a redirect into a company
-// dashboard.
+// but only accounts listed in the superAdmins Firestore collection (doc id
+// = uid, see authService.checkSuperAdmin) may proceed past this page -
+// anyone else gets an access-denied message here, never a redirect into a
+// company dashboard.
 function SuperAdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,8 +22,8 @@ function SuperAdminLoginPage() {
     setError(null)
     try {
       const user = await signIn(email, password)
-      const { role } = await getUserClaims(user)
-      if (role !== ROLES.SUPER_ADMIN) {
+      const isSuperAdmin = await checkSuperAdmin(user.uid)
+      if (!isSuperAdmin) {
         await signOutUser()
         setError('Access denied. This sign-in is for Lumora platform administrators only.')
         return

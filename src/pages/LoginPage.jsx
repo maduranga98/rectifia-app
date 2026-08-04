@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { signIn, getUserClaims } from '../services/authService'
-import { ROLES } from '../constants/roles'
+import { signIn, checkSuperAdmin } from '../services/authService'
 
 // Staff sign-in only. There is no self-signup link here on purpose - the
 // only ways to get a staff account are an invite (AcceptInvitePage) or one
@@ -20,8 +19,8 @@ function LoginPage() {
     setError(null)
     try {
       const user = await signIn(email, password)
-      const { role } = await getUserClaims(user)
-      navigate(role === ROLES.SUPER_ADMIN ? '/super-admin' : '/dashboard', { replace: true })
+      const isSuperAdmin = await checkSuperAdmin(user.uid)
+      navigate(isSuperAdmin ? '/super-admin' : '/dashboard', { replace: true })
     } catch (err) {
       setError('Incorrect email or password')
     } finally {
