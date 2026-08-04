@@ -74,40 +74,78 @@ export async function updateStaffStatus(companyId, staffId, status) {
   await updateDoc(doc(firestore, 'companies', companyId, 'staff', staffId), { status })
 }
 
-// The cases routeCase.js could not route on its own (missing_company_id,
-// no_routing_rule, conflict_of_interest) - the queue behind the Super Admin
-// dashboard's manual-assignment section. Reads caseMetadata/{caseId}, the
-// same metadata-only mirror the HR Coordinator dashboard uses, never
-// cases/{caseId}; firestore.rules narrows Super Admin's read of that mirror
-// to exactly this status, which is why the where() clause is not optional
-// window dressing - drop it and the query is denied outright.
+const CASE_METADATA_COLLECTION = 'caseMetadata'
+const MANUAL_ASSIGNMENT_STATUS = 'needs_manual_assignment'
+
+// Reasons routeCase.js hands to the platform operator rather than the company
+// (MANUAL_ASSIGNMENT_AUDIENCE in functions/src/intake/routeCase.js).
+// 'no_routing_rule' is deliberately not here - that one is the company's own
+// configuration gap and is resolved on RoutingRulesPage.
+const SUPER_ADMIN_ROUTING_REASONS = ['conflict_of_interest', 'missing_company_id']
+
+// Both queue readers below go through caseMetadata/{caseId}, the metadata-only
+// mirror the HR Coordinator dashboard uses, never cases/{caseId} - and
+// firestore.rules narrows each role's read of that mirror to exactly the
+// status + routingReason combination it is allowed to act on. The where()
+// clauses are therefore not client-side filtering: drop one and the query is
+// denied outright.
 //
-// The returned rows are built field by field rather than by spreading the
-// document, the same explicit-allowlist habit pickMetadata() follows in
-// functions/src/intake/syncCaseMetadata.js: a field added to the mirror later
-// does not silently start appearing in the Super Admin's view.
-export async function listCasesNeedingManualAssignment() {
-  const snapshot = await getDocs(
-    query(
-      collection(firestore, 'caseMetadata'),
-      where('status', '==', 'needs_manual_assignment')
+// Rows are built field by field rather than by spreading the document, the
+// same explicit-allowlist habit pickMetadata() follows in
+// functions/src/intake/syncCaseMetadata.js - a field added to the mirror later
+// does not silently start appearing in either view.
+function toQueueRow(d) {
+  const data = d.data()
+  return {
+    // The metadata doc id is the Case ID itself (see submitCase.js).
+    caseId: d.id,
+    companyId: data.companyId ?? null,
+    category: data.category ?? null,
+    department: data.department ?? null,
+    priority: data.priority ?? null,
+    routingReason: data.routingReason ?? null,
+    createdAt: data.createdAt ?? null,
+  }
+}
+
+function newestFirst(rows) {
+  return rows.sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
+}
+
+// The Super Admin queue: conflict-of-interest cases (which the company must
+// never resolve itself) plus the missing_company_id system-error fallback.
+// Issued as one equality query per reason rather than a single `in` query so
+// each one lines up with a matching disjunct in the caseMetadata rule.
+export async function listCasesForSuperAdminAssignment() {
+  const snapshots = await Promise.all(
+    SUPER_ADMIN_ROUTING_REASONS.map((reason) =>
+      getDocs(
+        query(
+          collection(firestore, CASE_METADATA_COLLECTION),
+          where('status', '==', MANUAL_ASSIGNMENT_STATUS),
+          where('routingReason', '==', reason)
+        )
+      )
     )
   )
-  return snapshot.docs
-    .map((d) => {
-      const data = d.data()
-      return {
-        // The metadata doc id is the Case ID itself (see submitCase.js).
-        caseId: d.id,
-        companyId: data.companyId ?? null,
-        category: data.category ?? null,
-        department: data.department ?? null,
-        priority: data.priority ?? null,
-        routingReason: data.routingReason ?? null,
-        createdAt: data.createdAt ?? null,
-      }
-    })
-    .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
+  return newestFirst(snapshots.flatMap((snapshot) => snapshot.docs.map(toQueueRow)))
+}
+
+// The Company Admin queue on RoutingRulesPage: this company's cases that
+// stalled purely because no rule covered their (category, department) bucket.
+// Conflict-of-interest cases can't appear here - the rule denies this role any
+// read of them, not just this query.
+export async function listCasesMissingRoutingRule(companyId) {
+  if (!companyId) return []
+  const snapshot = await getDocs(
+    query(
+      collection(firestore, CASE_METADATA_COLLECTION),
+      where('companyId', '==', companyId),
+      where('status', '==', MANUAL_ASSIGNMENT_STATUS),
+      where('routingReason', '==', 'no_routing_rule')
+    )
+  )
+  return newestFirst(snapshot.docs.map(toQueueRow))
 }
 
 // Reassigns a case to a different Case Handler - used both for ordinary
