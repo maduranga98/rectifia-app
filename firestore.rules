@@ -26,6 +26,17 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    // Platform-level Super Admin allowlist, doc id == the account's Firebase
+    // Auth uid. SuperAdminLoginPage/AuthContext check "does a doc exist at
+    // superAdmins/{my uid}" to decide super-admin access - not a custom
+    // claim. Entries are added only via functions/scripts/addSuperAdmin.js
+    // (Admin SDK, run by hand), never by a client write; a signed-in user
+    // may only read their own doc, just enough to check their own status.
+    match /superAdmins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
     // Case documents are gated by a passcode, not by auth, so client SDK
     // access is never allowed - not even by a correct Case ID. Reads and
     // writes only ever happen through the Cloud Functions in

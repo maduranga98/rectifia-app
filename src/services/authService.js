@@ -6,7 +6,10 @@ import {
   confirmPasswordReset,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
-import { auth, functions } from './firebase'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, functions, firestore } from './firebase'
+
+const SUPER_ADMINS_COLLECTION = 'superAdmins'
 
 const acceptInviteCallable = httpsCallable(functions, 'acceptInvite')
 
@@ -55,4 +58,13 @@ export async function getUserClaims(user, forceRefresh = false) {
     role: tokenResult.claims.role ?? null,
     companyId: tokenResult.claims.companyId ?? null,
   }
+}
+
+// Super admin status is an allowlist doc at superAdmins/{uid}, not a custom
+// claim - entries are added by hand via functions/scripts/addSuperAdmin.js.
+// firestore.rules only lets a signed-in user read their own doc, so this
+// must be called with that user's own uid.
+export async function checkSuperAdmin(uid) {
+  const snapshot = await getDoc(doc(firestore, SUPER_ADMINS_COLLECTION, uid))
+  return snapshot.exists()
 }

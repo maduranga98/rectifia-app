@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/shared/ProtectedRoute'
-import { ROLES } from './constants/roles'
 import Home from './pages/Home'
 import Submit from './pages/Submit'
 import CaseDetail from './pages/CaseDetail'
@@ -29,7 +28,7 @@ function App() {
         <Route
           path="/super-admin"
           element={
-            <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]} loginPath="/super-admin/login">
+            <ProtectedRoute requireSuperAdmin loginPath="/super-admin/login">
               <SuperAdminDashboardPage />
             </ProtectedRoute>
           }
