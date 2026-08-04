@@ -13,6 +13,7 @@ const COMPANIES_COLLECTION = 'companies'
 const ROUTING_RULES_SUBCOLLECTION = 'routingRules'
 const STAFF_SUBCOLLECTION = 'staff'
 const NOTIFICATIONS_COLLECTION = 'notifications'
+const SUPER_ADMINS_COLLECTION = 'superAdmins'
 
 const LOW_SCORE_THRESHOLD = 30
 const HIGH_SEVERITY_THRESHOLD = 70
@@ -261,6 +262,40 @@ exports.routeCase = onDocumentUpdated(CASES_COLLECTION + '/{caseId}', async (eve
   })
 })
 
+// Super Admin is allowlist membership at superAdmins/{uid}, not a custom
+// claim - the same check firestore.rules, authService.checkSuperAdmin, and
+// createCompanyAdmin.js make.
+async function isSuperAdminUid(firestore, uid) {
+  const snapshot = await firestore.collection(SUPER_ADMINS_COLLECTION).doc(uid).get()
+  return snapshot.exists
+}
+
+// Closes out the queued superAdminReview signals for a case once a human has
+// actually assigned it, so notifySuperAdmin's 'pending' rows don't pile up
+// forever. Filtered on caseId alone and narrowed in memory - three equality
+// filters would be a composite index for a handful of docs.
+async function resolveSuperAdminReviewNotifications(firestore, caseId, actorUid) {
+  const snapshot = await firestore
+    .collection(NOTIFICATIONS_COLLECTION)
+    .where('caseId', '==', caseId)
+    .get()
+
+  const batch = firestore.batch()
+  let pendingCount = 0
+  snapshot.docs.forEach((notificationDoc) => {
+    const data = notificationDoc.data()
+    if (data.type !== 'superAdminReview' || data.status !== 'pending') return
+    pendingCount += 1
+    batch.update(notificationDoc.ref, {
+      status: 'resolved',
+      resolvedBy: actorUid,
+      resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+  })
+
+  if (pendingCount > 0) await batch.commit()
+}
+
 // Admin-facing manual reassignment. Case documents are locked down in
 // firestore.rules (no direct client read/write), so this callable - run
 // with the Admin SDK - is the only path routingService.js has to change who
@@ -281,10 +316,18 @@ exports.reassignCase = onCall(async (request) => {
   // HRCoordinatorDashboard), not something the assigned handler does - verify
   // the authenticated caller's role from their staff record keyed by
   // request.auth.uid, never a client-supplied actorId.
+  //
+  // A platform Super Admin is also allowed through, and is the only caller who
+  // can be resolving a case from the manual-assignment queue on
+  // SuperAdminDashboardPage: they belong to no company, so they have no staff
+  // record for loadCallerRole to find.
   const REASSIGN_ROLES = ['companyAdmin', 'hrCoordinator']
-  const actorRole = await loadCallerRole(firestore, companyId, actorUid)
-  if (!REASSIGN_ROLES.includes(actorRole)) {
-    throw new HttpsError('permission-denied', 'You do not have permission to reassign cases')
+  const superAdmin = await isSuperAdminUid(firestore, actorUid)
+  if (!superAdmin) {
+    const actorRole = await loadCallerRole(firestore, companyId, actorUid)
+    if (!REASSIGN_ROLES.includes(actorRole)) {
+      throw new HttpsError('permission-denied', 'You do not have permission to reassign cases')
+    }
   }
 
   const staffSnapshot = await firestore
@@ -303,13 +346,36 @@ exports.reassignCase = onCall(async (request) => {
     throw new HttpsError('not-found', 'No such case')
   }
 
-  await firestore.collection(CASES_COLLECTION).doc(caseId).update({
+  // The caller's authority was established against `companyId`, so that had
+  // better be the company this case actually belongs to - otherwise a Company
+  // Admin could hand another tenant's case to one of their own staff.
+  const caseCompanyId = caseSnapshot.data().companyId ?? null
+  if (caseCompanyId && caseCompanyId !== companyId) {
+    throw new HttpsError('permission-denied', 'This case belongs to a different company')
+  }
+
+  // A case routed with reason 'missing_company_id' never got a company at all,
+  // so assigning a handler also has to record which company that handler
+  // belongs to - otherwise the case stays orphaned from every company-scoped
+  // view. Only a Super Admin can make that call; a company-scoped role
+  // adopting a stray case into their own tenant is exactly the move the check
+  // above exists to prevent.
+  const update = {
     assignedHandlerId: handlerId,
     assignedAt: admin.firestore.FieldValue.serverTimestamp(),
     status: 'assigned',
     routingReason: 'manual_reassignment',
     reassignedBy: actorUid,
-  })
+  }
+  if (!caseCompanyId) {
+    if (!superAdmin) {
+      throw new HttpsError('permission-denied', 'This case is not associated with a company')
+    }
+    update.companyId = companyId
+  }
+
+  await firestore.collection(CASES_COLLECTION).doc(caseId).update(update)
+  await resolveSuperAdminReviewNotifications(firestore, caseId, actorUid)
 
   return { success: true }
 })

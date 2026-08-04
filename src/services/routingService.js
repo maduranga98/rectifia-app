@@ -1,4 +1,14 @@
-import { collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { firestore, functions } from './firebase'
 
@@ -62,6 +72,42 @@ export async function updateStaffStatus(companyId, staffId, status) {
     throw new Error('status must be active or suspended')
   }
   await updateDoc(doc(firestore, 'companies', companyId, 'staff', staffId), { status })
+}
+
+// The cases routeCase.js could not route on its own (missing_company_id,
+// no_routing_rule, conflict_of_interest) - the queue behind the Super Admin
+// dashboard's manual-assignment section. Reads caseMetadata/{caseId}, the
+// same metadata-only mirror the HR Coordinator dashboard uses, never
+// cases/{caseId}; firestore.rules narrows Super Admin's read of that mirror
+// to exactly this status, which is why the where() clause is not optional
+// window dressing - drop it and the query is denied outright.
+//
+// The returned rows are built field by field rather than by spreading the
+// document, the same explicit-allowlist habit pickMetadata() follows in
+// functions/src/intake/syncCaseMetadata.js: a field added to the mirror later
+// does not silently start appearing in the Super Admin's view.
+export async function listCasesNeedingManualAssignment() {
+  const snapshot = await getDocs(
+    query(
+      collection(firestore, 'caseMetadata'),
+      where('status', '==', 'needs_manual_assignment')
+    )
+  )
+  return snapshot.docs
+    .map((d) => {
+      const data = d.data()
+      return {
+        // The metadata doc id is the Case ID itself (see submitCase.js).
+        caseId: d.id,
+        companyId: data.companyId ?? null,
+        category: data.category ?? null,
+        department: data.department ?? null,
+        priority: data.priority ?? null,
+        routingReason: data.routingReason ?? null,
+        createdAt: data.createdAt ?? null,
+      }
+    })
+    .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
 }
 
 // Reassigns a case to a different Case Handler - used both for ordinary
