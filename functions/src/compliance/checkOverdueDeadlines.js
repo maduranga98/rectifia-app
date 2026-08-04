@@ -1,6 +1,7 @@
 const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
+const { recomputeCompanyStats } = require('../company/computeCompanyStats')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -53,8 +54,10 @@ exports.checkOverdueDeadlines = onSchedule('every day 00:00', async () => {
 
   const now = Date.now()
   const windowEnd = now + ESCALATION_WINDOW_MS
+  const companyIds = new Set()
 
   for (const doc of openCasesSnapshot.docs) {
+    companyIds.add(doc.data().companyId)
     const caseData = doc.data()
 
     for (const check of DEADLINE_CHECKS) {
@@ -82,5 +85,15 @@ exports.checkOverdueDeadlines = onSchedule('every day 00:00', async () => {
         })
       }
     }
+  }
+
+  // Refreshes the Company Admin overview rollup's overdue/approaching counts
+  // for every company with an open case, since those counts drift out of date
+  // with the passage of time alone - not just on a caseMetadata write, which
+  // is the only other thing that triggers a recompute.
+  for (const companyId of companyIds) {
+    await recomputeCompanyStats(firestore, companyId).catch((err) => {
+      logger.error('checkOverdueDeadlines: stats recompute failed', { companyId, error: err.message })
+    })
   }
 })
