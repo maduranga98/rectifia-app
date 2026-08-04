@@ -9,6 +9,10 @@ export const ROLES = {
   CASE_HANDLER: 'caseHandler',
   MANAGER: 'manager',
   PULSE_CHECK_REVIEWER: 'pulseCheckReviewer',
+  // Platform-level role, deliberately excluded from ASSIGNABLE_ROLES below:
+  // a Super Admin account is created directly by Lumora, never issued
+  // through the inviteStaff flow, and isn't scoped to any companyId.
+  SUPER_ADMIN: 'super_admin',
 }
 
 export const ROLE_LABELS = {

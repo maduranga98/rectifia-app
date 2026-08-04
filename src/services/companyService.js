@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore'
@@ -67,6 +68,15 @@ export async function createCompany({
   })
 
   return docRef.id
+}
+
+// Company-level metadata only (name, subscriptionTier, case-count fields) -
+// used by SuperAdminDashboardPage, which per Module 2's no-case-content-
+// access rule must never read from `cases`, `caseMetadata`, or any
+// messages/questionnaire subcollection.
+export async function listCompanies() {
+  const snapshot = await getDocs(collection(firestore, COMPANIES_COLLECTION))
+  return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() }))
 }
 
 export async function getCompany(companyId) {
