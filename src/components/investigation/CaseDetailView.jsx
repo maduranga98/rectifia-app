@@ -10,6 +10,7 @@ import ComplianceCountdown from '../dashboard/ComplianceCountdown'
 import CaseThread from '../intake/CaseThread'
 import CaseReport from './CaseReport'
 import InvestigationChecklist from './InvestigationChecklist'
+import RelatedPatternNotice from './RelatedPatternNotice'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
@@ -401,6 +402,15 @@ function CaseDetailView({ caseId }) {
           <Card title="Compliance deadlines">
             <ComplianceCountdown caseData={caseData} />
           </Card>
+
+          {/* Alongside the consistency flag, not merged into it: the two
+              answer different questions. The consistency check compares the
+              action proposed here against how comparable closed cases were
+              resolved; a pattern signal says nothing about actions at all,
+              only that other open or closed cases share this case's
+              department and role tier. Renders nothing when this case is not
+              in a signal. */}
+          <RelatedPatternNotice caseId={caseId} />
 
           <Card title="Consistency check" padded={Boolean(caseData.consistencyCheck)}>
             <ConsistencyFlags caseData={caseData} />

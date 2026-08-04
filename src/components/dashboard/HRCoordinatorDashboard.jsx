@@ -4,6 +4,7 @@ import { listCompanyCaseMetadata } from '../../services/caseMetadataService'
 import { listCaseHandlers, reassignCase } from '../../services/routingService'
 import { auth } from '../../services/firebase'
 import CaseTriageModal from './CaseTriageModal'
+import PatternSignals from './PatternSignals'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
@@ -205,6 +206,12 @@ function HRCoordinatorDashboard({ companyId }) {
           />
         </div>
       )}
+
+      {/* Above the case table on purpose: a cluster is the thing a queue view
+          cannot show you, since it lives across rows rather than in one. Still
+          metadata only - patternSignals is its own collection, derived from
+          the same mirror this dashboard already reads. */}
+      <PatternSignals companyId={companyId} />
 
       {firstLoad ? (
         <SkeletonList rows={5} />

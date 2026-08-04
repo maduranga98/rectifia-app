@@ -1,5 +1,15 @@
 // Question definitions for the harassment intake questionnaire. This module
 // only structures the questions - scoring and analysis happen in module 6.
+//
+// subject_department / subject_role mirror what toxicManagement.js already
+// asks about the involved manager: the person a report is about is described
+// by where they work and what they do, never by name. Both are optional - a
+// reporter who leaves them blank still files a complete report, and a case
+// with either one missing simply never joins a pattern group (see
+// functions/src/patterns/subjectSignature.js). The two questionnaires that
+// have a subject party share one field id pair so that grouping does not have
+// to care which questionnaire a case came from; burnout has no subject party
+// and gets neither field.
 const harassmentQuestions = [
   {
     id: 'harassment_conduct_type',
@@ -38,6 +48,20 @@ const harassmentQuestions = [
       { value: 'report', label: 'Someone who reports to me', severityWeight: 2 },
       { value: 'external', label: 'A client, vendor, or other external party', severityWeight: 2 },
     ],
+    severityWeight: null,
+  },
+  {
+    id: 'subject_department',
+    text: 'What department does the involved person work in? (Optional)',
+    type: 'text',
+    options: null,
+    severityWeight: null,
+  },
+  {
+    id: 'subject_role',
+    text: "What is the involved person's role or title? (Optional - no names, please.)",
+    type: 'text',
+    options: null,
     severityWeight: null,
   },
   {
