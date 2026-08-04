@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const crypto = require('crypto')
+const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -65,8 +66,15 @@ exports.generateUniqueCaseId = generateUniqueCaseId
 // Validates a reporter-supplied Case ID + passcode against the stored salted
 // hash. This is the only path that may read a case document, per the
 // Firestore rules - clients cannot read the `cases` collection directly.
-exports.validateCaseAccess = onCall(async (request) => {
+exports.validateCaseAccess = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { caseId, passcode } = request.data || {}
+
+  // This is the brute-force surface. The Case ID keyspace is RC-YYYY-NNNN -
+  // 9000 ids per year - so the id is not a secret and the passcode is doing
+  // all the work; a low hourly ceiling per caller is what stops an attacker
+  // grinding through either. It runs before the id is even parsed, so a
+  // throttled caller learns nothing about which ids exist.
+  await enforceRateLimit(admin.firestore(), 'validateCaseAccess', request)
 
   if (
     typeof caseId !== 'string' ||

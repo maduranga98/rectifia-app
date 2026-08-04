@@ -5,6 +5,7 @@ const admin = require('firebase-admin')
 const webpush = require('web-push')
 const { verifyReporterAccess } = require('../intake/caseThread')
 const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
+const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
 const { DECOY_TEMPLATES } = require('./decoyTemplates')
 
 if (!admin.apps.length) {
@@ -27,8 +28,10 @@ const vapidSubject = defineSecret('VAPID_SUBJECT')
 // account to sign in with. Case ID + passcode *is* the credential here, same
 // as getCaseThread / postReporterMessage. Do not add requireAuthUid to this
 // one - it would lock reporters out of their own case updates.
-exports.registerPushSubscription = onCall(async (request) => {
+exports.registerPushSubscription = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { caseId, passcode, subscription } = request.data || {}
+
+  await enforceRateLimit(admin.firestore(), 'registerPushSubscription', request)
   if (!subscription?.endpoint || !subscription?.keys) {
     throw new HttpsError('invalid-argument', 'A valid push subscription is required')
   }

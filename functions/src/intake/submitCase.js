@@ -8,6 +8,7 @@ const {
   generateUniqueCaseId,
 } = require('./generateCaseAccess')
 const { resolveCompanyBySlug } = require('../company/resolveCompanySlug')
+const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -119,8 +120,14 @@ function requireResponses(responses) {
 // Coordinator, Case Handler) key on to find their cases, so a case written
 // without it is effectively invisible to the company; that's why an
 // unresolvable slug is rejected here rather than written as an orphan case.
-exports.submitCase = onCall(async (request) => {
+exports.submitCase = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { category, responses, companySlug, tier } = request.data || {}
+
+  // Filing a case is the most expensive unauthenticated action in the system:
+  // it writes a case, which fires scoreCase.js and then aiFollowUp.js, each a
+  // paid Claude call. Limited before any validation runs so the limiter cannot
+  // be probed for which slugs or categories are real.
+  await enforceRateLimit(admin.firestore(), 'submitCase', request)
 
   requireCategory(category)
   requireResponses(responses)

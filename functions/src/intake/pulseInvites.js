@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const crypto = require('crypto')
 const { hashPasscode } = require('./generateCaseAccess')
+const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -92,8 +93,14 @@ const COMPANIES_COLLECTION = 'companies'
 // deliberately coarse: it never leaks whether an invite id exists beyond what
 // the employee already holds, and 'used'/'expired' are only ever returned to a
 // caller who presented the correct token for that specific invite.
-exports.validatePulseInvite = onCall(async (request) => {
+exports.validatePulseInvite = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { inviteId, token } = request.data || {}
+
+  // Complements the per-invite MAX_VALIDATION_ATTEMPTS budget below, which
+  // bounds guesses against one known invite id. This bounds how many *invite
+  // ids* a single caller can try in an hour, which that per-document counter
+  // cannot see.
+  await enforceRateLimit(admin.firestore(), 'validatePulseInvite', request)
   if (typeof inviteId !== 'string' || typeof token !== 'string' || !inviteId || !token) {
     throw new HttpsError('invalid-argument', 'inviteId and token are required')
   }

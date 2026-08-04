@@ -1,6 +1,5 @@
 import { httpsCallable } from 'firebase/functions'
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { functions, storage } from './firebase'
+import { functions } from './firebase'
 
 export const MESSAGE_TYPES = { MESSAGE: 'message', MANUAL_LOG: 'manual_log' }
 export const SENDERS = { AI: 'ai', INVESTIGATOR: 'investigator', REPORTER: 'reporter' }
@@ -8,6 +7,8 @@ export const SENDERS = { AI: 'ai', INVESTIGATOR: 'investigator', REPORTER: 'repo
 const getCaseThreadCallable = httpsCallable(functions, 'getCaseThread')
 const postReporterMessageCallable = httpsCallable(functions, 'postReporterMessage')
 const postInvestigatorMessageCallable = httpsCallable(functions, 'postInvestigatorMessage')
+const requestEvidenceUploadUrlCallable = httpsCallable(functions, 'requestEvidenceUploadUrl')
+const requestEvidenceDownloadUrlCallable = httpsCallable(functions, 'requestEvidenceDownloadUrl')
 
 // Cases and their messages subcollection are not client-readable or
 // writable (see firestore.rules) - reporters have no Firebase Auth
@@ -58,21 +59,49 @@ export async function addManualLogEntry(caseId, text) {
   return result.data.messageId
 }
 
-function randomId() {
-  return typeof crypto !== 'undefined' && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+// Uploads evidence. The bucket is closed to direct client access
+// (storage.rules denies read and write on case-evidence/**), so nothing here
+// talks to the Storage SDK: the server validates the caller, decides the
+// stored filename, checks the type and size, and hands back a signed URL good
+// for at most 15 minutes. The PUT below is the only thing this client does
+// with it.
+//
+// The storage path is still scoped only by caseId and now carries even less:
+// the filename is 32 random bytes chosen server-side, so the reporter's own
+// filename ("statement-from-jane.pdf") never becomes part of a path. It
+// travels as a display label instead.
+//
+// Returns the attachment reference to pass alongside a message. It contains no
+// URL by design - callers fetch a fresh one via getEvidenceDownloadUrl when a
+// file is actually opened.
+export async function uploadCaseEvidence(caseId, file, passcode) {
+  const contentType = file.type || 'application/octet-stream'
+  const { data } = await requestEvidenceUploadUrlCallable({
+    caseId,
+    passcode,
+    contentType,
+    sizeBytes: file.size,
+    label: file.name,
+  })
+
+  const response = await fetch(data.uploadUrl, {
+    method: 'PUT',
+    // Must match the type bound into the signature, or the upload is refused.
+    headers: { 'Content-Type': data.contentType },
+    body: file,
+  })
+  if (!response.ok) {
+    throw new Error('That file could not be uploaded. Please try again.')
+  }
+
+  return { fileName: data.fileName, label: file.name, contentType: data.contentType, sizeBytes: file.size }
 }
 
-// Uploads evidence to Storage under a path scoped only by caseId - never
-// the reporter's name, email, or passcode - so the storage path itself
-// carries no identity. Returns an attachment object to pass alongside a
-// reporter message.
-export async function uploadCaseEvidence(caseId, file) {
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-  const path = `case-evidence/${caseId}/${randomId()}-${safeName}`
-  const storageRef = ref(storage, path)
-  await uploadBytes(storageRef, file, { contentType: file.type })
-  const url = await getDownloadURL(storageRef)
-  return { path, url, filename: file.name, contentType: file.type, size: file.size }
+// Fetches a fresh, short-lived signed URL for one attachment at the moment it
+// is opened. Nothing caches the result: the URL is a bearer credential with a
+// 15-minute life, so holding on to one is the thing this design exists to
+// avoid. Every call is recorded in evidenceAccessLog server-side.
+export async function getEvidenceDownloadUrl(caseId, fileName, passcode) {
+  const { data } = await requestEvidenceDownloadUrlCallable({ caseId, fileName, passcode })
+  return data.downloadUrl
 }

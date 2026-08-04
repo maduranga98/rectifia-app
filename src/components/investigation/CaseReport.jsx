@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
+import { getEvidenceDownloadUrl } from '../../services/caseThreadService'
 import { generateReport } from '../../services/reportService'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
@@ -47,6 +48,57 @@ function DetailList({ items }) {
         </Fragment>
       ))}
     </dl>
+  )
+}
+
+// Evidence rows. The report carries attachment *metadata* only - the message
+// documents no longer store a URL, because a stored signed URL is a permanent
+// bearer credential for a confidential file. Opening one fetches a fresh URL
+// valid for about 15 minutes, and the fetch is audited server-side, so an
+// exported PDF of this report contains a list of what exists rather than a
+// page of live links to it.
+//
+// The caller here is an authenticated handler, so no passcode is passed - the
+// callable authorizes on the Firebase Auth identity and the case assignment.
+function EvidenceRow({ caseId, item }) {
+  const [opening, setOpening] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  async function open() {
+    setOpening(true)
+    setFailed(false)
+    try {
+      const url = await getEvidenceDownloadUrl(caseId, item.fileName)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.target = '_blank'
+      anchor.rel = 'noreferrer'
+      anchor.click()
+    } catch {
+      setFailed(true)
+    } finally {
+      setOpening(false)
+    }
+  }
+
+  return (
+    <li className="flex flex-wrap items-baseline gap-x-2">
+      <span className="font-medium text-charcoal">{item.label ?? item.fileName}</span>
+      <span className="text-xs text-muted">
+        submitted by {item.postedBy} on {formatTimestamp(item.postedAt)}
+      </span>
+      {item.fileName && (
+        <button
+          type="button"
+          onClick={open}
+          disabled={opening}
+          className="text-xs text-navy underline disabled:no-underline disabled:opacity-60 print:hidden"
+        >
+          {opening ? 'Opening…' : 'Open'}
+        </button>
+      )}
+      {failed && <span className="text-xs text-critical">Could not open this file.</span>}
+    </li>
   )
 }
 
@@ -157,12 +209,7 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         ) : (
           <ul className="flex flex-col gap-2 text-sm">
             {report.evidence.map((item) => (
-              <li key={item.path} className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-medium text-charcoal">{item.filename}</span>
-                <span className="text-xs text-muted">
-                  submitted by {item.postedBy} on {formatTimestamp(item.postedAt)}
-                </span>
-              </li>
+              <EvidenceRow key={item.fileName ?? item.label} caseId={caseId} item={item} />
             ))}
           </ul>
         )}

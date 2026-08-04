@@ -1,5 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
+const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -50,8 +51,13 @@ exports.resolveCompanyBySlug = resolveCompanyBySlug
 // can show a clear "this reporting link isn't valid" message instead of a
 // blank form. No auth by design: company resolution has to stay anonymous, the
 // same way case submission does.
-exports.resolveCompanySlug = onCall(async (request) => {
+exports.resolveCompanySlug = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { companySlug } = request.data || {}
+
+  // The loosest of the limits: one indexed read per call, and a whole office
+  // behind one NAT may legitimately open the same reporting link. It exists to
+  // stop slug enumeration, not to ration ordinary use.
+  await enforceRateLimit(admin.firestore(), 'resolveCompanySlug', request)
 
   if (typeof companySlug !== 'string' || !companySlug.trim()) {
     throw new HttpsError('invalid-argument', 'A company slug is required')
