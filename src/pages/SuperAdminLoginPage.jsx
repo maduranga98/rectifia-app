@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { signIn, signOutUser, checkSuperAdmin } from '../services/authService'
+import { useAuth } from '../contexts/AuthContext'
 
 // Platform-level login, deliberately separate from the staff LoginPage:
 // different route, different heading, dark theme so it never gets mistaken
@@ -15,6 +16,7 @@ function SuperAdminLoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const { user: currentUser, isSuperAdmin: currentIsSuperAdmin, loading } = useAuth()
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -30,10 +32,21 @@ function SuperAdminLoginPage() {
       }
       navigate('/super-admin', { replace: true })
     } catch (err) {
-      setError('Incorrect email or password')
+      // Only genuine Firebase Auth rejections mean bad credentials - a
+      // failed allowlist lookup used to be reported as a wrong password.
+      setError(
+        err?.code?.startsWith('auth/')
+          ? 'Incorrect email or password'
+          : 'Could not sign in right now. Please try again.'
+      )
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // An already signed-in super admin has no reason to see this form again.
+  if (!loading && currentUser && currentIsSuperAdmin) {
+    return <Navigate to="/super-admin" replace />
   }
 
   return (

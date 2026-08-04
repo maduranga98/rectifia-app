@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { signIn, checkSuperAdmin } from '../services/authService'
+import { useAuth } from '../contexts/AuthContext'
 
 // Staff sign-in only. There is no self-signup link here on purpose - the
 // only ways to get a staff account are an invite (AcceptInvitePage) or one
@@ -12,6 +13,8 @@ function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user: currentUser, isSuperAdmin: currentIsSuperAdmin, loading } = useAuth()
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -20,12 +23,23 @@ function LoginPage() {
     try {
       const user = await signIn(email, password)
       const isSuperAdmin = await checkSuperAdmin(user.uid)
-      navigate(isSuperAdmin ? '/super-admin' : '/dashboard', { replace: true })
+      const fallback = isSuperAdmin ? '/super-admin' : '/dashboard'
+      // Return the user to whatever ProtectedRoute bounced them off of.
+      navigate(location.state?.from?.pathname ?? fallback, { replace: true })
     } catch (err) {
-      setError('Incorrect email or password')
+      setError(
+        err?.code?.startsWith('auth/')
+          ? 'Incorrect email or password'
+          : 'Could not sign in right now. Please try again.'
+      )
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // Already signed in - don't show the form again, go where they belong.
+  if (!loading && currentUser) {
+    return <Navigate to={currentIsSuperAdmin ? '/super-admin' : '/dashboard'} replace />
   }
 
   return (
