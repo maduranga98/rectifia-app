@@ -4,25 +4,28 @@ import ReporterLayout from '../components/shared/ReporterLayout'
 import CategorySelect from '../components/intake/CategorySelect'
 import QuestionnaireForm from '../components/intake/QuestionnaireForm'
 import { CATEGORIES } from '../data/categories'
+import { submitCase } from '../services/caseAccessService'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
 
 const STEPS = ['Category', 'Details', 'Submit']
 
-// The anonymous reporter's intake flow. CategorySelect and
-// QuestionnaireForm were both already built but had no page rendering them,
-// so /submit was a bare heading; this wires them into the two-step flow
-// they were written for.
-//
-// Filing the completed report is not wired up: there is no case-creation
-// callable in functions/ yet (generateCaseAccess, caseThread, routeCase and
-// the rest all assume a case document that already exists), and inventing a
-// Case ID here would hand the reporter a reference that resolves to
-// nothing. The answers stay on screen and the last step says so plainly
-// rather than reporting a success that didn't happen.
+// The anonymous reporter's intake flow. CategorySelect and QuestionnaireForm
+// collect the report; on the final step it's filed with the submitCase
+// callable (functions/src/intake/submitCase.js), which creates the case with
+// the category and answers attached and returns the Case ID + one-time
+// passcode the reporter needs to track it later.
 function Submit() {
   const [category, setCategory] = useState(null)
   const [completed, setCompleted] = useState(null)
+
+  // QuestionnaireForm awaits this and surfaces any thrown error in the form,
+  // so a failed submission keeps the reporter on the questionnaire with their
+  // answers intact rather than advancing to a success screen.
+  async function handleSubmit(submission) {
+    const { caseId, passcode } = await submitCase(submission)
+    setCompleted({ caseId, passcode, responseCount: submission.responses.length })
+  }
 
   const step = completed ? 2 : category ? 1 : 0
   const categoryLabel = CATEGORIES.find((c) => c.id === category)?.label
@@ -38,8 +41,8 @@ function Submit() {
       description: `${categoryLabel ?? 'Your report'} — answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.`,
     },
     {
-      title: 'Ready to file',
-      description: 'Your answers are complete.',
+      title: 'Report filed',
+      description: 'Your report has been submitted. Save your Case ID and passcode below.',
     },
   ][step]
 
@@ -59,26 +62,36 @@ function Submit() {
             Change category
           </Button>
           <div className="card p-6">
-            <QuestionnaireForm category={category} onSubmit={setCompleted} />
+            <QuestionnaireForm category={category} onSubmit={handleSubmit} />
           </div>
         </div>
       )}
 
       {step === 2 && (
         <div className="flex flex-col gap-4">
-          <Alert variant="warning" title="Submission is not available yet">
-            Your answers are complete, but this deployment has no case-intake endpoint connected,
-            so the report has not been filed and no Case ID has been issued. Nothing you entered
-            has been sent anywhere.
+          <Alert variant="success" title="Your report has been filed">
+            Write down your Case ID and passcode now — they are shown only once and cannot be
+            recovered. You'll need both to track your case.
           </Alert>
 
           <div className="card p-6">
-            <p className="text-sm font-medium text-charcoal">
-              {completed.responses.length} answer
-              {completed.responses.length === 1 ? '' : 's'} recorded for {categoryLabel}
-            </p>
-            <p className="mt-1 text-sm text-muted">
-              Keep this window open if you want to copy anything out before leaving.
+            <dl className="flex flex-col gap-4">
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">Case ID</dt>
+                <dd className="mt-1 select-all font-mono text-lg font-semibold text-charcoal">
+                  {completed.caseId}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">Passcode</dt>
+                <dd className="mt-1 select-all font-mono text-lg font-semibold text-charcoal">
+                  {completed.passcode}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-4 text-sm text-muted">
+              {completed.responseCount} answer
+              {completed.responseCount === 1 ? '' : 's'} recorded for {categoryLabel}.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Button

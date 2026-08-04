@@ -4,16 +4,18 @@ import { functions } from './firebase'
 export const CASE_ID_PATTERN = /^RC-\d{4}-\d{4}$/
 export const MIN_PASSCODE_LENGTH = 10
 
-const generateCaseAccessCallable = httpsCallable(functions, 'generateCaseAccess')
+const submitCaseCallable = httpsCallable(functions, 'submitCase')
 const validateCaseAccessCallable = httpsCallable(functions, 'validateCaseAccess')
 
-// Asks the server to create a new case and issue its one-time passcode.
-// The passcode is generated server-side (see
-// functions/src/intake/generateCaseAccess.js) and is only ever available in
-// this response - callers must surface it to the reporter immediately, since
-// it cannot be recovered later.
-export async function generateCaseAccess() {
-  const result = await generateCaseAccessCallable()
+// Files a completed questionnaire as a new case and returns its one-time
+// access credentials. `submission` is the { category, responses } payload
+// QuestionnaireForm produces. The server writes the category and answers onto
+// the case at creation (see functions/src/intake/submitCase.js) so scoring can
+// run immediately, and issues the passcode server-side. The passcode is only
+// ever available in this response - callers must surface it to the reporter
+// immediately, since it cannot be recovered later.
+export async function submitCase(submission) {
+  const result = await submitCaseCallable(submission)
   return result.data
 }
 
