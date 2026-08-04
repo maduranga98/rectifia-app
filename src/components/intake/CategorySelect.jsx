@@ -13,7 +13,7 @@ function CategorySelect({ onSelect }) {
     <div className="max-w-xl space-y-6 p-8">
       <div>
         <h1 className="text-2xl font-semibold">What's this report about?</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-muted">
           Choose the category that best fits your situation. The next
           questions will be tailored to it.
         </p>
@@ -25,8 +25,8 @@ function CategorySelect({ onSelect }) {
             key={category.id}
             className={`block cursor-pointer rounded border px-4 py-3 ${
               selected === category.id
-                ? 'border-blue-600 ring-1 ring-blue-600'
-                : 'border-gray-300'
+                ? 'border-gold ring-1 ring-gold'
+                : 'border-line'
             }`}
           >
             <input
@@ -38,7 +38,7 @@ function CategorySelect({ onSelect }) {
               className="sr-only"
             />
             <span className="font-medium">{category.label}</span>
-            <p className="mt-1 text-sm text-gray-500">{category.description}</p>
+            <p className="mt-1 text-sm text-muted">{category.description}</p>
           </label>
         ))}
       </div>
@@ -47,7 +47,7 @@ function CategorySelect({ onSelect }) {
         type="button"
         onClick={handleContinue}
         disabled={!selected}
-        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+        className="btn-primary rounded px-4 py-2 disabled:opacity-50"
       >
         Continue
       </button>

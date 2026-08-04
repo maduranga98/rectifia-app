@@ -106,23 +106,23 @@ function CompanyAdminPanel({ companyId }) {
   }
 
   if (loading && !company) {
-    return <p className="p-6 text-sm text-gray-500">Loading...</p>
+    return <p className="p-6 text-sm text-muted">Loading...</p>
   }
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8 p-6">
       <h1 className="text-xl font-semibold">Company settings</h1>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-gray-700">Departments</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Departments</h2>
         <ul className="flex flex-col gap-2">
           {(company?.departments ?? []).map((dept) => (
             <li key={dept.id} className="flex items-center gap-2">
               <input
                 defaultValue={dept.name}
                 onBlur={(e) => e.target.value !== dept.name && handleRenameDepartment(dept.id, e.target.value)}
-                className="rounded border border-gray-300 px-2 py-1 text-sm"
+                className="field rounded px-2 py-1 text-sm"
               />
             </li>
           ))}
@@ -132,22 +132,22 @@ function CompanyAdminPanel({ companyId }) {
             placeholder="New department name"
             value={newDeptName}
             onChange={(e) => setNewDeptName(e.target.value)}
-            className="rounded border border-gray-300 px-3 py-2 text-sm"
+            className="field rounded px-3 py-2 text-sm"
           />
-          <button type="submit" className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white">
+          <button type="submit" className="btn-primary rounded px-4 py-2 text-sm font-medium">
             Add
           </button>
         </form>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-gray-700">Staff</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Staff</h2>
         <ul className="flex flex-col gap-2 text-sm">
           {staff.map((s) => (
-            <li key={s.id} className="flex items-center justify-between rounded border border-gray-200 px-3 py-2">
+            <li key={s.id} className="flex items-center justify-between rounded border border-line bg-surface px-3 py-2">
               <span>{s.email ?? s.id}</span>
-              <span className="text-xs text-gray-500">{ROLE_LABELS[s.role] ?? s.role}</span>
-              <span className="text-xs text-gray-400">{s.status ?? 'active'}</span>
+              <span className="text-xs text-muted">{ROLE_LABELS[s.role] ?? s.role}</span>
+              <span className="text-xs text-muted">{s.status ?? 'active'}</span>
             </li>
           ))}
         </ul>
@@ -155,18 +155,18 @@ function CompanyAdminPanel({ companyId }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-gray-700">Routing rules</h2>
-        <p className="text-xs text-gray-500">Maps a case category + department to the Case Handler it routes to.</p>
+        <h2 className="text-sm font-semibold text-charcoal">Routing rules</h2>
+        <p className="text-xs text-muted">Maps a case category + department to the Case Handler it routes to.</p>
         <ul className="flex flex-col gap-2 text-sm">
           {rules.map((rule) => (
-            <li key={rule.id} className="flex items-center justify-between rounded border border-gray-200 px-3 py-2">
+            <li key={rule.id} className="flex items-center justify-between rounded border border-line bg-surface px-3 py-2">
               <span>
                 {rule.category} / {rule.department}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted">
                 {handlers.find((h) => h.id === rule.caseHandlerId)?.email ?? rule.caseHandlerId}
               </span>
-              <button type="button" onClick={() => handleRemoveRule(rule)} className="text-xs text-red-600 underline">
+              <button type="button" onClick={() => handleRemoveRule(rule)} className="text-xs text-critical underline">
                 Remove
               </button>
             </li>
@@ -176,7 +176,7 @@ function CompanyAdminPanel({ companyId }) {
           <select
             value={ruleForm.category}
             onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="field rounded px-2 py-1 text-sm"
           >
             {CATEGORIES.map((c) => (
               <option key={c.id} value={c.id}>
@@ -188,12 +188,12 @@ function CompanyAdminPanel({ companyId }) {
             placeholder="Department"
             value={ruleForm.department}
             onChange={(e) => setRuleForm({ ...ruleForm, department: e.target.value })}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="field rounded px-2 py-1 text-sm"
           />
           <select
             value={ruleForm.caseHandlerId}
             onChange={(e) => setRuleForm({ ...ruleForm, caseHandlerId: e.target.value })}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            className="field rounded px-2 py-1 text-sm"
           >
             <option value="" disabled>
               Case Handler...
@@ -204,22 +204,22 @@ function CompanyAdminPanel({ companyId }) {
               </option>
             ))}
           </select>
-          <button type="submit" className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white">
+          <button type="submit" className="btn-primary rounded px-4 py-2 text-sm font-medium">
             Save rule
           </button>
         </form>
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-gray-700">Subscription &amp; billing</h2>
-        <div className="rounded border border-gray-200 px-4 py-3 text-sm">
+        <h2 className="text-sm font-semibold text-charcoal">Subscription &amp; billing</h2>
+        <div className="border border-line bg-surface rounded px-4 py-3 text-sm">
           <p>
             Plan: <span className="font-medium">{company?.subscriptionTier ?? 'Not set'}</span>
           </p>
           <p>
             Cases this period: <span className="font-medium">{company?.currentPeriodCaseCount ?? 0}</span>
           </p>
-          <p className="mt-2 text-xs text-gray-400">Read-only. Payment and plan changes are handled outside this panel.</p>
+          <p className="mt-2 text-xs text-muted">Read-only. Payment and plan changes are handled outside this panel.</p>
         </div>
       </section>
     </div>

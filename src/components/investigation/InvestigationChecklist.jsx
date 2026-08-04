@@ -13,9 +13,9 @@ const TYPE_LABELS = {
 }
 
 const TYPE_STYLE = {
-  [CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION]: 'border-blue-200 bg-blue-50 text-blue-700',
-  [CHECKLIST_ITEM_TYPES.DOCUMENT_REQUEST]: 'border-purple-200 bg-purple-50 text-purple-700',
-  [CHECKLIST_ITEM_TYPES.CONTRADICTION_FLAG]: 'border-amber-300 bg-amber-50 text-amber-700',
+  [CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION]: 'tone-info',
+  [CHECKLIST_ITEM_TYPES.DOCUMENT_REQUEST]: 'tone-neutral',
+  [CHECKLIST_ITEM_TYPES.CONTRADICTION_FLAG]: 'tone-high',
 }
 
 // Suggestions the assigned Case Handler can check off, edit, or ignore -
@@ -73,21 +73,21 @@ function InvestigationChecklist({ caseId, investigatorId }) {
           type="button"
           onClick={handleGenerate}
           disabled={loading}
-          className="rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="btn-primary rounded px-4 py-2 text-sm disabled:opacity-50"
         >
           {loading ? 'Generating...' : checklist.length > 0 ? 'Regenerate' : 'Generate checklist'}
         </button>
       </div>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-muted">
         AI-suggested next steps based on the case category, questionnaire answers, and thread so far. Check off, edit,
         or ignore anything - this is a planning aid, not a required workflow.
       </p>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
 
       {checklist.length === 0 && !loading && (
-        <p className="text-sm text-gray-500">No checklist yet. Generate one to get started.</p>
+        <p className="text-sm text-muted">No checklist yet. Generate one to get started.</p>
       )}
 
       <ul className="flex flex-col gap-3">
@@ -121,17 +121,17 @@ function InvestigationChecklist({ caseId, investigatorId }) {
                       value={editDraft}
                       onChange={(e) => setEditDraft(e.target.value)}
                       rows={2}
-                      className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                      className="w-full field rounded px-2 py-1 text-sm"
                     />
                     <div className="flex gap-3">
                       <button
                         type="button"
                         onClick={() => saveEdit(item.id)}
-                        className="rounded bg-blue-600 px-3 py-1 text-xs text-white"
+                        className="btn-primary rounded px-3 py-1 text-xs"
                       >
                         Save
                       </button>
-                      <button type="button" onClick={() => setEditingId(null)} className="text-xs text-gray-500">
+                      <button type="button" onClick={() => setEditingId(null)} className="text-xs text-muted">
                         Cancel
                       </button>
                     </div>
@@ -139,25 +139,25 @@ function InvestigationChecklist({ caseId, investigatorId }) {
                 ) : (
                   <p
                     className={`mt-1 ${
-                      item.status === CHECKLIST_ITEM_STATUSES.CHECKED ? 'line-through text-gray-400' : ''
+                      item.status === CHECKLIST_ITEM_STATUSES.CHECKED ? 'line-through text-muted' : ''
                     }`}
                   >
                     {item.item}
                   </p>
                 )}
 
-                <p className="mt-1 text-xs text-gray-500">{item.rationale}</p>
+                <p className="mt-1 text-xs text-muted">{item.rationale}</p>
 
                 {editingId !== item.id && (
                   <div className="mt-2 flex gap-3 text-xs">
-                    <button type="button" onClick={() => startEdit(item)} className="text-blue-600 underline">
+                    <button type="button" onClick={() => startEdit(item)} className="text-navy underline">
                       Edit
                     </button>
                     {item.status !== CHECKLIST_ITEM_STATUSES.IGNORED ? (
                       <button
                         type="button"
                         onClick={() => updateItem(item.id, CHECKLIST_ITEM_STATUSES.IGNORED)}
-                        className="text-gray-500 underline"
+                        className="text-muted underline"
                       >
                         Ignore
                       </button>
@@ -165,7 +165,7 @@ function InvestigationChecklist({ caseId, investigatorId }) {
                       <button
                         type="button"
                         onClick={() => updateItem(item.id, CHECKLIST_ITEM_STATUSES.SUGGESTED)}
-                        className="text-gray-500 underline"
+                        className="text-muted underline"
                       >
                         Unignore
                       </button>

@@ -24,7 +24,7 @@ function ExportPdfButton() {
     <button
       type="button"
       onClick={() => window.print()}
-      className="print:hidden rounded bg-blue-600 px-4 py-2 text-sm text-white"
+      className="print:hidden btn-primary rounded px-4 py-2 text-sm"
     >
       Export as PDF
     </button>
@@ -65,8 +65,8 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
     }
   }, [caseId])
 
-  if (loading) return <p className="p-6 text-sm text-gray-500">Loading report...</p>
-  if (error) return <p className="p-6 text-sm text-red-600">{error}</p>
+  if (loading) return <p className="p-6 text-sm text-muted">Loading report...</p>
+  if (error) return <p className="p-6 text-sm text-critical">{error}</p>
   if (!report) return null
 
   return (
@@ -77,30 +77,30 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-700">Case summary</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Case summary</h2>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-gray-500">Category</dt>
+          <dt className="text-muted">Category</dt>
           <dd>{report.summary.category ?? '-'}</dd>
-          <dt className="text-gray-500">Status</dt>
+          <dt className="text-muted">Status</dt>
           <dd>{report.summary.status ?? '-'}</dd>
-          <dt className="text-gray-500">Created</dt>
+          <dt className="text-muted">Created</dt>
           <dd>{formatTimestamp(report.summary.createdAt)}</dd>
-          <dt className="text-gray-500">Closed</dt>
+          <dt className="text-muted">Closed</dt>
           <dd>{formatTimestamp(report.summary.closedAt)}</dd>
-          <dt className="text-gray-500">Severity score</dt>
+          <dt className="text-muted">Severity score</dt>
           <dd>{report.summary.severityScore ?? '-'}</dd>
-          <dt className="text-gray-500">Evidence score</dt>
+          <dt className="text-muted">Evidence score</dt>
           <dd>{report.summary.evidenceScore ?? '-'}</dd>
         </dl>
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-700">Message timeline</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Message timeline</h2>
         <ul className="mt-2 flex flex-col gap-2">
-          {report.timeline.length === 0 && <li className="text-sm text-gray-500">No messages.</li>}
+          {report.timeline.length === 0 && <li className="text-sm text-muted">No messages.</li>}
           {report.timeline.map((message) => (
-            <li key={message.id} className="rounded border border-gray-200 px-3 py-2 text-sm">
-              <div className="flex items-center justify-between text-xs text-gray-500">
+            <li key={message.id} className="border border-line bg-surface rounded px-3 py-2 text-sm">
+              <div className="flex items-center justify-between text-xs text-muted">
                 <span className="font-medium">{messageAuthorLabel(message)}</span>
                 <span>{formatTimestamp(message.timestamp)}</span>
               </div>
@@ -111,9 +111,9 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-700">Evidence</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Evidence</h2>
         {report.evidence.length === 0 ? (
-          <p className="mt-2 text-sm text-gray-500">No attachments.</p>
+          <p className="mt-2 text-sm text-muted">No attachments.</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {report.evidence.map((item) => (
@@ -126,14 +126,14 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-700">Investigator manual log</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Investigator manual log</h2>
         {report.manualLogEntries.length === 0 ? (
-          <p className="mt-2 text-sm text-gray-500">No manual log entries.</p>
+          <p className="mt-2 text-sm text-muted">No manual log entries.</p>
         ) : (
           <ul className="mt-2 flex flex-col gap-2">
             {report.manualLogEntries.map((entry) => (
-              <li key={entry.id} className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
-                <div className="text-xs text-gray-500">{formatTimestamp(entry.timestamp)}</div>
+              <li key={entry.id} className="rounded border border tone-high px-3 py-2 text-sm">
+                <div className="text-xs text-muted">{formatTimestamp(entry.timestamp)}</div>
                 <p className="mt-1 whitespace-pre-wrap">{entry.text}</p>
               </li>
             ))}
@@ -142,68 +142,68 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-700">Consistency check</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Consistency check</h2>
         {!report.consistencyCheck ? (
-          <p className="mt-2 text-sm text-gray-500">No consistency check has run for this case.</p>
+          <p className="mt-2 text-sm text-muted">No consistency check has run for this case.</p>
         ) : (
           <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-            <dt className="text-gray-500">Status</dt>
+            <dt className="text-muted">Status</dt>
             <dd>{report.consistencyCheck.status ?? '-'}</dd>
-            <dt className="text-gray-500">Flag</dt>
+            <dt className="text-muted">Flag</dt>
             <dd>{report.consistencyCheck.flag?.message ?? 'None'}</dd>
-            <dt className="text-gray-500">Typical action</dt>
+            <dt className="text-muted">Typical action</dt>
             <dd>{report.consistencyCheck.typicalAction ?? '-'}</dd>
-            <dt className="text-gray-500">Resolution notes</dt>
+            <dt className="text-muted">Resolution notes</dt>
             <dd>{report.consistencyCheck.resolutionNotes ?? '-'}</dd>
           </dl>
         )}
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-700">Final action taken</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Final action taken</h2>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-gray-500">Action</dt>
+          <dt className="text-muted">Action</dt>
           <dd>{report.finalAction.actionTaken ?? report.finalAction.proposedAction ?? 'Not yet decided'}</dd>
-          <dt className="text-gray-500">Effective date</dt>
+          <dt className="text-muted">Effective date</dt>
           <dd>{formatTimestamp(report.finalAction.actionEffectiveDate)}</dd>
-          <dt className="text-gray-500">Notes</dt>
+          <dt className="text-muted">Notes</dt>
           <dd>{report.finalAction.actionNotes ?? '-'}</dd>
         </dl>
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-gray-700">Compliance deadline log</h2>
+        <h2 className="text-sm font-semibold text-charcoal">Compliance deadline log</h2>
         <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-gray-500">Rule applied</dt>
+          <dt className="text-muted">Rule applied</dt>
           <dd>{report.complianceDeadlineLog.complianceRuleApplied ?? '-'}</dd>
-          <dt className="text-gray-500">Acknowledgment due</dt>
+          <dt className="text-muted">Acknowledgment due</dt>
           <dd>{formatTimestamp(report.complianceDeadlineLog.acknowledgmentDueAt)}</dd>
-          <dt className="text-gray-500">Acknowledgment sent</dt>
+          <dt className="text-muted">Acknowledgment sent</dt>
           <dd>{formatTimestamp(report.complianceDeadlineLog.acknowledgmentSentAt)}</dd>
-          <dt className="text-gray-500">Feedback due</dt>
+          <dt className="text-muted">Feedback due</dt>
           <dd>{formatTimestamp(report.complianceDeadlineLog.feedbackDueAt)}</dd>
-          <dt className="text-gray-500">Feedback given</dt>
+          <dt className="text-muted">Feedback given</dt>
           <dd>{formatTimestamp(report.complianceDeadlineLog.feedbackGivenAt)}</dd>
         </dl>
       </section>
 
       {report.restrictedReporterIdentity && (
-        <section className="rounded border-2 border-red-300 bg-red-50 p-4">
-          <h2 className="text-sm font-semibold text-red-700">Restricted - reporter identity (confidential tier)</h2>
-          <p className="mt-1 text-xs text-red-600">
+        <section className="rounded border-2 tone-critical p-4">
+          <h2 className="text-sm font-semibold text-critical">Restricted - reporter identity (confidential tier)</h2>
+          <p className="mt-1 text-xs text-critical">
             Visible only to roles authorized to see reporter identity on confidential-tier cases.
           </p>
           {canViewReporterIdentity ? (
             <dl className="mt-2 grid grid-cols-2 gap-2 text-sm">
               {Object.entries(report.restrictedReporterIdentity).map(([key, value]) => (
                 <Fragment key={key}>
-                  <dt className="text-gray-500">{key}</dt>
+                  <dt className="text-muted">{key}</dt>
                   <dd>{String(value)}</dd>
                 </Fragment>
               ))}
             </dl>
           ) : (
-            <p className="mt-2 text-sm text-red-700">
+            <p className="mt-2 text-sm text-critical">
               You are not authorized to view reporter identity for this case.
             </p>
           )}

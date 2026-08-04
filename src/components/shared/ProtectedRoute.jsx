@@ -13,7 +13,7 @@ function ProtectedRoute({ children, allowedRoles, requireSuperAdmin = false, log
   if (loading) {
     return (
       <div className="p-8">
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-sm text-muted">Loading...</p>
       </div>
     )
   }

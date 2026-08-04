@@ -21,7 +21,7 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
   const [submitted, setSubmitted] = useState(false)
 
   if (!auth.currentUser) {
-    return <p className="p-6 text-sm text-gray-500">Sign in to complete this pulse check.</p>
+    return <p className="p-6 text-sm text-muted">Sign in to complete this pulse check.</p>
   }
 
   async function handleSubmit(e) {
@@ -43,7 +43,7 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
   }
 
   if (submitted) {
-    return <p className="p-6 text-sm text-green-600">Thanks - your response has been submitted.</p>
+    return <p className="p-6 text-sm text-low">Thanks - your response has been submitted.</p>
   }
 
   return (
@@ -58,13 +58,13 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
               rows={3}
               value={values[q.id] ?? ''}
               onChange={(e) => setValues({ ...values, [q.id]: e.target.value })}
-              className="rounded border border-gray-300 px-3 py-2"
+              className="field rounded px-3 py-2"
             />
           ) : (
             <select
               value={values[q.id] ?? ''}
               onChange={(e) => setValues({ ...values, [q.id]: e.target.value })}
-              className="rounded border border-gray-300 px-3 py-2"
+              className="field rounded px-3 py-2"
             >
               <option value="">Select...</option>
               <option value="1">1 - Not at all</option>
@@ -77,12 +77,12 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
         </label>
       ))}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
 
       <button
         type="submit"
         disabled={submitting}
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="btn-primary rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
       >
         {submitting ? 'Submitting...' : 'Submit'}
       </button>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { listCompanies } from '../services/companyService'
 import { signOutUser } from '../services/authService'
 import CompanySetup from '../components/dashboard/CompanySetup'
+import AppHeader from '../components/shared/AppHeader'
 
 // Per Module 2's no-case-content-access rule, this reads only company-level
 // metadata (name, subscriptionTier, case-count) from the `companies` doc -
@@ -48,35 +49,41 @@ function SuperAdminDashboardPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-8 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Platform overview</h1>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="rounded border border-gray-300 px-3 py-1.5 text-sm"
-        >
-          Sign out
-        </button>
-      </div>
+    <div className="min-h-screen">
+      <AppHeader
+        title="Rectifia"
+        subtitle="Lumora platform administration"
+        actions={
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="rounded border border-navy-600 px-3 py-1.5 text-sm text-white hover:bg-navy-800"
+          >
+            Sign out
+          </button>
+        }
+      />
 
-      <div className="flex flex-col gap-4">
+      <div className="mx-auto flex max-w-5xl flex-col gap-4 p-6">
+        <h1 className="text-xl font-semibold">Platform overview</h1>
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">Companies</h2>
+          <h2 className="text-sm font-semibold text-charcoal">Companies</h2>
           <button
             type="button"
             onClick={() => {
               setNotice(null)
               setShowRegisterForm((open) => !open)
             }}
-            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+            className={`rounded px-3 py-1.5 text-sm font-semibold ${
+              showRegisterForm ? 'btn-secondary' : 'btn-accent'
+            }`}
           >
             {showRegisterForm ? 'Close' : 'Register company'}
           </button>
         </div>
 
         {showRegisterForm && (
-          <div className="rounded border border-gray-200 p-4">
+          <div className="rounded-lg border border-line bg-surface p-4">
             <CompanySetup
               title="Register a company"
               onCreated={handleCreated}
@@ -85,11 +92,11 @@ function SuperAdminDashboardPage() {
           </div>
         )}
 
-        {notice && <p className="text-sm text-green-700">{notice}</p>}
-        {loading && <p className="text-sm text-gray-500">Loading companies...</p>}
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {notice && <p className="text-sm text-low">{notice}</p>}
+        {loading && <p className="text-sm text-muted">Loading companies...</p>}
+        {error && <p className="text-sm text-critical">{error}</p>}
         {!loading && !error && companies.length === 0 && (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             No companies yet. Use &quot;Register company&quot; to onboard the first one.
           </p>
         )}
@@ -97,16 +104,16 @@ function SuperAdminDashboardPage() {
         {!loading && companies.length > 0 && (
           <div className="flex flex-col gap-2">
             {companies.map((company) => (
-              <div key={company.id} className="flex flex-col gap-1 rounded border border-gray-200 p-4">
-                <p className="text-sm font-medium text-gray-900">{company.name}</p>
-                <p className="text-sm text-gray-600">Plan: {company.subscriptionTier ?? 'Unknown'}</p>
-                <p className="text-sm text-gray-600">
+              <div key={company.id} className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-4">
+                <p className="text-sm font-medium text-charcoal">{company.name}</p>
+                <p className="text-sm text-muted">Plan: {company.subscriptionTier ?? 'Unknown'}</p>
+                <p className="text-sm text-muted">
                   Jurisdictions: {company.jurisdictions?.join(', ') || '—'}
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted">
                   Cases this period: {company.currentPeriodCaseCount ?? '—'}
                 </p>
-                <p className="text-sm text-gray-600">Billing status: {company.billingStatus ?? 'Unknown'}</p>
+                <p className="text-sm text-muted">Billing status: {company.billingStatus ?? 'Unknown'}</p>
               </div>
             ))}
           </div>

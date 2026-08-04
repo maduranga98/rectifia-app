@@ -7,16 +7,16 @@ import InvestigationChecklist from './InvestigationChecklist'
 const POLL_INTERVAL_MS = 8000
 
 const CONSISTENCY_STYLE = {
-  insufficient_data: 'border-gray-200 bg-gray-50 text-gray-600',
-  consistent: 'border-green-200 bg-green-50 text-green-700',
-  unrankable: 'border-gray-200 bg-gray-50 text-gray-600',
-  flagged: 'border-amber-300 bg-amber-50 text-amber-700',
+  insufficient_data: 'tone-neutral',
+  consistent: 'tone-low',
+  unrankable: 'tone-neutral',
+  flagged: 'tone-high',
 }
 
 function ConsistencyFlags({ caseData }) {
   const check = caseData.consistencyCheck
   if (!check) {
-    return <p className="text-sm text-gray-500">No consistency check has run for this case yet.</p>
+    return <p className="text-sm text-muted">No consistency check has run for this case yet.</p>
   }
 
   return (
@@ -33,14 +33,14 @@ function ConsistencyFlags({ caseData }) {
 function QuestionnaireAnswers({ caseData }) {
   const responses = Array.isArray(caseData.responses) ? caseData.responses : []
   if (responses.length === 0) {
-    return <p className="text-sm text-gray-500">No questionnaire responses on file.</p>
+    return <p className="text-sm text-muted">No questionnaire responses on file.</p>
   }
 
   return (
     <ul className="flex flex-col gap-2 text-sm">
       {responses.map((response) => (
-        <li key={response.questionId} className="rounded border border-gray-200 px-3 py-2">
-          <p className="text-xs text-gray-500">{response.questionId}</p>
+        <li key={response.questionId} className="field rounded px-3 py-2">
+          <p className="text-xs text-muted">{response.questionId}</p>
           <p className="mt-1">{Array.isArray(response.value) ? response.value.join(', ') : String(response.value ?? '')}</p>
         </li>
       ))}
@@ -95,7 +95,7 @@ function ActionForm({ caseData, onChanged }) {
   }
 
   if (alreadyClosed) {
-    return <p className="text-sm text-gray-500">This case is closed. Final action: {caseData.actionTaken}</p>
+    return <p className="text-sm text-muted">This case is closed. Final action: {caseData.actionTaken}</p>
   }
 
   return (
@@ -109,7 +109,7 @@ function ActionForm({ caseData, onChanged }) {
             id="action-category"
             value={actionCategory}
             onChange={(e) => setActionCategory(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 w-full field rounded px-3 py-2 text-sm"
           >
             {ACTION_CATEGORIES.map((category) => (
               <option key={category} value={category}>
@@ -128,7 +128,7 @@ function ActionForm({ caseData, onChanged }) {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 w-full field rounded px-3 py-2 text-sm"
           />
         </div>
 
@@ -141,25 +141,25 @@ function ActionForm({ caseData, onChanged }) {
             type="date"
             value={effectiveDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            className="mt-1 w-full field rounded px-3 py-2 text-sm"
           />
         </div>
 
         <button
           type="submit"
           disabled={submitting}
-          className="self-start rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="self-start btn-primary rounded px-4 py-2 text-sm disabled:opacity-50"
         >
           {caseData.proposedAction ? 'Update proposed action' : 'Propose action'}
         </button>
       </form>
 
       {caseData.proposedAction && (
-        <div className="rounded border border-gray-200 p-3 text-sm">
+        <div className="rounded-lg border border-line bg-surface p-3 text-sm">
           <p>
             Proposed action: <strong>{caseData.proposedAction.replace(/_/g, ' ')}</strong>
           </p>
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-muted">
             {canClose
               ? 'Consistency check complete - this case can be closed.'
               : 'Waiting for the consistency check to finish against this proposal before the case can be closed.'}
@@ -168,14 +168,14 @@ function ActionForm({ caseData, onChanged }) {
             type="button"
             onClick={handleClose}
             disabled={!canClose || submitting}
-            className="mt-2 rounded bg-red-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="mt-2 btn-danger rounded px-4 py-2 text-sm disabled:opacity-50"
           >
             Mark case closed
           </button>
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
     </div>
   )
 }
@@ -207,40 +207,40 @@ function CaseDetailView({ caseId, investigatorId }) {
     return () => clearInterval(id)
   }, [refresh])
 
-  if (error) return <p className="p-6 text-sm text-red-600">{error}</p>
-  if (!caseData) return <p className="p-6 text-sm text-gray-500">Loading case...</p>
+  if (error) return <p className="p-6 text-sm text-critical">{error}</p>
+  if (!caseData) return <p className="p-6 text-sm text-muted">Loading case...</p>
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8 p-6">
       <h1 className="text-xl font-semibold">Case {caseData.caseId ?? caseData.id}</h1>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">Questionnaire answers</h2>
+        <h2 className="mb-2 text-sm font-semibold text-charcoal">Questionnaire answers</h2>
         <QuestionnaireAnswers caseData={caseData} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">Compliance</h2>
+        <h2 className="mb-2 text-sm font-semibold text-charcoal">Compliance</h2>
         <ComplianceCountdown caseData={caseData} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">Consistency check</h2>
+        <h2 className="mb-2 text-sm font-semibold text-charcoal">Consistency check</h2>
         <ConsistencyFlags caseData={caseData} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">Investigation checklist</h2>
+        <h2 className="mb-2 text-sm font-semibold text-charcoal">Investigation checklist</h2>
         <InvestigationChecklist caseId={caseId} investigatorId={investigatorId} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">Case thread</h2>
+        <h2 className="mb-2 text-sm font-semibold text-charcoal">Case thread</h2>
         <CaseThread caseId={caseId} mode="investigator" investigatorId={investigatorId} />
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-gray-700">Take action</h2>
+        <h2 className="mb-2 text-sm font-semibold text-charcoal">Take action</h2>
         <ActionForm caseData={caseData} onChanged={refresh} />
       </section>
     </div>

@@ -32,8 +32,8 @@ function StaffInvite({ companyId, onInvited }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded border border-gray-200 p-4">
-      <h3 className="text-sm font-semibold text-gray-700">Invite staff</h3>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
+      <h3 className="text-sm font-semibold text-charcoal">Invite staff</h3>
 
       <input
         type="email"
@@ -41,13 +41,13 @@ function StaffInvite({ companyId, onInvited }) {
         placeholder="name@company.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="rounded border border-gray-300 px-3 py-2 text-sm"
+        className="field rounded px-3 py-2 text-sm"
       />
 
       <select
         value={role}
         onChange={(e) => setRole(e.target.value)}
-        className="rounded border border-gray-300 px-3 py-2 text-sm"
+        className="field rounded px-3 py-2 text-sm"
       >
         {ASSIGNABLE_ROLES.map((r) => (
           <option key={r} value={r}>
@@ -56,13 +56,13 @@ function StaffInvite({ companyId, onInvited }) {
         ))}
       </select>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {success && <p className="text-sm text-green-600">{success}</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
+      {success && <p className="text-sm text-low">{success}</p>}
 
       <button
         type="submit"
         disabled={submitting}
-        className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="btn-primary rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
       >
         {submitting ? 'Sending invite...' : 'Send invite'}
       </button>

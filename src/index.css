@@ -1,1 +1,167 @@
 @import "tailwindcss";
+
+/* Rectifia brand system.
+ *
+ * Every colour the app is allowed to use is declared here as a theme token,
+ * so components reference brand names (bg-navy, text-muted, border-line)
+ * rather than Tailwind's stock palette. Adding a raw blue-600/gray-500 back
+ * into a component re-introduces the off-brand default palette - use a token
+ * below, or add one here if something genuinely new is needed. */
+@theme {
+  /* Inter across the portfolio; Noto Sans Sinhala carries the `si` locale,
+   * whose glyphs Inter does not cover. */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    "Noto Sans Sinhala", sans-serif;
+
+  /* Primary - headers, primary buttons, nav bars, Super Admin and Case
+   * Handler accents. */
+  --color-navy: #0b2c49;
+  --color-navy-50: #f2f6fa;
+  --color-navy-100: #e7edf3;
+  --color-navy-200: #c8d6e3;
+  --color-navy-600: #14456f;
+  --color-navy-800: #071d30;
+  --color-navy-900: #051523;
+
+  /* Accent - CTAs, highlights, active states, attention/flag indicators
+   * (consistency-engine flags, priority markers). */
+  --color-gold: #db9b3a;
+  --color-gold-50: #fdf6ec;
+  --color-gold-100: #f7e7cc;
+  --color-gold-200: #eecfa0;
+  --color-gold-600: #c4862b;
+
+  /* Surfaces and text. The page sits on off-white rather than stark white -
+   * this is a dashboard-heavy app and cards need to read as raised. */
+  --color-canvas: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-charcoal: #1e2a38;
+  --color-muted: #6b7684;
+  --color-line: #e2e5e9;
+
+  /* Severity / status. Deliberately distinct from the brand amber except at
+   * "high", which reuses it on purpose so the accent doubles as the
+   * attention colour. */
+  --color-critical: #b3261e;
+  /* Light tint of critical, for error text on a navy surface where the
+   * full-strength red has nowhere near enough contrast. */
+  --color-critical-200: #f2b8b5;
+  --color-high: #db9b3a;
+  --color-medium: #d4a72c;
+  --color-low: #3b7a57;
+  --color-info: #3e6b96;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-charcoal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Inputs and selects inherit the brand face rather than the UA default. */
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
+
+  /* Checkboxes and radios pick up the primary rather than the UA blue. */
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  progress {
+    accent-color: var(--color-navy);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Status tones. Each severity level is one token expanded into the
+   * border/background/text triple that badges and callouts use, so a level's
+   * colour is defined once instead of being spelled out at every call site. */
+  .tone-critical,
+  .tone-high,
+  .tone-medium,
+  .tone-low,
+  .tone-info,
+  .tone-neutral {
+    border-color: color-mix(in srgb, var(--tone) 32%, white);
+    background-color: color-mix(in srgb, var(--tone) 8%, white);
+    color: color-mix(in srgb, var(--tone) 88%, black);
+  }
+  .tone-critical {
+    --tone: var(--color-critical);
+  }
+  .tone-high {
+    --tone: var(--color-gold);
+  }
+  .tone-medium {
+    --tone: var(--color-medium);
+  }
+  .tone-low {
+    --tone: var(--color-low);
+  }
+  .tone-info {
+    --tone: var(--color-info);
+  }
+  .tone-neutral {
+    --tone: var(--color-muted);
+  }
+
+  /* Text inputs, selects and textareas. */
+  .field {
+    border: 1px solid var(--color-line);
+    background-color: var(--color-surface);
+    color: var(--color-charcoal);
+  }
+  .field::placeholder {
+    color: var(--color-muted);
+  }
+  .field:focus {
+    border-color: var(--color-navy);
+  }
+
+  /* Solid navy primary action. */
+  .btn-primary {
+    background-color: var(--color-navy);
+    color: var(--color-surface);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--color-navy-800);
+  }
+
+  /* Amber call-to-action, for the one action a screen wants you to take. */
+  .btn-accent {
+    background-color: var(--color-gold);
+    color: var(--color-navy-900);
+  }
+  .btn-accent:hover:not(:disabled) {
+    background-color: var(--color-gold-600);
+  }
+
+  /* Neutral/secondary action on a card surface. */
+  .btn-secondary {
+    border: 1px solid var(--color-line);
+    background-color: var(--color-surface);
+    color: var(--color-charcoal);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-navy-50);
+  }
+
+  /* Destructive action (case closure, deletion). */
+  .btn-danger {
+    background-color: var(--color-critical);
+    color: var(--color-surface);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-critical) 85%, black);
+  }
+}

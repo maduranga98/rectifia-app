@@ -32,9 +32,9 @@ function formatDaysUntilDeadline(deadlineMs, now) {
 }
 
 const PRIORITY_STYLE = {
-  high: 'border-red-300 bg-red-50 text-red-700',
-  medium: 'border-amber-300 bg-amber-50 text-amber-700',
-  low: 'border-gray-200 bg-gray-50 text-gray-600',
+  high: 'tone-high',
+  medium: 'tone-medium',
+  low: 'tone-low',
 }
 
 // Company-wide case table for the HR Coordinator role. Every column here -
@@ -115,27 +115,27 @@ function HRCoordinatorDashboard({ companyId }) {
     <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Company case overview</h1>
-        <button type="button" onClick={refresh} className="text-sm text-blue-600 underline">
+        <button type="button" onClick={refresh} className="text-sm text-navy underline">
           Refresh
         </button>
       </div>
 
       <div
         className={`w-fit rounded border px-4 py-3 text-sm ${
-          approachingDeadlineCount > 0 ? 'border-amber-300 bg-amber-50 text-amber-700' : 'border-gray-200 bg-gray-50 text-gray-600'
+          approachingDeadlineCount > 0 ? 'tone-high' : 'tone-neutral'
         }`}
       >
         <span className="font-semibold">{approachingDeadlineCount}</span> case
         {approachingDeadlineCount === 1 ? '' : 's'} approaching or past a compliance deadline (within 48h)
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {loading && cases.length === 0 && <p className="text-sm text-gray-500">Loading...</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
+      {loading && cases.length === 0 && <p className="text-sm text-muted">Loading...</p>}
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-500">
+            <tr className="border-b border-line text-left text-muted">
               <th className="py-2 pr-4">Category</th>
               <th className="py-2 pr-4">Severity</th>
               <th className="py-2 pr-4">Evidence</th>
@@ -148,7 +148,7 @@ function HRCoordinatorDashboard({ companyId }) {
           </thead>
           <tbody>
             {cases.map((c) => (
-              <tr key={c.id} className="border-b border-gray-100">
+              <tr key={c.id} className="border-b border-line">
                 <td className="py-2 pr-4">{c.category ?? 'Uncategorized'}</td>
                 <td className="py-2 pr-4">{c.severityScore ?? '-'}</td>
                 <td className="py-2 pr-4">{c.evidenceScore ?? '-'}</td>
@@ -164,7 +164,7 @@ function HRCoordinatorDashboard({ companyId }) {
                 </td>
                 <td className="py-2 pr-4">
                   <select
-                    className="rounded border border-gray-300 px-2 py-1 text-xs"
+                    className="field rounded px-2 py-1 text-xs"
                     disabled={reassigningId === c.id}
                     defaultValue=""
                     onChange={(e) => handleReassign(c.id, e.target.value)}
@@ -184,7 +184,7 @@ function HRCoordinatorDashboard({ companyId }) {
           </tbody>
         </table>
         {!loading && cases.length === 0 && !error && (
-          <p className="py-4 text-sm text-gray-500">No cases for this company yet.</p>
+          <p className="py-4 text-sm text-muted">No cases for this company yet.</p>
         )}
       </div>
     </div>

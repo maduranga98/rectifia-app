@@ -22,9 +22,9 @@ function messageAuthorLabel(message) {
 }
 
 function messageStyle(message) {
-  if (message.type === 'manual_log') return 'border-amber-300 bg-amber-50'
-  if (message.sender === 'ai') return 'border-blue-200 bg-blue-50'
-  return 'border-gray-200 bg-white'
+  if (message.type === 'manual_log') return 'tone-high'
+  if (message.sender === 'ai') return 'border-navy-200 bg-navy-50'
+  return 'border-line bg-surface'
 }
 
 // The single ongoing communication channel for a case. Reporter messages,
@@ -111,11 +111,11 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
     <div className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
       <h2 className="text-xl font-semibold">Case thread</h2>
 
-      <div className="flex flex-col gap-3 rounded border border-gray-200 p-4">
-        {messages.length === 0 && <p className="text-sm text-gray-500">No messages yet.</p>}
+      <div className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
+        {messages.length === 0 && <p className="text-sm text-muted">No messages yet.</p>}
         {messages.map((message) => (
           <div key={message.id} className={`rounded border px-3 py-2 text-sm ${messageStyle(message)}`}>
-            <div className="flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center justify-between text-xs text-muted">
               <span className="font-medium">{messageAuthorLabel(message)}</span>
               <span>{formatTimestamp(message.timestamp)}</span>
             </div>
@@ -128,7 +128,7 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
                       href={attachment.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs text-blue-600 underline"
+                      className="text-xs text-navy underline"
                     >
                       {attachment.filename}
                     </a>
@@ -140,7 +140,7 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
         ))}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-critical">{error}</p>}
 
       <form onSubmit={handleSend} className="flex flex-col gap-2">
         <textarea
@@ -148,7 +148,7 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
           onChange={(e) => setDraft(e.target.value)}
           rows={3}
           placeholder="Type a message..."
-          className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          className="w-full field rounded px-3 py-2 text-sm"
         />
         <div className="flex items-center gap-3">
           <input
@@ -159,7 +159,7 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
           <button
             type="submit"
             disabled={sending}
-            className="ml-auto rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="ml-auto btn-primary rounded px-4 py-2 text-sm disabled:opacity-50"
           >
             {sending ? 'Sending...' : 'Send'}
           </button>
@@ -167,12 +167,12 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
       </form>
 
       {mode === 'investigator' && (
-        <div className="rounded border border-amber-200 p-3">
+        <div className="rounded border border-gold-200 p-3">
           {!showLogForm ? (
             <button
               type="button"
               onClick={() => setShowLogForm(true)}
-              className="text-sm text-amber-700 underline"
+              className="text-sm text-gold-600 underline"
             >
               + Add manual log entry
             </button>
@@ -183,17 +183,17 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
                 onChange={(e) => setLogDraft(e.target.value)}
                 rows={2}
                 placeholder="e.g. Called witness X, summary: ..."
-                className="w-full rounded border border-amber-300 px-3 py-2 text-sm"
+                className="w-full rounded border border-gold-200 px-3 py-2 text-sm"
               />
               <div className="flex gap-3">
                 <button
                   type="submit"
                   disabled={sending}
-                  className="rounded bg-amber-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                  className="btn-accent rounded px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                 >
                   Save log entry
                 </button>
-                <button type="button" onClick={() => setShowLogForm(false)} className="text-sm text-gray-500">
+                <button type="button" onClick={() => setShowLogForm(false)} className="text-sm text-muted">
                   Cancel
                 </button>
               </div>

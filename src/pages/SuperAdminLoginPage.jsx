@@ -50,14 +50,14 @@ function SuperAdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-900 p-6">
+    <div className="flex min-h-screen items-center justify-center bg-navy-900 p-6">
       <div className="flex w-full max-w-md flex-col gap-3">
         <h1 className="text-xl font-semibold text-white">Lumora Platform Admin</h1>
-        <p className="text-sm text-gray-400">Super Admin access only - not scoped to any company.</p>
+        <p className="text-sm text-navy-200">Super Admin access only - not scoped to any company.</p>
 
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col gap-3 rounded border border-gray-700 bg-gray-800 p-4"
+          className="flex flex-col gap-3 rounded-lg border border-navy-600 bg-navy p-5 shadow-lg"
         >
           <input
             type="email"
@@ -65,7 +65,7 @@ function SuperAdminLoginPage() {
             placeholder="admin@lumora.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500"
+            className="rounded border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-white placeholder:text-navy-200"
           />
           <input
             type="password"
@@ -73,15 +73,15 @@ function SuperAdminLoginPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500"
+            className="rounded border border-navy-600 bg-navy-900 px-3 py-2 text-sm text-white placeholder:text-navy-200"
           />
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-critical-200">{error}</p>}
 
           <button
             type="submit"
             disabled={submitting}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-accent rounded px-4 py-2 text-sm font-semibold disabled:opacity-50"
           >
             {submitting ? 'Signing in...' : 'Sign in'}
           </button>

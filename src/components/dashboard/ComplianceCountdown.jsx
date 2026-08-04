@@ -19,9 +19,9 @@ function formatCountdown(msRemaining) {
 }
 
 function urgencyStyle(msRemaining) {
-  if (msRemaining <= 0) return 'border-red-300 bg-red-50 text-red-700'
-  if (msRemaining <= ESCALATION_WINDOW_MS) return 'border-amber-300 bg-amber-50 text-amber-700'
-  return 'border-green-200 bg-green-50 text-green-700'
+  if (msRemaining <= 0) return 'tone-critical'
+  if (msRemaining <= ESCALATION_WINDOW_MS) return 'tone-high'
+  return 'tone-low'
 }
 
 // A deadline that's already been actioned (acknowledgment sent, feedback
@@ -44,7 +44,7 @@ function DeadlineRow({ label, dueAt, actionedAt, actionedLabel }) {
   return (
     <div
       className={`rounded border px-3 py-2 text-sm ${
-        actioned ? 'border-gray-200 bg-gray-50 text-gray-500' : urgencyStyle(msRemaining)
+        actioned ? 'border-line bg-canvas text-muted' : urgencyStyle(msRemaining)
       }`}
     >
       <div className="flex items-center justify-between">
@@ -66,7 +66,7 @@ function ComplianceCountdown({ caseData }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-gray-700">Compliance deadlines</h3>
+      <h3 className="text-sm font-semibold text-charcoal">Compliance deadlines</h3>
 
       <DeadlineRow
         label="Acknowledgment"
@@ -82,7 +82,7 @@ function ComplianceCountdown({ caseData }) {
       />
 
       {caseData.complianceRuleApplied && (
-        <p className="text-xs text-gray-400">Rule applied: {caseData.complianceRuleApplied}</p>
+        <p className="text-xs text-muted">Rule applied: {caseData.complianceRuleApplied}</p>
       )}
     </div>
   )
