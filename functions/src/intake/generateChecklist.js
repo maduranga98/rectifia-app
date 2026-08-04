@@ -3,6 +3,7 @@ const { defineSecret } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
+const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -11,7 +12,6 @@ if (!admin.apps.length) {
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY')
 const MODEL = 'claude-opus-5'
 
-const CASES_COLLECTION = 'cases'
 const MESSAGES_SUBCOLLECTION = 'messages'
 
 const CHECKLIST_ITEM_TYPES = ['interview_question', 'document_request', 'contradiction_flag']
@@ -136,17 +136,11 @@ function serializeChecklistItem(entry) {
 // what we know now", not something merged across runs, since the thread it
 // was built from keeps growing.
 exports.generateChecklist = onCall({ secrets: [anthropicApiKey] }, async (request) => {
-  const { caseId, investigatorId } = request.data || {}
-  if (!caseId) {
-    throw new HttpsError('invalid-argument', 'caseId is required')
-  }
+  const uid = requireAuthUid(request)
+  const { caseId } = request.data || {}
 
   const firestore = admin.firestore()
-  const caseRef = firestore.collection(CASES_COLLECTION).doc(caseId)
-  const caseSnapshot = await caseRef.get()
-  if (!caseSnapshot.exists) {
-    throw new HttpsError('not-found', 'No such case')
-  }
+  const { caseRef, snapshot: caseSnapshot } = await loadCaseForHandler(firestore, caseId, uid)
 
   const caseData = caseSnapshot.data()
   const { category, responses } = caseData
@@ -183,7 +177,7 @@ exports.generateChecklist = onCall({ secrets: [anthropicApiKey] }, async (reques
   await caseRef.update({
     checklist,
     checklistGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
-    checklistGeneratedBy: investigatorId ?? null,
+    checklistGeneratedBy: uid,
   })
 
   return { checklist: checklist.map(serializeChecklistItem) }
@@ -194,6 +188,7 @@ exports.generateChecklist = onCall({ secrets: [anthropicApiKey] }, async (reques
 // deliberately no "all items must be checked before X" enforcement anywhere
 // in this module.
 exports.updateChecklistItem = onCall(async (request) => {
+  const uid = requireAuthUid(request)
   const { caseId, itemId, status, text } = request.data || {}
   if (!caseId || !itemId) {
     throw new HttpsError('invalid-argument', 'caseId and itemId are required')
@@ -206,7 +201,8 @@ exports.updateChecklistItem = onCall(async (request) => {
   }
 
   const firestore = admin.firestore()
-  const caseRef = firestore.collection(CASES_COLLECTION).doc(caseId)
+  // Verify the authenticated caller is the assigned handler before mutating.
+  const { caseRef } = await loadCaseForHandler(firestore, caseId, uid)
 
   const updatedChecklist = await firestore.runTransaction(async (tx) => {
     const snapshot = await tx.get(caseRef)

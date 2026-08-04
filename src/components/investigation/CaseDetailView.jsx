@@ -217,7 +217,7 @@ function ActionForm({ caseData, onChanged }) {
 // (deadlines, consistency, checklist) on the right. The old single stacked
 // column put the compliance countdown five scrolls above the button it
 // governs.
-function CaseDetailView({ caseId, investigatorId }) {
+function CaseDetailView({ caseId }) {
   const [caseData, setCaseData] = useState(null)
   const [error, setError] = useState(null)
 
@@ -265,7 +265,7 @@ function CaseDetailView({ caseId, investigatorId }) {
           </Card>
 
           <Card title="Case thread" description="Messages between the reporter and you.">
-            <CaseThread caseId={caseId} mode="investigator" investigatorId={investigatorId} />
+            <CaseThread caseId={caseId} mode="investigator" />
           </Card>
 
           <Card title="Take action" description="Proposing an action starts the consistency check.">
@@ -282,7 +282,7 @@ function CaseDetailView({ caseId, investigatorId }) {
             <ConsistencyFlags caseData={caseData} />
           </Card>
 
-          <InvestigationChecklist caseId={caseId} investigatorId={investigatorId} />
+          <InvestigationChecklist caseId={caseId} />
         </div>
       </div>
     </div>

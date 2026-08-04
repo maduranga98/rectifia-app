@@ -2,6 +2,7 @@ const { onDocumentUpdated } = require('firebase-functions/v2/firestore')
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
+const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -268,12 +269,24 @@ exports.routeCase = onDocumentUpdated(CASES_COLLECTION + '/{caseId}', async (eve
 // appropriate (this v1 does not re-run the conflict-of-interest check -
 // that's the point of routing it to a human in the first place).
 exports.reassignCase = onCall(async (request) => {
-  const { caseId, companyId, handlerId, actorId } = request.data || {}
+  const actorUid = requireAuthUid(request)
+  const { caseId, companyId, handlerId } = request.data || {}
   if (!caseId || !companyId || !handlerId) {
     throw new HttpsError('invalid-argument', 'caseId, companyId, and handlerId are required')
   }
 
   const firestore = admin.firestore()
+
+  // Reassignment is an oversight action (Company Admin or HR Coordinator via
+  // HRCoordinatorDashboard), not something the assigned handler does - verify
+  // the authenticated caller's role from their staff record keyed by
+  // request.auth.uid, never a client-supplied actorId.
+  const REASSIGN_ROLES = ['companyAdmin', 'hrCoordinator']
+  const actorRole = await loadCallerRole(firestore, companyId, actorUid)
+  if (!REASSIGN_ROLES.includes(actorRole)) {
+    throw new HttpsError('permission-denied', 'You do not have permission to reassign cases')
+  }
+
   const staffSnapshot = await firestore
     .collection(COMPANIES_COLLECTION)
     .doc(companyId)
@@ -295,7 +308,7 @@ exports.reassignCase = onCall(async (request) => {
     assignedAt: admin.firestore.FieldValue.serverTimestamp(),
     status: 'assigned',
     routingReason: 'manual_reassignment',
-    reassignedBy: actorId ?? null,
+    reassignedBy: actorUid,
   })
 
   return { success: true }

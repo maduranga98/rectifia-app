@@ -40,13 +40,13 @@ function bubbleClasses(message, mine) {
 // AI follow-up questions, and Case Handler messages all share one timeline
 // - this component doubles as the audit trail, so nothing here is ever
 // deleted or hidden, only appended to. mode is 'reporter' (Case ID +
-// passcode) or 'investigator' (investigatorId - see caseThreadService.js
-// for the current no-auth caveat on that side).
+// passcode) or 'investigator' (the caller's Firebase Auth identity, which
+// the callable attaches automatically - see caseThreadService.js).
 //
 // The heading and page framing belong to whatever renders this; it used to
 // carry its own <h2> and page padding, which meant it could only ever be
 // dropped onto a page by itself.
-function CaseThread({ caseId, mode, passcode, investigatorId }) {
+function CaseThread({ caseId, mode, passcode }) {
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [pendingFile, setPendingFile] = useState(null)
@@ -89,7 +89,7 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
       if (mode === 'reporter') {
         await sendReporterMessage(caseId, passcode, draft, attachments)
       } else {
-        await sendInvestigatorMessage(caseId, investigatorId, draft)
+        await sendInvestigatorMessage(caseId, draft)
       }
 
       setDraft('')
@@ -109,7 +109,7 @@ function CaseThread({ caseId, mode, passcode, investigatorId }) {
     setSending(true)
     setError(null)
     try {
-      await addManualLogEntry(caseId, investigatorId, logDraft)
+      await addManualLogEntry(caseId, logDraft)
       setLogDraft('')
       setShowLogForm(false)
       await refresh()

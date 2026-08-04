@@ -1,11 +1,11 @@
-const { onCall, HttpsError } = require('firebase-functions/v2/https')
+const { onCall } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
+const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
 
 if (!admin.apps.length) {
   admin.initializeApp()
 }
 
-const CASES_COLLECTION = 'cases'
 const MESSAGES_SUBCOLLECTION = 'messages'
 
 function toMillis(value) {
@@ -29,17 +29,11 @@ function serializeMessage(doc) {
 // read/compile operation only - every Firestore call below is a read, and
 // nothing on the case, its thread, or anything else is ever written back.
 exports.generateReport = onCall(async (request) => {
+  const uid = requireAuthUid(request)
   const { caseId } = request.data || {}
-  if (!caseId) {
-    throw new HttpsError('invalid-argument', 'caseId is required')
-  }
 
   const firestore = admin.firestore()
-  const caseRef = firestore.collection(CASES_COLLECTION).doc(caseId)
-  const caseSnapshot = await caseRef.get()
-  if (!caseSnapshot.exists) {
-    throw new HttpsError('not-found', 'No such case')
-  }
+  const { caseRef, snapshot: caseSnapshot } = await loadCaseForHandler(firestore, caseId, uid)
   const caseData = caseSnapshot.data()
 
   const messagesSnapshot = await caseRef.collection(MESSAGES_SUBCOLLECTION).orderBy('timestamp', 'asc').get()

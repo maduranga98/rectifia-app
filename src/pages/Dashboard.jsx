@@ -95,7 +95,7 @@ function Dashboard() {
             <Button icon="back" onClick={() => setSelectedCaseId(null)} className="self-start">
               Back to my cases
             </Button>
-            <CaseDetailView caseId={selectedCaseId} investigatorId={user?.uid} />
+            <CaseDetailView caseId={selectedCaseId} />
           </div>
         ) : (
           <HandlerDashboard onSelectCase={setSelectedCaseId} />
