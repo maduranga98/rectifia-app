@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDocs, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { firestore, functions } from './firebase'
 
@@ -52,6 +52,16 @@ export async function listStaff(companyId) {
 export async function listCaseHandlers(companyId) {
   const staff = await listStaff(companyId)
   return staff.filter((member) => member.role === 'caseHandler')
+}
+
+// Flips a staff member between 'active' and 'suspended'. Same plain-write
+// tradeoff as routingRules above - status isn't a custom claim, so this
+// doesn't touch auth or the role/companyId claims inviteStaff.js stamps.
+export async function updateStaffStatus(companyId, staffId, status) {
+  if (!['active', 'suspended'].includes(status)) {
+    throw new Error('status must be active or suspended')
+  }
+  await updateDoc(doc(firestore, 'companies', companyId, 'staff', staffId), { status })
 }
 
 // Reassigns a case to a different Case Handler - used both for ordinary

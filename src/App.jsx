@@ -37,7 +37,7 @@ function App() {
           }
         />
         <Route
-          path="/admin"
+          path="/admin/*"
           element={
             <ProtectedRoute allowedRoles={[ROLES.COMPANY_ADMIN]}>
               <Admin />
