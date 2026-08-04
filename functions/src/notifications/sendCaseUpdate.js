@@ -4,6 +4,7 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const webpush = require('web-push')
 const { verifyReporterAccess } = require('../intake/caseThread')
+const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
 const { DECOY_TEMPLATES } = require('./decoyTemplates')
 
 if (!admin.apps.length) {
@@ -21,6 +22,11 @@ const vapidSubject = defineSecret('VAPID_SUBJECT')
 // info, email, or anything else identifying - and only reachable after the
 // same Case ID + passcode check every other reporter action requires, so a
 // caller can't register a subscription for a case that isn't theirs.
+//
+// Deliberately has NO Firebase Auth check: a reporter is anonymous and has no
+// account to sign in with. Case ID + passcode *is* the credential here, same
+// as getCaseThread / postReporterMessage. Do not add requireAuthUid to this
+// one - it would lock reporters out of their own case updates.
 exports.registerPushSubscription = onCall(async (request) => {
   const { caseId, passcode, subscription } = request.data || {}
   if (!subscription?.endpoint || !subscription?.keys) {
@@ -55,17 +61,28 @@ function pickTemplate(lastTemplateId) {
 // entirely from the randomly-chosen decoy template - subject, body, and
 // preview text never reveal the case category or the words "case"/"report",
 // and the same template is never repeated twice in a row for the same case.
-// Staff invoke this (e.g. after posting an investigator message); it is not
-// reachable by the reporter.
+//
+// Staff invoke this (e.g. after posting an investigator message), so it is
+// gated by the same staffAuth check every other staff-invoked callable uses
+// (caseActions.js, caseThread.js, routeCase.js): the caller must present a
+// Firebase Auth token, and loadCaseForHandler verifies from the *server-side*
+// staff record - keyed by request.auth.uid, never a client-supplied id - that
+// they are a caseHandler/companyAdmin in this case's company and that the
+// case is assigned to them. Without it any unauthenticated caller who guessed
+// a Case ID could trigger a push to that reporter's device, which is both a
+// notification-spam channel and a way to probe whether a Case ID exists.
 exports.sendCaseUpdate = onCall(
   { secrets: [vapidPublicKey, vapidPrivateKey, vapidSubject] },
   async (request) => {
+    const uid = requireAuthUid(request)
     const { caseId } = request.data || {}
     if (!caseId) {
       throw new HttpsError('invalid-argument', 'caseId is required')
     }
 
     const firestore = admin.firestore()
+    await loadCaseForHandler(firestore, caseId, uid)
+
     const subscriptionSnapshot = await firestore.collection(PUSH_SUBSCRIPTIONS_COLLECTION).doc(caseId).get()
     if (!subscriptionSnapshot.exists) {
       return { delivered: false, reason: 'no_subscription' }

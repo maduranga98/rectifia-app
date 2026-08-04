@@ -147,6 +147,28 @@ service cloud.firestore {
       allow update, delete: if isCompanyAdmin(companyId);
     }
 
+    // Pulse Check recipient roster (module 14) - deliberately a different
+    // collection from companies/{companyId}/staff above, not an extra field on
+    // it. A staff doc is a login-having account: its id is a Firebase Auth
+    // uid, it carries a role, and it can only be created server-side by
+    // inviteStaff.js precisely so nobody can mint their own privileged record.
+    // An employee doc is the opposite - no account, no uid, no role, nothing
+    // that grants access to anything - so a Company Admin can create these
+    // directly (including a several-hundred-row CSV import from
+    // src/services/employeeService.js) without that being a privilege-
+    // escalation path: the worst a bad write here can do is queue a pulse
+    // check for someone who doesn't exist.
+    //
+    // Read is open to any staff of the company (HR Coordinator and Pulse Check
+    // Reviewer need to resolve an employeeId on a pulse response to a person);
+    // writes are Company Admin only, the same as departments and routing
+    // rules. `email` is optional by design - see schedulePulseChecks.js, which
+    // queues an invite either way.
+    match /companies/{companyId}/employees/{employeeId} {
+      allow read: if isCompanyStaff(companyId);
+      allow write: if isCompanyAdmin(companyId);
+    }
+
     // Case-count rollup for the Company Admin overview page (module 15),
     // maintained by functions/src/company/syncCompanyStats.js from
     // caseMetadata - counts and breakdowns only (byStatus/byPriority/
