@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ACTION_CATEGORIES, closeCase, getAssignedCase, proposeAction } from '../../services/handlerService'
+import {
+  ACTION_CATEGORIES,
+  closeCase,
+  getAssignedCase,
+  proposeAction,
+  reviewConsistencyFlag,
+} from '../../services/handlerService'
 import ComplianceCountdown from '../dashboard/ComplianceCountdown'
 import CaseThread from '../intake/CaseThread'
+import CaseReport from './CaseReport'
 import InvestigationChecklist from './InvestigationChecklist'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
@@ -77,6 +84,90 @@ function QuestionnaireAnswers({ caseData }) {
   )
 }
 
+// The consistency flag is deliberately advisory: it maps a flagged
+// deviation to an Alert whose tone matches the *direction* (harsher vs
+// lenient) so both are surfaced with equal weight, and it never suggests an
+// action or gates the form below it. All the handler can do here is
+// acknowledge it with a note - "flag never suggests, human decides".
+const FLAG_DIRECTION_VARIANT = {
+  harsher: 'warning',
+  lenient: 'info',
+}
+
+function ConsistencyFlagBanner({ caseData, onChanged }) {
+  const check = caseData.consistencyCheck
+  const flag = check?.status === 'flagged' ? check.flag : null
+  const [note, setNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+
+  if (!flag) return null
+
+  const reviewed = Boolean(flag.reviewedAt)
+
+  async function handleReview(event) {
+    event.preventDefault()
+    if (!note.trim()) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await reviewConsistencyFlag(caseData.id, note)
+      await onChanged()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (reviewed) {
+    return (
+      <Alert variant="success" title="Consistency flag reviewed">
+        <p>{flag.message}</p>
+        {flag.reviewNote && <p className="mt-1.5">Reviewer note: {flag.reviewNote}</p>}
+      </Alert>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Alert
+        variant={FLAG_DIRECTION_VARIANT[flag.direction] ?? 'warning'}
+        title={`Consistency flag - proposed action is ${humanize(flag.direction)} than typical`}
+      >
+        <p>{flag.message}</p>
+        <p className="mt-1.5 text-xs">
+          This is informational only. It does not suggest an action or stop you from proposing or
+          closing this case - the decision remains yours. Add a note to record that you have seen
+          and considered it.
+        </p>
+      </Alert>
+
+      <form onSubmit={handleReview} className="flex flex-col gap-3">
+        <Textarea
+          label="Review note"
+          rows={2}
+          placeholder="Note why the proposed action is appropriate despite the flag."
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        <Button
+          type="submit"
+          variant="secondary"
+          className="self-start"
+          loading={submitting}
+          loadingLabel="Saving"
+          disabled={!note.trim()}
+        >
+          Mark reviewed
+        </Button>
+      </form>
+
+      {error && <Alert variant="error">{error}</Alert>}
+    </div>
+  )
+}
+
 // This form is the only way a proposed action gets written to the case
 // (via handlerService.proposeAction -> functions/src/investigation/caseActions.js),
 // which is what starts module 10's consistency check running. Closing the
@@ -133,6 +224,8 @@ function ActionForm({ caseData, onChanged }) {
 
   return (
     <div className="flex flex-col gap-5">
+      <ConsistencyFlagBanner caseData={caseData} onChanged={onChanged} />
+
       <form onSubmit={handlePropose} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
@@ -220,6 +313,7 @@ function ActionForm({ caseData, onChanged }) {
 function CaseDetailView({ caseId }) {
   const [caseData, setCaseData] = useState(null)
   const [error, setError] = useState(null)
+  const [showReport, setShowReport] = useState(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -240,6 +334,26 @@ function CaseDetailView({ caseId }) {
   if (!caseData) return <SkeletonList rows={4} />
 
   const closed = caseData.status === 'closed'
+
+  // A closed case has a compiled report to show. CaseReport is a self-
+  // contained, read-only view (it fetches via generateReport on its own), so
+  // rather than squeezing it into a card it replaces the working layout
+  // entirely, with a way back to the case summary.
+  if (closed && showReport) {
+    return (
+      <div className="flex flex-col gap-5">
+        <Button
+          variant="secondary"
+          icon="back"
+          className="self-start print:hidden"
+          onClick={() => setShowReport(false)}
+        >
+          Back to case
+        </Button>
+        <CaseReport caseId={caseId} />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -268,7 +382,17 @@ function CaseDetailView({ caseId }) {
             <CaseThread caseId={caseId} mode="investigator" />
           </Card>
 
-          <Card title="Take action" description="Proposing an action starts the consistency check.">
+          <Card
+            title={closed ? 'Case outcome' : 'Take action'}
+            description={closed ? undefined : 'Proposing an action starts the consistency check.'}
+            actions={
+              closed ? (
+                <Button variant="primary" icon="document" onClick={() => setShowReport(true)}>
+                  View report
+                </Button>
+              ) : undefined
+            }
+          >
             <ActionForm caseData={caseData} onChanged={refresh} />
           </Card>
         </div>

@@ -6,6 +6,7 @@ const CASES_COLLECTION = 'cases'
 
 const proposeActionCallable = httpsCallable(functions, 'proposeAction')
 const closeCaseCallable = httpsCallable(functions, 'closeCase')
+const reviewConsistencyFlagCallable = httpsCallable(functions, 'reviewConsistencyFlag')
 
 export const ACTION_CATEGORIES = [
   'no_action',
@@ -70,5 +71,15 @@ export async function proposeAction(caseId, { actionCategory, notes, effectiveDa
 export async function closeCase(caseId) {
   requireHandlerUid()
   const result = await closeCaseCallable({ caseId })
+  return result.data
+}
+
+// Acknowledges module 10's consistency flag with a short note. This only
+// records that the handler saw and considered the flag (stored on
+// consistencyCheck.flag.reviewedBy/reviewNote/reviewedAt server-side) - it
+// never changes or unblocks their proposed action or the case status.
+export async function reviewConsistencyFlag(caseId, note) {
+  requireHandlerUid()
+  const result = await reviewConsistencyFlagCallable({ caseId, note })
   return result.data
 }
