@@ -1,41 +1,21 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { ACTION_TAKEN_OPTIONS, normalizeAction } = require('../consistency/actionVocabulary')
+const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
 
 if (!admin.apps.length) {
   admin.initializeApp()
 }
 
-const CASES_COLLECTION = 'cases'
 const OPEN_STATUSES_ALLOWING_ACTION = ['open', 'assigned', 'needs_manual_assignment']
-
-// Staff authentication doesn't exist in this codebase yet (see the same
-// caveat in caseThread.js / routeCase.js) - investigatorId is trusted as the
-// caller-supplied assigned handler, not verified against a Firebase Auth
-// identity.
-async function loadCaseForHandler(firestore, caseId, investigatorId) {
-  if (!caseId || !investigatorId) {
-    throw new HttpsError('invalid-argument', 'caseId and investigatorId are required')
-  }
-
-  const caseRef = firestore.collection(CASES_COLLECTION).doc(caseId)
-  const snapshot = await caseRef.get()
-  if (!snapshot.exists) {
-    throw new HttpsError('not-found', 'No such case')
-  }
-  if (snapshot.data().assignedHandlerId !== investigatorId) {
-    throw new HttpsError('permission-denied', 'This case is not assigned to you')
-  }
-
-  return { caseRef, snapshot }
-}
 
 // Records the Case Handler's proposed action. This write is exactly what
 // checkConsistency.js's onDocumentUpdated trigger reacts to (module 10) -
 // proposing an action here is what starts that check running; this
 // function itself never reads or writes consistencyCheck.
 exports.proposeAction = onCall(async (request) => {
-  const { caseId, investigatorId, actionCategory, notes, effectiveDate } = request.data || {}
+  const uid = requireAuthUid(request)
+  const { caseId, actionCategory, notes, effectiveDate } = request.data || {}
   if (!ACTION_TAKEN_OPTIONS.includes(normalizeAction(actionCategory))) {
     throw new HttpsError('invalid-argument', `actionCategory must be one of ${ACTION_TAKEN_OPTIONS.join(', ')}`)
   }
@@ -47,7 +27,7 @@ exports.proposeAction = onCall(async (request) => {
   }
 
   const firestore = admin.firestore()
-  const { caseRef, snapshot } = await loadCaseForHandler(firestore, caseId, investigatorId)
+  const { caseRef, snapshot } = await loadCaseForHandler(firestore, caseId, uid)
   if (!OPEN_STATUSES_ALLOWING_ACTION.includes(snapshot.data().status)) {
     throw new HttpsError('failed-precondition', 'This case is already closed')
   }
@@ -56,7 +36,7 @@ exports.proposeAction = onCall(async (request) => {
     proposedAction: normalizeAction(actionCategory),
     proposedActionNotes: notes.trim(),
     proposedActionEffectiveDate: admin.firestore.Timestamp.fromDate(new Date(effectiveDate)),
-    proposedActionBy: investigatorId,
+    proposedActionBy: uid,
     proposedActionAt: admin.firestore.FieldValue.serverTimestamp(),
   })
 
@@ -71,9 +51,10 @@ exports.proposeAction = onCall(async (request) => {
 // check result itself is advisory (a flagged case can still be closed) -
 // this only gates on the check having completed, not on its outcome.
 exports.closeCase = onCall(async (request) => {
-  const { caseId, investigatorId } = request.data || {}
+  const uid = requireAuthUid(request)
+  const { caseId } = request.data || {}
   const firestore = admin.firestore()
-  const { caseRef, snapshot } = await loadCaseForHandler(firestore, caseId, investigatorId)
+  const { caseRef, snapshot } = await loadCaseForHandler(firestore, caseId, uid)
   const caseData = snapshot.data()
 
   if (!caseData.proposedAction) {
@@ -95,7 +76,7 @@ exports.closeCase = onCall(async (request) => {
     actionEffectiveDate: caseData.proposedActionEffectiveDate ?? null,
     status: 'closed',
     closedAt: admin.firestore.FieldValue.serverTimestamp(),
-    closedBy: investigatorId,
+    closedBy: uid,
   })
 
   return { success: true }

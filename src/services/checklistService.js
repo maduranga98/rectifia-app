@@ -19,9 +19,11 @@ const updateChecklistItemCallable = httpsCallable(functions, 'updateChecklistIte
 
 // Regenerates the checklist from the case's current category, questionnaire
 // responses, and full thread - see functions/src/intake/generateChecklist.js.
-// This replaces any previous checklist rather than merging into it.
-export async function generateChecklist(caseId, investigatorId) {
-  const result = await generateChecklistCallable({ caseId, investigatorId })
+// This replaces any previous checklist rather than merging into it. The
+// caller's identity is read server-side from the ID token the callable
+// attaches automatically, so no investigatorId is sent in the payload.
+export async function generateChecklist(caseId) {
+  const result = await generateChecklistCallable({ caseId })
   return result.data.checklist
 }
 

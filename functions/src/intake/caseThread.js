@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const crypto = require('crypto')
+const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -106,15 +107,12 @@ exports.postReporterMessage = onCall(async (request) => {
 
 // Posts an investigator message or a manual log entry ('manual_log' is kept
 // as a distinct `type` so the UI can render it differently from ordinary
-// messages). Staff authentication doesn't exist in this codebase yet, so
-// this trusts the caller-supplied investigatorId - the same no-auth
-// tradeoff companyService.js already makes for department heads.
-// TODO: gate this behind real staff auth once that module exists.
+// messages). The investigator's identity is taken from the verified Firebase
+// Auth token (request.auth.uid), never a client-supplied field: the caller
+// must be an authenticated caseHandler/companyAdmin assigned to this case.
 exports.postInvestigatorMessage = onCall(async (request) => {
-  const { caseId, investigatorId, text, type = 'message', attachments } = request.data || {}
-  if (!caseId || !investigatorId) {
-    throw new HttpsError('invalid-argument', 'caseId and investigatorId are required')
-  }
+  const uid = requireAuthUid(request)
+  const { caseId, text, type = 'message', attachments } = request.data || {}
   if (!text?.trim()) {
     throw new HttpsError('invalid-argument', 'Message text is required')
   }
@@ -123,10 +121,7 @@ exports.postInvestigatorMessage = onCall(async (request) => {
   }
 
   const firestore = admin.firestore()
-  const caseSnapshot = await firestore.collection(CASES_COLLECTION).doc(caseId).get()
-  if (!caseSnapshot.exists) {
-    throw new HttpsError('not-found', 'No such case')
-  }
+  await loadCaseForHandler(firestore, caseId, uid)
 
   const messageRef = await firestore
     .collection(CASES_COLLECTION)
@@ -136,7 +131,7 @@ exports.postInvestigatorMessage = onCall(async (request) => {
       sender: 'investigator',
       type,
       text: text.trim(),
-      investigatorId,
+      investigatorId: uid,
       attachments: Array.isArray(attachments) ? attachments : [],
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
     })

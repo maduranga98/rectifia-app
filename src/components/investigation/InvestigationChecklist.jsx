@@ -23,7 +23,7 @@ const TYPE_STYLE = {
 // on-demand (not automatic) since the checklist is only as good as the
 // thread it's built from, and the handler decides when there's enough
 // there to be worth regenerating from.
-function InvestigationChecklist({ caseId, investigatorId }) {
+function InvestigationChecklist({ caseId }) {
   const [checklist, setChecklist] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -34,7 +34,7 @@ function InvestigationChecklist({ caseId, investigatorId }) {
     setLoading(true)
     setError(null)
     try {
-      const result = await generateChecklist(caseId, investigatorId)
+      const result = await generateChecklist(caseId)
       setChecklist(result)
     } catch (err) {
       setError(err.message)

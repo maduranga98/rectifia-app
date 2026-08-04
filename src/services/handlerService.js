@@ -56,8 +56,11 @@ export async function getAssignedCase(caseId) {
 // (see functions/src/investigation/caseActions.js) - it does not close the
 // case by itself.
 export async function proposeAction(caseId, { actionCategory, notes, effectiveDate }) {
-  const investigatorId = requireHandlerUid()
-  const result = await proposeActionCallable({ caseId, investigatorId, actionCategory, notes, effectiveDate })
+  // Guard the UX for a signed-out user; the caller's identity itself is
+  // taken server-side from the ID token the callable attaches automatically,
+  // so no investigatorId is sent in the payload.
+  requireHandlerUid()
+  const result = await proposeActionCallable({ caseId, actionCategory, notes, effectiveDate })
   return result.data
 }
 
@@ -65,7 +68,7 @@ export async function proposeAction(caseId, { actionCategory, notes, effectiveDa
 // running against the current proposed action - callers should surface that
 // as "still checking, try again shortly" rather than a hard error.
 export async function closeCase(caseId) {
-  const investigatorId = requireHandlerUid()
-  const result = await closeCaseCallable({ caseId, investigatorId })
+  requireHandlerUid()
+  const result = await closeCaseCallable({ caseId })
   return result.data
 }

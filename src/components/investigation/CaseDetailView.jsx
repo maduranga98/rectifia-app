@@ -188,7 +188,7 @@ function ActionForm({ caseData, onChanged }) {
 // firestore.rules only permits when this case is assigned to the
 // signed-in handler - there is no separate "is this case mine" check here
 // because there doesn't need to be one.
-function CaseDetailView({ caseId, investigatorId }) {
+function CaseDetailView({ caseId }) {
   const [caseData, setCaseData] = useState(null)
   const [error, setError] = useState(null)
 
@@ -231,12 +231,12 @@ function CaseDetailView({ caseId, investigatorId }) {
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-charcoal">Investigation checklist</h2>
-        <InvestigationChecklist caseId={caseId} investigatorId={investigatorId} />
+        <InvestigationChecklist caseId={caseId} />
       </section>
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-charcoal">Case thread</h2>
-        <CaseThread caseId={caseId} mode="investigator" investigatorId={investigatorId} />
+        <CaseThread caseId={caseId} mode="investigator" />
       </section>
 
       <section>

@@ -28,15 +28,15 @@ export async function sendReporterMessage(caseId, passcode, text, attachments = 
   return result.data.messageId
 }
 
-// investigatorId is trusted as-is for now - see the TODO in
-// functions/src/intake/caseThread.js on real staff auth.
-export async function sendInvestigatorMessage(caseId, investigatorId, text) {
+// The caller's identity comes from their Firebase Auth ID token, which the
+// Cloud Functions SDK attaches automatically - the callable reads
+// request.auth.uid server-side, so no investigatorId is sent.
+export async function sendInvestigatorMessage(caseId, text) {
   if (!text?.trim()) {
     throw new Error('Enter a message before sending')
   }
   const result = await postInvestigatorMessageCallable({
     caseId,
-    investigatorId,
     text,
     type: MESSAGE_TYPES.MESSAGE,
   })
@@ -46,13 +46,12 @@ export async function sendInvestigatorMessage(caseId, investigatorId, text) {
 // Manual log entries (e.g. "called witness X, summary: ...") are their own
 // message type so the UI can render them distinctly from an ordinary
 // investigator message.
-export async function addManualLogEntry(caseId, investigatorId, text) {
+export async function addManualLogEntry(caseId, text) {
   if (!text?.trim()) {
     throw new Error('Enter a log entry before saving')
   }
   const result = await postInvestigatorMessageCallable({
     caseId,
-    investigatorId,
     text,
     type: MESSAGE_TYPES.MANUAL_LOG,
   })
