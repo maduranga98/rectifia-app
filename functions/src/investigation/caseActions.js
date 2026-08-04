@@ -81,3 +81,35 @@ exports.closeCase = onCall(async (request) => {
 
   return { success: true }
 })
+
+// Records that the Case Handler has seen and considered module 10's
+// consistency flag, with a short note. This is deliberately advisory-only:
+// per the "flag never suggests, human decides" principle it records
+// acknowledgement onto the flag itself (reviewedBy/reviewNote/reviewedAt)
+// and never touches proposedAction, actionTaken, or status - reviewing a
+// flag neither changes nor unblocks the handler's own decision. Writes go
+// through this callable because clients cannot write cases/{caseId}
+// directly (firestore.rules: allow write: if false).
+exports.reviewConsistencyFlag = onCall(async (request) => {
+  const uid = requireAuthUid(request)
+  const { caseId, note } = request.data || {}
+  if (!note?.trim()) {
+    throw new HttpsError('invalid-argument', 'A review note is required')
+  }
+
+  const firestore = admin.firestore()
+  const { caseRef, snapshot } = await loadCaseForHandler(firestore, caseId, uid)
+  if (snapshot.data().consistencyCheck?.status !== 'flagged') {
+    throw new HttpsError('failed-precondition', 'There is no consistency flag to review on this case')
+  }
+
+  // Dotted field paths merge into the existing consistencyCheck.flag map so
+  // the flag's message/direction are preserved alongside the review record.
+  await caseRef.update({
+    'consistencyCheck.flag.reviewedBy': uid,
+    'consistencyCheck.flag.reviewNote': note.trim(),
+    'consistencyCheck.flag.reviewedAt': admin.firestore.FieldValue.serverTimestamp(),
+  })
+
+  return { success: true }
+})
