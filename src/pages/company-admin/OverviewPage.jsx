@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import QRCode from 'qrcode'
 import { getCompanyStats } from '../../services/companyStatsService'
+import { getCompany } from '../../services/companyService'
 import { listRoutingRules, listStaff } from '../../services/routingService'
 import { listPulseSummaries } from '../../services/pulseCheckService'
 import { CATEGORIES } from '../../data/categories'
@@ -65,6 +67,96 @@ function BreakdownList({ entries, labelFor = (key) => key, toneFor = () => 'tone
   )
 }
 
+// The printable/postable reporting link for this company. The QR encodes the
+// public /submit/:companySlug URL an anonymous reporter follows - the same slug
+// the Submit page resolves server-side - so a company can put the code on a
+// poster in a break room and reporters reach the right, company-scoped intake
+// flow without typing anything or authenticating. Nothing here is case content;
+// it's just the company's own public reporting address rendered as a QR.
+function ReportingLinkCard({ slug }) {
+  const [qrDataUrl, setQrDataUrl] = useState(null)
+  const [copied, setCopied] = useState(false)
+
+  // Built from the current origin so the QR points at wherever the app is
+  // actually served (localhost in dev, the real domain in production) rather
+  // than a hard-coded host.
+  const submitUrl =
+    slug && typeof window !== 'undefined'
+      ? `${window.location.origin}/submit/${slug}`
+      : null
+
+  useEffect(() => {
+    if (!submitUrl) return undefined
+    let active = true
+    QRCode.toDataURL(submitUrl, { width: 256, margin: 1 })
+      .then((url) => {
+        if (active) setQrDataUrl(url)
+      })
+      .catch(() => {
+        if (active) setQrDataUrl(null)
+      })
+    return () => {
+      active = false
+    }
+  }, [submitUrl])
+
+  async function copyLink() {
+    if (!submitUrl) return
+    try {
+      await navigator.clipboard.writeText(submitUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard can be unavailable (insecure context / denied permission);
+      // the link stays visible and selectable below either way.
+    }
+  }
+
+  return (
+    <Card title="Reporting link">
+      {!slug ? (
+        <p className="text-sm text-muted">
+          This company doesn&apos;t have a reporting link yet. It&apos;s assigned automatically when
+          the company is set up.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="shrink-0">
+            {qrDataUrl ? (
+              <img
+                src={qrDataUrl}
+                alt={`QR code linking to the reporting page for this company`}
+                className="h-40 w-40 rounded-lg border border-line bg-white p-2"
+              />
+            ) : (
+              <div className="flex h-40 w-40 items-center justify-center rounded-lg border border-line bg-line-soft text-xs text-muted">
+                Generating…
+              </div>
+            )}
+          </div>
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className="text-sm text-muted">
+              Print or post this QR code so anyone can file a confidential report to your company.
+              It opens the anonymous intake form - no login required.
+            </p>
+            <code className="block select-all break-all rounded-md border border-line bg-line-soft px-3 py-2 text-xs text-charcoal">
+              {submitUrl}
+            </code>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
+              {qrDataUrl && (
+                <a href={qrDataUrl} download="reporting-qr.png" className="btn btn-secondary">
+                  Download QR
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 function SectionHeading({ children, hint }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -89,6 +181,7 @@ function OverviewPage({ companyId }) {
   const [staff, setStaff] = useState([])
   const [routingRules, setRoutingRules] = useState([])
   const [pulseSummaries, setPulseSummaries] = useState([])
+  const [company, setCompany] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -96,16 +189,18 @@ function OverviewPage({ companyId }) {
     setLoading(true)
     setError(null)
     try {
-      const [statsRow, staffRows, routingRows, pulseRows] = await Promise.all([
+      const [statsRow, staffRows, routingRows, pulseRows, companyRow] = await Promise.all([
         getCompanyStats(companyId),
         listStaff(companyId),
         listRoutingRules(companyId),
         listPulseSummaries(companyId),
+        getCompany(companyId),
       ])
       setStats(statsRow)
       setStaff(staffRows)
       setRoutingRules(routingRows)
       setPulseSummaries(pulseRows)
+      setCompany(companyRow)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -145,6 +240,17 @@ function OverviewPage({ companyId }) {
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
+
+      <section className="flex flex-col gap-3">
+        <SectionHeading hint="Share this QR code or link so employees can file confidential reports.">
+          Reporting link
+        </SectionHeading>
+        {firstLoad ? (
+          <SkeletonList rows={1} />
+        ) : (
+          <ReportingLinkCard slug={company?.slug} />
+        )}
+      </section>
 
       <section className="flex flex-col gap-3">
         <SectionHeading hint="Counts only, updated as cases move through their lifecycle.">

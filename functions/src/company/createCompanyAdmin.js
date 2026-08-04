@@ -11,6 +11,33 @@ const COMPANIES_COLLECTION = 'companies'
 const STAFF_SUBCOLLECTION = 'staff'
 const SUPER_ADMINS_COLLECTION = 'superAdmins'
 
+// Mirrors slugifyCompanyName in src/services/companyService.js. The company doc
+// is normally created client-side with its slug already set; this is a safety
+// net for docs that predate the slug field (or a client that somehow wrote one
+// without a slug), so no company can reach the admin-creation step without a
+// usable reporting slug.
+function slugifyCompanyName(name) {
+  return String(name ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+async function allocateUniqueSlug(firestore, name) {
+  const base = slugifyCompanyName(name) || 'company'
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`
+    const existing = await firestore
+      .collection(COMPANIES_COLLECTION)
+      .where('slug', '==', candidate)
+      .limit(1)
+      .get()
+    if (existing.empty) return candidate
+  }
+  return `${base}-${randomBytes(3).toString('hex')}`
+}
+
 // Super Admin is allowlist membership at superAdmins/{uid}, not a custom
 // claim (see src/constants/roles.js) - so this checks the doc, the same way
 // firestore.rules and authService.checkSuperAdmin do.
@@ -82,6 +109,13 @@ exports.createCompanyAdmin = onCall(async (request) => {
     .get()
   if (!companySnapshot.exists) {
     throw new HttpsError('not-found', 'No such company')
+  }
+
+  // Backfill a reporting slug for any company that reached this step without
+  // one, so its /submit/:companySlug link resolves.
+  if (!companySnapshot.data().slug) {
+    const slug = await allocateUniqueSlug(admin.firestore(), companySnapshot.data().name)
+    await companySnapshot.ref.update({ slug })
   }
 
   const password = generatePassword()

@@ -7,6 +7,7 @@ const {
   hashPasscode,
   generateUniqueCaseId,
 } = require('./generateCaseAccess')
+const { resolveCompanyBySlug } = require('../company/resolveCompanySlug')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -33,8 +34,16 @@ const KNOWN_CATEGORIES = new Set([
 // category and responses collected by QuestionnaireForm are written onto the
 // case at creation time, so scoreCase.js's onCreate trigger has the data it
 // needs on the very first fire.
+//
+// The reporter's link carries a company slug, not a companyId. We resolve the
+// slug to a companyId here, server-side, and never trust a companyId sent by
+// the client - a spoofed one would let a reporter file into another company's
+// queue. companyId is what routeCase.js and the company-scoped dashboards (HR
+// Coordinator, Case Handler) key on to find their cases, so a case written
+// without it is effectively invisible to the company; that's why an
+// unresolvable slug is rejected here rather than written as an orphan case.
 exports.submitCase = onCall(async (request) => {
-  const { category, responses } = request.data || {}
+  const { category, responses, companySlug } = request.data || {}
 
   if (typeof category !== 'string' || !KNOWN_CATEGORIES.has(category)) {
     throw new HttpsError('invalid-argument', 'A valid case category is required')
@@ -45,6 +54,15 @@ exports.submitCase = onCall(async (request) => {
       'invalid-argument',
       'At least one questionnaire response is required'
     )
+  }
+
+  if (typeof companySlug !== 'string' || !companySlug.trim()) {
+    throw new HttpsError('invalid-argument', 'A company slug is required')
+  }
+
+  const company = await resolveCompanyBySlug(companySlug)
+  if (!company) {
+    throw new HttpsError('not-found', 'This reporting link is not valid')
   }
 
   const firestore = admin.firestore()
@@ -59,6 +77,7 @@ exports.submitCase = onCall(async (request) => {
     .doc(caseId)
     .set({
       caseId,
+      companyId: company.companyId,
       passcodeHash,
       passcodeSalt,
       category,
