@@ -18,8 +18,10 @@ function RootRedirect() {
   if (!user) return <Navigate to="/login" replace />
   if (isSuperAdmin) return <Navigate to="/super-admin" replace />
   // A Company Admin's entire surface is /admin (company settings) - landing
-  // them on /dashboard would show them a page with nothing on it.
-  if (role === ROLES.COMPANY_ADMIN) return <Navigate to="/admin" replace />
+  // them on /dashboard would only show the interstitial redirect card, so
+  // send them straight to their first page rather than through it. /admin
+  // itself redirects to overview anyway; naming it here skips that extra hop.
+  if (role === ROLES.COMPANY_ADMIN) return <Navigate to="/admin/overview" replace />
 
   return <Navigate to="/dashboard" replace />
 }

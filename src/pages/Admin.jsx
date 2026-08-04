@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import AppShell from '../components/shared/AppShell'
 import Alert from '../components/ui/Alert'
 import OverviewPage from './company-admin/OverviewPage'
+import CasesPage from './company-admin/CasesPage'
 import DepartmentsPage from './company-admin/DepartmentsPage'
 import StaffPage from './company-admin/StaffPage'
 import EmployeesPage from './company-admin/EmployeesPage'
@@ -18,16 +19,23 @@ import BillingPage from './company-admin/BillingPage'
 //
 // The overview (module 15) reads only the aggregate-only
 // companies/{companyId}/stats/overview rollup; departments/staff/routing/
-// billing never touch cases/{caseId} or caseMetadata/{caseId} - per the
-// module 2 role design, Company Admin gets case counts and settings, never
-// case content, and firestore.rules doesn't grant this role a path to
-// either collection even if a page here tried to read them.
+// billing never touch cases/{caseId} or caseMetadata/{caseId}.
+//
+// Cases is the one exception, and a deliberately narrow one: it reads
+// caseMetadata for cases stalled on 'no_routing_rule' (the only rows
+// firestore.rules lets this role read) and opens case content solely through
+// the getCaseForTriage callable's server-side allowlist, so the admin can
+// read a waiting report and place it. This is the same view-and-assign flow
+// RoutingRulesPage already carried in its "Needs attention" card - Cases just
+// gives it a home of its own instead of burying it under routing setup. No
+// broader path to cases/ or caseMetadata/ is granted.
 //
 // companyId comes from the custom claim, not a URL param or a form field: a
 // Company Admin can only ever administer the company stamped on their own
 // token, and firestore.rules enforces that independently.
 const NAV_ITEMS = [
   { to: '/admin/overview', label: 'Overview', icon: 'overview' },
+  { to: '/admin/cases', label: 'Cases', icon: 'cases' },
   { to: '/admin/departments', label: 'Departments', icon: 'departments' },
   { to: '/admin/staff', label: 'Staff', icon: 'staff' },
   { to: '/admin/employees', label: 'Employees', icon: 'pulse' },
@@ -37,6 +45,7 @@ const NAV_ITEMS = [
 
 const PAGE_TITLES = {
   overview: 'Overview',
+  cases: 'Cases',
   departments: 'Departments',
   staff: 'Staff',
   employees: 'Employees',
@@ -70,6 +79,7 @@ function Admin() {
         <Routes>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage companyId={companyId} />} />
+          <Route path="cases" element={<CasesPage companyId={companyId} />} />
           <Route path="departments" element={<DepartmentsPage companyId={companyId} />} />
           <Route path="staff" element={<StaffPage companyId={companyId} />} />
           <Route path="employees" element={<EmployeesPage companyId={companyId} />} />
