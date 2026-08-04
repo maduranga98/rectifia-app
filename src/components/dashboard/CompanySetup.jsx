@@ -3,9 +3,11 @@ import {
   JURISDICTIONS,
   SUBSCRIPTION_TIERS,
   createCompany,
+  createCompanyAdmin,
   createDepartment,
   getStrictestJurisdiction,
 } from '../../services/companyService'
+import CompanyCredentials from './CompanyCredentials'
 
 const JURISDICTION_LABELS = {
   EU: 'European Union',
@@ -19,6 +21,7 @@ const JURISDICTION_LABELS = {
 // on any route, which is why there was no way to register a company at all.
 function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   const [name, setName] = useState('')
+  const [adminEmail, setAdminEmail] = useState('')
   const [jurisdictions, setJurisdictions] = useState([])
   const [subscriptionTier, setSubscriptionTier] = useState(
     SUBSCRIPTION_TIERS[0]
@@ -27,6 +30,13 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   const [newDepartmentName, setNewDepartmentName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  // Set as soon as the company doc exists. Kept in state so that if the
+  // Company Admin account fails to be created afterwards (duplicate email,
+  // say), retrying reuses the company instead of registering a second one.
+  const [companyId, setCompanyId] = useState(null)
+  // { email, password } returned once by createCompanyAdmin - the only time
+  // the password is ever available, since nothing stores it.
+  const [credentials, setCredentials] = useState(null)
 
   const strictestJurisdiction = getStrictestJurisdiction(jurisdictions)
 
@@ -54,23 +64,39 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
     setError(null)
     setSubmitting(true)
     try {
-      const companyId = await createCompany({
-        name,
-        jurisdictions,
-        departments,
-        subscriptionTier,
-      })
-      setName('')
-      setJurisdictions([])
-      setDepartments([])
-      setNewDepartmentName('')
-      setSubscriptionTier(SUBSCRIPTION_TIERS[0])
-      onCreated?.(companyId)
+      // Reuses the company from a previous attempt whose admin step failed,
+      // so a retry doesn't register a duplicate company.
+      const id =
+        companyId ??
+        (await createCompany({
+          name,
+          jurisdictions,
+          departments,
+          subscriptionTier,
+        }))
+      setCompanyId(id)
+
+      const admin = await createCompanyAdmin({ companyId: id, email: adminEmail })
+      setCredentials({ email: admin.email, password: admin.password })
     } catch (err) {
       setError(err.message)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // The credentials replace the form: the password is shown exactly once and
+  // is unrecoverable afterwards, so the Super Admin has to be able to sit on
+  // this screen and copy it before moving on.
+  if (credentials) {
+    return (
+      <CompanyCredentials
+        companyName={name}
+        email={credentials.email}
+        password={credentials.password}
+        onDone={() => onCreated?.(companyId)}
+      />
+    )
   }
 
   return (
@@ -88,6 +114,26 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
           onChange={(e) => setName(e.target.value)}
           required
           className="field mt-1 w-full rounded px-3 py-2"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="company-admin-email" className="block text-sm font-medium">
+          Company Admin email
+        </label>
+        <p className="mt-1 text-xs text-muted">
+          A Company Admin account is created with this email. No invitation is
+          sent for now - the login credentials are shown on the next screen for
+          you to hand over.
+        </p>
+        <input
+          id="company-admin-email"
+          type="email"
+          value={adminEmail}
+          onChange={(e) => setAdminEmail(e.target.value)}
+          required
+          placeholder="admin@company.com"
+          className="field mt-2 w-full rounded px-3 py-2"
         />
       </div>
 
@@ -188,14 +234,30 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
       </div>
 
       {error && <p className="text-sm text-critical">{error}</p>}
+      {error && companyId && (
+        <p className="text-sm text-muted">
+          <strong>{name}</strong> was registered, but its Company Admin account
+          was not created. Fix the email above and submit again - this will not
+          register the company a second time.
+        </p>
+      )}
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          disabled={submitting || !name.trim() || jurisdictions.length === 0}
+          disabled={
+            submitting ||
+            !name.trim() ||
+            !adminEmail.trim() ||
+            jurisdictions.length === 0
+          }
           className="btn-primary rounded px-4 py-2 disabled:opacity-50"
         >
-          {submitting ? 'Creating...' : 'Create company'}
+          {submitting
+            ? 'Creating...'
+            : companyId
+              ? 'Create admin account'
+              : 'Create company'}
         </button>
         {onCancel && (
           <button
