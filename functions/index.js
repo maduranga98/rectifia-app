@@ -22,6 +22,7 @@ const { submitPulseResponse, analyzePulseResponse } = require('./src/intake/anal
 const { validatePulseInvite } = require('./src/intake/pulseInvites')
 const { schedulePulseChecks } = require('./src/intake/schedulePulseChecks')
 const { registerPushSubscription, sendCaseUpdate } = require('./src/notifications/sendCaseUpdate')
+const { deliverNotifications } = require('./src/notifications/deliverNotifications')
 
 exports.submitCase = submitCase
 exports.validateCaseAccess = validateCaseAccess
@@ -55,3 +56,4 @@ exports.analyzePulseResponse = analyzePulseResponse
 exports.schedulePulseChecks = schedulePulseChecks
 exports.registerPushSubscription = registerPushSubscription
 exports.sendCaseUpdate = sendCaseUpdate
+exports.deliverNotifications = deliverNotifications

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { submitPulseResponse } from '../../services/pulseCheckService'
-import { auth } from '../../services/firebase'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
@@ -8,10 +7,12 @@ import EmptyState from '../ui/EmptyState'
 import { Textarea } from '../ui/Field'
 
 // Wellness questions only - no case content, no reference to the anonymous
-// reporting system anywhere in this form. Submission requires the employee
-// to be signed in (auth.currentUser) - that's the whole point of keeping
-// Pulse Check structurally separate from the anonymous case system, which
-// has no auth path at all.
+// reporting system anywhere in this form. Access is the single-use invite
+// token (inviteId + token), NOT a signed-in account: the people this form
+// targets are roster employees who have no staff account at all, so there is
+// deliberately no auth.currentUser check here. companyId, department and
+// employeeId are never taken from this form - the server reads them off the
+// invite when the token is spent.
 const QUESTIONS = [
   { id: 'workload', label: 'How manageable has your workload felt this week?' },
   { id: 'support', label: 'How supported do you feel by your manager/team?' },
@@ -63,11 +64,32 @@ function ScaleInput({ question, value, onChange }) {
   )
 }
 
-function PulseSurveyForm({ companyId, department, onSubmitted }) {
+// Spelled out on screen, not just in a policy doc: this is the module's trust
+// contract, and an employee deciding how candid to be deserves to see exactly
+// who reads what before they answer and again after they submit.
+function WhoSeesThis() {
+  return (
+    <ul className="flex flex-col gap-1.5 text-xs leading-relaxed text-muted">
+      <li>
+        Your <strong className="font-medium text-charcoal">HR Coordinator</strong> and{' '}
+        <strong className="font-medium text-charcoal">Pulse Check Reviewer</strong> can see your
+        individual response.
+      </li>
+      <li>
+        Your <strong className="font-medium text-charcoal">manager</strong> sees department-level
+        aggregates only - never your individual answers.
+      </li>
+    </ul>
+  )
+}
+
+function PulseSurveyForm({ inviteId, token, companyName, onSubmitted }) {
   const [values, setValues] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+
+  const company = companyName || 'your organization'
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -77,7 +99,7 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
       const answers = QUESTIONS.map((q) => ({ questionId: q.id, value: values[q.id] ?? '' })).filter(
         (a) => a.value !== ''
       )
-      await submitPulseResponse({ companyId, department, answers })
+      await submitPulseResponse({ inviteId, token, answers })
       setSubmitted(true)
       onSubmitted?.()
     } catch (err) {
@@ -87,26 +109,20 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
     }
   }
 
-  if (!auth.currentUser) {
-    return (
-      <Card padded={false} className="mx-auto max-w-lg">
-        <EmptyState
-          icon="pulse"
-          title="Sign in to complete this pulse check"
-          description="Pulse checks are tied to your staff account, unlike anonymous case reports."
-        />
-      </Card>
-    )
-  }
-
   if (submitted) {
     return (
-      <Card padded={false} className="mx-auto max-w-lg">
-        <EmptyState
-          icon="check"
-          title="Thanks - your response has been submitted"
-          description="Your answers feed the aggregate wellbeing picture for your department."
-        />
+      <Card className="mx-auto max-w-lg">
+        <div className="flex flex-col gap-4">
+          <EmptyState
+            icon="check"
+            title="Thanks - your response has been recorded"
+            description={`Your check-in for ${company} has been saved.`}
+          />
+          <div className="rounded-lg border border-line bg-navy-50 p-4">
+            <p className="mb-2 text-sm font-medium text-charcoal">Who sees your response</p>
+            <WhoSeesThis />
+          </div>
+        </div>
       </Card>
     )
   }
@@ -114,7 +130,7 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
   return (
     <Card
       title="Pulse check"
-      description="A few quick questions about how work is going. Takes under a minute."
+      description={`A few quick questions about how work is going at ${company}. Takes under a minute.`}
       className="mx-auto max-w-lg"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -136,6 +152,11 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
             />
           )
         )}
+
+        <div className="rounded-lg border border-line bg-navy-50 p-4">
+          <p className="mb-2 text-sm font-medium text-charcoal">Who sees your response</p>
+          <WhoSeesThis />
+        </div>
 
         {error && <Alert variant="error">{error}</Alert>}
 
