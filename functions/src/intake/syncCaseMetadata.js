@@ -1,5 +1,6 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const admin = require('firebase-admin')
+const { normalizeTier } = require('./submitCase')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -35,6 +36,22 @@ function pickMetadata(data) {
     acknowledgmentDueAt: data.acknowledgmentDueAt ?? null,
     feedbackDueAt: data.feedbackDueAt ?? null,
     createdAt: data.createdAt ?? null,
+    // Provenance, not content. An HR Coordinator overseeing a queue needs to
+    // know a case came in by phone and was typed up, or that the reporter
+    // chose to be identifiable, in order to read the queue at all - but none
+    // of these three fields says anything about what was reported or by whom.
+    //
+    // `reporterIdentity` is not here and must never be added. It is on the
+    // case document as an encrypted envelope, and mirroring it would put
+    // ciphertext into the one case-derived collection this role CAN read
+    // directly, turning a rules-gated vault into a client-readable blob to
+    // attack offline. Same for enteredByUid/enteredByRole: who typed a case
+    // up is audit-trail material (staffIntakeAuditLog), not dashboard
+    // material, and in a small company naming the intake taker can narrow
+    // down who the reporter is.
+    tier: normalizeTier(data.tier),
+    source: data.source ?? 'reporter',
+    intakeMethod: data.intakeMethod ?? null,
   }
 }
 

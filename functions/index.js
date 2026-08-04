@@ -1,5 +1,6 @@
 const { validateCaseAccess } = require('./src/intake/generateCaseAccess')
 const { submitCase } = require('./src/intake/submitCase')
+const { createCaseOnBehalf } = require('./src/intake/createCaseOnBehalf')
 const { scoreCase } = require('./src/intake/scoreCase')
 const { routeCase, reassignCase } = require('./src/intake/routeCase')
 const { getCaseThread, postReporterMessage, postInvestigatorMessage } = require('./src/intake/caseThread')
@@ -25,6 +26,7 @@ const { registerPushSubscription, sendCaseUpdate } = require('./src/notification
 const { deliverNotifications } = require('./src/notifications/deliverNotifications')
 
 exports.submitCase = submitCase
+exports.createCaseOnBehalf = createCaseOnBehalf
 exports.validateCaseAccess = validateCaseAccess
 exports.scoreCase = scoreCase
 exports.routeCase = routeCase

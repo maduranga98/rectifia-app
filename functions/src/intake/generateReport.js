@@ -88,16 +88,34 @@ exports.generateReport = onCall(async (request) => {
     },
   }
 
-  // Reporter identity is never included for 'anonymous'-tier cases - and
-  // nothing in this codebase captures one for them today anyway, since
-  // reporters authenticate with a Case ID + passcode, never an account.
-  // For 'confidential'-tier cases, if the intake flow has attached a
-  // reporterContact field to the case, it's returned under its own
-  // separated key rather than merged into `summary`, so a consumer of this
-  // report can gate rendering it behind its own access control instead of
-  // it riding along with the rest of the report by default.
-  if (caseData.tier === 'confidential' && caseData.reporterContact) {
-    report.restrictedReporterIdentity = { ...caseData.reporterContact }
+  // Reporter identity is never included for 'anonymous'-tier cases, and for
+  // a case with no `tier` at all - one written before the field existed -
+  // 'anonymous' is the reading, so those fall through here too.
+  //
+  // For a 'confidential'-tier case this reports the *existence and shape* of
+  // the identity record, never its contents. The values are an AES-GCM
+  // envelope written by createCaseOnBehalf.js through
+  // functions/src/utils/identityVault.js, and this function deliberately does
+  // not decrypt them: decryptIdentity() requires a live Super Admin session
+  // and a documented reason and writes an identityAccessAuditLog entry every
+  // time, and a report generated for whoever happens to open a case is none
+  // of those things. Emitting the ciphertext instead would be worse than
+  // useless - it would move the vault into a payload that gets rendered,
+  // cached, and exported.
+  //
+  // What a reader of a case report actually needs from this section is
+  // whether an identity exists and how to lawfully reach it, and that is
+  // exactly what is returned. It stays under its own separated key rather
+  // than merged into `summary` so a consumer can gate rendering it behind
+  // its own access control instead of it riding along with the rest of the
+  // report by default.
+  if (caseData.tier === 'confidential' && caseData.reporterIdentity) {
+    report.restrictedReporterIdentity = {
+      status: 'On file, encrypted in the identity vault',
+      detailsOnFile: (caseData.reporterIdentity.fieldsOnFile ?? []).join(', ') || 'unspecified',
+      access:
+        'Decryption requires a Super Admin, a documented legal reason, and is recorded in the identity access audit log.',
+    }
   }
 
   return { report }

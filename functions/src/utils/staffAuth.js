@@ -15,6 +15,19 @@ const HANDLER_ROLES = ['caseHandler', 'companyAdmin']
 // enough of the case to exercise that power responsibly, not a new one.
 const TRIAGE_ROLES = ['hrCoordinator', 'companyAdmin']
 
+// Roles that may file a case on behalf of a reporter
+// (functions/src/intake/createCaseOnBehalf.js). These are the two roles that
+// actually take reports by phone, by email, or across a desk.
+//
+// companyAdmin is deliberately absent, and this is the one place in this file
+// where that role is narrower than TRIAGE_ROLES rather than wider. A Company
+// Admin's zero-case-content design is a conflict-of-interest control (see the
+// caseMetadata block in firestore.rules): an intake form is case content -
+// the fullest form of it, since whoever types it reads every answer - so
+// granting it here would hand that role the case narrative the rest of the
+// system spends its rules budget keeping away from them.
+const INTAKE_ROLES = ['caseHandler', 'hrCoordinator']
+
 // Every staff-facing callable must establish *who is calling* from the
 // Firebase Auth token, never from a client-supplied field. Returns the
 // authenticated uid or throws 'unauthenticated'.
@@ -105,11 +118,41 @@ async function loadCaseForTriage(firestore, caseId, uid) {
   return { caseRef, snapshot, role }
 }
 
+// The intake counterpart of loadCaseForHandler/loadCaseForTriage, for the one
+// staff action that happens *before* a case exists and so has no case document
+// to authorize against: filing on behalf of a reporter.
+//
+// The company is taken from the caller's own custom claim, never from the
+// request body - a client-supplied companyId would let any staff member file
+// into another company's queue, the exact spoof submitCase.js avoids by
+// re-resolving the reporter's slug server-side. The claim is then checked
+// against the staff subcollection by loadCallerRole, so a stale claim on a
+// deactivated account still fails.
+async function requireIntakeRole(firestore, request, uid) {
+  const companyId = request.auth?.token?.companyId
+  if (!companyId) {
+    throw new HttpsError(
+      'permission-denied',
+      'Your account is not linked to a company, so it cannot file a case'
+    )
+  }
+  const role = await loadCallerRole(firestore, companyId, uid)
+  if (!INTAKE_ROLES.includes(role)) {
+    throw new HttpsError(
+      'permission-denied',
+      'Only a Case Handler or HR Coordinator may file a case on behalf of a reporter'
+    )
+  }
+  return { companyId, role }
+}
+
 module.exports = {
   HANDLER_ROLES,
   TRIAGE_ROLES,
+  INTAKE_ROLES,
   requireAuthUid,
   loadCallerRole,
   loadCaseForHandler,
   loadCaseForTriage,
+  requireIntakeRole,
 }

@@ -42,6 +42,21 @@ exports.storeReferenceCase = onDocumentUpdated(`${CASES_COLLECTION}/{caseId}`, a
     evidenceScore: after.evidenceScore,
     department: deriveDepartmentTier(after.category, after.responses),
     actionTaken: after.actionTaken ?? null,
+    // Whether the reporter filed this themselves or a staff member typed it
+    // up. Coarse provenance in the same spirit as the department *tier*
+    // above - it says nothing about who reported or what they said, but it
+    // matters to a comparison: a case taken down second-hand by phone has
+    // been through a listener's summarising before it was ever scored, so
+    // "this outcome is out of line with comparable cases" reads differently
+    // depending which pool the comparables came from. Without it, staff-filed
+    // and reporter-filed cases are indistinguishable in the reference pool
+    // and any such difference is invisible.
+    //
+    // Deliberately not enteredByUid: the pool is cross-company and permanent,
+    // and a staff uid in it would let the reference set be filtered down to
+    // one intake taker's cases, which for a small company is close to naming
+    // the people involved.
+    source: after.source ?? 'reporter',
     closedAt: admin.firestore.FieldValue.serverTimestamp(),
   })
 })

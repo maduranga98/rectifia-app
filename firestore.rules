@@ -116,6 +116,21 @@ service cloud.firestore {
     // flag (module 10's `consistencyCheck` field, written by
     // checkConsistency.js) - both live on this same locked-down document,
     // read and written only through their respective callables.
+    // A case document now also carries the tier/provenance fields written by
+    // submitCase.js and createCaseOnBehalf.js - tier, source, intakeMethod,
+    // reportedAt, and for staff-filed cases enteredByUid/enteredByRole - plus,
+    // for confidential-tier cases only, a `reporterIdentity` map.
+    //
+    // reporterIdentity holds an AES-GCM envelope from
+    // functions/src/utils/identityVault.js, never plaintext, and that is load-
+    // bearing here rather than belt-and-braces: the read rule below hands the
+    // assigned handler the *whole* document and Firestore rules cannot filter
+    // fields, so the only thing that keeps a reporter's name out of that read
+    // is that the field does not contain one. Decryption is not reachable from
+    // any client rule at all - it goes through decryptIdentity(), which needs a
+    // Super Admin session and a documented reason and audits every attempt.
+    // For anonymous-tier cases the field is absent entirely, so there is
+    // nothing to read even in ciphertext.
     match /cases/{caseId} {
       // Writes still only ever happen through Cloud Functions with the
       // Admin SDK (generateCaseAccess.js, scoreCase.js, routeCase.js,
@@ -206,7 +221,11 @@ service cloud.firestore {
     // category/severityScore/evidenceScore/status/assignedHandlerId/
     // department/priority/companyId/deadlines/timestamps. It deliberately
     // never includes `responses` (questionnaire free text) or anything from
-    // the messages subcollection, so unlike cases/{caseId} this document CAN
+    // the messages subcollection. It also now carries tier/source/intakeMethod,
+    // which are provenance rather than content - "filed by phone, reporter
+    // chose to be identifiable" says nothing about what was reported - while
+    // `reporterIdentity` and enteredByUid/enteredByRole are deliberately kept
+    // off the mirror, so unlike cases/{caseId} this document CAN
     // be safely opened up for read: there's no free-text field on it a rule
     // would need to hide. This is what makes the "metadata only" constraint
     // a server-side guarantee rather than a client-side filter - the
@@ -332,6 +351,23 @@ service cloud.firestore {
     // an HR Coordinator or Company Admin being able to edit the record of
     // what they read would defeat the point of keeping one.
     match /triageAccessLog/{entryId} {
+      allow read, write: if false;
+    }
+
+    // The third audited surface, and the same discipline again: every case a
+    // staff member files on behalf of a reporter
+    // (functions/src/intake/createCaseOnBehalf.js) records who filed it, for
+    // which company, by what intake method, at what tier, whether an identity
+    // was vaulted and which *field names* it holds, and how far the report was
+    // backdated. Never an identity value, never a questionnaire answer - the
+    // log describes the act of filing, not the report, so an auditor can read
+    // it end to end without it becoming a second copy of the case.
+    //
+    // Written only by that callable with the Admin SDK. No client role gets a
+    // path here, including the staff member who filed and the Super Admin: the
+    // record of who typed up whose report is exactly the record that must not
+    // be editable by the person who typed it.
+    match /staffIntakeAuditLog/{entryId} {
       allow read, write: if false;
     }
   }
