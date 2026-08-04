@@ -1,4 +1,5 @@
-const { generateCaseAccess, validateCaseAccess } = require('./src/intake/generateCaseAccess')
+const { validateCaseAccess } = require('./src/intake/generateCaseAccess')
+const { submitCase } = require('./src/intake/submitCase')
 const { scoreCase } = require('./src/intake/scoreCase')
 const { routeCase, reassignCase } = require('./src/intake/routeCase')
 const { getCaseThread, postReporterMessage, postInvestigatorMessage } = require('./src/intake/caseThread')
@@ -19,7 +20,7 @@ const { submitPulseResponse, analyzePulseResponse } = require('./src/intake/anal
 const { schedulePulseChecks } = require('./src/intake/schedulePulseChecks')
 const { registerPushSubscription, sendCaseUpdate } = require('./src/notifications/sendCaseUpdate')
 
-exports.generateCaseAccess = generateCaseAccess
+exports.submitCase = submitCase
 exports.validateCaseAccess = validateCaseAccess
 exports.scoreCase = scoreCase
 exports.routeCase = routeCase

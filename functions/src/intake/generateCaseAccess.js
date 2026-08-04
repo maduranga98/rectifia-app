@@ -49,32 +49,18 @@ async function generateUniqueCaseId(firestore) {
   )
 }
 
-// Creates a new case and its access credentials. The passcode is generated
-// here, server-side, so it can never be spoofed or predicted by a client;
-// only its salted hash is persisted. The plaintext passcode is returned in
-// this response and nowhere else - there is no recovery flow, since a
-// recovery flow would need an identity to recover to.
-exports.generateCaseAccess = onCall(async () => {
-  const firestore = admin.firestore()
-
-  const caseId = await generateUniqueCaseId(firestore)
-  const passcode = randomPasscode()
-  const passcodeSalt = crypto.randomBytes(16).toString('hex')
-  const passcodeHash = hashPasscode(passcode, passcodeSalt)
-
-  await firestore
-    .collection(CASES_COLLECTION)
-    .doc(caseId)
-    .set({
-      caseId,
-      passcodeHash,
-      passcodeSalt,
-      status: 'open',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    })
-
-  return { caseId, passcode }
-})
+// Case access credentials are generated server-side so the passcode can never
+// be spoofed or predicted by a client; only its salted hash is persisted. The
+// plaintext passcode is returned to the caller once and nowhere else - there
+// is no recovery flow, since a recovery flow would need an identity to recover
+// to. The actual case document is now written by submitCase.js, which reuses
+// these helpers so the reporter's category/answers land on the case at
+// creation time; these exports let it do that without duplicating the ID
+// allocation or hashing logic.
+exports.CASES_COLLECTION = CASES_COLLECTION
+exports.randomPasscode = randomPasscode
+exports.hashPasscode = hashPasscode
+exports.generateUniqueCaseId = generateUniqueCaseId
 
 // Validates a reporter-supplied Case ID + passcode against the stored salted
 // hash. This is the only path that may read a case document, per the
