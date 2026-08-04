@@ -274,13 +274,31 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Single-use pulse-check invites (module 14). A roster employee has no
+    // Firebase Auth account, so the invite token in this doc is the only
+    // credential that lets them reach and submit a pulse check - a named
+    // credential, deliberately its OWN collection and not the anonymous case
+    // passcode path (pushSubscriptions/cases), which are keyed and gated
+    // entirely differently. Only the token's salted hash is stored here (same
+    // scrypt scheme as a case passcode), never the plaintext. Every access -
+    // validatePulseInvite to check one, submitPulseResponse to spend it - goes
+    // through a Cloud Function with the Admin SDK, so no client rules path
+    // exists: a client can neither read a hash to attack offline nor forge an
+    // invite to submit as someone else.
+    match /pulseInvites/{inviteId} {
+      allow read, write: if false;
+    }
+
     // Pulse Check (module 14) is structurally separate from the anonymous
-    // case system: responses are tied to a named, authenticated employee.
-    // Individual responses + their AI analysis are readable only by HR
-    // Coordinator / Pulse Check Reviewer for that company - never by
-    // Manager, and never written directly by a client (submission goes
-    // through submitPulseResponse in functions/src/intake/
-    // analyzePulseResponse.js so the employeeId can't be spoofed).
+    // case system: responses are tied to a named roster employee, identified
+    // by their employees/{employeeId} roster doc id - not a Firebase Auth uid,
+    // since roster employees have no account. Individual responses + their AI
+    // analysis are readable only by HR Coordinator / Pulse Check Reviewer for
+    // that company - never by Manager, and never written directly by a client
+    // (submission goes through submitPulseResponse in functions/src/intake/
+    // analyzePulseResponse.js, which reads companyId/department/employeeId off
+    // the single-use invite server-side, so the employee identity can't be
+    // spoofed).
     match /pulseResponses/{responseId} {
       allow read: if isHrCoordinator(resource.data.companyId) || isPulseReviewer(resource.data.companyId);
       allow write: if false;

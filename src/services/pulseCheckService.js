@@ -6,17 +6,34 @@ const PULSE_RESPONSES_COLLECTION = 'pulseResponses'
 const PULSE_SUMMARIES_COLLECTION = 'pulseSummaries'
 
 const submitPulseResponseCallable = httpsCallable(functions, 'submitPulseResponse')
+const validatePulseInviteCallable = httpsCallable(functions, 'validatePulseInvite')
 
-// Submits a pulse-check response as the signed-in employee. The employee
-// identity comes from the caller's Firebase Auth session server-side
-// (functions/src/intake/analyzePulseResponse.js), never from a field in this
-// payload - so this call can never submit a response on someone else's
-// behalf.
-export async function submitPulseResponse({ companyId, department, answers }) {
+// Checks a single-use invite (inviteId + token from the employee's link)
+// before the survey is rendered, without spending it. Returns
+// { valid, invite?: { companyId, department } }. A roster employee has no
+// account, so this token is their only credential - there is no sign-in step.
+export async function validatePulseInvite({ inviteId, token }) {
+  if (!inviteId || !token) {
+    throw new Error('A valid pulse-check invite is required')
+  }
+  const result = await validatePulseInviteCallable({ inviteId, token })
+  return result.data
+}
+
+// Submits a pulse-check response using the invite token as the credential.
+// companyId, department and employeeId are NOT in this payload: the server
+// reads them off the invite document (functions/src/intake/
+// analyzePulseResponse.js) and spends the invite in the same transaction that
+// writes the response, so this call can neither submit as someone else nor be
+// replayed once the invite is used.
+export async function submitPulseResponse({ inviteId, token, answers }) {
+  if (!inviteId || !token) {
+    throw new Error('A valid pulse-check invite is required')
+  }
   if (!Array.isArray(answers) || answers.length === 0) {
     throw new Error('At least one answer is required')
   }
-  const result = await submitPulseResponseCallable({ companyId, department, answers })
+  const result = await submitPulseResponseCallable({ inviteId, token, answers })
   return result.data
 }
 

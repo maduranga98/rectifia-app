@@ -1,6 +1,7 @@
 const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
+const { createPulseInvite } = require('./pulseInvites')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -71,6 +72,19 @@ exports.schedulePulseChecks = onSchedule('every day 01:00', async () => {
         if (employee.status === 'inactive') continue
 
         const email = employee.email || null
+        // Each queued invite carries its own single-use token. The plaintext
+        // token is returned here exactly once and lives only on the queued
+        // notification (a Cloud-Functions-only collection), for the delivery
+        // side to build the employee's link from; only its salted hash is
+        // persisted on pulseInvites. expiresAt is now + this cadence, so the
+        // invite dies when the next send is due - one live invite per employee.
+        const { inviteId, token } = await createPulseInvite(firestore, {
+          companyId: companyDoc.id,
+          employeeId: employeeDoc.id,
+          department: employee.department ?? null,
+          cadenceDays,
+        })
+
         const notificationRef = firestore.collection(NOTIFICATIONS_COLLECTION).doc()
         batch.set(notificationRef, {
           type: 'pulseCheckInvite',
@@ -79,6 +93,8 @@ exports.schedulePulseChecks = onSchedule('every day 01:00', async () => {
           employeeId: employeeDoc.id,
           department: employee.department ?? null,
           recipientEmail: email,
+          inviteId,
+          inviteToken: token,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           status: email ? PENDING_STATUS : AWAITING_CONTACT_STATUS,
         })
