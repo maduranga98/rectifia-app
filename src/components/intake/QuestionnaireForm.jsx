@@ -3,6 +3,9 @@ import harassmentQuestions from '../../data/questionnaires/harassment'
 import toxicManagementQuestions from '../../data/questionnaires/toxicManagement'
 import retaliationQuestions from '../../data/questionnaires/retaliation'
 import burnoutQuestions from '../../data/questionnaires/burnout'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import { Select, Textarea } from '../ui/Field'
 
 const QUESTIONNAIRES = {
   harassment: harassmentQuestions,
@@ -70,7 +73,7 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
   const [error, setError] = useState(null)
 
   if (!questions) {
-    return <p className="p-8 text-sm text-critical">Unknown case category.</p>
+    return <Alert variant="error">Unknown case category.</Alert>
   }
 
   function setAnswer(question, value) {
@@ -92,9 +95,7 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
     event.preventDefault()
     setError(null)
 
-    const requiredMissing = questions.some(
-      (question) => !isAnswered(answers[question.id])
-    )
+    const requiredMissing = questions.some((question) => !isAnswered(answers[question.id]))
     if (requiredMissing) {
       setError('Please answer every question before submitting.')
       return
@@ -113,22 +114,37 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
     }
   }
 
+  const answeredCount = questions.filter((q) => isAnswered(answers[q.id])).length
+  const progress = Math.round((answeredCount / questions.length) * 100)
+
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl space-y-6 p-8">
-      <h1 className="text-2xl font-semibold">Tell us what happened</h1>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {/* Progress is worth showing on a form this long - the old version
+          gave no sense of how much was left. */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between text-xs text-muted">
+          <span>
+            {answeredCount} of {questions.length} answered
+          </span>
+          <span className="tabular-nums">{progress}%</span>
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-line-soft">
+          <div
+            className="h-full rounded-full bg-navy transition-[width] duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
 
-      {questions.map((question) => (
-        <div key={question.id}>
-          <label htmlFor={question.id} className="block text-sm font-medium">
-            {question.text}
-          </label>
-
-          {question.type === 'select' && (
-            <select
+      {questions.map((question) => {
+        if (question.type === 'select') {
+          return (
+            <Select
+              key={question.id}
               id={question.id}
+              label={question.text}
               value={answers[question.id] ?? ''}
               onChange={(e) => setAnswer(question, e.target.value)}
-              className="field mt-1 w-full rounded px-3 py-2"
             >
               <option value="" disabled>
                 Select an answer
@@ -138,63 +154,95 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
                   {option.label}
                 </option>
               ))}
-            </select>
-          )}
+            </Select>
+          )
+        }
 
-          {question.type === 'multiselect' && (
-            <div className="mt-2 space-y-2">
-              {question.options.map((option) => (
-                <label key={option.value} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={(answers[question.id] ?? []).includes(option.value)}
-                    onChange={() => toggleMultiselect(question, option.value)}
-                  />
-                  <span>{option.label}</span>
-                </label>
-              ))}
-            </div>
-          )}
+        if (question.type === 'multiselect') {
+          return (
+            <fieldset key={question.id} className="flex flex-col gap-2">
+              <legend className="text-sm font-medium text-charcoal">{question.text}</legend>
+              <p className="text-xs text-muted">Select all that apply.</p>
+              <div className="mt-1 flex flex-col gap-2">
+                {question.options.map((option) => {
+                  const checked = (answers[question.id] ?? []).includes(option.value)
+                  return (
+                    <label
+                      key={option.value}
+                      className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3.5 py-2.5 text-sm transition-colors ${
+                        checked
+                          ? 'border-navy bg-navy-50 text-charcoal'
+                          : 'border-line bg-surface text-muted hover:border-navy-200'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleMultiselect(question, option.value)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-charcoal">{option.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
+          )
+        }
 
-          {question.type === 'scale' && (
-            <div className="mt-2">
-              <input
-                id={question.id}
-                type="range"
-                min={question.options.min}
-                max={question.options.max}
-                value={answers[question.id] ?? question.options.min}
-                onChange={(e) => setAnswer(question, Number(e.target.value))}
-                className="w-full"
-              />
-              <div className="mt-1 flex justify-between text-xs text-muted">
+        if (question.type === 'scale') {
+          const value = answers[question.id] ?? question.options.min
+          return (
+            <div key={question.id} className="flex flex-col gap-2">
+              <label htmlFor={question.id} className="text-sm font-medium text-charcoal">
+                {question.text}
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  id={question.id}
+                  type="range"
+                  min={question.options.min}
+                  max={question.options.max}
+                  value={value}
+                  onChange={(e) => setAnswer(question, Number(e.target.value))}
+                  className="flex-1"
+                />
+                <span className="w-8 shrink-0 text-center text-sm font-semibold tabular-nums text-navy">
+                  {value}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-muted">
                 <span>{question.options.minLabel}</span>
                 <span>{question.options.maxLabel}</span>
               </div>
             </div>
-          )}
+          )
+        }
 
-          {question.type === 'text' && (
-            <textarea
-              id={question.id}
-              value={answers[question.id] ?? ''}
-              onChange={(e) => setAnswer(question, e.target.value)}
-              rows={4}
-              className="field mt-1 w-full rounded px-3 py-2"
-            />
-          )}
-        </div>
-      ))}
+        return (
+          <Textarea
+            key={question.id}
+            id={question.id}
+            label={question.text}
+            rows={4}
+            value={answers[question.id] ?? ''}
+            onChange={(e) => setAnswer(question, e.target.value)}
+          />
+        )
+      })}
 
-      {error && <p className="text-sm text-critical">{error}</p>}
+      {error && <Alert variant="error">{error}</Alert>}
 
-      <button
+      <Button
         type="submit"
-        disabled={submitting}
-        className="btn-primary rounded px-4 py-2 disabled:opacity-50"
+        variant="primary"
+        size="lg"
+        className="self-start"
+        loading={submitting}
+        loadingLabel="Submitting"
       >
-        {submitting ? 'Submitting...' : 'Continue'}
-      </button>
+        Continue
+      </Button>
     </form>
   )
 }

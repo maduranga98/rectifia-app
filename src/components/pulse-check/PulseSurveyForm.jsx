@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { submitPulseResponse } from '../../services/pulseCheckService'
 import { auth } from '../../services/firebase'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import Card from '../ui/Card'
+import EmptyState from '../ui/EmptyState'
+import { Textarea } from '../ui/Field'
 
 // Wellness questions only - no case content, no reference to the anonymous
 // reporting system anywhere in this form. Submission requires the employee
@@ -14,15 +19,55 @@ const QUESTIONS = [
   { id: 'comments', label: 'Anything else you want to share?', freeText: true },
 ]
 
+const SCALE = [
+  { value: '1', label: 'Not at all' },
+  { value: '2', label: 'Rarely' },
+  { value: '3', label: 'Somewhat' },
+  { value: '4', label: 'Mostly' },
+  { value: '5', label: 'Very much' },
+]
+
+// A five-point scale is a scale, not a dropdown: showing all five options at
+// once is one glance instead of a click, and it makes the midpoint visible.
+function ScaleInput({ question, value, onChange }) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-sm font-medium text-charcoal">{question.label}</legend>
+      <div className="grid grid-cols-5 gap-1.5">
+        {SCALE.map((option) => {
+          const selected = value === option.value
+          return (
+            <label
+              key={option.value}
+              className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border px-1 py-2.5 text-center transition-colors ${
+                selected
+                  ? 'border-navy bg-navy text-white'
+                  : 'border-line bg-surface text-muted hover:border-navy-200 hover:bg-navy-50'
+              }`}
+            >
+              <input
+                type="radio"
+                name={question.id}
+                value={option.value}
+                checked={selected}
+                onChange={(e) => onChange(e.target.value)}
+                className="sr-only"
+              />
+              <span className="text-base font-semibold">{option.value}</span>
+              <span className="text-[0.6875rem] leading-tight">{option.label}</span>
+            </label>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
 function PulseSurveyForm({ companyId, department, onSubmitted }) {
   const [values, setValues] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [submitted, setSubmitted] = useState(false)
-
-  if (!auth.currentUser) {
-    return <p className="p-6 text-sm text-muted">Sign in to complete this pulse check.</p>
-  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -42,51 +87,70 @@ function PulseSurveyForm({ companyId, department, onSubmitted }) {
     }
   }
 
+  if (!auth.currentUser) {
+    return (
+      <Card padded={false} className="mx-auto max-w-lg">
+        <EmptyState
+          icon="pulse"
+          title="Sign in to complete this pulse check"
+          description="Pulse checks are tied to your staff account, unlike anonymous case reports."
+        />
+      </Card>
+    )
+  }
+
   if (submitted) {
-    return <p className="p-6 text-sm text-low">Thanks - your response has been submitted.</p>
+    return (
+      <Card padded={false} className="mx-auto max-w-lg">
+        <EmptyState
+          icon="check"
+          title="Thanks - your response has been submitted"
+          description="Your answers feed the aggregate wellbeing picture for your department."
+        />
+      </Card>
+    )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto flex max-w-lg flex-col gap-4 p-6">
-      <h1 className="text-lg font-semibold">Pulse check</h1>
-
-      {QUESTIONS.map((q) => (
-        <label key={q.id} className="flex flex-col gap-1 text-sm">
-          {q.label}
-          {q.freeText ? (
-            <textarea
+    <Card
+      title="Pulse check"
+      description="A few quick questions about how work is going. Takes under a minute."
+      className="mx-auto max-w-lg"
+    >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        {QUESTIONS.map((q) =>
+          q.freeText ? (
+            <Textarea
+              key={q.id}
+              label={q.label}
               rows={3}
               value={values[q.id] ?? ''}
               onChange={(e) => setValues({ ...values, [q.id]: e.target.value })}
-              className="field rounded px-3 py-2"
             />
           ) : (
-            <select
-              value={values[q.id] ?? ''}
-              onChange={(e) => setValues({ ...values, [q.id]: e.target.value })}
-              className="field rounded px-3 py-2"
-            >
-              <option value="">Select...</option>
-              <option value="1">1 - Not at all</option>
-              <option value="2">2</option>
-              <option value="3">3 - Somewhat</option>
-              <option value="4">4</option>
-              <option value="5">5 - Very much</option>
-            </select>
-          )}
-        </label>
-      ))}
+            <ScaleInput
+              key={q.id}
+              question={q}
+              value={values[q.id]}
+              onChange={(value) => setValues({ ...values, [q.id]: value })}
+            />
+          )
+        )}
 
-      {error && <p className="text-sm text-critical">{error}</p>}
+        {error && <Alert variant="error">{error}</Alert>}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="btn-primary rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
-      >
-        {submitting ? 'Submitting...' : 'Submit'}
-      </button>
-    </form>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="w-full"
+          loading={submitting}
+          loadingLabel="Submitting"
+        >
+          Submit
+        </Button>
+      </form>
+    </Card>
   )
 }
 

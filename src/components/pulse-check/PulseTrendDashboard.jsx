@@ -1,11 +1,34 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listPulseResponses, listPulseSummaries } from '../../services/pulseCheckService'
+import Alert from '../ui/Alert'
+import Badge from '../ui/Badge'
+import Card from '../ui/Card'
+import EmptyState from '../ui/EmptyState'
+import Icon from '../ui/Icon'
 
-const TREND_STYLE = {
+const TREND_TONE = {
   improving: 'tone-low',
   stable: 'tone-neutral',
   declining: 'tone-critical',
-  insufficient_data: 'border-line bg-canvas text-muted',
+  insufficient_data: 'tone-neutral',
+}
+
+const SENTIMENT_TONE = (score) => {
+  if (score === null || score === undefined) return 'tone-neutral'
+  if (score < 40) return 'tone-critical'
+  if (score < 60) return 'tone-medium'
+  return 'tone-low'
+}
+
+const RAIL = {
+  'tone-critical': 'bg-critical',
+  'tone-medium': 'bg-medium',
+  'tone-low': 'bg-low',
+  'tone-neutral': 'bg-navy-200',
+}
+
+function humanize(value) {
+  return typeof value === 'string' ? value.replace(/_/g, ' ') : value
 }
 
 // Manager-facing view. This ONLY ever calls listPulseSummaries -
@@ -23,21 +46,41 @@ function ManagerAggregateView({ companyId }) {
     listPulseSummaries(companyId).then(setSummaries).catch((err) => setError(err.message))
   }, [companyId])
 
+  if (error) return <Alert variant="error">{error}</Alert>
+
+  if (summaries.length === 0) {
+    return (
+      <Card padded={false}>
+        <EmptyState
+          icon="pulse"
+          title="No pulse data yet"
+          description="Department averages appear here once your team starts submitting pulse checks."
+        />
+      </Card>
+    )
+  }
+
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-charcoal">Team wellness (aggregate)</h2>
-      {error && <p className="text-sm text-critical">{error}</p>}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {summaries.map((s) => (
-          <div key={s.id} className="rounded-lg border border-line bg-surface p-4">
-            <p className="font-medium">{s.department}</p>
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {summaries.map((s) => {
+        const tone = SENTIMENT_TONE(s.averageSentiment)
+        return (
+          <Card key={s.id} className="relative overflow-hidden p-5 pl-6">
+            <span
+              className={`absolute inset-y-0 left-0 w-1 ${RAIL[tone] ?? RAIL['tone-neutral']}`}
+              aria-hidden="true"
+            />
+            <p className="truncate font-medium text-charcoal">{s.department}</p>
             <p className="text-xs text-muted">{s.period}</p>
-            <p className="mt-2 text-2xl font-semibold">{s.averageSentiment ?? '-'}</p>
-            <p className="text-xs text-muted">avg. sentiment - {s.responseCount} response(s)</p>
-          </div>
-        ))}
-      </div>
-      {summaries.length === 0 && !error && <p className="text-sm text-muted">No pulse data yet.</p>}
+            <p className="mt-3 text-3xl font-semibold tabular-nums text-charcoal">
+              {s.averageSentiment ?? '-'}
+            </p>
+            <p className="text-xs text-muted">
+              avg. sentiment across {s.responseCount} response{s.responseCount === 1 ? '' : 's'}
+            </p>
+          </Card>
+        )
+      })}
     </div>
   )
 }
@@ -63,33 +106,71 @@ function IndividualResponsesView({ companyId }) {
     refresh()
   }, [refresh])
 
+  if (error) return <Alert variant="error">{error}</Alert>
+
+  if (responses.length === 0) {
+    return (
+      <Card padded={false}>
+        <EmptyState
+          icon="pulse"
+          title="No responses yet"
+          description="Individual pulse check responses and their AI summaries land here as they come in."
+        />
+      </Card>
+    )
+  }
+
+  const crisisCount = responses.filter((r) => r.crisisFlag).length
+
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-charcoal">Individual responses</h2>
-      {error && <p className="text-sm text-critical">{error}</p>}
-      <ul className="flex flex-col gap-3">
-        {responses.map((r) => (
-          <li key={r.id} className="rounded-lg border border-line bg-surface p-4 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">{r.employeeId}</span>
-              <span
-                className={`rounded border px-2 py-0.5 text-xs ${TREND_STYLE[r.trendFlag] ?? TREND_STYLE.insufficient_data}`}
-              >
-                {r.trendFlag ?? 'pending analysis'}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted">{r.department ?? 'Unspecified department'}</p>
-            {r.sentimentSummary && <p className="mt-2">{r.sentimentSummary}</p>}
-            {Array.isArray(r.themes) && r.themes.length > 0 && (
-              <p className="mt-1 text-xs text-muted">Themes: {r.themes.join(', ')}</p>
-            )}
-            {r.crisisFlag && (
-              <p className="mt-2 text-xs font-semibold text-critical">Crisis flagged - contact triggered</p>
-            )}
-          </li>
-        ))}
-      </ul>
-      {responses.length === 0 && !error && <p className="text-sm text-muted">No responses yet.</p>}
+    <div className="flex flex-col gap-4">
+      {crisisCount > 0 && (
+        <Alert variant="error" title={`${crisisCount} response${crisisCount === 1 ? '' : 's'} flagged for crisis`}>
+          Crisis contact has already been triggered automatically for these.
+        </Alert>
+      )}
+
+      <Card
+        title="Individual responses"
+        description={`${responses.length} response${responses.length === 1 ? '' : 's'}`}
+        padded={false}
+      >
+        <ul className="divide-y divide-line-soft">
+          {responses.map((r) => (
+            <li key={r.id} className="px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-charcoal">{r.employeeId}</p>
+                  <p className="text-xs text-muted">{r.department ?? 'Unspecified department'}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {r.crisisFlag && (
+                    <Badge tone="tone-critical" icon="alert">
+                      Crisis flagged
+                    </Badge>
+                  )}
+                  <Badge tone={TREND_TONE[r.trendFlag] ?? 'tone-neutral'} dot>
+                    {humanize(r.trendFlag) ?? 'pending analysis'}
+                  </Badge>
+                </div>
+              </div>
+
+              {r.sentimentSummary && <p className="mt-2 text-sm text-charcoal">{r.sentimentSummary}</p>}
+
+              {Array.isArray(r.themes) && r.themes.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <Icon name="sparkle" className="h-3.5 w-3.5 text-subtle" />
+                  {r.themes.map((theme) => (
+                    <Badge key={theme} tone="tone-neutral">
+                      {theme}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Card>
     </div>
   )
 }
@@ -102,9 +183,18 @@ function PulseTrendDashboard({ companyId, role }) {
   const canSeeIndividualResponses = role === 'hrCoordinator' || role === 'pulseCheckReviewer'
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-8 p-6">
-      <h1 className="text-xl font-semibold">Pulse check trends</h1>
-      {canSeeIndividualResponses ? <IndividualResponsesView companyId={companyId} /> : <ManagerAggregateView companyId={companyId} />}
+    <div className="mx-auto flex max-w-5xl flex-col gap-5">
+      <p className="max-w-2xl text-sm text-muted">
+        {canSeeIndividualResponses
+          ? 'Individual pulse check responses with their AI sentiment summaries.'
+          : 'Department and period averages. Individual responses are never attributed to a person here.'}
+      </p>
+
+      {canSeeIndividualResponses ? (
+        <IndividualResponsesView companyId={companyId} />
+      ) : (
+        <ManagerAggregateView companyId={companyId} />
+      )}
     </div>
   )
 }

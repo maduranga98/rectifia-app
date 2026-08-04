@@ -2,8 +2,24 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listCompanies } from '../services/companyService'
 import { signOutUser } from '../services/authService'
+import { useAuth } from '../contexts/AuthContext'
 import CompanySetup from '../components/dashboard/CompanySetup'
-import AppHeader from '../components/shared/AppHeader'
+import AppShell from '../components/shared/AppShell'
+import Alert from '../components/ui/Alert'
+import Badge from '../components/ui/Badge'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
+import EmptyState from '../components/ui/EmptyState'
+import StatTile from '../components/ui/StatTile'
+import { SkeletonList } from '../components/ui/Loading'
+
+const BILLING_TONE = {
+  active: 'tone-low',
+  trialing: 'tone-info',
+  past_due: 'tone-critical',
+  canceled: 'tone-critical',
+  unpaid: 'tone-critical',
+}
 
 // Per Module 2's no-case-content-access rule, this reads only company-level
 // metadata (name, subscriptionTier, case-count) from the `companies` doc -
@@ -20,6 +36,7 @@ function SuperAdminDashboardPage() {
   const [showRegisterForm, setShowRegisterForm] = useState(false)
   const [notice, setNotice] = useState(null)
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const loadCompanies = useCallback(async () => {
     setLoading(true)
@@ -48,78 +65,114 @@ function SuperAdminDashboardPage() {
     navigate('/super-admin/login', { replace: true })
   }
 
-  return (
-    <div className="min-h-screen">
-      <AppHeader
-        title="Rectifia"
-        subtitle="Lumora platform administration"
-        actions={
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="rounded border border-navy-600 px-3 py-1.5 text-sm text-white hover:bg-navy-800"
-          >
-            Sign out
-          </button>
-        }
-      />
+  const totalCases = companies.reduce((sum, c) => sum + (c.currentPeriodCaseCount ?? 0), 0)
+  const attentionCount = companies.filter(
+    (c) => c.billingStatus && !['active', 'trialing'].includes(c.billingStatus)
+  ).length
 
-      <div className="mx-auto flex max-w-5xl flex-col gap-4 p-6">
-        <h1 className="text-xl font-semibold">Platform overview</h1>
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-charcoal">Companies</h2>
-          <button
-            type="button"
-            onClick={() => {
-              setNotice(null)
-              setShowRegisterForm((open) => !open)
-            }}
-            className={`rounded px-3 py-1.5 text-sm font-semibold ${
-              showRegisterForm ? 'btn-secondary' : 'btn-accent'
-            }`}
-          >
-            {showRegisterForm ? 'Close' : 'Register company'}
-          </button>
+  const registerButton = (
+    <Button
+      variant={showRegisterForm ? 'secondary' : 'accent'}
+      icon={showRegisterForm ? 'close' : 'plus'}
+      onClick={() => {
+        setNotice(null)
+        setShowRegisterForm((open) => !open)
+      }}
+    >
+      {showRegisterForm ? 'Cancel' : 'Register company'}
+    </Button>
+  )
+
+  return (
+    <AppShell
+      scopeLabel="Lumora platform"
+      navItems={[{ id: 'companies', label: 'Companies', icon: 'company' }]}
+      activeId="companies"
+      userEmail={user?.email}
+      roleLabel="Super Admin"
+      onSignOut={handleSignOut}
+      eyebrow="Platform administration"
+      title="Companies"
+      headerActions={registerButton}
+    >
+      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        {notice && <Alert variant="success">{notice}</Alert>}
+        {error && <Alert variant="error">{error}</Alert>}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatTile label="Companies" value={companies.length} tone="tone-info" icon="company" />
+          <StatTile
+            label="Cases this period"
+            hint="Across every tenant"
+            value={totalCases}
+            tone="tone-neutral"
+            icon="cases"
+          />
+          <StatTile
+            label="Billing needs attention"
+            value={attentionCount}
+            tone={attentionCount > 0 ? 'tone-critical' : 'tone-low'}
+            icon="billing"
+          />
         </div>
 
         {showRegisterForm && (
-          <div className="rounded-lg border border-line bg-surface p-4">
+          <Card title="Register a company">
             <CompanySetup
-              title="Register a company"
+              title={null}
               onCreated={handleCreated}
               onCancel={() => setShowRegisterForm(false)}
             />
-          </div>
+          </Card>
         )}
 
-        {notice && <p className="text-sm text-low">{notice}</p>}
-        {loading && <p className="text-sm text-muted">Loading companies...</p>}
-        {error && <p className="text-sm text-critical">{error}</p>}
-        {!loading && !error && companies.length === 0 && (
-          <p className="text-sm text-muted">
-            No companies yet. Use &quot;Register company&quot; to onboard the first one.
-          </p>
-        )}
-
-        {!loading && companies.length > 0 && (
-          <div className="flex flex-col gap-2">
+        {loading && companies.length === 0 ? (
+          <SkeletonList rows={3} />
+        ) : companies.length === 0 ? (
+          <Card padded={false}>
+            <EmptyState
+              icon="company"
+              title="No companies yet"
+              description="Register the first tenant to create its Company Admin account and open the workspace."
+              action={registerButton}
+            />
+          </Card>
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
             {companies.map((company) => (
-              <div key={company.id} className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-4">
-                <p className="text-sm font-medium text-charcoal">{company.name}</p>
-                <p className="text-sm text-muted">Plan: {company.subscriptionTier ?? 'Unknown'}</p>
-                <p className="text-sm text-muted">
-                  Jurisdictions: {company.jurisdictions?.join(', ') || '—'}
-                </p>
-                <p className="text-sm text-muted">
-                  Cases this period: {company.currentPeriodCaseCount ?? '—'}
-                </p>
-                <p className="text-sm text-muted">Billing status: {company.billingStatus ?? 'Unknown'}</p>
-              </div>
+              <Card key={company.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-semibold text-charcoal">{company.name}</p>
+                    <p className="mt-0.5 text-xs capitalize text-muted">
+                      {company.subscriptionTier ?? 'Plan unknown'}
+                    </p>
+                  </div>
+                  <Badge tone={BILLING_TONE[company.billingStatus] ?? 'tone-neutral'} dot>
+                    {(company.billingStatus ?? 'unknown').replace(/_/g, ' ')}
+                  </Badge>
+                </div>
+
+                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line-soft pt-4 text-sm">
+                  <div>
+                    <dt className="text-xs text-muted">Jurisdictions</dt>
+                    <dd className="mt-0.5 font-medium text-charcoal">
+                      {company.jurisdictions?.join(', ') || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">Cases this period</dt>
+                    <dd className="mt-0.5 font-medium tabular-nums text-charcoal">
+                      {company.currentPeriodCaseCount ?? '—'}
+                    </dd>
+                  </div>
+                </dl>
+              </Card>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   )
 }
 

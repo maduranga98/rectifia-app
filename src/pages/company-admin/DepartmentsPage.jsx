@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createDepartment, getCompany, updateCompanyDepartments } from '../../services/companyService'
 import { listStaff } from '../../services/routingService'
+import Alert from '../../components/ui/Alert'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import EmptyState from '../../components/ui/EmptyState'
+import Icon from '../../components/ui/Icon'
+import { SkeletonList } from '../../components/ui/Loading'
 
 // Departments live as a plain array on companies/{companyId}.departments
 // (Module 3's schema - {id, name, headUserId}), not a subcollection, so
@@ -11,6 +17,7 @@ function DepartmentsPage({ companyId }) {
   const [newDeptName, setNewDeptName] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -31,11 +38,14 @@ function DepartmentsPage({ companyId }) {
   }, [companyId, refresh])
 
   async function saveDepartments(departments) {
+    setSaving(true)
     try {
       await updateCompanyDepartments(companyId, departments)
       await refresh()
     } catch (err) {
       setError(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -67,60 +77,103 @@ function DepartmentsPage({ companyId }) {
     await saveDepartments(updated)
   }
 
-  if (loading && !company) {
-    return <p className="p-6 text-sm text-muted">Loading...</p>
-  }
-
   const departments = company?.departments ?? []
 
+  // The add form is duplicated into the empty state on purpose: with no
+  // departments there is nothing above it to anchor to, and a lone input
+  // under a "No departments yet." line reads as a broken page.
+  const addForm = (
+    <form onSubmit={handleAddDepartment} className="flex flex-col gap-2 sm:flex-row">
+      <input
+        aria-label="New department name"
+        placeholder="e.g. Engineering"
+        value={newDeptName}
+        onChange={(e) => setNewDeptName(e.target.value)}
+        className="field sm:max-w-xs"
+      />
+      <Button type="submit" variant="primary" icon="plus" disabled={!newDeptName.trim() || saving}>
+        Add department
+      </Button>
+    </form>
+  )
+
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-4 p-6">
-      <h2 className="text-lg font-semibold text-charcoal">Departments</h2>
-      {error && <p className="text-sm text-critical">{error}</p>}
+    <div className="mx-auto flex max-w-4xl flex-col gap-5">
+      <p className="max-w-2xl text-sm text-muted">
+        Departments organise your staff and feed the routing rules that assign incoming cases.
+        Each one can have a department head.
+      </p>
 
-      <ul className="flex flex-col gap-2">
-        {departments.map((dept) => (
-          <li key={dept.id} className="flex flex-wrap items-center gap-2 rounded border border-line bg-surface px-3 py-2">
-            <input
-              defaultValue={dept.name}
-              onBlur={(e) => e.target.value !== dept.name && handleRenameDepartment(dept.id, e.target.value)}
-              className="field rounded px-2 py-1 text-sm"
+      {error && <Alert variant="error">{error}</Alert>}
+
+      {loading && !company ? (
+        <SkeletonList rows={3} />
+      ) : (
+        <Card
+          title="Departments"
+          description={`${departments.length} configured`}
+          padded={false}
+          footer={departments.length > 0 ? addForm : undefined}
+        >
+          {departments.length === 0 ? (
+            <EmptyState
+              icon="departments"
+              title="No departments yet"
+              description="Add your first department to start organising staff and routing cases."
+              action={addForm}
             />
-            <select
-              value={dept.headUserId ?? ''}
-              onChange={(e) => handleSetHead(dept.id, e.target.value)}
-              className="field rounded px-2 py-1 text-sm"
-            >
-              <option value="">No head assigned</option>
-              {staff.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.email ?? s.id}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => handleDeleteDepartment(dept.id)}
-              className="ml-auto text-xs text-critical underline"
-            >
-              Delete
-            </button>
-          </li>
-        ))}
-        {departments.length === 0 && <li className="text-sm text-muted">No departments yet.</li>}
-      </ul>
+          ) : (
+            <ul className="divide-y divide-line-soft">
+              {departments.map((dept) => (
+                <li
+                  key={dept.id}
+                  className="flex flex-wrap items-center gap-3 px-5 py-3.5 hover:bg-navy-50/40"
+                >
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy"
+                    aria-hidden="true"
+                  >
+                    <Icon name="departments" />
+                  </span>
 
-      <form onSubmit={handleAddDepartment} className="flex gap-2">
-        <input
-          placeholder="New department name"
-          value={newDeptName}
-          onChange={(e) => setNewDeptName(e.target.value)}
-          className="field rounded px-3 py-2 text-sm"
-        />
-        <button type="submit" className="btn-primary rounded px-4 py-2 text-sm font-medium">
-          Add
-        </button>
-      </form>
+                  <input
+                    aria-label={`Department name for ${dept.name}`}
+                    defaultValue={dept.name}
+                    onBlur={(e) => e.target.value !== dept.name && handleRenameDepartment(dept.id, e.target.value)}
+                    className="field w-full font-medium sm:w-56"
+                  />
+
+                  <label className="flex items-center gap-2 text-xs text-muted">
+                    <span className="whitespace-nowrap">Head</span>
+                    <select
+                      value={dept.headUserId ?? ''}
+                      onChange={(e) => handleSetHead(dept.id, e.target.value)}
+                      className="field w-full sm:w-56"
+                    >
+                      <option value="">Not assigned</option>
+                      {staff.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.email ?? s.id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <Button
+                    variant="dangerGhost"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => handleDeleteDepartment(dept.id)}
+                    disabled={saving}
+                  >
+                    Delete
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
     </div>
   )
 }

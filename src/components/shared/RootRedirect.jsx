@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../constants/roles'
+import { FullPageLoader } from '../ui/Loading'
 
 // The app has no public landing page - "/" is just a dispatcher. A visitor
 // who isn't signed in lands on the staff login page (that's what should
@@ -11,11 +12,7 @@ function RootRedirect() {
   const { user, role, isSuperAdmin, loading } = useAuth()
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-8">
-        <p className="text-sm text-muted">Loading...</p>
-      </div>
-    )
+    return <FullPageLoader />
   }
 
   if (!user) return <Navigate to="/login" replace />

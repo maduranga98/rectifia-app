@@ -1,4 +1,24 @@
 import { useState } from 'react'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import Icon from '../ui/Icon'
+
+// One credential row: a label, the value in a mono face, and its own copy
+// button. Split out so the email and the password are visibly the same kind
+// of thing and the copy affordance sits in the same place on both.
+function CredentialRow({ label, value, copied, onCopy }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-canvas px-3.5 py-3">
+      <div className="min-w-0">
+        <p className="text-xs font-medium uppercase tracking-[0.04em] text-muted">{label}</p>
+        <p className="mt-0.5 truncate font-mono text-sm text-charcoal">{value}</p>
+      </div>
+      <Button size="sm" icon={copied ? 'check' : undefined} onClick={onCopy} className="shrink-0">
+        {copied ? 'Copied' : 'Copy'}
+      </Button>
+    </div>
+  )
+}
 
 // Shows the Company Admin's login credentials once, right after the company
 // is registered. Invitation emails are not sent for now, so this screen is
@@ -23,79 +43,57 @@ function CompanyCredentials({ companyName, email, password, onDone }) {
   }
 
   return (
-    <div className="max-w-xl space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">Company registered</h2>
-        <p className="mt-1 text-sm text-muted">
-          {companyName ? `${companyName} is set up. ` : ''}
-          Give these credentials to the Company Admin. They can sign in with
-          them straight away and should change the password afterwards.
-        </p>
+    <div className="flex flex-col gap-5">
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-low/10 text-low">
+          <Icon name="check" className="h-5 w-5" />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold text-charcoal">Company registered</h2>
+          <p className="mt-1 text-sm text-muted">
+            {companyName ? `${companyName} is set up. ` : ''}
+            Give these credentials to the Company Admin. They can sign in with them straight away
+            and should change the password afterwards.
+          </p>
+        </div>
       </div>
 
-      <div className="rounded-lg border border-line bg-surface p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          Login credentials
-        </p>
-
-        <div className="mt-3 flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs text-muted">Email</p>
-              <p className="truncate font-mono text-sm text-charcoal">{email}</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => copy('email', email)}
-              className="btn-secondary shrink-0 rounded px-3 py-1.5 text-sm"
-            >
-              {copied === 'email' ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs text-muted">Temporary password</p>
-              <p className="truncate font-mono text-sm text-charcoal">
-                {password}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => copy('password', password)}
-              className="btn-secondary shrink-0 rounded px-3 py-1.5 text-sm"
-            >
-              {copied === 'password' ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-        </div>
-
-        <button
-          type="button"
+      <div className="flex flex-col gap-2.5">
+        <CredentialRow
+          label="Email"
+          value={email}
+          copied={copied === 'email'}
+          onCopy={() => copy('email', email)}
+        />
+        <CredentialRow
+          label="Temporary password"
+          value={password}
+          copied={copied === 'password'}
+          onCopy={() => copy('password', password)}
+        />
+        <Button
+          className="self-start"
+          size="sm"
+          icon={copied === 'both' ? 'check' : undefined}
           onClick={() => copy('both', `Email: ${email}\nPassword: ${password}`)}
-          className="btn-secondary mt-4 rounded px-3 py-1.5 text-sm"
         >
           {copied === 'both' ? 'Copied both' : 'Copy both'}
-        </button>
+        </Button>
         {copyFailed && (
-          <p className="mt-2 text-xs text-muted">
+          <p className="text-xs text-muted">
             Could not use the clipboard - copy the values above manually.
           </p>
         )}
       </div>
 
-      <p className="text-sm text-critical">
-        This password is shown only once and is not stored anywhere. Copy it
-        before closing - if it is lost, the admin has to reset their password.
-      </p>
+      <Alert variant="warning" title="Shown once">
+        This password is not stored anywhere. Copy it before closing - if it is lost, the admin
+        has to reset their password.
+      </Alert>
 
-      <button
-        type="button"
-        onClick={onDone}
-        className="btn-primary rounded px-4 py-2"
-      >
+      <Button variant="primary" onClick={onDone} className="self-start">
         Done
-      </button>
+      </Button>
     </div>
   )
 }

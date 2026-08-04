@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listAssignedCases } from '../../services/handlerService'
+import Alert from '../ui/Alert'
+import Badge from '../ui/Badge'
+import Button from '../ui/Button'
+import Card from '../ui/Card'
+import EmptyState from '../ui/EmptyState'
+import Icon from '../ui/Icon'
+import { SkeletonList } from '../ui/Loading'
 
-const STATUS_STYLE = {
-  open: 'border-line bg-canvas text-charcoal',
+const STATUS_TONE = {
+  open: 'tone-neutral',
   assigned: 'tone-info',
   needs_manual_assignment: 'tone-high',
   closed: 'tone-low',
 }
 
 function formatTimestamp(value) {
-  if (!value) return '-'
+  if (!value) return null
   const ms = typeof value.toMillis === 'function' ? value.toMillis() : value
   return new Date(ms).toLocaleString()
 }
@@ -41,48 +48,76 @@ function HandlerDashboard({ onSelectCase }) {
     refresh()
   }, [refresh])
 
+  const openCount = cases.filter((c) => c.status !== 'closed').length
+
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">My cases</h1>
-        <button type="button" onClick={refresh} className="text-sm text-navy underline">
+    <div className="mx-auto flex max-w-4xl flex-col gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted">
+          {openCount} open case{openCount === 1 ? '' : 's'} assigned to you.
+        </p>
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
           Refresh
-        </button>
+        </Button>
       </div>
 
-      {error && <p className="text-sm text-critical">{error}</p>}
-      {loading && cases.length === 0 && <p className="text-sm text-muted">Loading...</p>}
-      {!loading && cases.length === 0 && !error && (
-        <p className="text-sm text-muted">No cases are currently assigned to you.</p>
-      )}
+      {error && <Alert variant="error">{error}</Alert>}
 
-      <ul className="flex flex-col gap-3">
-        {cases.map((c) => (
-          <li key={c.id}>
-            <button
-              type="button"
-              onClick={() => onSelectCase?.(c.id)}
-              className="flex w-full items-center justify-between rounded border border-line bg-surface px-4 py-3 text-left hover:bg-canvas"
-            >
-              <div>
-                <p className="font-medium">{c.caseId ?? c.id}</p>
-                <p className="text-xs text-muted">{c.category ?? 'Uncategorized'}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                {c.priority === 'high' && (
-                  <span className="tone-high rounded border px-2 py-0.5 text-xs">
-                    High priority
+      {loading && cases.length === 0 ? (
+        <SkeletonList rows={3} />
+      ) : cases.length === 0 ? (
+        <Card padded={false}>
+          <EmptyState
+            icon="cases"
+            title="No cases assigned to you"
+            description="New cases arrive here automatically when a routing rule sends one your way."
+          />
+        </Card>
+      ) : (
+        <ul className="flex flex-col gap-2.5">
+          {cases.map((c) => {
+            const assignedAt = formatTimestamp(c.assignedAt)
+            return (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectCase?.(c.id)}
+                  className="card flex w-full items-center gap-4 px-5 py-4 text-left transition-shadow hover:shadow-[var(--shadow-raised)]"
+                >
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-navy-50 text-navy"
+                    aria-hidden="true"
+                  >
+                    <Icon name="document" className="h-5 w-5" />
                   </span>
-                )}
-                <span className={`rounded border px-2 py-0.5 text-xs ${STATUS_STYLE[c.status] ?? STATUS_STYLE.open}`}>
-                  {c.status ?? 'open'}
-                </span>
-                <span className="text-xs text-muted">{formatTimestamp(c.assignedAt)}</span>
-              </div>
-            </button>
-          </li>
-        ))}
-      </ul>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-charcoal">
+                      {c.caseId ?? c.id}
+                    </span>
+                    <span className="block truncate text-xs text-muted">
+                      {(c.category ?? 'Uncategorized').replace(/_/g, ' ')}
+                      {assignedAt && ` · assigned ${assignedAt}`}
+                    </span>
+                  </span>
+
+                  <span className="flex shrink-0 items-center gap-2">
+                    {c.priority === 'high' && (
+                      <Badge tone="tone-high" dot>
+                        High priority
+                      </Badge>
+                    )}
+                    <Badge tone={STATUS_TONE[c.status] ?? STATUS_TONE.open}>
+                      {(c.status ?? 'open').replace(/_/g, ' ')}
+                    </Badge>
+                    <Icon name="chevronRight" className="h-4 w-4 text-subtle" />
+                  </span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

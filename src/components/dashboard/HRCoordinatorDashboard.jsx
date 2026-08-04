@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listCompanyCaseMetadata } from '../../services/caseMetadataService'
 import { listCaseHandlers, reassignCase } from '../../services/routingService'
 import { auth } from '../../services/firebase'
+import Alert from '../ui/Alert'
+import Badge from '../ui/Badge'
+import Button from '../ui/Button'
+import Card from '../ui/Card'
+import EmptyState from '../ui/EmptyState'
+import StatTile from '../ui/StatTile'
+import { SkeletonList, SkeletonStats } from '../ui/Loading'
 
 const HOUR_MS = 60 * 60 * 1000
 const DAY_MS = 24 * HOUR_MS
@@ -24,17 +31,34 @@ function nextDeadlineMs(caseRow) {
   return Math.min(...candidates)
 }
 
-function formatDaysUntilDeadline(deadlineMs, now) {
-  if (deadlineMs === null) return '-'
+// A deadline is either past, inside the escalation window, or comfortable -
+// and the cell should say which without the reader doing date arithmetic.
+function deadlineDisplay(deadlineMs, now) {
+  if (deadlineMs === null) return { label: '—', tone: 'tone-neutral' }
   const msRemaining = deadlineMs - now
-  if (msRemaining <= 0) return 'Overdue'
-  return `${Math.ceil(msRemaining / DAY_MS)}d`
+  if (msRemaining <= 0) return { label: 'Overdue', tone: 'tone-critical' }
+  const days = Math.ceil(msRemaining / DAY_MS)
+  return {
+    label: days === 1 ? '1 day' : `${days} days`,
+    tone: msRemaining <= APPROACHING_DEADLINE_WINDOW_MS ? 'tone-high' : 'tone-low',
+  }
 }
 
-const PRIORITY_STYLE = {
+const PRIORITY_TONE = {
   high: 'tone-high',
   medium: 'tone-medium',
   low: 'tone-low',
+}
+
+const STATUS_TONE = {
+  open: 'tone-neutral',
+  assigned: 'tone-info',
+  needs_manual_assignment: 'tone-high',
+  closed: 'tone-low',
+}
+
+function humanize(value) {
+  return typeof value === 'string' ? value.replace(/_/g, ' ') : value
 }
 
 // Company-wide case table for the HR Coordinator role. Every column here -
@@ -97,6 +121,9 @@ function HRCoordinatorDashboard({ companyId }) {
     [cases, now]
   )
 
+  const openCount = cases.filter((c) => c.status !== 'closed').length
+  const unassignedCount = cases.filter((c) => !c.assignedHandlerId).length
+
   async function handleReassign(caseId, handlerId) {
     if (!handlerId) return
     setReassigningId(caseId)
@@ -111,82 +138,129 @@ function HRCoordinatorDashboard({ companyId }) {
     }
   }
 
+  const firstLoad = loading && cases.length === 0
+
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Company case overview</h1>
-        <button type="button" onClick={refresh} className="text-sm text-navy underline">
+    <div className="mx-auto flex max-w-7xl flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-sm text-muted">
+          Every case in the company, by metadata only. Case content stays with the assigned
+          handler.
+        </p>
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
           Refresh
-        </button>
+        </Button>
       </div>
 
-      <div
-        className={`w-fit rounded border px-4 py-3 text-sm ${
-          approachingDeadlineCount > 0 ? 'tone-high' : 'tone-neutral'
-        }`}
-      >
-        <span className="font-semibold">{approachingDeadlineCount}</span> case
-        {approachingDeadlineCount === 1 ? '' : 's'} approaching or past a compliance deadline (within 48h)
-      </div>
+      {error && <Alert variant="error">{error}</Alert>}
 
-      {error && <p className="text-sm text-critical">{error}</p>}
-      {loading && cases.length === 0 && <p className="text-sm text-muted">Loading...</p>}
+      {firstLoad ? (
+        <SkeletonStats count={3} />
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatTile label="Open cases" value={openCount} tone="tone-info" icon="cases" />
+          <StatTile
+            label="Deadline pressure"
+            hint="Approaching or past a compliance deadline"
+            value={approachingDeadlineCount}
+            tone={approachingDeadlineCount > 0 ? 'tone-high' : 'tone-low'}
+            icon="clock"
+          />
+          <StatTile
+            label="Unassigned"
+            value={unassignedCount}
+            tone={unassignedCount > 0 ? 'tone-critical' : 'tone-neutral'}
+            icon="alert"
+          />
+        </div>
+      )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-muted">
-              <th className="py-2 pr-4">Category</th>
-              <th className="py-2 pr-4">Severity</th>
-              <th className="py-2 pr-4">Evidence</th>
-              <th className="py-2 pr-4">Status</th>
-              <th className="py-2 pr-4">Assigned handler</th>
-              <th className="py-2 pr-4">Days until deadline</th>
-              <th className="py-2 pr-4">Priority</th>
-              <th className="py-2 pr-4">Reassign</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cases.map((c) => (
-              <tr key={c.id} className="border-b border-line">
-                <td className="py-2 pr-4">{c.category ?? 'Uncategorized'}</td>
-                <td className="py-2 pr-4">{c.severityScore ?? '-'}</td>
-                <td className="py-2 pr-4">{c.evidenceScore ?? '-'}</td>
-                <td className="py-2 pr-4">{c.status ?? '-'}</td>
-                <td className="py-2 pr-4">{handlerNameById.get(c.assignedHandlerId) ?? '-'}</td>
-                <td className="py-2 pr-4">{formatDaysUntilDeadline(nextDeadlineMs(c), now)}</td>
-                <td className="py-2 pr-4">
-                  {c.priority && (
-                    <span className={`rounded border px-2 py-0.5 text-xs ${PRIORITY_STYLE[c.priority] ?? PRIORITY_STYLE.low}`}>
-                      {c.priority}
-                    </span>
-                  )}
-                </td>
-                <td className="py-2 pr-4">
-                  <select
-                    className="field rounded px-2 py-1 text-xs"
-                    disabled={reassigningId === c.id}
-                    defaultValue=""
-                    onChange={(e) => handleReassign(c.id, e.target.value)}
-                  >
-                    <option value="" disabled>
-                      Reassign to...
-                    </option>
-                    {handlers.map((h) => (
-                      <option key={h.id} value={h.id}>
-                        {h.email ?? h.id}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!loading && cases.length === 0 && !error && (
-          <p className="py-4 text-sm text-muted">No cases for this company yet.</p>
-        )}
-      </div>
+      {firstLoad ? (
+        <SkeletonList rows={5} />
+      ) : (
+        <Card
+          title="All cases"
+          description={`${cases.length} case${cases.length === 1 ? '' : 's'}`}
+          padded={false}
+        >
+          {cases.length === 0 ? (
+            <EmptyState
+              icon="cases"
+              title="No cases for this company yet"
+              description="Submitted reports appear here the moment they are routed."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="data-table min-w-[980px]">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Severity</th>
+                    <th>Evidence</th>
+                    <th>Assigned handler</th>
+                    <th>Next deadline</th>
+                    <th>Reassign</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cases.map((c) => {
+                    const deadline = deadlineDisplay(nextDeadlineMs(c), now)
+                    return (
+                      <tr key={c.id}>
+                        <td className="font-medium text-charcoal">
+                          {humanize(c.category) ?? 'Uncategorized'}
+                        </td>
+                        <td>
+                          {c.priority && (
+                            <Badge tone={PRIORITY_TONE[c.priority] ?? 'tone-neutral'} dot>
+                              {c.priority}
+                            </Badge>
+                          )}
+                        </td>
+                        <td>
+                          <Badge tone={STATUS_TONE[c.status] ?? 'tone-neutral'}>
+                            {humanize(c.status) ?? 'open'}
+                          </Badge>
+                        </td>
+                        <td className="tabular-nums text-muted">{c.severityScore ?? '—'}</td>
+                        <td className="tabular-nums text-muted">{c.evidenceScore ?? '—'}</td>
+                        <td className="text-muted">
+                          {handlerNameById.get(c.assignedHandlerId) ?? (
+                            <span className="text-critical">Unassigned</span>
+                          )}
+                        </td>
+                        <td>
+                          <Badge tone={deadline.tone}>{deadline.label}</Badge>
+                        </td>
+                        <td>
+                          <select
+                            aria-label={`Reassign case ${c.caseId ?? c.id}`}
+                            className="field w-44 py-1 text-xs"
+                            disabled={reassigningId === c.id}
+                            defaultValue=""
+                            onChange={(e) => handleReassign(c.id, e.target.value)}
+                          >
+                            <option value="" disabled>
+                              {reassigningId === c.id ? 'Reassigning...' : 'Reassign to...'}
+                            </option>
+                            {handlers.map((h) => (
+                              <option key={h.id} value={h.id}>
+                                {h.email ?? h.id}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
     </div>
   )
 }
