@@ -33,4 +33,12 @@ function deriveDepartmentTier(category, responses) {
   return classifyRoleText(role)
 }
 
-module.exports = { deriveDepartmentTier }
+// classifyRoleText is exported so functions/src/patterns/ can derive the same
+// junior/senior/manager tier from a role string without a second copy of the
+// keyword lists - one classifier, two callers. The ACCUSED_ROLE_FIELDS map
+// above is deliberately NOT shared: it is module 10's answer to "which
+// questionnaire field names the accused's role", scoped to the reference pool
+// checkConsistency.js compares against, and widening it here would silently
+// re-tier that pool. Pattern detection keeps its own field map (see
+// patterns/subjectSignature.js) for exactly that reason.
+module.exports = { deriveDepartmentTier, classifyRoleText }

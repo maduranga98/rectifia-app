@@ -1,6 +1,7 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const admin = require('firebase-admin')
 const { normalizeTier } = require('./submitCase')
+const { deriveSubjectSignature, signatureHash } = require('../patterns/subjectSignature')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -52,6 +53,41 @@ function pickMetadata(data) {
     tier: normalizeTier(data.tier),
     source: data.source ?? 'reporter',
     intakeMethod: data.intakeMethod ?? null,
+    ...subjectSignatureFields(data),
+  }
+}
+
+// The three fields module 16's pattern detection groups on, derived here
+// rather than read from the case so that detectPatterns.js never needs a path
+// to cases/{caseId} or to `responses`.
+//
+// They are deliberately NOT the `department` field above. That one is the
+// case's own routing department (routeCase.js, and the column four admin
+// screens already render); these describe the person the report is ABOUT, and
+// collapsing the two would silently change what those screens display and what
+// routing rules match on. Different question, different field.
+//
+// A tier is a bucket of a job title and a department is a team - together they
+// are the coarsest description of a subject that is still groupable, and
+// nothing here is identity-bearing on its own. What makes a *signal* built
+// from them safe is not this function, it is the population check in
+// patterns/suppressionRules.js: department + tier IS an identity when only
+// three people match it. Nothing free-text, no answer values, and no reporter
+// attribute is mirrored here - deriveSubjectSignature returns a tier and a
+// normalized department or it returns null.
+function subjectSignatureFields(data) {
+  const signature = deriveSubjectSignature({
+    companyId: data.companyId,
+    category: data.category,
+    responses: data.responses,
+  })
+  if (!signature) {
+    return { subjectDepartment: null, subjectRoleTier: null, subjectSignatureHash: null }
+  }
+  return {
+    subjectDepartment: signature.department,
+    subjectRoleTier: signature.roleTier,
+    subjectSignatureHash: signatureHash(signature),
   }
 }
 

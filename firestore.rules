@@ -221,7 +221,15 @@ service cloud.firestore {
     // category/severityScore/evidenceScore/status/assignedHandlerId/
     // department/priority/companyId/deadlines/timestamps. It deliberately
     // never includes `responses` (questionnaire free text) or anything from
-    // the messages subcollection. It also now carries tier/source/intakeMethod,
+    // the messages subcollection. It additionally carries the three pattern-detection fields
+    // (subjectDepartment, subjectRoleTier, subjectSignatureHash) - the
+    // department and coarse role tier of the person a report is about, derived
+    // from the questionnaire by syncCaseMetadata.js so that
+    // functions/src/patterns/ never needs a path to `responses`. A tier is a
+    // bucket, a department is a team, and neither is a name; what keeps a
+    // *signal* built from them non-identifying is the population check in
+    // patterns/suppressionRules.js, not these fields being coarse.
+    // It also carries tier/source/intakeMethod,
     // which are provenance rather than content - "filed by phone, reporter
     // chose to be identifiable" says nothing about what was reported - while
     // `reporterIdentity` and enteredByUid/enteredByRole are deliberately kept
@@ -261,6 +269,52 @@ service cloud.firestore {
           && resource.data.status == 'needs_manual_assignment'
           && (resource.data.routingReason == 'conflict_of_interest'
             || resource.data.routingReason == 'missing_company_id'));
+      allow write: if false;
+    }
+
+    // Module 16's cross-case pattern signals: a count of cases sharing a
+    // department + role tier inside a rolling window, recomputed from scratch
+    // daily by functions/src/patterns/detectPatterns.js and never written by a
+    // client. A signal document holds counts, a tier, two dates and case ids -
+    // no name, no questionnaire answer, no free text - and any group whose
+    // matching employee population is too small to be anonymous never becomes
+    // a document at all (functions/src/patterns/suppressionRules.js), so the
+    // privacy guarantee here is that the row does not exist, not that a rule
+    // hides it.
+    //
+    // Two readers, deliberately no others:
+    // - HR Coordinator, company-wide. This is a third case-derived read for
+    //   the role that already reads caseMetadata company-wide, and it is
+    //   strictly coarser than that mirror.
+    // - The Case Handler assigned to a case inside the signal, matched on
+    //   handlerIds. This is the only reason handlerIds is on the document.
+    //
+    // Company Admin gets no path here even for their own company, and that is
+    // not an oversight to be tidied up later: a pattern signal is derived from
+    // case content, and the module 2 role design keeps Company Admin to
+    // settings and structure, with its one case-derived read being the
+    // aggregate stats rollup. Manager has no path either.
+    //
+    // The caseIds array is readable by a handler whose own case is in the
+    // signal, and it stays inert: cases/{caseId} is still gated on
+    // assignedHandlerId and caseMetadata/{caseId} on the hrCoordinator claim,
+    // so holding an id from this array grants no read of the case behind it.
+    match /patternSignals/{signalId} {
+      allow read: if isHrCoordinator(resource.data.companyId)
+        || (request.auth != null && request.auth.uid in resource.data.handlerIds);
+      allow write: if false;
+    }
+
+    // The per-company run summary, doc id == companyId. Counts and thresholds
+    // only - how many signals fired, how many groups were withheld as too
+    // small to report safely, and the thresholds in force. It names no
+    // department, tier or category on purpose: identifying WHICH group was
+    // suppressed would be the same disclosure the suppression exists to
+    // prevent. It exists so an HR Coordinator seeing an empty list can tell
+    // "no pattern" apart from "a pattern that cannot be shown safely" instead
+    // of being shown silence.
+    match /patternSignalSummaries/{companyId} {
+      allow read: if isHrCoordinator(companyId);
       allow write: if false;
     }
 

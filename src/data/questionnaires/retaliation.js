@@ -1,3 +1,10 @@
+// subject_department / subject_role are the same optional pair harassment.js
+// asks and that toxicManagement.js has always asked about the involved
+// manager: department and role, never a name. Here they describe whoever took
+// the retaliatory action. Leaving them blank costs the reporter nothing - a
+// case missing either one just never joins a pattern group (see
+// functions/src/patterns/subjectSignature.js).
+//
 // Question definitions for the retaliation intake questionnaire. Both
 // timeframe fields feed the temporal-correlation score module 6 computes -
 // this module only collects the raw approximate timing, it does not compute
@@ -65,6 +72,20 @@ const retaliationQuestions = [
       { value: 'different_person', label: 'Someone else entirely', severityWeight: 2 },
       { value: 'unsure', label: 'Not sure', severityWeight: 1 },
     ],
+    severityWeight: null,
+  },
+  {
+    id: 'subject_department',
+    text: 'What department does the person who took that action work in? (Optional)',
+    type: 'text',
+    options: null,
+    severityWeight: null,
+  },
+  {
+    id: 'subject_role',
+    text: "What is that person's role or title? (Optional - no names, please.)",
+    type: 'text',
+    options: null,
     severityWeight: null,
   },
   {
