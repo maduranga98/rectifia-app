@@ -1,5 +1,19 @@
+import { useLocation, useNavigate } from 'react-router-dom'
+import Button from '../ui/Button'
 import Icon from '../ui/Icon'
 import Logo from '../ui/Logo'
+
+// A reporter who already filed can only get back to their case through
+// /case, and until this lived in the chrome the only links to it sat on two
+// Submit screens - so anyone who closed the tab had to start a whole new
+// report to find the tracking form. It belongs on every reporter-facing
+// screen, which is exactly the set of screens this layout wraps.
+//
+// Suppressed on the tracking route itself: /case and /case/:caseId are where
+// the link goes, and a link to the page you are on reads as a dead control.
+function isTrackingRoute(pathname) {
+  return pathname === '/case' || pathname.startsWith('/case/')
+}
 
 // Chrome for the account-less, self-serve pages: the anonymous reporter flow
 // (/submit and /case/:caseId) and the roster-employee pulse check
@@ -10,16 +24,48 @@ import Logo from '../ui/Logo'
 //
 // `steps` renders a numbered progress trail when the page is a flow;
 // omitting it gives a plain centred column.
-function ReporterLayout({ title, description, steps, currentStep, children, footerNote }) {
+//
+// `unsavedWarning` is the text to confirm with before the tracking link
+// navigates away. A page passes it while it holds work that only exists in
+// component state (the half-filled questionnaire on /submit) and leaves it
+// undefined otherwise, so the confirm only appears when there is genuinely
+// something to lose.
+function ReporterLayout({
+  title,
+  description,
+  steps,
+  currentStep,
+  children,
+  footerNote,
+  unsavedWarning,
+}) {
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+
+  // A plain <Link> can't ask first, and the answers live in React state that
+  // unmounting would drop silently - so this navigates by hand, behind a
+  // confirm the page opts into.
+  function trackExistingCase() {
+    if (unsavedWarning && !window.confirm(unsavedWarning)) return
+    navigate('/case')
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-5 py-4">
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4">
           <Logo size="md" />
-          <span className="flex items-center gap-1.5 text-xs text-muted">
-            <Icon name="shield" className="h-3.5 w-3.5" />
-            Confidential
-          </span>
+          <div className="flex items-center gap-3">
+            {!isTrackingRoute(pathname) && (
+              <Button size="sm" icon="search" onClick={trackExistingCase}>
+                Track an existing case
+              </Button>
+            )}
+            <span className="flex items-center gap-1.5 text-xs text-muted">
+              <Icon name="shield" className="h-3.5 w-3.5" />
+              Confidential
+            </span>
+          </div>
         </div>
       </header>
 

@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/shared/ProtectedRoute'
 import RootRedirect from './components/shared/RootRedirect'
@@ -67,11 +67,14 @@ function App() {
         />
 
         {/* "/" is a dispatcher, not a landing page: signed-out visitors get
-            the login page on startup, signed-in ones their dashboard. */}
+            the public entry page (track a case, or staff sign-in), signed-in
+            ones their dashboard. */}
         <Route path="/" element={<RootRedirect />} />
-        {/* Unknown URLs resolve through the same dispatcher instead of
-            rendering a blank page. */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Unknown URLs resolve through the same dispatcher rather than
+            rendering a blank page - a reporter who mistypes or follows a
+            stale link still gets a route back into their case, which
+            bouncing them to the staff login page never gave them. */}
+        <Route path="*" element={<RootRedirect />} />
       </Routes>
     </AuthProvider>
   )
