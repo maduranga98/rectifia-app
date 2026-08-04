@@ -4,8 +4,10 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
   serverTimestamp,
   updateDoc,
+  where,
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { firestore, functions } from './firebase'
@@ -24,6 +26,41 @@ export const SUBSCRIPTION_TIERS = ['starter', 'professional', 'enterprise']
 const JURISDICTION_STRICTNESS_ORDER = ['EU', 'UK', 'US', 'LK']
 
 const COMPANIES_COLLECTION = 'companies'
+
+// Turns a company name into a URL-safe slug: lowercase, non-alphanumeric runs
+// collapsed to single hyphens, no leading/trailing hyphens. This is the
+// public identifier that appears in a reporting link (/submit/:companySlug),
+// so it must never contain anything that needs URL-encoding or that leaks the
+// exact legal name formatting.
+export function slugifyCompanyName(name) {
+  return String(name ?? '')
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+// Finds a slug that isn't already taken by another company. The base slug
+// derived from the name is tried first; on a collision it appends -2, -3, ...
+// A Super Admin (the only caller of createCompany) can read every company doc
+// per firestore.rules, so the uniqueness query below is permitted. The slug is
+// what an unauthenticated reporter's link resolves against, so it has to be
+// unique across the whole platform - not per company.
+async function allocateUniqueSlug(name) {
+  const base = slugifyCompanyName(name) || 'company'
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`
+    const snapshot = await getDocs(
+      query(collection(firestore, COMPANIES_COLLECTION), where('slug', '==', candidate))
+    )
+    if (snapshot.empty) {
+      return candidate
+    }
+  }
+  // Astronomically unlikely with 50 name-based attempts; fall back to a
+  // random suffix rather than blocking company creation outright.
+  return `${base}-${Math.random().toString(36).slice(2, 8)}`
+}
 
 function createDepartmentId() {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -68,8 +105,14 @@ export async function createCompany({
     throw new Error('A valid subscription tier is required')
   }
 
+  // Unique, URL-safe reporting slug allocated at creation time - this is what
+  // /submit/:companySlug resolves against so anonymous reporters can file
+  // against the right company without ever being handed a raw companyId.
+  const slug = await allocateUniqueSlug(name)
+
   const docRef = await addDoc(collection(firestore, COMPANIES_COLLECTION), {
     name: name.trim(),
+    slug,
     jurisdictions,
     departments,
     subscriptionTier,

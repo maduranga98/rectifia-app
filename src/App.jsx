@@ -17,8 +17,12 @@ function App() {
   return (
     <AuthProvider>
       <Routes>
-        {/* Anonymous reporter routes - deliberately not behind auth. */}
-        <Route path="/submit" element={<Submit />} />
+        {/* Anonymous reporter routes - deliberately not behind auth. The
+            reporting entry point is company-scoped: the slug in the path is
+            resolved to a company server-side, so a report can only be filed
+            against a real company's queue. A bare /submit with no company is
+            not a valid reporting link and resolves through the dispatcher. */}
+        <Route path="/submit/:companySlug" element={<Submit />} />
         {/* Both forms of the tracking route: with a Case ID when the
             reporter followed a link, without one when they arrived cold and
             type it in. */}
