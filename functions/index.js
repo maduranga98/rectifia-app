@@ -19,6 +19,7 @@ const { createCompanyAdmin } = require('./src/company/createCompanyAdmin')
 const { resolveCompanySlug } = require('./src/company/resolveCompanySlug')
 const { acceptInvite } = require('./src/staff/acceptInvite')
 const { submitPulseResponse, analyzePulseResponse } = require('./src/intake/analyzePulseResponse')
+const { validatePulseInvite } = require('./src/intake/pulseInvites')
 const { schedulePulseChecks } = require('./src/intake/schedulePulseChecks')
 const { registerPushSubscription, sendCaseUpdate } = require('./src/notifications/sendCaseUpdate')
 
@@ -49,6 +50,7 @@ exports.createCompanyAdmin = createCompanyAdmin
 exports.resolveCompanySlug = resolveCompanySlug
 exports.acceptInvite = acceptInvite
 exports.submitPulseResponse = submitPulseResponse
+exports.validatePulseInvite = validatePulseInvite
 exports.analyzePulseResponse = analyzePulseResponse
 exports.schedulePulseChecks = schedulePulseChecks
 exports.registerPushSubscription = registerPushSubscription

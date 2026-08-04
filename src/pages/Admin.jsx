@@ -10,6 +10,7 @@ import StaffPage from './company-admin/StaffPage'
 import EmployeesPage from './company-admin/EmployeesPage'
 import RoutingRulesPage from './company-admin/RoutingRulesPage'
 import BillingPage from './company-admin/BillingPage'
+import SettingsPage from './company-admin/SettingsPage'
 
 // Company Admin's whole surface: the shell's navigation plus the overview
 // and four settings sub-pages it routes to. CompanyAdminPanel used to hold
@@ -41,6 +42,7 @@ const NAV_ITEMS = [
   { to: '/admin/employees', label: 'Employees', icon: 'pulse' },
   { to: '/admin/routing', label: 'Routing rules', icon: 'routing' },
   { to: '/admin/billing', label: 'Billing', icon: 'billing' },
+  { to: '/admin/settings', label: 'Settings', icon: 'settings' },
 ]
 
 const PAGE_TITLES = {
@@ -51,6 +53,7 @@ const PAGE_TITLES = {
   employees: 'Employees',
   routing: 'Routing rules',
   billing: 'Subscription & billing',
+  settings: 'Company settings',
 }
 
 function Admin() {
@@ -85,6 +88,7 @@ function Admin() {
           <Route path="employees" element={<EmployeesPage companyId={companyId} />} />
           <Route path="routing" element={<RoutingRulesPage companyId={companyId} />} />
           <Route path="billing" element={<BillingPage companyId={companyId} />} />
+          <Route path="settings" element={<SettingsPage companyId={companyId} />} />
           <Route path="*" element={<Navigate to="overview" replace />} />
         </Routes>
       ) : (

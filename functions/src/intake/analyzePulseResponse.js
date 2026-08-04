@@ -5,6 +5,7 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
 const { notifyCrisisContact } = require('./routeCase')
+const { PULSE_INVITES_COLLECTION, verifyInviteToken } = require('./pulseInvites')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -61,39 +62,66 @@ function currentPeriod() {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-// Submits a pulse response as the signed-in employee. Unlike the anonymous
-// case system, pulse responses ARE tied to a named person - but that
-// identity comes from request.auth.uid (a real Firebase Auth session), never
-// a client-supplied field, so a caller can't submit a response as someone
-// else. companyId prefers the employee's own custom claim (set by
-// inviteStaff.js for staff accounts); for non-staff employee accounts that
-// don't carry a companyId claim yet, this falls back to the client-supplied
-// value - the same no-full-staff-auth tradeoff other modules in this
-// codebase already accept until a real employee directory exists.
+// Submits a pulse response on behalf of a roster employee, who has no Firebase
+// Auth account at all - their single-use invite token is the credential
+// instead. Identity is NOT client-supplied: companyId, department and
+// employeeId are all read off the invite document server-side, so submitting a
+// response as someone else is impossible rather than merely discouraged, and
+// the payload no longer carries companyId or department at all.
+//
+// The invite is spent in the SAME transaction that writes the response, so a
+// token is genuinely single-use: two racing submissions can't both mark a
+// 'pending' invite 'used' and both write a response. employeeId stored here is
+// the roster doc id (companies/{companyId}/employees), never a uid - roster
+// employees don't have one.
 exports.submitPulseResponse = onCall(async (request) => {
-  const employeeId = request.auth?.uid
-  if (!employeeId) {
-    throw new HttpsError('unauthenticated', 'Sign in to submit a pulse check response')
-  }
-
-  const { companyId: requestedCompanyId, department, answers } = request.data || {}
-  const companyId = request.auth.token?.companyId ?? requestedCompanyId
-  if (!companyId) {
-    throw new HttpsError('invalid-argument', 'companyId is required')
+  const { inviteId, token, answers } = request.data || {}
+  if (typeof inviteId !== 'string' || typeof token !== 'string' || !inviteId || !token) {
+    throw new HttpsError('invalid-argument', 'A valid pulse-check invite is required')
   }
   if (!Array.isArray(answers) || answers.length === 0) {
     throw new HttpsError('invalid-argument', 'answers are required')
   }
 
-  const docRef = await admin.firestore().collection(PULSE_RESPONSES_COLLECTION).add({
-    employeeId,
-    companyId,
-    department: department ?? null,
-    answers,
-    submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+  const firestore = admin.firestore()
+  const inviteRef = firestore.collection(PULSE_INVITES_COLLECTION).doc(inviteId)
+  const responseRef = firestore.collection(PULSE_RESPONSES_COLLECTION).doc()
+
+  await firestore.runTransaction(async (tx) => {
+    const snapshot = await tx.get(inviteRef)
+    if (!snapshot.exists) {
+      throw new HttpsError('permission-denied', 'Invalid or expired pulse-check invite')
+    }
+    const invite = snapshot.data()
+
+    const expired = invite.expiresAt && invite.expiresAt.toMillis() <= Date.now()
+    // Single-use enforcement: only a still-pending, unexpired invite whose
+    // token matches may be spent, and spending it (status -> 'used') happens
+    // right here alongside the response write, never in a separate step.
+    if (invite.status !== 'pending' || expired) {
+      throw new HttpsError(
+        'failed-precondition',
+        'This pulse-check invite has already been used or has expired'
+      )
+    }
+    if (!verifyInviteToken(token, invite.tokenHash, invite.tokenSalt)) {
+      throw new HttpsError('permission-denied', 'Invalid or expired pulse-check invite')
+    }
+
+    tx.set(responseRef, {
+      employeeId: invite.employeeId,
+      companyId: invite.companyId,
+      department: invite.department ?? null,
+      answers,
+      submittedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
+    tx.update(inviteRef, {
+      status: 'used',
+      usedAt: admin.firestore.FieldValue.serverTimestamp(),
+    })
   })
 
-  return { responseId: docRef.id }
+  return { responseId: responseRef.id }
 })
 
 async function analyzeWithClaude(answers, history) {
