@@ -23,6 +23,8 @@ function Submit() {
   const { companySlug } = useParams()
   const [category, setCategory] = useState(null)
   const [completed, setCompleted] = useState(null)
+  const [copied, setCopied] = useState(false)
+  const [copyFailed, setCopyFailed] = useState(false)
   // The last settled slug lookup, tagged with the slug it was for. Tagging lets
   // us treat a result from a previous slug as "still loading" once the slug in
   // the URL changes, without having to synchronously reset state in the effect.
@@ -94,6 +96,31 @@ function Submit() {
   const step = completed ? 2 : category ? 1 : 0
   const categoryLabel = CATEGORIES.find((c) => c.id === category)?.label
 
+  // The tracking address for this specific case, shown as text the reporter
+  // can write down or bookmark. The Case ID in the path pre-fills the access
+  // form; the passcode is never in the URL, so the link on its own opens
+  // nothing.
+  const trackingUrl =
+    completed && typeof window !== 'undefined'
+      ? `${window.location.origin}/case/${completed.caseId}`
+      : null
+
+  async function copyTrackingUrl() {
+    if (!trackingUrl) return
+    setCopied(false)
+    setCopyFailed(false)
+    try {
+      // Absent over plain http and in some embedded browsers - exactly the
+      // contexts a reporter on a shared or locked-down device is likely to
+      // be in. The URL stays selectable above either way.
+      await navigator.clipboard.writeText(trackingUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopyFailed(true)
+    }
+  }
+
   const COPY = [
     {
       title: "What's this report about?",
@@ -117,7 +144,18 @@ function Submit() {
       description={COPY.description}
       steps={STEPS}
       currentStep={step}
-      footerNote="Rectifia does not record your name, email, or IP address with this report unless you choose to include it in an answer. Already submitted a report? Track it with your Case ID."
+      // Two steps hold something that only exists in this tab: the answers
+      // on step 1 (nothing filed yet, all of it in QuestionnaireForm state)
+      // and the credentials on step 2 (shown once, never recoverable). The
+      // header's tracking link asks before it takes either away.
+      unsavedWarning={
+        step === 1
+          ? 'Leaving now discards the answers you have entered - this report has not been submitted yet and nothing is saved. Continue to case tracking?'
+          : step === 2
+            ? 'Have you saved your Case ID and passcode? They are shown only on this screen and cannot be recovered afterwards. Continue to case tracking?'
+            : undefined
+      }
+      footerNote="Rectifia does not record your name, email, or IP address with this report unless you choose to include it in an answer."
     >
       {step === 0 && <CategorySelect onSelect={setCategory} />}
 
@@ -132,11 +170,16 @@ function Submit() {
         </div>
       )}
 
+      {/* This screen is the only time these credentials exist anywhere the
+          reporter can see them: the passcode is stored hashed and the case
+          has no owner to prove identity against, so nothing here can be
+          re-issued or emailed later. It is worth the space it takes. */}
       {step === 2 && (
         <div className="flex flex-col gap-4">
           <Alert variant="success" title="Your report has been filed">
-            Write down your Case ID and passcode now — they are shown only once and cannot be
-            recovered. You'll need both to track your case.
+            {completed.responseCount} answer
+            {completed.responseCount === 1 ? '' : 's'} recorded for {categoryLabel}. Save the
+            details below before you close this page.
           </Alert>
 
           <div className="card p-6">
@@ -153,23 +196,67 @@ function Submit() {
                   {completed.passcode}
                 </dd>
               </div>
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted">
+                  Where to check on your case
+                </dt>
+                <dd className="mt-1 flex flex-col gap-2">
+                  {/* Spelled out rather than hidden behind a link label: a
+                      reporter writing this on paper or photographing the
+                      screen needs the characters, not a click target. */}
+                  <code className="block select-all break-all rounded-md border border-line bg-line-soft px-3 py-2 text-xs text-charcoal">
+                    {trackingUrl}
+                  </code>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button icon="document" onClick={copyTrackingUrl}>
+                      {copied ? 'Copied' : 'Copy link'}
+                    </Button>
+                    {copyFailed && (
+                      <span className="text-xs text-muted">
+                        Couldn&apos;t copy automatically — select the link above and copy it.
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted">
+                    The link opens the tracking form with your Case ID filled in. It does not
+                    contain your passcode — you will still be asked for it.
+                  </p>
+                </dd>
+              </div>
             </dl>
-            <p className="mt-4 text-sm text-muted">
-              {completed.responseCount} answer
-              {completed.responseCount === 1 ? '' : 's'} recorded for {categoryLabel}.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+          </div>
+
+          <Alert variant="warning" title="Your passcode cannot be recovered">
+            It is stored only as a hash, so no one — not Rectifia, not your employer, not the
+            handler on your case — can look it up, reset it, or send it to you. There is no
+            account and no email address attached to this report to recover it to.{' '}
+            <strong className="font-semibold">
+              If you lose the Case ID or passcode, you permanently lose access to this case
+            </strong>{' '}
+            and its messages, and filing a new report is the only way to be heard again.
+          </Alert>
+
+          <div className="card p-6">
+            <h2 className="text-sm font-semibold text-charcoal">Before you leave this page</h2>
+            <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed text-muted">
+              <li>Bookmark the link above, or screenshot this screen.</li>
+              <li>
+                Write the passcode somewhere only you can reach — a screenshot on a work device
+                may not be private.
+              </li>
+              <li>Come back any time to read replies from your handler and answer them.</li>
+            </ul>
+            <div className="mt-4">
               <Button
                 onClick={() => {
                   setCompleted(null)
                   setCategory(null)
+                  setCopied(false)
+                  setCopyFailed(false)
                 }}
               >
-                Start over
+                File another report
               </Button>
-              <Link to="/case" className="btn btn-secondary">
-                Track an existing case
-              </Link>
             </div>
           </div>
         </div>

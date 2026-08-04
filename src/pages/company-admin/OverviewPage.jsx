@@ -67,12 +67,84 @@ function BreakdownList({ entries, labelFor = (key) => key, toneFor = () => 'tone
   )
 }
 
-// The printable/postable reporting link for this company. The QR encodes the
-// public /submit/:companySlug URL an anonymous reporter follows - the same slug
-// the Submit page resolves server-side - so a company can put the code on a
-// poster in a break room and reporters reach the right, company-scoped intake
-// flow without typing anything or authenticating. Nothing here is case content;
-// it's just the company's own public reporting address rendered as a QR.
+// One postable address: a QR code beside the literal URL, both generated
+// client-side from the current origin so they point at wherever the app is
+// actually served (localhost in dev, the real domain in production) rather
+// than a hard-coded host.
+function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
+  const [qrDataUrl, setQrDataUrl] = useState(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!url) return undefined
+    let active = true
+    QRCode.toDataURL(url, { width: 256, margin: 1 })
+      .then((dataUrl) => {
+        if (active) setQrDataUrl(dataUrl)
+      })
+      .catch(() => {
+        if (active) setQrDataUrl(null)
+      })
+    return () => {
+      active = false
+    }
+  }, [url])
+
+  async function copyLink() {
+    if (!url) return
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard can be unavailable (insecure context / denied permission);
+      // the link stays visible and selectable below either way.
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="shrink-0">
+        {qrDataUrl ? (
+          <img
+            src={qrDataUrl}
+            alt={qrAlt}
+            className="h-40 w-40 rounded-lg border border-line bg-white p-2"
+          />
+        ) : (
+          <div className="flex h-40 w-40 items-center justify-center rounded-lg border border-line bg-line-soft text-xs text-muted">
+            Generating…
+          </div>
+        )}
+      </div>
+      <div className="flex min-w-0 flex-col gap-2">
+        <h4 className="text-sm font-semibold text-charcoal">{heading}</h4>
+        <p className="text-sm text-muted">{description}</p>
+        <code className="block select-all break-all rounded-md border border-line bg-line-soft px-3 py-2 text-xs text-charcoal">
+          {url}
+        </code>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
+          {qrDataUrl && (
+            <a href={qrDataUrl} download={downloadName} className="btn btn-secondary">
+              Download QR
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// The printable/postable reporting addresses for this company. Two of them,
+// because a poster with only the intake link answers half the question: the
+// first QR encodes the public /submit/:companySlug URL an anonymous reporter
+// follows - the same slug the Submit page resolves server-side - and the
+// second encodes /case, where someone who already filed goes back to read
+// replies. A reporter has no account and no email, so the tracking address is
+// the only way back in; posting both together is what makes it findable
+// months later. Nothing here is case content; it's the company's own public
+// addresses rendered as QRs.
 //
 // A company with no slug isn't stuck waiting on a backfill: this role can
 // allocate one here. The allocation itself is the same platform-wide-unique
@@ -81,47 +153,17 @@ function BreakdownList({ entries, labelFor = (key) => key, toneFor = () => 'tone
 // Admin write the field, so the button is a convenience on top of a
 // server-enforced permission rather than the thing granting it.
 function ReportingLinkCard({ company, onSlugGenerated }) {
-  const [qrDataUrl, setQrDataUrl] = useState(null)
-  const [copied, setCopied] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState(null)
 
   const slug = company?.slug
+  const origin = typeof window !== 'undefined' ? window.location.origin : null
 
-  // Built from the current origin so the QR points at wherever the app is
-  // actually served (localhost in dev, the real domain in production) rather
-  // than a hard-coded host.
-  const submitUrl =
-    slug && typeof window !== 'undefined'
-      ? `${window.location.origin}/submit/${slug}`
-      : null
-
-  useEffect(() => {
-    if (!submitUrl) return undefined
-    let active = true
-    QRCode.toDataURL(submitUrl, { width: 256, margin: 1 })
-      .then((url) => {
-        if (active) setQrDataUrl(url)
-      })
-      .catch(() => {
-        if (active) setQrDataUrl(null)
-      })
-    return () => {
-      active = false
-    }
-  }, [submitUrl])
-
-  async function copyLink() {
-    if (!submitUrl) return
-    try {
-      await navigator.clipboard.writeText(submitUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // Clipboard can be unavailable (insecure context / denied permission);
-      // the link stays visible and selectable below either way.
-    }
-  }
+  const submitUrl = slug && origin ? `${origin}/submit/${slug}` : null
+  // Not company-scoped: tracking is keyed by the Case ID and passcode the
+  // reporter holds, so there is no slug in this one and every company posts
+  // the same address.
+  const trackingUrl = origin ? `${origin}/case` : null
 
   async function generateLink() {
     if (!company?.id || generating) return
@@ -140,7 +182,7 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
   }
 
   return (
-    <Card title="Reporting link">
+    <Card title="Reporting links">
       {!slug ? (
         <div className="flex flex-col items-start gap-3">
           <p className="text-sm text-muted">
@@ -160,37 +202,30 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <div className="shrink-0">
-            {qrDataUrl ? (
-              <img
-                src={qrDataUrl}
-                alt={`QR code linking to the reporting page for this company`}
-                className="h-40 w-40 rounded-lg border border-line bg-white p-2"
-              />
-            ) : (
-              <div className="flex h-40 w-40 items-center justify-center rounded-lg border border-line bg-line-soft text-xs text-muted">
-                Generating…
-              </div>
-            )}
-          </div>
-          <div className="flex min-w-0 flex-col gap-2">
-            <p className="text-sm text-muted">
-              Print or post this QR code so anyone can file a confidential report to your company.
-              It opens the anonymous intake form - no login required.
-            </p>
-            <code className="block select-all break-all rounded-md border border-line bg-line-soft px-3 py-2 text-xs text-charcoal">
-              {submitUrl}
-            </code>
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
-              {qrDataUrl && (
-                <a href={qrDataUrl} download="reporting-qr.png" className="btn btn-secondary">
-                  Download QR
-                </a>
-              )}
-            </div>
-          </div>
+        <div className="flex flex-col gap-6">
+          <p className="text-sm text-muted">
+            Print or post both of these together - one for filing, one for coming back. Neither
+            requires a login. Reporters have no account and no password reset, so the tracking
+            address is the only route back to a case they have already filed.
+          </p>
+
+          <ShareableLink
+            heading="File a report"
+            description="Opens the confidential intake form for your company. Anyone with this link can file - no login, no name required."
+            url={submitUrl}
+            qrAlt="QR code linking to the confidential reporting form for this company"
+            downloadName="reporting-qr.png"
+          />
+
+          <div className="border-t border-line-soft" />
+
+          <ShareableLink
+            heading="Check a report you already filed"
+            description="Opens the case tracking form, where a reporter enters the Case ID and passcode issued at submission to read replies and respond."
+            url={trackingUrl}
+            qrAlt="QR code linking to the case tracking form"
+            downloadName="case-tracking-qr.png"
+          />
         </div>
       )}
     </Card>
@@ -282,8 +317,8 @@ function OverviewPage({ companyId }) {
       {error && <Alert variant="error">{error}</Alert>}
 
       <section className="flex flex-col gap-3">
-        <SectionHeading hint="Share this QR code or link so employees can file confidential reports.">
-          Reporting link
+        <SectionHeading hint="Share these QR codes or links so employees can file confidential reports - and find their way back to one they already filed.">
+          Reporting links
         </SectionHeading>
         {firstLoad ? (
           <SkeletonList rows={1} />

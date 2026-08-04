@@ -1,13 +1,18 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { ROLES } from '../../constants/roles'
+import PublicEntryPage from '../../pages/PublicEntryPage'
 import { FullPageLoader } from '../ui/Loading'
 
-// The app has no public landing page - "/" is just a dispatcher. A visitor
-// who isn't signed in lands on the staff login page (that's what should
-// come up when the app starts), and anyone already signed in goes straight
-// to the dashboard their account is entitled to. Reporter-facing routes
-// (/submit, /case/:caseId) are reached by link, never through here.
+// "/" is a dispatcher, not a landing page. Anyone already signed in goes
+// straight to the dashboard their account is entitled to; a signed-out
+// visitor gets the public entry page.
+//
+// That visitor used to be sent to the staff login page, which assumed every
+// unauthenticated arrival was staff. A reporter who closed the tab after
+// filing is unauthenticated too, and the login page gives them no route back
+// to their case - PublicEntryPage does, without pretending they have an
+// account. Signed-in routing is unchanged.
 function RootRedirect() {
   const { user, role, isSuperAdmin, loading } = useAuth()
 
@@ -15,7 +20,7 @@ function RootRedirect() {
     return <FullPageLoader />
   }
 
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <PublicEntryPage />
   if (isSuperAdmin) return <Navigate to="/super-admin" replace />
   // A Company Admin's entire surface is /admin (company settings) - landing
   // them on /dashboard would only show the interstitial redirect card, so
