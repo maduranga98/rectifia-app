@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLES, ROLE_LABELS } from '../constants/roles'
@@ -25,9 +25,9 @@ const VIEWS_BY_ROLE = {
   [ROLES.CASE_HANDLER]: [{ id: 'myCases', label: 'My cases', icon: 'cases' }],
   [ROLES.MANAGER]: [{ id: 'pulse', label: 'Team wellness', icon: 'pulse' }],
   [ROLES.PULSE_CHECK_REVIEWER]: [{ id: 'pulse', label: 'Pulse checks', icon: 'pulse' }],
-  // Company Admin's whole surface is the settings panel on /admin, so it
-  // gets a link there rather than a view of its own.
-  [ROLES.COMPANY_ADMIN]: [],
+  // Company Admin has no view here at all: its whole surface is the settings
+  // panel on /admin, and RootRedirect sends it straight to /admin/overview on
+  // sign-in, so it never lands on /dashboard through the normal flow.
 }
 
 // Renders the dashboard each staff role is entitled to. These components
@@ -50,23 +50,6 @@ function Dashboard() {
   }
 
   function renderView() {
-    if (role === ROLES.COMPANY_ADMIN) {
-      return (
-        <Card padded={false} className="mx-auto max-w-2xl">
-          <EmptyState
-            icon="company"
-            title="Your tools live in company settings"
-            description="Departments, staff, routing rules, and billing are all administered from the company settings panel."
-            action={
-              <Link to="/admin" className="btn btn-primary">
-                Open company settings
-              </Link>
-            }
-          />
-        </Card>
-      )
-    }
-
     if (!role) {
       return (
         <Alert variant="error" title="No role assigned">
