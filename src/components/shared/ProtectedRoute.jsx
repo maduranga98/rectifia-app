@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { FullPageLoader } from '../ui/Loading'
 
 // Gates a route by signed-in status and, optionally, staff role or super
 // admin allowlist membership. loginPath lets /super-admin send unauthorized
@@ -11,11 +12,9 @@ function ProtectedRoute({ children, allowedRoles, requireSuperAdmin = false, log
   const location = useLocation()
 
   if (loading) {
-    return (
-      <div className="p-8">
-        <p className="text-sm text-muted">Loading...</p>
-      </div>
-    )
+    // Super Admin routes resolve onto a dark surface, so the loader matches
+    // the page that's about to render rather than flashing a light screen.
+    return <FullPageLoader onDark={requireSuperAdmin} />
   }
 
   const isAuthorized =

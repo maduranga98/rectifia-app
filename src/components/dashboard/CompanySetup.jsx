@@ -8,6 +8,10 @@ import {
   getStrictestJurisdiction,
 } from '../../services/companyService'
 import CompanyCredentials from './CompanyCredentials'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import Icon from '../ui/Icon'
+import { Input, Select } from '../ui/Field'
 
 const JURISDICTION_LABELS = {
   EU: 'European Union',
@@ -19,13 +23,15 @@ const JURISDICTION_LABELS = {
 // Registers a new company. This is the Super Admin's onboarding form (see
 // SuperAdminDashboardPage) - it was previously written but never rendered
 // on any route, which is why there was no way to register a company at all.
+//
+// `title` is optional: when this form is dropped into a card that already
+// has a heading, passing null keeps the page from stating the same thing
+// twice.
 function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   const [name, setName] = useState('')
   const [adminEmail, setAdminEmail] = useState('')
   const [jurisdictions, setJurisdictions] = useState([])
-  const [subscriptionTier, setSubscriptionTier] = useState(
-    SUBSCRIPTION_TIERS[0]
-  )
+  const [subscriptionTier, setSubscriptionTier] = useState(SUBSCRIPTION_TIERS[0])
   const [departments, setDepartments] = useState([])
   const [newDepartmentName, setNewDepartmentName] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -42,9 +48,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
 
   function toggleJurisdiction(code) {
     setJurisdictions((current) =>
-      current.includes(code)
-        ? current.filter((j) => j !== code)
-        : [...current, code]
+      current.includes(code) ? current.filter((j) => j !== code) : [...current, code]
     )
   }
 
@@ -68,12 +72,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
       // so a retry doesn't register a duplicate company.
       const id =
         companyId ??
-        (await createCompany({
-          name,
-          jurisdictions,
-          departments,
-          subscriptionTier,
-        }))
+        (await createCompany({ name, jurisdictions, departments, subscriptionTier }))
       setCompanyId(id)
 
       const admin = await createCompanyAdmin({ companyId: id, email: adminEmail })
@@ -100,132 +99,120 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
-      <h2 className="text-lg font-semibold">{title}</h2>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {title && <h2 className="text-lg font-semibold text-charcoal">{title}</h2>}
 
-      <div>
-        <label htmlFor="company-name" className="block text-sm font-medium">
-          Company name
-        </label>
-        <input
-          id="company-name"
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          label="Company name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          className="field mt-1 w-full rounded px-3 py-2"
+          placeholder="Acme Ltd"
         />
-      </div>
-
-      <div>
-        <label htmlFor="company-admin-email" className="block text-sm font-medium">
-          Company Admin email
-        </label>
-        <p className="mt-1 text-xs text-muted">
-          A Company Admin account is created with this email. No invitation is
-          sent for now - the login credentials are shown on the next screen for
-          you to hand over.
-        </p>
-        <input
-          id="company-admin-email"
-          type="email"
-          value={adminEmail}
-          onChange={(e) => setAdminEmail(e.target.value)}
-          required
-          placeholder="admin@company.com"
-          className="field mt-2 w-full rounded px-3 py-2"
-        />
-      </div>
-
-      <div>
-        <span className="block text-sm font-medium">Jurisdictions</span>
-        <p className="mt-1 text-xs text-muted">
-          Select every jurisdiction your company operates in. A company can
-          operate across multiple jurisdictions simultaneously.
-        </p>
-        <div className="mt-2 flex flex-wrap gap-3">
-          {JURISDICTIONS.map((code) => (
-            <label
-              key={code}
-              className="flex items-center gap-2 rounded border border-line bg-surface px-3 py-2"
-            >
-              <input
-                type="checkbox"
-                checked={jurisdictions.includes(code)}
-                onChange={() => toggleJurisdiction(code)}
-              />
-              <span>
-                {code} - {JURISDICTION_LABELS[code]}
-              </span>
-            </label>
-          ))}
-        </div>
-        {jurisdictions.length > 1 && strictestJurisdiction && (
-          <p className="mt-2 text-xs text-muted">
-            Default compliance timeline will follow{' '}
-            <strong>{strictestJurisdiction}</strong>, the strictest of your
-            selected jurisdictions, unless overridden per-jurisdiction later.
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label
-          htmlFor="subscription-tier"
-          className="block text-sm font-medium"
-        >
-          Subscription tier
-        </label>
-        <select
-          id="subscription-tier"
+        <Select
+          label="Subscription tier"
           value={subscriptionTier}
           onChange={(e) => setSubscriptionTier(e.target.value)}
-          className="field mt-1 w-full rounded px-3 py-2"
         >
           {SUBSCRIPTION_TIERS.map((tier) => (
             <option key={tier} value={tier}>
               {tier}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
-      <div>
-        <span className="block text-sm font-medium">Departments</span>
-        <p className="mt-1 text-xs text-muted">
-          Departments feed case routing. You can assign a department head
-          later.
+      <Input
+        label="Company Admin email"
+        type="email"
+        value={adminEmail}
+        onChange={(e) => setAdminEmail(e.target.value)}
+        required
+        placeholder="admin@company.com"
+        hint="A Company Admin account is created with this email. No invitation is sent for now - the login credentials are shown on the next screen for you to hand over."
+      />
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium text-charcoal">Jurisdictions</legend>
+        <p className="text-xs text-muted">
+          Select every jurisdiction the company operates in. Compliance deadlines follow the
+          strictest one selected.
         </p>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-1 grid gap-2 sm:grid-cols-2">
+          {JURISDICTIONS.map((code) => {
+            const checked = jurisdictions.includes(code)
+            return (
+              <label
+                key={code}
+                className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                  checked
+                    ? 'border-navy bg-navy-50 text-charcoal'
+                    : 'border-line bg-surface text-muted hover:border-navy-200'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleJurisdiction(code)}
+                  className="h-4 w-4"
+                />
+                <span className="font-medium text-charcoal">{code}</span>
+                <span className="truncate text-xs">{JURISDICTION_LABELS[code]}</span>
+              </label>
+            )
+          })}
+        </div>
+        {jurisdictions.length > 1 && strictestJurisdiction && (
+          <Alert variant="info" className="mt-1">
+            Default compliance timeline will follow <strong>{strictestJurisdiction}</strong>, the
+            strictest of the selected jurisdictions, unless overridden per-jurisdiction later.
+          </Alert>
+        )}
+      </fieldset>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-charcoal">Departments</span>
+        <p className="text-xs text-muted">
+          Departments feed case routing. You can assign a department head later.
+        </p>
+        <div className="mt-1 flex gap-2">
           <input
             type="text"
+            aria-label="Department name"
             value={newDepartmentName}
             onChange={(e) => setNewDepartmentName(e.target.value)}
-            placeholder="Department name"
-            className="field flex-1 rounded px-3 py-2"
+            onKeyDown={(e) => {
+              // Enter inside this input would otherwise submit the whole
+              // registration form instead of adding a department.
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                addDepartment()
+              }
+            }}
+            placeholder="e.g. Engineering"
+            className="field flex-1"
           />
-          <button
-            type="button"
-            onClick={addDepartment}
-            className="btn-secondary rounded px-3 py-2"
-          >
+          <Button icon="plus" onClick={addDepartment} disabled={!newDepartmentName.trim()}>
             Add
-          </button>
+          </Button>
         </div>
         {departments.length > 0 && (
-          <ul className="mt-2 space-y-1">
+          <ul className="mt-1 flex flex-wrap gap-2">
             {departments.map((dept) => (
               <li
                 key={dept.id}
-                className="flex items-center justify-between rounded border border-line bg-surface px-3 py-2"
+                className="flex items-center gap-1.5 rounded-full border border-line bg-surface py-1 pl-3 pr-1.5 text-sm"
               >
                 <span>{dept.name}</span>
                 <button
                   type="button"
                   onClick={() => removeDepartment(dept.id)}
-                  className="text-sm text-critical"
+                  aria-label={`Remove ${dept.name}`}
+                  className="rounded-full p-0.5 text-muted transition-colors hover:bg-navy-50 hover:text-critical"
                 >
-                  Remove
+                  <Icon name="close" className="h-3.5 w-3.5" />
                 </button>
               </li>
             ))}
@@ -233,41 +220,32 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
         )}
       </div>
 
-      {error && <p className="text-sm text-critical">{error}</p>}
-      {error && companyId && (
-        <p className="text-sm text-muted">
-          <strong>{name}</strong> was registered, but its Company Admin account
-          was not created. Fix the email above and submit again - this will not
-          register the company a second time.
-        </p>
+      {error && (
+        <Alert variant="error" title={companyId ? 'Company registered, admin account was not' : undefined}>
+          {error}
+          {companyId && (
+            <p className="mt-1">
+              <strong>{name}</strong> already exists. Fix the email above and submit again - this
+              will not register the company a second time.
+            </p>
+          )}
+        </Alert>
       )}
 
       <div className="flex items-center gap-3">
-        <button
+        <Button
           type="submit"
-          disabled={
-            submitting ||
-            !name.trim() ||
-            !adminEmail.trim() ||
-            jurisdictions.length === 0
-          }
-          className="btn-primary rounded px-4 py-2 disabled:opacity-50"
+          variant="primary"
+          loading={submitting}
+          loadingLabel="Creating"
+          disabled={!name.trim() || !adminEmail.trim() || jurisdictions.length === 0}
         >
-          {submitting
-            ? 'Creating...'
-            : companyId
-              ? 'Create admin account'
-              : 'Create company'}
-        </button>
+          {companyId ? 'Create admin account' : 'Create company'}
+        </Button>
         {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={submitting}
-            className="btn-secondary rounded px-4 py-2 text-sm disabled:opacity-50"
-          >
+          <Button onClick={onCancel} disabled={submitting}>
             Cancel
-          </button>
+          </Button>
         )}
       </div>
     </form>

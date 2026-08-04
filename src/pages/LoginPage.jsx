@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { signIn } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
+import AuthLayout from '../components/shared/AuthLayout'
+import Alert from '../components/ui/Alert'
+import Button from '../components/ui/Button'
+import { Input } from '../components/ui/Field'
 
 // Staff sign-in only. There is no self-signup link here on purpose - the
 // only ways to get a staff account are an invite (AcceptInvitePage) or one
@@ -44,48 +48,57 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
-      <div className="flex w-full max-w-md flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <span className="h-5 w-1.5 rounded-full bg-gold" aria-hidden="true" />
-          <span className="text-lg font-semibold tracking-tight text-navy">Rectifia</span>
-        </div>
-        <h1 className="text-xl font-semibold">Staff sign in</h1>
+    <AuthLayout
+      title="Staff sign in"
+      description="Use the account your Company Admin issued you."
+      footer={
+        <p>
+          Reporting something? You do not need an account - use the case link or Case ID you
+          were given.
+        </p>
+      }
+    >
+      <form onSubmit={handleSubmit} className="card flex flex-col gap-4 p-6">
+        <Input
+          label="Work email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder="name@company.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <Input
+          label="Password"
+          type="password"
+          required
+          autoComplete="current-password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
-          <input
-            type="email"
-            required
-            placeholder="name@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="field rounded px-3 py-2 text-sm"
-          />
-          <input
-            type="password"
-            required
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="field rounded px-3 py-2 text-sm"
-          />
+        {error && <Alert variant="error">{error}</Alert>}
 
-          {error && <p className="text-sm text-critical">{error}</p>}
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="w-full"
+          loading={submitting}
+          loadingLabel="Signing in"
+        >
+          Sign in
+        </Button>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="btn-primary rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? 'Signing in...' : 'Sign in'}
-          </button>
-
-          <Link to="/forgot-password" className="text-xs text-navy underline">
-            Forgot your password?
-          </Link>
-        </form>
-      </div>
-    </div>
+        <Link
+          to="/forgot-password"
+          className="self-center text-sm font-medium text-navy hover:text-navy-600 hover:underline"
+        >
+          Forgot your password?
+        </Link>
+      </form>
+    </AuthLayout>
   )
 }
 

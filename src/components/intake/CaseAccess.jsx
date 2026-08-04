@@ -1,8 +1,14 @@
 import { useState } from 'react'
 import { validateCaseAccess } from '../../services/caseAccessService'
+import Alert from '../ui/Alert'
+import Button from '../ui/Button'
+import { Input } from '../ui/Field'
 
-function CaseAccess({ onAccessGranted }) {
-  const [caseId, setCaseId] = useState('')
+// The reporter's way back into their own case: no account, just the Case ID
+// and passcode issued at submission. Deliberately its own form rather than
+// anything on the staff sign-in page - they are different systems.
+function CaseAccess({ onAccessGranted, initialCaseId = '' }) {
+  const [caseId, setCaseId] = useState(initialCaseId.toUpperCase())
   const [passcode, setPasscode] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -17,7 +23,10 @@ function CaseAccess({ onAccessGranted }) {
         setError('Case ID or passcode is incorrect.')
         return
       }
-      onAccessGranted?.(result.case)
+      // The passcode goes back to the caller too: the case thread
+      // re-verifies with it on every poll, and this form is the only place
+      // it is ever entered.
+      onAccessGranted?.(result.case, passcode)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -26,55 +35,42 @@ function CaseAccess({ onAccessGranted }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md space-y-6 p-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Access your case</h1>
-        <p className="mt-1 text-sm text-muted">
-          No account needed. Enter the Case ID and passcode you were given
-          when you submitted your report.
-        </p>
-      </div>
+    <form onSubmit={handleSubmit} className="card flex flex-col gap-4 p-6">
+      <Input
+        label="Case ID"
+        type="text"
+        value={caseId}
+        onChange={(e) => setCaseId(e.target.value.toUpperCase())}
+        placeholder="RC-2026-8842"
+        autoComplete="off"
+        required
+        className="font-mono tracking-wide"
+      />
 
-      <div>
-        <label htmlFor="case-id" className="block text-sm font-medium">
-          Case ID
-        </label>
-        <input
-          id="case-id"
-          type="text"
-          value={caseId}
-          onChange={(e) => setCaseId(e.target.value.toUpperCase())}
-          placeholder="RC-2026-8842"
-          autoComplete="off"
-          required
-          className="field mt-1 w-full rounded px-3 py-2 font-mono"
-        />
-      </div>
+      <Input
+        label="Passcode"
+        type="password"
+        value={passcode}
+        onChange={(e) => setPasscode(e.target.value)}
+        autoComplete="off"
+        required
+        className="font-mono"
+        hint="Both were shown to you once, when you submitted your report."
+      />
 
-      <div>
-        <label htmlFor="case-passcode" className="block text-sm font-medium">
-          Passcode
-        </label>
-        <input
-          id="case-passcode"
-          type="password"
-          value={passcode}
-          onChange={(e) => setPasscode(e.target.value)}
-          autoComplete="off"
-          required
-          className="field mt-1 w-full rounded px-3 py-2 font-mono"
-        />
-      </div>
+      {error && <Alert variant="error">{error}</Alert>}
 
-      {error && <p className="text-sm text-critical">{error}</p>}
-
-      <button
+      <Button
         type="submit"
-        disabled={submitting || !caseId || !passcode}
-        className="btn-primary rounded px-4 py-2 disabled:opacity-50"
+        variant="primary"
+        size="lg"
+        className="w-full"
+        loading={submitting}
+        loadingLabel="Checking"
+        disabled={!caseId || !passcode}
       >
-        {submitting ? 'Checking...' : 'Access case'}
-      </button>
+        Access case
+      </Button>
     </form>
   )
 }

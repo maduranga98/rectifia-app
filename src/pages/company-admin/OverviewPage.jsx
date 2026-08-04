@@ -3,6 +3,13 @@ import { getCompanyStats } from '../../services/companyStatsService'
 import { listRoutingRules, listStaff } from '../../services/routingService'
 import { listPulseSummaries } from '../../services/pulseCheckService'
 import { CATEGORIES } from '../../data/categories'
+import Alert from '../../components/ui/Alert'
+import Badge from '../../components/ui/Badge'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import EmptyState from '../../components/ui/EmptyState'
+import StatTile from '../../components/ui/StatTile'
+import { SkeletonList, SkeletonStats } from '../../components/ui/Loading'
 
 const PRIORITY_TONE = {
   high: 'tone-high',
@@ -17,33 +24,52 @@ const SENTIMENT_TONE = (score) => {
   return 'tone-low'
 }
 
+// The band the average falls in, said in words. The number alone doesn't
+// tell a reader whether 58 is good; the badge does, and it uses the same
+// thresholds as the colour so the two can never disagree.
+const SENTIMENT_LABEL = (score) => {
+  if (score === null || score === undefined) return 'no data'
+  if (score < 40) return 'needs attention'
+  if (score < 60) return 'mixed'
+  return 'healthy'
+}
+
 const categoryLabelById = new Map(CATEGORIES.map((c) => [c.id, c.label]))
 
-function StatTile({ label, value, tone = 'tone-neutral' }) {
+// A labelled count list rendered as a proportional bar rather than a
+// label/number pair. With counts this small the bar is what makes the
+// distribution readable at a glance - "12 vs 3" lands slower than two bars
+// of visibly different length.
+function BreakdownList({ entries, labelFor = (key) => key, toneFor = () => 'tone-neutral' }) {
+  const max = Math.max(...entries.map(([, count]) => count), 1)
+
   return (
-    <div className={`flex flex-col gap-1 rounded border px-4 py-3 ${tone}`}>
-      <span className="text-2xl font-semibold">{value}</span>
-      <span className="text-sm">{label}</span>
-    </div>
+    <ul className="flex flex-col gap-3">
+      {entries.map(([key, count]) => (
+        <li key={key} className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-3">
+            <Badge tone={toneFor(key)} dot>
+              {labelFor(key)}
+            </Badge>
+            <span className="text-sm font-semibold tabular-nums text-charcoal">{count}</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-line-soft">
+            <div
+              className="h-full rounded-full bg-navy transition-[width] duration-500"
+              style={{ width: `${Math.round((count / max) * 100)}%` }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }
 
-function BreakdownList({ title, entries, emptyLabel = 'Nothing to show.', labelFor = (key) => key, toneFor = () => 'tone-neutral' }) {
+function SectionHeading({ children, hint }) {
   return (
-    <div className="flex flex-col gap-2 rounded border border-line bg-surface px-4 py-3">
-      <h3 className="text-sm font-semibold text-charcoal">{title}</h3>
-      {entries.length === 0 ? (
-        <p className="text-sm text-muted">{emptyLabel}</p>
-      ) : (
-        <ul className="flex flex-col gap-1 text-sm">
-          {entries.map(([key, count]) => (
-            <li key={key} className="flex items-center justify-between">
-              <span className={`rounded border px-2 py-0.5 text-xs ${toneFor(key)}`}>{labelFor(key)}</span>
-              <span className="font-medium">{count}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="flex flex-col gap-0.5">
+      <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-muted">{children}</h2>
+      {hint && <p className="text-xs text-subtle">{hint}</p>}
     </div>
   )
 }
@@ -104,87 +130,160 @@ function OverviewPage({ companyId }) {
   const categoryEntries = Object.entries(stats?.byCategory ?? {}).sort(([, a], [, b]) => b - a)
   const handlerEntries = Object.entries(stats?.byHandler ?? {}).sort(([, a], [, b]) => b - a)
 
-  if (loading && !stats) {
-    return <p className="p-6 text-sm text-muted">Loading...</p>
-  }
+  const firstLoad = loading && !stats && staff.length === 0
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-8 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-charcoal">Overview</h2>
-        <button type="button" onClick={refresh} className="text-sm text-navy underline">
+    <div className="mx-auto flex max-w-6xl flex-col gap-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="max-w-2xl text-sm text-muted">
+          Aggregate case activity, staffing, and wellbeing signals for your company. Case
+          content itself is never shown to this role - only counts.
+        </p>
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
           Refresh
-        </button>
+        </Button>
       </div>
-      {error && <p className="text-sm text-critical">{error}</p>}
 
-      <section className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">Case overview</h3>
-        {!stats ? (
-          <p className="text-sm text-muted">No case activity yet.</p>
+      {error && <Alert variant="error">{error}</Alert>}
+
+      <section className="flex flex-col gap-3">
+        <SectionHeading hint="Counts only, updated as cases move through their lifecycle.">
+          Case overview
+        </SectionHeading>
+
+        {firstLoad ? (
+          <SkeletonStats />
+        ) : !stats ? (
+          <Card padded={false}>
+            <EmptyState
+              icon="cases"
+              title="No case activity yet"
+              description="Once the first report is submitted, open, closed, and overdue counts appear here."
+            />
+          </Card>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <StatTile label="Open cases" value={stats.openCount ?? 0} tone="tone-info" />
-              <StatTile label="Closed cases" value={stats.closedCount ?? 0} tone="tone-neutral" />
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile label="Open cases" value={stats.openCount ?? 0} tone="tone-info" icon="cases" />
+              <StatTile label="Closed cases" value={stats.closedCount ?? 0} tone="tone-neutral" icon="check" />
               <StatTile
                 label="Overdue deadlines"
                 value={stats.overdueCount ?? 0}
                 tone={stats.overdueCount > 0 ? 'tone-critical' : 'tone-neutral'}
+                icon="alert"
               />
               <StatTile
-                label="Approaching deadlines (48h)"
+                label="Approaching deadlines"
+                hint="Due within 48 hours"
                 value={stats.approachingDeadlineCount ?? 0}
                 tone={stats.approachingDeadlineCount > 0 ? 'tone-high' : 'tone-neutral'}
+                icon="clock"
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <BreakdownList
-                title="Open cases by priority"
-                entries={priorityEntries}
-                emptyLabel="No open cases."
-                toneFor={(key) => PRIORITY_TONE[key] ?? 'tone-neutral'}
-              />
-              <BreakdownList
-                title="Cases by category"
-                entries={categoryEntries}
-                emptyLabel="No cases yet."
-                labelFor={(key) => categoryLabelById.get(key) ?? key}
-              />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card title="Open cases by priority">
+                {priorityEntries.length === 0 ? (
+                  <p className="text-sm text-muted">No open cases.</p>
+                ) : (
+                  <BreakdownList
+                    entries={priorityEntries}
+                    toneFor={(key) => PRIORITY_TONE[key] ?? 'tone-neutral'}
+                  />
+                )}
+              </Card>
+              <Card title="Cases by category">
+                {categoryEntries.length === 0 ? (
+                  <p className="text-sm text-muted">No cases yet.</p>
+                ) : (
+                  <BreakdownList
+                    entries={categoryEntries}
+                    labelFor={(key) => categoryLabelById.get(key) ?? key}
+                  />
+                )}
+              </Card>
             </div>
           </>
         )}
       </section>
 
-      <section className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">Staff &amp; routing</h3>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Active staff" value={activeStaffCount} tone="tone-info" />
-          <StatTile label="Case handlers" value={caseHandlerCount} tone="tone-neutral" />
-          <StatTile label="Routing rules configured" value={routingRules.length} tone="tone-neutral" />
-        </div>
-        <BreakdownList
-          title="Open cases by handler"
-          entries={handlerEntries}
-          emptyLabel="No open cases assigned yet."
-          labelFor={(key) => staffNameById.get(key) ?? key}
-        />
+      <section className="flex flex-col gap-3">
+        <SectionHeading hint="Who is available to take cases, and how they get assigned.">
+          Staff &amp; routing
+        </SectionHeading>
+
+        {firstLoad ? (
+          <SkeletonStats count={3} />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile label="Active staff" value={activeStaffCount} tone="tone-info" icon="staff" />
+              <StatTile label="Case handlers" value={caseHandlerCount} tone="tone-neutral" icon="shield" />
+              <StatTile
+                label="Routing rules"
+                hint="Category and department mappings"
+                value={routingRules.length}
+                tone={routingRules.length === 0 ? 'tone-high' : 'tone-neutral'}
+                icon="routing"
+              />
+            </div>
+
+            <Card title="Open cases by handler" padded={handlerEntries.length > 0}>
+              {handlerEntries.length === 0 ? (
+                <EmptyState
+                  compact
+                  icon="staff"
+                  title="No open cases assigned"
+                  description="Assigned workload per handler shows up here as cases come in."
+                />
+              ) : (
+                <BreakdownList
+                  entries={handlerEntries}
+                  labelFor={(key) => staffNameById.get(key) ?? key}
+                />
+              )}
+            </Card>
+          </>
+        )}
       </section>
 
-      <section className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">Pulse check sentiment</h3>
-        {pulseSummaries.length === 0 ? (
-          <p className="text-sm text-muted">No pulse check data yet.</p>
+      <section className="flex flex-col gap-3">
+        <SectionHeading hint="Department and period averages - never an individual response.">
+          Pulse check sentiment
+        </SectionHeading>
+
+        {firstLoad ? (
+          <SkeletonList rows={2} />
+        ) : pulseSummaries.length === 0 ? (
+          <Card padded={false}>
+            <EmptyState
+              icon="pulse"
+              title="No pulse check data yet"
+              description="Department sentiment averages appear here once employees start submitting pulse checks."
+            />
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {pulseSummaries.map((s) => (
-              <div key={s.id} className={`rounded border px-4 py-3 ${SENTIMENT_TONE(s.averageSentiment)}`}>
-                <p className="font-medium">{s.department ?? 'Unspecified department'}</p>
-                <p className="text-xs">{s.period}</p>
-                <p className="mt-2 text-2xl font-semibold">{s.averageSentiment ?? '-'}</p>
-                <p className="text-xs">avg. sentiment - {s.responseCount} response(s)</p>
-              </div>
+              <Card key={s.id} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-charcoal">
+                      {s.department ?? 'Unspecified department'}
+                    </p>
+                    <p className="text-xs text-muted">{s.period}</p>
+                  </div>
+                  <Badge tone={SENTIMENT_TONE(s.averageSentiment)} dot>
+                    {SENTIMENT_LABEL(s.averageSentiment)}
+                  </Badge>
+                </div>
+                <p className="mt-3 text-3xl font-semibold tabular-nums text-charcoal">
+                  {s.averageSentiment ?? '-'}
+                </p>
+                <p className="text-xs text-muted">
+                  avg. sentiment across {s.responseCount} response{s.responseCount === 1 ? '' : 's'}
+                </p>
+              </Card>
             ))}
           </div>
         )}

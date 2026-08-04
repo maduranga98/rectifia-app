@@ -3,28 +3,48 @@ import { ACTION_CATEGORIES, closeCase, getAssignedCase, proposeAction } from '..
 import ComplianceCountdown from '../dashboard/ComplianceCountdown'
 import CaseThread from '../intake/CaseThread'
 import InvestigationChecklist from './InvestigationChecklist'
+import Alert from '../ui/Alert'
+import Badge from '../ui/Badge'
+import Button from '../ui/Button'
+import Card from '../ui/Card'
+import EmptyState from '../ui/EmptyState'
+import { Select, Textarea, Input } from '../ui/Field'
+import { SkeletonList } from '../ui/Loading'
 
 const POLL_INTERVAL_MS = 8000
 
-const CONSISTENCY_STYLE = {
+const CONSISTENCY_TONE = {
   insufficient_data: 'tone-neutral',
   consistent: 'tone-low',
   unrankable: 'tone-neutral',
   flagged: 'tone-high',
 }
 
+function humanize(value) {
+  return typeof value === 'string' ? value.replace(/_/g, ' ') : value
+}
+
 function ConsistencyFlags({ caseData }) {
   const check = caseData.consistencyCheck
   if (!check) {
-    return <p className="text-sm text-muted">No consistency check has run for this case yet.</p>
+    return (
+      <EmptyState
+        compact
+        icon="sparkle"
+        title="No consistency check yet"
+        description="A check runs automatically once an action is proposed on this case."
+      />
+    )
   }
 
   return (
-    <div className={`rounded border px-3 py-2 text-sm ${CONSISTENCY_STYLE[check.status] ?? CONSISTENCY_STYLE.unrankable}`}>
-      <p className="font-medium">{check.status}</p>
-      {check.flag && <p className="mt-1">{check.flag.message}</p>}
+    <div className="flex flex-col gap-2">
+      <Badge tone={CONSISTENCY_TONE[check.status] ?? CONSISTENCY_TONE.unrankable} dot>
+        {humanize(check.status)}
+      </Badge>
+      {check.flag && <p className="text-sm text-charcoal">{check.flag.message}</p>}
       {typeof check.similarCaseCount === 'number' && (
-        <p className="mt-1 text-xs opacity-80">{check.similarCaseCount} similar case(s) considered.</p>
+        <p className="text-xs text-muted">{check.similarCaseCount} similar case(s) considered.</p>
       )}
     </div>
   )
@@ -33,18 +53,27 @@ function ConsistencyFlags({ caseData }) {
 function QuestionnaireAnswers({ caseData }) {
   const responses = Array.isArray(caseData.responses) ? caseData.responses : []
   if (responses.length === 0) {
-    return <p className="text-sm text-muted">No questionnaire responses on file.</p>
+    return (
+      <EmptyState compact icon="document" title="No questionnaire responses on file" />
+    )
   }
 
+  // A definition list rather than a stack of boxes: these are question and
+  // answer pairs, and marking them up as such is both more readable and
+  // what a screen reader needs to pair them.
   return (
-    <ul className="flex flex-col gap-2 text-sm">
+    <dl className="flex flex-col divide-y divide-line-soft">
       {responses.map((response) => (
-        <li key={response.questionId} className="field rounded px-3 py-2">
-          <p className="text-xs text-muted">{response.questionId}</p>
-          <p className="mt-1">{Array.isArray(response.value) ? response.value.join(', ') : String(response.value ?? '')}</p>
-        </li>
+        <div key={response.questionId} className="py-3 first:pt-0 last:pb-0">
+          <dt className="text-xs font-medium uppercase tracking-[0.04em] text-muted">
+            {humanize(response.questionId)}
+          </dt>
+          <dd className="mt-1 text-sm text-charcoal">
+            {Array.isArray(response.value) ? response.value.join(', ') : String(response.value ?? '')}
+          </dd>
+        </div>
       ))}
-    </ul>
+    </dl>
   )
 }
 
@@ -95,87 +124,81 @@ function ActionForm({ caseData, onChanged }) {
   }
 
   if (alreadyClosed) {
-    return <p className="text-sm text-muted">This case is closed. Final action: {caseData.actionTaken}</p>
+    return (
+      <Alert variant="success" title="Case closed">
+        Final action: {humanize(caseData.actionTaken) ?? 'not recorded'}
+      </Alert>
+    )
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <form onSubmit={handlePropose} className="flex flex-col gap-3">
-        <div>
-          <label htmlFor="action-category" className="block text-sm font-medium">
-            Category of action
-          </label>
-          <select
-            id="action-category"
+    <div className="flex flex-col gap-5">
+      <form onSubmit={handlePropose} className="flex flex-col gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Select
+            label="Category of action"
             value={actionCategory}
             onChange={(e) => setActionCategory(e.target.value)}
-            className="mt-1 w-full field rounded px-3 py-2 text-sm"
           >
             {ACTION_CATEGORIES.map((category) => (
               <option key={category} value={category}>
-                {category.replace(/_/g, ' ')}
+                {humanize(category)}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
 
-        <div>
-          <label htmlFor="action-notes" className="block text-sm font-medium">
-            Notes
-          </label>
-          <textarea
-            id="action-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className="mt-1 w-full field rounded px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="action-effective-date" className="block text-sm font-medium">
-            Effective date
-          </label>
-          <input
-            id="action-effective-date"
+          <Input
+            label="Effective date"
             type="date"
             value={effectiveDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
-            className="mt-1 w-full field rounded px-3 py-2 text-sm"
           />
         </div>
 
-        <button
+        <Textarea
+          label="Notes"
+          rows={3}
+          placeholder="What is being done, and on what basis."
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+
+        <Button
           type="submit"
-          disabled={submitting}
-          className="self-start btn-primary rounded px-4 py-2 text-sm disabled:opacity-50"
+          variant="primary"
+          className="self-start"
+          loading={submitting}
+          loadingLabel="Saving"
+          disabled={!notes.trim() || !effectiveDate}
         >
           {caseData.proposedAction ? 'Update proposed action' : 'Propose action'}
-        </button>
+        </Button>
       </form>
 
       {caseData.proposedAction && (
-        <div className="rounded-lg border border-line bg-surface p-3 text-sm">
-          <p>
-            Proposed action: <strong>{caseData.proposedAction.replace(/_/g, ' ')}</strong>
+        <div className="rounded-lg border border-line bg-navy-50/60 p-4">
+          <p className="text-sm text-charcoal">
+            Proposed action: <strong>{humanize(caseData.proposedAction)}</strong>
           </p>
-          <p className="mt-2 text-xs text-muted">
+          <p className="mt-1.5 text-xs text-muted">
             {canClose
               ? 'Consistency check complete - this case can be closed.'
               : 'Waiting for the consistency check to finish against this proposal before the case can be closed.'}
           </p>
-          <button
-            type="button"
+          <Button
+            variant="danger"
+            className="mt-3"
             onClick={handleClose}
-            disabled={!canClose || submitting}
-            className="mt-2 btn-danger rounded px-4 py-2 text-sm disabled:opacity-50"
+            disabled={!canClose}
+            loading={submitting}
+            loadingLabel="Closing"
           >
             Mark case closed
-          </button>
+          </Button>
         </div>
       )}
 
-      {error && <p className="text-sm text-critical">{error}</p>}
+      {error && <Alert variant="error">{error}</Alert>}
     </div>
   )
 }
@@ -188,6 +211,12 @@ function ActionForm({ caseData, onChanged }) {
 // firestore.rules only permits when this case is assigned to the
 // signed-in handler - there is no separate "is this case mine" check here
 // because there doesn't need to be one.
+//
+// Two columns on wide screens: the thread and the action the handler is
+// working through on the left, the reference material they keep glancing at
+// (deadlines, consistency, checklist) on the right. The old single stacked
+// column put the compliance countdown five scrolls above the button it
+// governs.
 function CaseDetailView({ caseId }) {
   const [caseData, setCaseData] = useState(null)
   const [error, setError] = useState(null)
@@ -207,42 +236,55 @@ function CaseDetailView({ caseId }) {
     return () => clearInterval(id)
   }, [refresh])
 
-  if (error) return <p className="p-6 text-sm text-critical">{error}</p>
-  if (!caseData) return <p className="p-6 text-sm text-muted">Loading case...</p>
+  if (error) return <Alert variant="error">{error}</Alert>
+  if (!caseData) return <SkeletonList rows={4} />
+
+  const closed = caseData.status === 'closed'
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8 p-6">
-      <h1 className="text-xl font-semibold">Case {caseData.caseId ?? caseData.id}</h1>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-xl font-semibold text-charcoal">
+          Case {caseData.caseId ?? caseData.id}
+        </h2>
+        <Badge tone={closed ? 'tone-low' : 'tone-info'} dot>
+          {humanize(caseData.status) ?? 'open'}
+        </Badge>
+        {caseData.priority === 'high' && (
+          <Badge tone="tone-high" dot>
+            High priority
+          </Badge>
+        )}
+        {caseData.category && <span className="text-sm text-muted">{humanize(caseData.category)}</span>}
+      </div>
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-charcoal">Questionnaire answers</h2>
-        <QuestionnaireAnswers caseData={caseData} />
-      </section>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] xl:items-start">
+        <div className="flex flex-col gap-5">
+          <Card title="Questionnaire answers">
+            <QuestionnaireAnswers caseData={caseData} />
+          </Card>
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-charcoal">Compliance</h2>
-        <ComplianceCountdown caseData={caseData} />
-      </section>
+          <Card title="Case thread" description="Messages between the reporter and you.">
+            <CaseThread caseId={caseId} mode="investigator" />
+          </Card>
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-charcoal">Consistency check</h2>
-        <ConsistencyFlags caseData={caseData} />
-      </section>
+          <Card title="Take action" description="Proposing an action starts the consistency check.">
+            <ActionForm caseData={caseData} onChanged={refresh} />
+          </Card>
+        </div>
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-charcoal">Investigation checklist</h2>
-        <InvestigationChecklist caseId={caseId} />
-      </section>
+        <div className="flex flex-col gap-5">
+          <Card title="Compliance deadlines">
+            <ComplianceCountdown caseData={caseData} />
+          </Card>
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-charcoal">Case thread</h2>
-        <CaseThread caseId={caseId} mode="investigator" />
-      </section>
+          <Card title="Consistency check" padded={Boolean(caseData.consistencyCheck)}>
+            <ConsistencyFlags caseData={caseData} />
+          </Card>
 
-      <section>
-        <h2 className="mb-2 text-sm font-semibold text-charcoal">Take action</h2>
-        <ActionForm caseData={caseData} onChanged={refresh} />
-      </section>
+          <InvestigationChecklist caseId={caseId} />
+        </div>
+      </div>
     </div>
   )
 }
