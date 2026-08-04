@@ -26,9 +26,13 @@ export async function resolveCompanySlug(companySlug) {
 }
 
 // Files a completed questionnaire as a new case and returns its one-time
-// access credentials. `submission` is the { category, responses, companySlug }
-// payload: the category/answers from QuestionnaireForm plus the slug from the
-// reporter's /submit/:companySlug link. The slug (never a companyId) is sent to
+// access credentials. `submission` is the
+// { category, responses, companySlug, tier } payload: the category/answers
+// from QuestionnaireForm, the slug from the reporter's /submit/:companySlug
+// link, and the reporter's own 'anonymous' | 'confidential' choice from the
+// step before submission. `tier` is required by the callable rather than
+// defaulted, so a caller that skipped the question fails loudly instead of
+// recording a choice the reporter never made. The slug (never a companyId) is sent to
 // the server, which resolves it to a companyId itself (see
 // functions/src/intake/submitCase.js) so a reporter can't file into another
 // company's queue by tampering with the payload. The server writes the

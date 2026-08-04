@@ -6,6 +6,7 @@ import Submit from './pages/Submit'
 import CaseDetail from './pages/CaseDetail'
 import PulseCheck from './pages/PulseCheck'
 import Dashboard from './pages/Dashboard'
+import StaffIntake from './pages/StaffIntake'
 import Admin from './pages/Admin'
 import LoginPage from './pages/LoginPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -46,6 +47,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* Staff-initiated intake. allowedRoles deliberately excludes
+            companyAdmin, which is narrower than that role gets almost
+            anywhere else in this app: an intake form is case content, and the
+            Company Admin's no-case-content design is a conflict-of-interest
+            control, not an oversight. This guard is navigation only - the
+            real refusal is requireIntakeRole() in
+            functions/src/utils/staffAuth.js, which the createCaseOnBehalf
+            callable runs regardless of how the caller got here. */}
+        <Route
+          path="/intake"
+          element={
+            <ProtectedRoute allowedRoles={[ROLES.CASE_HANDLER, ROLES.HR_COORDINATOR]}>
+              <StaffIntake />
             </ProtectedRoute>
           }
         />

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { listCompanyCaseMetadata } from '../../services/caseMetadataService'
 import { listCaseHandlers, reassignCase } from '../../services/routingService'
 import { auth } from '../../services/firebase'
@@ -87,6 +88,7 @@ function isTriageable(caseRow) {
 // even if it tried - the restriction isn't just "this component doesn't
 // render those fields", it's that this role has no server-side path to them.
 function HRCoordinatorDashboard({ companyId }) {
+  const navigate = useNavigate()
   const [cases, setCases] = useState([])
   const [handlers, setHandlers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -166,9 +168,19 @@ function HRCoordinatorDashboard({ companyId }) {
           Every case in the company, by metadata only. Case content stays with the assigned
           handler.
         </p>
-        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
-          Refresh
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* HR Coordinators are usually the ones a report is phoned or
+              walked in to, so the form is one click from the queue they
+              already have open. Filing a case grants them nothing on it -
+              it routes to a Case Handler like any other, and this role stays
+              metadata-only afterwards. */}
+          <Button icon="plus" variant="primary" onClick={() => navigate('/intake')}>
+            File a report on someone&apos;s behalf
+          </Button>
+          <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}

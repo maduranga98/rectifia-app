@@ -7,8 +7,37 @@ import { CATEGORIES } from '../data/categories'
 import { resolveCompanySlug, submitCase } from '../services/caseAccessService'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
+import Icon from '../components/ui/Icon'
 
-const STEPS = ['Category', 'Details', 'Submit']
+const STEPS = ['Category', 'Details', 'Your choice', 'Submit']
+
+// The two tiers in the words the reporter is actually asked them in. This is
+// the reporter's own decision and the last thing they are asked before the
+// report is filed, deliberately: a choice this consequential should not be
+// buried at the top of a form nobody has started filling in yet, and by this
+// point they know what they are about to hand over.
+//
+// The same copy is shown to staff taking a report by phone (see TIERS in
+// src/services/staffIntakeService.js), because a reporter's answer only means
+// anything if it was the same question. The anonymity trade-off is stated
+// plainly rather than sold - "some investigations are harder to complete" is
+// true, and a reporter who finds that out afterwards was misled.
+const REPORTER_TIERS = [
+  {
+    value: 'anonymous',
+    label: 'Stay anonymous',
+    summary: 'Nobody can ever identify you.',
+    detail:
+      'No name, email, or phone number is recorded anywhere on this report - not encrypted, not stored blank, simply never collected. Nobody at your employer, nobody at Rectifia, and nobody with a court order can look you up afterwards. You can still read replies and answer questions using your Case ID and passcode. Be aware that some investigations are harder to complete this way, and a few cannot be resolved at all, because the investigator has no way to come back to you for the detail they need.',
+  },
+  {
+    value: 'confidential',
+    label: 'Be identifiable to the investigator only',
+    summary: 'Only the person assigned to your case sees who you are.',
+    detail:
+      'Your identity is encrypted before it is stored and never appears on any dashboard, in any report, or to anyone else at your employer. The investigator can come back to you with follow-up questions, which usually makes a case easier to resolve. You are not asked for your details on this screen - this records your choice, and you decide what to share, and when, in the messages on your case.',
+  },
+]
 
 // The anonymous reporter's intake flow. The report is company-scoped: the
 // :companySlug in the URL is resolved to a company (server-side, via the
@@ -22,6 +51,12 @@ const STEPS = ['Category', 'Details', 'Submit']
 function Submit() {
   const { companySlug } = useParams()
   const [category, setCategory] = useState(null)
+  // The completed questionnaire, held in this tab only, between the answers
+  // being finished and the tier being chosen. Nothing is filed until both.
+  const [pending, setPending] = useState(null)
+  const [tier, setTier] = useState('')
+  const [filing, setFiling] = useState(false)
+  const [fileError, setFileError] = useState(null)
   const [completed, setCompleted] = useState(null)
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
@@ -49,13 +84,32 @@ function Submit() {
   const company = resolved?.company ?? null
   const resolveError = resolved?.error ?? null
 
-  // QuestionnaireForm awaits this and surfaces any thrown error in the form,
-  // so a failed submission keeps the reporter on the questionnaire with their
-  // answers intact rather than advancing to a success screen. The slug travels
-  // with the submission so the server can bind the case to this company.
-  async function handleSubmit(submission) {
-    const { caseId, passcode } = await submitCase({ ...submission, companySlug })
-    setCompleted({ caseId, passcode, responseCount: submission.responses.length })
+  // The questionnaire hands its answers back here rather than filing them:
+  // `tier` has to be on the case document when it is created (scoreCase.js
+  // fires on create, and generateReport.js keys its identity section on it),
+  // so the reporter is asked how they want to be recorded before anything is
+  // written, not after.
+  async function handleQuestionnaireSubmit(submission) {
+    setPending(submission)
+  }
+
+  async function handleFile(chosenTier) {
+    setFiling(true)
+    setFileError(null)
+    try {
+      const { caseId, passcode } = await submitCase({
+        ...pending,
+        companySlug,
+        tier: chosenTier,
+      })
+      setCompleted({ caseId, passcode, responseCount: pending.responses.length })
+    } catch (err) {
+      // Stay on the tier step with the answers intact - they exist only in
+      // this tab, and nothing has been filed yet.
+      setFileError(err.message)
+    } finally {
+      setFiling(false)
+    }
   }
 
   // The slug hasn't resolved yet - show a neutral loading state rather than
@@ -93,7 +147,7 @@ function Submit() {
     )
   }
 
-  const step = completed ? 2 : category ? 1 : 0
+  const step = completed ? 3 : pending ? 2 : category ? 1 : 0
   const categoryLabel = CATEGORIES.find((c) => c.id === category)?.label
 
   // The tracking address for this specific case, shown as text the reporter
@@ -133,6 +187,11 @@ function Submit() {
       description: `${categoryLabel ?? 'Your report'} — answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.`,
     },
     {
+      title: 'One last choice — how should we record you?',
+      description:
+        'Your answers are ready to file. Nothing has been submitted yet. This last question is yours alone to answer, and it cannot be changed afterwards.',
+    },
+    {
       title: 'Report filed',
       description: 'Your report has been submitted. Save your Case ID and passcode below.',
     },
@@ -144,14 +203,15 @@ function Submit() {
       description={COPY.description}
       steps={STEPS}
       currentStep={step}
-      // Two steps hold something that only exists in this tab: the answers
-      // on step 1 (nothing filed yet, all of it in QuestionnaireForm state)
-      // and the credentials on step 2 (shown once, never recoverable). The
-      // header's tracking link asks before it takes either away.
+      // Three steps hold something that only exists in this tab: the answers
+      // on step 1 (in QuestionnaireForm state) and step 2 (handed back but
+      // still not filed), and the credentials on step 3 (shown once, never
+      // recoverable). The header's tracking link asks before it takes any of
+      // them away.
       unsavedWarning={
-        step === 1
+        step === 1 || step === 2
           ? 'Leaving now discards the answers you have entered - this report has not been submitted yet and nothing is saved. Continue to case tracking?'
-          : step === 2
+          : step === 3
             ? 'Have you saved your Case ID and passcode? They are shown only on this screen and cannot be recovered afterwards. Continue to case tracking?'
             : undefined
       }
@@ -165,7 +225,78 @@ function Submit() {
             Change category
           </Button>
           <div className="card p-6">
-            <QuestionnaireForm category={category} onSubmit={handleSubmit} />
+            <QuestionnaireForm category={category} onSubmit={handleQuestionnaireSubmit} />
+          </div>
+        </div>
+      )}
+
+      {/* The tier step. It sits between the answers and the filing rather
+          than before either, because the trade-off only means something once
+          the reporter knows what they have written down - and because a
+          reporter who abandons the form here has still handed over nothing. */}
+      {step === 2 && (
+        <div className="flex flex-col gap-5">
+          <Button icon="back" onClick={() => setPending(null)} className="self-start">
+            Back to your answers
+          </Button>
+
+          <fieldset className="flex flex-col gap-2.5">
+            <legend className="sr-only">How you want to be recorded</legend>
+            {REPORTER_TIERS.map((option) => {
+              const checked = tier === option.value
+              return (
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${
+                    checked
+                      ? 'border-navy bg-navy-50 shadow-[var(--shadow-card)]'
+                      : 'border-line bg-surface hover:border-navy-200 hover:bg-navy-50/40'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="reporter-tier"
+                    value={option.value}
+                    checked={checked}
+                    onChange={() => setTier(option.value)}
+                    className="sr-only"
+                  />
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                      checked ? 'border-navy bg-navy text-white' : 'border-line-soft bg-surface'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {checked && <Icon name="check" className="h-3 w-3" strokeWidth={3} />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-medium text-charcoal">{option.label}</span>
+                    <span className="mt-0.5 block text-sm text-charcoal">{option.summary}</span>
+                    <span className="mt-1 block text-sm leading-relaxed text-muted">
+                      {option.detail}
+                    </span>
+                  </span>
+                </label>
+              )
+            })}
+          </fieldset>
+
+          {fileError && <Alert variant="error">{fileError}</Alert>}
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="primary"
+              size="lg"
+              disabled={!tier}
+              loading={filing}
+              loadingLabel="Filing your report"
+              onClick={() => handleFile(tier)}
+            >
+              File my report
+            </Button>
+            <span className="text-xs text-muted">
+              Your Case ID and passcode are shown once, on the next screen.
+            </span>
           </div>
         </div>
       )}
@@ -174,7 +305,7 @@ function Submit() {
           reporter can see them: the passcode is stored hashed and the case
           has no owner to prove identity against, so nothing here can be
           re-issued or emailed later. It is worth the space it takes. */}
-      {step === 2 && (
+      {step === 3 && (
         <div className="flex flex-col gap-4">
           <Alert variant="success" title="Your report has been filed">
             {completed.responseCount} answer
@@ -250,6 +381,9 @@ function Submit() {
               <Button
                 onClick={() => {
                   setCompleted(null)
+                  setPending(null)
+                  setTier('')
+                  setFileError(null)
                   setCategory(null)
                   setCopied(false)
                   setCopyFailed(false)
