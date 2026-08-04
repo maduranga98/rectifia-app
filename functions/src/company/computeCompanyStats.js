@@ -42,6 +42,7 @@ async function recomputeCompanyStats(firestore, companyId) {
     byStatus: {},
     byPriority: {},
     byCategory: {},
+    byHandler: {},
     overdueCount: 0,
     approachingDeadlineCount: 0,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -60,6 +61,10 @@ async function recomputeCompanyStats(firestore, companyId) {
 
       const priority = data.priority ?? 'unassigned'
       stats.byPriority[priority] = (stats.byPriority[priority] ?? 0) + 1
+
+      if (data.assignedHandlerId) {
+        stats.byHandler[data.assignedHandlerId] = (stats.byHandler[data.assignedHandlerId] ?? 0) + 1
+      }
 
       const { overdue, approaching } = tallyDeadlines(data, now)
       if (overdue) stats.overdueCount += 1

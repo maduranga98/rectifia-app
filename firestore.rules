@@ -107,10 +107,12 @@ service cloud.firestore {
     // Case-count rollup for the Company Admin overview page (module 15),
     // maintained by functions/src/company/syncCompanyStats.js from
     // caseMetadata - counts and breakdowns only (byStatus/byPriority/
-    // byCategory, overdue/approaching-deadline counts), never a case id,
-    // category-of-one, or anything else that could re-identify a case. This
-    // is the only case-derived collection Company Admin can read; it still
-    // has no rules path to cases/, messages/, or caseMetadata/ itself.
+    // byCategory/byHandler, overdue/approaching-deadline counts), never a
+    // case id, category-of-one, or anything else that could re-identify a
+    // case. byHandler keys on assignedHandlerId, a staff id Company Admin can
+    // already read via companies/{companyId}/staff below - not new exposure.
+    // This is the only case-derived collection Company Admin can read; it
+    // still has no rules path to cases/, messages/, or caseMetadata/ itself.
     match /companies/{companyId}/stats/{statId} {
       allow read: if isCompanyAdmin(companyId);
       allow write: if false;
@@ -180,11 +182,11 @@ service cloud.firestore {
     // Pre-aggregated, department/period-level summaries with no individual
     // attribution - written only by the aggregation step inside
     // analyzePulseResponse.js. This is the ONLY pulse-check collection a
-    // Manager can read; there is no rules path from the manager role to
-    // pulseResponses above, so a manager can never reach an individual
+    // Manager or Company Admin can read; there is no rules path from either
+    // role to pulseResponses above, so neither can ever reach an individual
     // record no matter how the client queries.
     match /pulseSummaries/{summaryId} {
-      allow read: if isManager(resource.data.companyId) || isHrCoordinator(resource.data.companyId) || isPulseReviewer(resource.data.companyId);
+      allow read: if isManager(resource.data.companyId) || isHrCoordinator(resource.data.companyId) || isPulseReviewer(resource.data.companyId) || isCompanyAdmin(resource.data.companyId);
       allow write: if false;
     }
 
