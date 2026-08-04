@@ -10,6 +10,7 @@ import {
 } from '../../services/routingService'
 import { auth } from '../../services/firebase'
 import { CATEGORIES } from '../../data/categories'
+import CaseTriageModal from '../../components/dashboard/CaseTriageModal'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -57,6 +58,7 @@ function RoutingRulesPage({ companyId }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [assigningCaseId, setAssigningCaseId] = useState(null)
+  const [triageCaseId, setTriageCaseId] = useState(null)
   const ruleFormRef = useRef(null)
 
   const refresh = useCallback(async () => {
@@ -227,6 +229,22 @@ function RoutingRulesPage({ companyId }) {
                   </Badge>
                 )}
 
+                {/* (c) Read the report before placing it. Every row in this
+                    list is unassigned and parked on 'no_routing_rule' - never
+                    a conflict-of-interest case, which this role has no read
+                    path to at all - so all of them are triageable. The modal,
+                    not this page, is the only place case content appears:
+                    the list itself is still fed by the metadata-only
+                    caseMetadata mirror. */}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon="document"
+                  onClick={() => setTriageCaseId(caseRow.caseId)}
+                >
+                  View
+                </Button>
+
                 <Button
                   variant="secondary"
                   size="sm"
@@ -366,6 +384,18 @@ function RoutingRulesPage({ companyId }) {
             </ul>
           )}
         </Card>
+      )}
+
+      {triageCaseId && (
+        <CaseTriageModal
+          caseId={triageCaseId}
+          companyId={companyId}
+          onClose={() => setTriageCaseId(null)}
+          onAssigned={(caseId) => {
+            setNotice(`Case ${caseId} assigned.`)
+            refresh()
+          }}
+        />
       )}
     </div>
   )

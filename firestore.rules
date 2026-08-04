@@ -294,5 +294,16 @@ service cloud.firestore {
     match /identityAccessAuditLog/{entryId} {
       allow read, write: if false;
     }
+
+    // The same audit discipline for the other read of case content that is
+    // not the assigned handler's: every getCaseForTriage call
+    // (functions/src/investigation/getCaseForTriage.js), granted or denied,
+    // records who opened which unassigned case and when. Written only by
+    // that callable with the Admin SDK. No role gets a rules path here -
+    // an HR Coordinator or Company Admin being able to edit the record of
+    // what they read would defeat the point of keeping one.
+    match /triageAccessLog/{entryId} {
+      allow read, write: if false;
+    }
   }
 }
