@@ -7,7 +7,8 @@ import {
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore'
-import { firestore } from './firebase'
+import { httpsCallable } from 'firebase/functions'
+import { firestore, functions } from './firebase'
 
 export const JURISDICTIONS = ['EU', 'UK', 'US', 'LK']
 
@@ -80,6 +81,24 @@ export async function createCompany({
   })
 
   return docRef.id
+}
+
+const createCompanyAdminCallable = httpsCallable(functions, 'createCompanyAdmin')
+
+// Creates the Company Admin account for a newly registered company and
+// returns { email, password } so the Super Admin can hand the credentials
+// over directly. No invite email is sent for now - see
+// functions/src/company/createCompanyAdmin.js. The password comes back once
+// and is never stored, so whatever calls this has to display it immediately.
+export async function createCompanyAdmin({ companyId, email }) {
+  if (!companyId || !email?.trim()) {
+    throw new Error('companyId and an admin email are required')
+  }
+  const result = await createCompanyAdminCallable({
+    companyId,
+    email: email.trim(),
+  })
+  return result.data
 }
 
 // Company-level metadata only (name, subscriptionTier, case-count fields) -
