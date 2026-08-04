@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import {
   JURISDICTIONS,
+  SUBSCRIPTION_TIERS,
   createCompany,
   createDepartment,
   getStrictestJurisdiction,
 } from '../../services/companyService'
-
-const SUBSCRIPTION_TIERS = ['starter', 'professional', 'enterprise']
 
 const JURISDICTION_LABELS = {
   EU: 'European Union',
@@ -15,7 +14,10 @@ const JURISDICTION_LABELS = {
   LK: 'Sri Lanka',
 }
 
-function CompanySetup({ onCreated }) {
+// Registers a new company. This is the Super Admin's onboarding form (see
+// SuperAdminDashboardPage) - it was previously written but never rendered
+// on any route, which is why there was no way to register a company at all.
+function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   const [name, setName] = useState('')
   const [jurisdictions, setJurisdictions] = useState([])
   const [subscriptionTier, setSubscriptionTier] = useState(
@@ -58,6 +60,11 @@ function CompanySetup({ onCreated }) {
         departments,
         subscriptionTier,
       })
+      setName('')
+      setJurisdictions([])
+      setDepartments([])
+      setNewDepartmentName('')
+      setSubscriptionTier(SUBSCRIPTION_TIERS[0])
       onCreated?.(companyId)
     } catch (err) {
       setError(err.message)
@@ -67,8 +74,8 @@ function CompanySetup({ onCreated }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-xl space-y-6 p-8">
-      <h1 className="text-2xl font-semibold">Company setup</h1>
+    <form onSubmit={handleSubmit} className="max-w-xl space-y-6">
+      <h2 className="text-lg font-semibold">{title}</h2>
 
       <div>
         <label htmlFor="company-name" className="block text-sm font-medium">
@@ -182,13 +189,25 @@ function CompanySetup({ onCreated }) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <button
-        type="submit"
-        disabled={submitting || !name || jurisdictions.length === 0}
-        className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
-      >
-        {submitting ? 'Creating...' : 'Create company'}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={submitting || !name.trim() || jurisdictions.length === 0}
+          className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+        >
+          {submitting ? 'Creating...' : 'Create company'}
+        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={submitting}
+            className="rounded border border-gray-300 px-4 py-2 text-sm disabled:opacity-50"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   )
 }

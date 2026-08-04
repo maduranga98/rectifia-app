@@ -20,21 +20,36 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Go back to loading on every auth change, not just the first one.
+      // Claims and the superAdmins lookup are async, so without this there
+      // is a window right after sign-in where user is set but isSuperAdmin
+      // is still false - long enough for ProtectedRoute to bounce a real
+      // super admin straight back to the login page.
+      setLoading(true)
       setUser(firebaseUser)
-      if (firebaseUser) {
-        const [claims, superAdmin] = await Promise.all([
-          getUserClaims(firebaseUser),
-          checkSuperAdmin(firebaseUser.uid),
-        ])
-        setRole(claims.role)
-        setCompanyId(claims.companyId)
-        setIsSuperAdmin(superAdmin)
-      } else {
+      try {
+        if (firebaseUser) {
+          const [claims, superAdmin] = await Promise.all([
+            getUserClaims(firebaseUser),
+            checkSuperAdmin(firebaseUser.uid),
+          ])
+          setRole(claims.role)
+          setCompanyId(claims.companyId)
+          setIsSuperAdmin(superAdmin)
+        } else {
+          setRole(null)
+          setCompanyId(null)
+          setIsSuperAdmin(false)
+        }
+      } catch {
+        // A failed claims/allowlist lookup means "not authorized", never a
+        // permanent spinner - the guards below re-route to the login page.
         setRole(null)
         setCompanyId(null)
         setIsSuperAdmin(false)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
     return unsubscribe
   }, [])

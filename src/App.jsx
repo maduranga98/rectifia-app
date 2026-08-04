@@ -1,7 +1,7 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/shared/ProtectedRoute'
-import Home from './pages/Home'
+import RootRedirect from './components/shared/RootRedirect'
 import Submit from './pages/Submit'
 import CaseDetail from './pages/CaseDetail'
 import Dashboard from './pages/Dashboard'
@@ -11,20 +11,39 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import AcceptInvitePage from './pages/AcceptInvitePage'
 import SuperAdminLoginPage from './pages/SuperAdminLoginPage'
 import SuperAdminDashboardPage from './pages/SuperAdminDashboardPage'
+import { ROLES } from './constants/roles'
 
 function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/" element={<Home />} />
+        {/* Anonymous reporter routes - deliberately not behind auth. */}
         <Route path="/submit" element={<Submit />} />
         <Route path="/case/:caseId" element={<CaseDetail />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/admin" element={<Admin />} />
+
+        {/* Auth entry points. */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/invite/:token" element={<AcceptInvitePage />} />
         <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
+
+        {/* Staff routes. These were previously reachable without signing in. */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={[ROLES.COMPANY_ADMIN]}>
+              <Admin />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/super-admin"
           element={
@@ -33,6 +52,13 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* "/" is a dispatcher, not a landing page: signed-out visitors get
+            the login page on startup, signed-in ones their dashboard. */}
+        <Route path="/" element={<RootRedirect />} />
+        {/* Unknown URLs resolve through the same dispatcher instead of
+            rendering a blank page. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
   )

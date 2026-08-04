@@ -11,6 +11,11 @@ import { firestore } from './firebase'
 
 export const JURISDICTIONS = ['EU', 'UK', 'US', 'LK']
 
+// Billing plans a Super Admin can put a newly registered company on. Lives
+// here rather than in the form component so createCompany can validate what
+// it's given instead of writing an arbitrary string into the doc.
+export const SUBSCRIPTION_TIERS = ['starter', 'professional', 'enterprise']
+
 // Compliance strictness ranking, most strict first. When a company selects
 // multiple jurisdictions, the default timeline is driven by whichever
 // jurisdiction ranks highest here (EU's 7-day/3-month rule), until a later
@@ -47,16 +52,19 @@ export async function createCompany({
   name,
   jurisdictions,
   departments = [],
-  subscriptionTier,
+  subscriptionTier = SUBSCRIPTION_TIERS[0],
 }) {
   if (!name?.trim()) {
     throw new Error('Company name is required')
   }
-  const invalidJurisdictions = jurisdictions.filter(
-    (j) => !JURISDICTIONS.includes(j)
-  )
-  if (!jurisdictions?.length || invalidJurisdictions.length) {
+  // Length check first: filtering an undefined jurisdictions list threw a
+  // TypeError before this, which surfaced as a raw crash instead of the
+  // message below.
+  if (!jurisdictions?.length || jurisdictions.some((j) => !JURISDICTIONS.includes(j))) {
     throw new Error('At least one valid jurisdiction is required')
+  }
+  if (!SUBSCRIPTION_TIERS.includes(subscriptionTier)) {
+    throw new Error('A valid subscription tier is required')
   }
 
   const docRef = await addDoc(collection(firestore, COMPANIES_COLLECTION), {
@@ -64,6 +72,10 @@ export async function createCompany({
     jurisdictions,
     departments,
     subscriptionTier,
+    // The Super Admin overview reads these three; seeding them at creation
+    // is what stops a brand new company rendering as "Unknown"/"—" there.
+    billingStatus: 'active',
+    currentPeriodCaseCount: 0,
     createdAt: serverTimestamp(),
   })
 
@@ -76,7 +88,11 @@ export async function createCompany({
 // messages/questionnaire subcollection.
 export async function listCompanies() {
   const snapshot = await getDocs(collection(firestore, COMPANIES_COLLECTION))
-  return snapshot.docs.map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() }))
+  return snapshot.docs
+    .map((docSnapshot) => ({ id: docSnapshot.id, ...docSnapshot.data() }))
+    // Newest first, sorted client-side on purpose: an orderBy('createdAt')
+    // query silently drops companies created before that field existed.
+    .sort((a, b) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
 }
 
 export async function getCompany(companyId) {

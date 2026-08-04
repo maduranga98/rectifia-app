@@ -19,11 +19,26 @@ service cloud.firestore {
     function isPulseReviewer(companyId) { return hasRole(companyId, 'pulseCheckReviewer'); }
     function isManager(companyId) { return hasRole(companyId, 'manager'); }
 
-    // Pre-existing, unrelated to the intake module: kept open to match the
-    // app's current no-auth company onboarding flow (a company is created
-    // before any staff account, hence any custom claim, exists).
+    // Platform Super Admin: allowlist membership at superAdmins/{uid}, the
+    // same check AuthContext/SuperAdminLoginPage make client-side. get()/
+    // exists() here bypass the read rule on that collection, so this works
+    // even though a user may only read their own allowlist doc.
+    function isSuperAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/superAdmins/$(request.auth.uid));
+    }
+
+    // Company onboarding is a Super Admin action (SuperAdminDashboardPage ->
+    // CompanySetup), so this is no longer the world-writable placeholder it
+    // was when a company had to be created before any account existed:
+    // anyone could previously create, rewrite, or delete any company doc.
+    // A Company Admin keeps write access to their own company because
+    // CompanyAdminPanel edits departments and jurisdictions in place.
     match /companies/{companyId} {
-      allow read, write: if true;
+      allow read: if isSuperAdmin() || isCompanyStaff(companyId);
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || isCompanyAdmin(companyId);
+      allow delete: if isSuperAdmin();
     }
 
     // Platform-level Super Admin allowlist, doc id == the account's Firebase
