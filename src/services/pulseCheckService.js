@@ -9,9 +9,16 @@ const submitPulseResponseCallable = httpsCallable(functions, 'submitPulseRespons
 const validatePulseInviteCallable = httpsCallable(functions, 'validatePulseInvite')
 
 // Checks a single-use invite (inviteId + token from the employee's link)
-// before the survey is rendered, without spending it. Returns
-// { valid, invite?: { companyId, department } }. A roster employee has no
+// before the survey is rendered, without spending it. A roster employee has no
 // account, so this token is their only credential - there is no sign-in step.
+//
+// Returns one of:
+//   { valid: true, invite: { companyId, department, companyName } }
+//   { valid: false, reason: 'used' | 'expired' | 'invalid' }
+// `companyName` is shown to the employee so they can tell a genuine invite
+// from a phishing link; `reason` lets the page explain used/expired/invalid
+// distinctly - and 'used' is a confirmation, not an error (their response is
+// already on file).
 export async function validatePulseInvite({ inviteId, token }) {
   if (!inviteId || !token) {
     throw new Error('A valid pulse-check invite is required')

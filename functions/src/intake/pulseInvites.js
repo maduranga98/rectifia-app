@@ -77,12 +77,21 @@ async function createPulseInvite(firestore, { companyId, employeeId, department,
   return { inviteId: ref.id, token }
 }
 
+const COMPANIES_COLLECTION = 'companies'
+
 // Validates an invite id + token before the pulse-check form is rendered. This
 // only tells the caller whether the invite is live and, if so, the company /
 // department the form belongs to - it never reveals employeeId, and it never
 // marks the invite used. Actually spending the invite happens only inside
 // submitPulseResponse's transaction, so validating and then abandoning the form
 // leaves the invite usable.
+//
+// On failure it returns a coarse `reason` so the page can distinguish the
+// cases an employee needs told apart - 'used' (their response is already
+// recorded), 'expired', or 'invalid' (bad/unknown token). The reason is
+// deliberately coarse: it never leaks whether an invite id exists beyond what
+// the employee already holds, and 'used'/'expired' are only ever returned to a
+// caller who presented the correct token for that specific invite.
 exports.validatePulseInvite = onCall(async (request) => {
   const { inviteId, token } = request.data || {}
   if (typeof inviteId !== 'string' || typeof token !== 'string' || !inviteId || !token) {
@@ -92,10 +101,10 @@ exports.validatePulseInvite = onCall(async (request) => {
   const firestore = admin.firestore()
   const ref = firestore.collection(PULSE_INVITES_COLLECTION).doc(inviteId)
 
-  return firestore.runTransaction(async (tx) => {
+  const result = await firestore.runTransaction(async (tx) => {
     const snapshot = await tx.get(ref)
     if (!snapshot.exists) {
-      return { valid: false }
+      return { valid: false, reason: 'invalid' }
     }
     const data = snapshot.data()
 
@@ -108,19 +117,26 @@ exports.validatePulseInvite = onCall(async (request) => {
     // right.
     tx.update(ref, { validationAttempts: attempts + 1 })
 
+    // Whether the invite is used/expired/unknown is only disclosed to a caller
+    // who actually holds the matching token; a wrong token always looks the
+    // same ('invalid') regardless of the invite's real state.
+    if (!verifyInviteToken(token, data.tokenHash, data.tokenSalt)) {
+      return { valid: false, reason: 'invalid' }
+    }
+
     // Expire lazily: an invite past its cadence window is dead even if the
     // scheduler hasn't yet overwritten it with the next send.
     if (data.expiresAt && data.expiresAt.toMillis() <= Date.now()) {
       if (data.status === 'pending') {
         tx.update(ref, { status: 'expired' })
       }
-      return { valid: false }
+      return { valid: false, reason: 'expired' }
+    }
+    if (data.status === 'used') {
+      return { valid: false, reason: 'used' }
     }
     if (data.status !== 'pending') {
-      return { valid: false }
-    }
-    if (!verifyInviteToken(token, data.tokenHash, data.tokenSalt)) {
-      return { valid: false }
+      return { valid: false, reason: 'invalid' }
     }
 
     return {
@@ -128,6 +144,17 @@ exports.validatePulseInvite = onCall(async (request) => {
       invite: { companyId: data.companyId, department: data.department ?? null },
     }
   })
+
+  // Resolve the company's display name outside the transaction (no write
+  // depends on it) so the form can show the employee which organization the
+  // check-in is for - the only way they can tell a genuine invite from a
+  // phishing link. companyId itself is never surfaced to the page.
+  if (result.valid) {
+    const companySnap = await firestore.collection(COMPANIES_COLLECTION).doc(result.invite.companyId).get()
+    result.invite.companyName = companySnap.exists ? companySnap.data().name ?? null : null
+  }
+
+  return result
 })
 
 exports.PULSE_INVITES_COLLECTION = PULSE_INVITES_COLLECTION

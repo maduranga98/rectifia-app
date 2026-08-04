@@ -1,10 +1,12 @@
 import Icon from '../ui/Icon'
 import Logo from '../ui/Logo'
 
-// Chrome for the two anonymous, reporter-facing pages (/submit and
-// /case/:caseId). Deliberately not AppShell: there is no account, no
-// navigation, and no role here, and the page should not look like a staff
-// dashboard the reporter has somehow been let into.
+// Chrome for the account-less, self-serve pages: the anonymous reporter flow
+// (/submit and /case/:caseId) and the roster-employee pulse check
+// (/pulse/:inviteId, reached by an invite token, not a login). Deliberately
+// not AppShell: there is no account, no navigation, and no role on any of
+// these, and the page should not look like a staff dashboard the visitor has
+// somehow been let into.
 //
 // `steps` renders a numbered progress trail when the page is a flow;
 // omitting it gives a plain centred column.

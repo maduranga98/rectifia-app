@@ -4,6 +4,7 @@ import ProtectedRoute from './components/shared/ProtectedRoute'
 import RootRedirect from './components/shared/RootRedirect'
 import Submit from './pages/Submit'
 import CaseDetail from './pages/CaseDetail'
+import PulseCheck from './pages/PulseCheck'
 import Dashboard from './pages/Dashboard'
 import Admin from './pages/Admin'
 import LoginPage from './pages/LoginPage'
@@ -28,6 +29,10 @@ function App() {
             type it in. */}
         <Route path="/case" element={<CaseDetail />} />
         <Route path="/case/:caseId" element={<CaseDetail />} />
+        {/* Roster employees have no account: a pulse-check invite is reached by
+            its single-use token (/pulse/:inviteId?t=<token>), so this route is
+            deliberately outside ProtectedRoute, same as the reporter routes. */}
+        <Route path="/pulse/:inviteId" element={<PulseCheck />} />
 
         {/* Auth entry points. */}
         <Route path="/login" element={<LoginPage />} />
