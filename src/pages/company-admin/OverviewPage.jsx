@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import QRCode from 'qrcode'
 import { getCompanyStats } from '../../services/companyStatsService'
-import { getCompany } from '../../services/companyService'
+import { assignCompanySlug, getCompany } from '../../services/companyService'
 import { listRoutingRules, listStaff } from '../../services/routingService'
 import { listPulseSummaries } from '../../services/pulseCheckService'
 import { CATEGORIES } from '../../data/categories'
@@ -73,9 +73,20 @@ function BreakdownList({ entries, labelFor = (key) => key, toneFor = () => 'tone
 // poster in a break room and reporters reach the right, company-scoped intake
 // flow without typing anything or authenticating. Nothing here is case content;
 // it's just the company's own public reporting address rendered as a QR.
-function ReportingLinkCard({ slug }) {
+//
+// A company with no slug isn't stuck waiting on a backfill: this role can
+// allocate one here. The allocation itself is the same platform-wide-unique
+// function company creation uses (companyService.assignCompanySlug ->
+// allocateUniqueSlug), and firestore.rules lets only this company's Company
+// Admin write the field, so the button is a convenience on top of a
+// server-enforced permission rather than the thing granting it.
+function ReportingLinkCard({ company, onSlugGenerated }) {
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState(null)
+
+  const slug = company?.slug
 
   // Built from the current origin so the QR points at wherever the app is
   // actually served (localhost in dev, the real domain in production) rather
@@ -112,13 +123,42 @@ function ReportingLinkCard({ slug }) {
     }
   }
 
+  async function generateLink() {
+    if (!company?.id || generating) return
+    setGenerating(true)
+    setGenerateError(null)
+    try {
+      await assignCompanySlug(company.id, company.name)
+      // Re-fetch through the page's own loader rather than patching local
+      // state, so the card renders the slug that is actually on the document.
+      await onSlugGenerated?.()
+    } catch (err) {
+      setGenerateError(err.message)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   return (
     <Card title="Reporting link">
       {!slug ? (
-        <p className="text-sm text-muted">
-          This company doesn&apos;t have a reporting link yet. It&apos;s assigned automatically when
-          the company is set up.
-        </p>
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-sm text-muted">
+            This company doesn&apos;t have a reporting link yet. Generating one creates the
+            public address employees use to file confidential reports - it can only be
+            created once, and stays the same afterwards.
+          </p>
+          {generateError && <Alert variant="error">{generateError}</Alert>}
+          <Button
+            variant="primary"
+            onClick={generateLink}
+            loading={generating}
+            loadingLabel="Generating"
+            disabled={!company?.id}
+          >
+            Generate reporting link
+          </Button>
+        </div>
       ) : (
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="shrink-0">
@@ -248,7 +288,7 @@ function OverviewPage({ companyId }) {
         {firstLoad ? (
           <SkeletonList rows={1} />
         ) : (
-          <ReportingLinkCard slug={company?.slug} />
+          <ReportingLinkCard company={company} onSlugGenerated={refresh} />
         )}
       </section>
 

@@ -4,6 +4,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   serverTimestamp,
   updateDoc,
@@ -42,16 +43,22 @@ export function slugifyCompanyName(name) {
 
 // Finds a slug that isn't already taken by another company. The base slug
 // derived from the name is tried first; on a collision it appends -2, -3, ...
-// A Super Admin (the only caller of createCompany) can read every company doc
-// per firestore.rules, so the uniqueness query below is permitted. The slug is
-// what an unauthenticated reporter's link resolves against, so it has to be
-// unique across the whole platform - not per company.
-async function allocateUniqueSlug(name) {
+// Callers are a Super Admin (createCompany) or a Company Admin generating a
+// link for their own company after the fact (assignCompanySlug); firestore.rules
+// permits the existence probe below for both, but only as a limit(1) query -
+// hence the explicit limit, which is also all the check needs. The slug is what
+// an unauthenticated reporter's link resolves against, so it has to be unique
+// across the whole platform - not per company.
+export async function allocateUniqueSlug(name) {
   const base = slugifyCompanyName(name) || 'company'
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`
     const snapshot = await getDocs(
-      query(collection(firestore, COMPANIES_COLLECTION), where('slug', '==', candidate))
+      query(
+        collection(firestore, COMPANIES_COLLECTION),
+        where('slug', '==', candidate),
+        limit(1)
+      )
     )
     if (snapshot.empty) {
       return candidate
@@ -160,6 +167,34 @@ export async function listCompanies() {
 export async function getCompany(companyId) {
   const snapshot = await getDoc(doc(firestore, COMPANIES_COLLECTION, companyId))
   return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null
+}
+
+// Self-service repair for a company that predates the slug field (or whose
+// creation never got one): allocates a slug with the exact same function
+// createCompany uses, so format and platform-wide uniqueness are identical
+// either way, and writes it onto the company doc. Only a Company Admin for
+// that company can do this - firestore.rules allows the slug field to be
+// written only by that role, and only while it is still missing, so a link
+// that has already been printed on a poster can never be reassigned out from
+// under the reporters using it.
+export async function assignCompanySlug(companyId, name) {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  // Re-read rather than trusting the caller's copy: if another admin generated
+  // the link in a different tab, reuse theirs instead of overwriting it (the
+  // rules would reject the write anyway).
+  const existing = await getCompany(companyId)
+  if (!existing) {
+    throw new Error('Company not found')
+  }
+  if (existing.slug) {
+    return existing.slug
+  }
+
+  const slug = await allocateUniqueSlug(name ?? existing.name)
+  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), { slug })
+  return slug
 }
 
 export async function updateCompanyJurisdictions(companyId, jurisdictions) {
