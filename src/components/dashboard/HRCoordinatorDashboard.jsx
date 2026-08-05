@@ -4,6 +4,7 @@ import { listCompanyCaseMetadata } from '../../services/caseMetadataService'
 import { listCaseHandlers, reassignCase } from '../../services/routingService'
 import { auth } from '../../services/firebase'
 import CaseTriageModal from './CaseTriageModal'
+import FollowUpStatus from './FollowUpStatus'
 import PatternSignals from './PatternSignals'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
@@ -212,6 +213,10 @@ function HRCoordinatorDashboard({ companyId }) {
           metadata only - patternSignals is its own collection, derived from
           the same mirror this dashboard already reads. */}
       <PatternSignals companyId={companyId} />
+
+      {/* Retaliation follow-up rollup, from the same metadata mirror this
+          dashboard already reads - counts and statuses only, no case content. */}
+      {!firstLoad && <FollowUpStatus cases={cases} />}
 
       {firstLoad ? (
         <SkeletonList rows={5} />

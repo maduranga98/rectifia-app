@@ -11,6 +11,7 @@ import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import CrisisResources from '../shared/CrisisResources'
 import EmptyState from '../ui/EmptyState'
+import FollowUpPrompt from './FollowUpPrompt'
 import Icon from '../ui/Icon'
 
 const POLL_INTERVAL_MS = 8000
@@ -202,6 +203,26 @@ function CaseThread({ caseId, mode, passcode }) {
         )}
 
         {messages.map((message) => {
+          // Follow-up messages (retaliation follow-up module) are rendered by
+          // their own component, full-width and visually distinct from AI and
+          // investigator messages - a check-in prompt the reporter answers in
+          // place, or the notice that a new retaliation case was filed. Only a
+          // reporter (Case ID + passcode) can answer; an investigator sees it
+          // read-only.
+          if (message.type === 'follow_up') {
+            return (
+              <div key={message.id} className="w-full">
+                <FollowUpPrompt
+                  caseId={caseId}
+                  passcode={passcode}
+                  interactive={mode === 'reporter'}
+                  followUp={{ ...(message.followUp ?? {}), text: message.text }}
+                  onAnswered={refresh}
+                />
+              </div>
+            )
+          }
+
           const mine = message.type !== 'manual_log' && message.sender === mySender
           return (
             <div

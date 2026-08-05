@@ -15,6 +15,14 @@ if (!admin.apps.length) {
 
 const CASES_COLLECTION = 'cases'
 const MESSAGES_SUBCOLLECTION = 'messages'
+// Every message type that can appear in a case thread. 'follow_up' is the
+// retaliation follow-up module's type (functions/src/followup/*): a neutral
+// post-closure check-in prompt, or the one-off notice that a new retaliation
+// case was filed. It is distinct from 'ai' | 'investigator' | 'reporter' |
+// 'manual_log' so CaseThread.jsx can render it differently, and it is written
+// only server-side by that module - it is deliberately NOT in
+// VALID_MESSAGE_TYPES below, so no client (reporter or investigator) can post a
+// message that impersonates a system follow-up.
 const VALID_MESSAGE_TYPES = ['message', 'manual_log']
 const SCRYPT_KEY_LENGTH = 64
 
@@ -83,6 +91,13 @@ function serializeMessage(doc) {
     type: data.type ?? 'message',
     text: data.text ?? '',
     attachments: Array.isArray(data.attachments) ? data.attachments.map(serializeAttachment) : [],
+    // Structured payload for a 'follow_up' message: { index, kind, status,
+    // answer } for a prompt, or { kind: 'new_case', newCaseId, linked } for the
+    // filed-case notice. Absent (null) on every other message type. It carries
+    // no free text and no passcode - the reporter's own answer text is never
+    // stored on this case, and a filed case's passcode is returned once by the
+    // callable, never persisted here.
+    followUp: data.followUp ?? null,
     timestamp: data.timestamp ? data.timestamp.toMillis() : null,
   }
 }

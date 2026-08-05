@@ -43,9 +43,15 @@ service cloud.firestore {
     // rollups, ...) fails outright, so this is deliberately NOT a blanket
     // "can write their own company doc" grant. Slug is handled by its own
     // one-time path (claimsMissingSlug) below and is not in this set.
+    // followUpConfig is the per-company retaliation follow-up cadence
+    // (intervalsDays + disabledCategories), edited on the Settings page and
+    // read server-side by functions/src/followup/scheduleFollowUps.js. Like the
+    // others it is company structure/config, not case content, so a Company
+    // Admin may write it directly - but only through this allowlist, so a write
+    // touching any other field still fails outright.
     function companyAdminEditableFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments']);
+        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig']);
     }
     function claimsMissingSlug() {
       return (!('slug' in resource.data) || resource.data.slug == null)
@@ -229,6 +235,13 @@ service cloud.firestore {
     // bucket, a department is a team, and neither is a name; what keeps a
     // *signal* built from them non-identifying is the population check in
     // patterns/suppressionRules.js, not these fields being coarse.
+    // It additionally carries the retaliation follow-up rollup
+    // (followUpStatus) and the next-prompt time (nextFollowUpAt) from
+    // functions/src/followup/*, so the HR Coordinator dashboard can show
+    // follow-up counts and statuses as metadata only. Neither is identity-
+    // bearing and the reporter's free-text answer is never mirrored (it never
+    // lives on the case at all); a followUpStatus of 'no_response' means
+    // UNKNOWN and is labelled as such, never as evidence no retaliation occurred.
     // It also carries tier/source/intakeMethod,
     // which are provenance rather than content - "filed by phone, reporter
     // chose to be identifiable" says nothing about what was reported - while

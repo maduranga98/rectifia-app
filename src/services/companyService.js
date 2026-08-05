@@ -27,6 +27,14 @@ export const PULSE_CADENCES = ['off', 'weekly', 'biweekly', 'monthly']
 // it's given instead of writing an arbitrary string into the doc.
 export const SUBSCRIPTION_TIERS = ['starter', 'professional', 'enterprise']
 
+// Retaliation follow-up cadence config (companies/{companyId}.followUpConfig),
+// read server-side by functions/src/followup/scheduleFollowUps.js. These
+// defaults mirror DEFAULT_INTERVAL_DAYS / ALL_CATEGORIES there - the module is
+// default-on for all four categories, so a company opts categories OUT rather
+// than in, and an unconfigured company still gets the defaults.
+export const DEFAULT_FOLLOW_UP_INTERVALS = [30, 60, 90]
+export const FOLLOW_UP_CATEGORIES = ['harassment', 'toxicManagement', 'retaliation', 'burnout']
+
 // Compliance strictness ranking, most strict first. When a company selects
 // multiple jurisdictions, the default timeline is driven by whichever
 // jurisdiction ranks highest here (EU's 7-day/3-month rule), until a later
@@ -233,6 +241,35 @@ export async function updateCompanyPulseCadence(companyId, cadence) {
   const value = ['weekly', 'biweekly', 'monthly'].includes(cadence) ? cadence : null
   await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
     pulseCheckCadence: value,
+  })
+}
+
+// Writes companies/{companyId}.followUpConfig - the retaliation follow-up
+// cadence and any categories the company has disabled. intervalsDays is a set
+// of positive whole-day offsets from case closure; an empty list is a valid,
+// explicit "no follow-ups" choice. disabledCategories must be a subset of the
+// four known categories. firestore.rules permits this field for the company's
+// own Company Admin (see companyAdminEditableFields); scheduleFollowUps.js
+// re-normalizes whatever is stored, so a malformed value can never schedule
+// something unexpected - but validating here gives the admin an error instead.
+export async function updateCompanyFollowUpConfig(companyId, { intervalsDays, disabledCategories }) {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  if (
+    !Array.isArray(intervalsDays) ||
+    intervalsDays.some((n) => !Number.isInteger(n) || n <= 0)
+  ) {
+    throw new Error('Follow-up intervals must be whole numbers of days greater than zero')
+  }
+  const disabled = Array.isArray(disabledCategories) ? disabledCategories : []
+  if (disabled.some((c) => !FOLLOW_UP_CATEGORIES.includes(c))) {
+    throw new Error('Unknown category in follow-up settings')
+  }
+  // De-duplicate and sort so what is stored round-trips cleanly to the UI.
+  const intervals = [...new Set(intervalsDays)].sort((a, b) => a - b)
+  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
+    followUpConfig: { intervalsDays: intervals, disabledCategories: disabled },
   })
 }
 

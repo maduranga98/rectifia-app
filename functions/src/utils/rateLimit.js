@@ -67,6 +67,11 @@ const limits = {
   submitPulseResponse: limit('submitPulseResponse', 'RATE_LIMIT_SUBMIT_PULSE_RESPONSE', 5),
   requestEvidenceUploadUrl: limit('requestEvidenceUploadUrl', 'RATE_LIMIT_EVIDENCE_UPLOAD', 20),
   requestEvidenceDownloadUrl: limit('requestEvidenceDownloadUrl', 'RATE_LIMIT_EVIDENCE_DOWNLOAD', 60),
+  // A reporter answering a post-closure follow-up prompt (and possibly filing
+  // one retaliation case from it). Low volume by nature - a handful of prompts
+  // ever exist per case - but filing spends a Claude scoring call on the new
+  // case, so it is bounded like the other write paths rather than left open.
+  submitFollowUpResponse: limit('submitFollowUpResponse', 'RATE_LIMIT_SUBMIT_FOLLOW_UP', 10),
 }
 
 // Resolves a configured limit to a usable number. Anything that is not a

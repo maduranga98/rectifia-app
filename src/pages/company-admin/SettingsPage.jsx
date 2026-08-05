@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  DEFAULT_FOLLOW_UP_INTERVALS,
+  FOLLOW_UP_CATEGORIES,
   JURISDICTIONS,
   PULSE_CADENCES,
   getCompany,
   getStrictestJurisdiction,
+  updateCompanyFollowUpConfig,
   updateCompanyJurisdictions,
   updateCompanyPulseCadence,
 } from '../../services/companyService'
@@ -21,6 +24,27 @@ const JURISDICTION_LABELS = {
   UK: 'United Kingdom',
   US: 'United States',
   LK: 'Sri Lanka',
+}
+
+const CATEGORY_LABELS = {
+  harassment: 'Harassment',
+  toxicManagement: 'Toxic management',
+  retaliation: 'Retaliation',
+  burnout: 'Burnout',
+}
+
+// Parses the admin's comma/space-separated day list into a sorted, de-duplicated
+// set of positive whole numbers. Anything non-numeric is dropped rather than
+// rejected so a trailing comma or stray space while typing isn't an error.
+function parseIntervals(text) {
+  return [
+    ...new Set(
+      String(text)
+        .split(/[\s,]+/)
+        .map((t) => Number.parseInt(t, 10))
+        .filter((n) => Number.isInteger(n) && n > 0)
+    ),
+  ].sort((a, b) => a - b)
 }
 
 // How each cadence reads to a human. The values themselves are the exact
@@ -75,6 +99,14 @@ function SettingsPage({ companyId }) {
   const [jurisdictions, setJurisdictions] = useState([])
   const [savingJurisdictions, setSavingJurisdictions] = useState(false)
 
+  // Follow-up cadence is staged locally and saved explicitly, same as
+  // jurisdictions - the intervals live as a text field the admin edits freely,
+  // and disabled categories as a set. Defaults are all four categories on at
+  // 30/60/90 days.
+  const [intervalsText, setIntervalsText] = useState(DEFAULT_FOLLOW_UP_INTERVALS.join(', '))
+  const [disabledCategories, setDisabledCategories] = useState([])
+  const [savingFollowUp, setSavingFollowUp] = useState(false)
+
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -85,6 +117,16 @@ function SettingsPage({ companyId }) {
       ])
       setCompany(companyData)
       setJurisdictions(companyData?.jurisdictions ?? [])
+      const followUp = companyData?.followUpConfig
+      setIntervalsText(
+        (Array.isArray(followUp?.intervalsDays)
+          ? followUp.intervalsDays
+          : DEFAULT_FOLLOW_UP_INTERVALS
+        ).join(', ')
+      )
+      setDisabledCategories(
+        Array.isArray(followUp?.disabledCategories) ? followUp.disabledCategories : []
+      )
       setRosterSize(employees.filter((e) => e.status !== 'inactive').length)
     } catch (err) {
       setError(err.message)
@@ -138,7 +180,37 @@ function SettingsPage({ companyId }) {
     }
   }
 
+  function toggleCategory(code) {
+    setDisabledCategories((current) =>
+      current.includes(code) ? current.filter((c) => c !== code) : [...current, code]
+    )
+  }
+
+  async function handleSaveFollowUp() {
+    const intervals = parseIntervals(intervalsText)
+    setSavingFollowUp(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await updateCompanyFollowUpConfig(companyId, {
+        intervalsDays: intervals,
+        disabledCategories,
+      })
+      await refresh()
+      setNotice(
+        intervals.length === 0
+          ? 'Follow-ups turned off for future closed cases.'
+          : 'Follow-up cadence saved. This applies to cases closed from now on.'
+      )
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingFollowUp(false)
+    }
+  }
+
   const cadence = cadenceOf(company)
+  const parsedIntervals = parseIntervals(intervalsText)
   const strictestJurisdiction = getStrictestJurisdiction(jurisdictions)
   const savedJurisdictions = company?.jurisdictions ?? []
   const jurisdictionsChanged = !sameSet(jurisdictions, savedJurisdictions)
@@ -275,6 +347,79 @@ function SettingsPage({ companyId }) {
             </Alert>
           )}
         </fieldset>
+      </Card>
+
+      <Card
+        title="Retaliation follow-up check-ins"
+        description="After a case closes, reporters get neutral check-ins asking whether anything has changed. This applies to all categories by default — retaliation can follow any report."
+        footer={
+          <Button
+            variant="primary"
+            onClick={handleSaveFollowUp}
+            loading={savingFollowUp}
+            loadingLabel="Saving"
+          >
+            Save follow-up settings
+          </Button>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5 text-sm sm:max-w-md">
+            <span className="font-medium text-charcoal">Days after closure to check in</span>
+            <input
+              type="text"
+              value={intervalsText}
+              onChange={(e) => setIntervalsText(e.target.value)}
+              placeholder="30, 60, 90"
+              className="field"
+              inputMode="numeric"
+            />
+            <span className="text-xs text-muted">
+              {parsedIntervals.length === 0
+                ? 'No check-ins will be sent.'
+                : `${parsedIntervals.length} check-in${
+                    parsedIntervals.length === 1 ? '' : 's'
+                  } at day ${parsedIntervals.join(', ')} after a case closes.`}
+            </span>
+          </label>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm font-medium text-charcoal">Categories to follow up</legend>
+            <p className="text-xs text-muted">
+              All on by default. Untick a category to stop scheduling check-ins for cases closed in
+              it.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {FOLLOW_UP_CATEGORIES.map((code) => {
+                const enabled = !disabledCategories.includes(code)
+                return (
+                  <label
+                    key={code}
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                      enabled
+                        ? 'border-navy bg-navy-50 text-charcoal'
+                        : 'border-line bg-surface text-muted hover:border-navy-200'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      onChange={() => toggleCategory(code)}
+                      className="h-4 w-4"
+                    />
+                    <span className="font-medium text-charcoal">{CATEGORY_LABELS[code]}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </fieldset>
+
+          <Alert variant="info">
+            Check-ins are neutral and optional for the reporter. A reporter can always answer that
+            nothing has changed, or ignore them entirely — there is no chasing. Changes here apply
+            to cases closed from now on.
+          </Alert>
+        </div>
       </Card>
     </div>
   )
