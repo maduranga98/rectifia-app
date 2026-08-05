@@ -50,6 +50,26 @@ function pickMetadata(data) {
     // up is audit-trail material (staffIntakeAuditLog), not dashboard
     // material, and in a small company naming the intake taker can narrow
     // down who the reporter is.
+    //
+    // `contactEmail` (module 20) is not here and must never be added either,
+    // on exactly the same reasoning: it is an AES-GCM envelope on the case
+    // document, and mirroring it would drop ciphertext into the one
+    // case-derived collection an HR Coordinator reads directly, where it could
+    // be pulled down and attacked offline at leisure. A dashboard has no
+    // question that a reporter's contact address answers, and the reporter was
+    // told the address is a delivery detail, not case content.
+    //
+    // `tier` below DOES keep mirroring after module 20, and now legitimately
+    // changes over the life of a case rather than being fixed at submission -
+    // a reporter can move their own case from anonymous to confidential
+    // (functions/src/intake/identityTransition.js), and this trigger fires on
+    // that write like any other, so the mirror follows. That is the intended
+    // behaviour: a queue reader needs to know a reporter is identifiable to
+    // read the queue at all. It says nothing about who they are - reading that
+    // still requires revealIdentity, a documented reason, and an audit entry.
+    // tierChangedAt/tierChangedBy are deliberately left off: when the reporter
+    // changed their mind is timeline detail for the case report, not a
+    // dashboard column.
     tier: normalizeTier(data.tier),
     source: data.source ?? 'reporter',
     intakeMethod: data.intakeMethod ?? null,

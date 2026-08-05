@@ -81,6 +81,16 @@ const limits = {
   // ever exist per case - but filing spends a Claude scoring call on the new
   // case, so it is bounded like the other write paths rather than left open.
   submitFollowUpResponse: limit('submitFollowUpResponse', 'RATE_LIMIT_SUBMIT_FOLLOW_UP', 10),
+  // The three reporter-initiated identity transitions
+  // (functions/src/intake/identityTransition.js), all scoped per case like
+  // postReporterMessage. Each is a decision a reporter makes at most a couple
+  // of times in the life of a case, so the numbers are small on purpose: a
+  // caller repeatedly toggling a contact address is not a reporter changing
+  // their mind, and the identity upgrade is irreversible after the first
+  // success, so anything past that is a retry after an error at worst.
+  upgradeToConfidential: limit('upgradeToConfidential', 'RATE_LIMIT_UPGRADE_TO_CONFIDENTIAL', 5),
+  addContactEmail: limit('addContactEmail', 'RATE_LIMIT_ADD_CONTACT_EMAIL', 5),
+  removeContactEmail: limit('removeContactEmail', 'RATE_LIMIT_REMOVE_CONTACT_EMAIL', 5),
 }
 
 // Resolves a configured limit to a usable number. Anything that is not a

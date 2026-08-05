@@ -79,6 +79,19 @@ function decryptWithKey(envelope) {
   }
 }
 
+// The one writer for identityAccessAuditLog. Exported (as
+// writeIdentityAuditEntry) because decryption is no longer the only event that
+// belongs in this log: a reporter choosing to identify themselves mid-case, or
+// adding/removing a contact address, changes what the vault holds without ever
+// decrypting it (functions/src/intake/identityTransition.js). Those events are
+// exactly as accountable as a read, and splitting them into a second
+// collection would mean an auditor had to join two logs to answer "what has
+// ever happened to this case's identity data".
+//
+// Every entry carries an `action`, so a staff decrypt ('staff_reveal') is
+// never confusable with a reporter's own disclosure ('reporter_self_reveal') -
+// the two look nothing alike in accountability terms and must not read alike
+// in the log.
 async function writeAuditEntry(firestore, entry) {
   await firestore.collection(AUDIT_COLLECTION).add({
     ...entry,
@@ -118,6 +131,11 @@ async function decryptIdentity({
   caseId,
   field,
   firestore,
+  // What kind of access this is, recorded on every audit entry below.
+  // Defaults to a staff-initiated reveal because that is what every human
+  // caller of this function is; automated deliveries pass their own label
+  // (see functions/src/notifications/sendContactEmailUpdate.js).
+  action = 'staff_reveal',
 }) {
   const db = firestore || admin.firestore()
   const uid = actorUid ?? null
@@ -125,6 +143,7 @@ async function decryptIdentity({
 
   const deny = async (code, message) => {
     await writeAuditEntry(db, {
+      action,
       actorUid: uid,
       actorEmail: email,
       authorizedAs: authorizedAs ?? null,
@@ -158,6 +177,7 @@ async function decryptIdentity({
     plaintext = decryptWithKey(envelope)
   } catch (err) {
     await writeAuditEntry(db, {
+      action,
       actorUid: uid,
       actorEmail: email,
       authorizedAs,
@@ -171,6 +191,7 @@ async function decryptIdentity({
   }
 
   await writeAuditEntry(db, {
+    action,
     actorUid: uid,
     actorEmail: email,
     authorizedAs,
@@ -187,5 +208,7 @@ module.exports = {
   encryptionKeySecret,
   encryptIdentity,
   decryptIdentity,
+  writeIdentityAuditEntry: writeAuditEntry,
+  AUDIT_COLLECTION,
   MIN_REASON_LENGTH,
 }

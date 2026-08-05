@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 import ReporterLayout from '../components/shared/ReporterLayout'
 import CaseAccess from '../components/intake/CaseAccess'
 import CaseThread from '../components/intake/CaseThread'
+import ContactChannelPanel from '../components/intake/ContactChannelPanel'
+import IdentityUpgradePanel from '../components/intake/IdentityUpgradePanel'
 import Badge from '../components/ui/Badge'
 import Card from '../components/ui/Card'
 
@@ -45,6 +47,13 @@ function CaseDetail() {
   }
 
   const caseNumber = grantedCase.caseId ?? caseIdFromUrl
+  // Both panels below act on state that lives on the case document, so after a
+  // change the local copy is stale. Rather than refetch (which would mean
+  // re-sending the passcode for no new information), each transition reports
+  // its own outcome and we patch the one field it changed - the callables are
+  // the source of truth for whether it succeeded.
+  const isOpen = grantedCase.status !== 'closed'
+  const isAnonymous = (grantedCase.tier ?? 'anonymous') === 'anonymous'
 
   return (
     <ReporterLayout
@@ -64,6 +73,33 @@ function CaseDetail() {
         <Card title="Case thread">
           <CaseThread caseId={caseNumber} mode="reporter" passcode={passcode} />
         </Card>
+
+        {/* Blueprint §7.2 and §8, beneath the thread rather than above it: both
+            are optional, neither is what the reporter came here to do, and
+            putting either where a reply belongs would make it feel asked for.
+            Both are collapsed until opened, and nothing in the app - staff, AI,
+            or system - ever points a reporter at them. */}
+        {isOpen && isAnonymous && (
+          <IdentityUpgradePanel
+            caseId={caseNumber}
+            passcode={passcode}
+            onUpgraded={() => setGrantedCase((prev) => ({ ...prev, tier: 'confidential' }))}
+          />
+        )}
+
+        {/* Offered at either tier: wanting to know when something moves is not
+            the same question as wanting to be known, and a confidential-tier
+            reporter has just as little reason to sit refreshing this page. */}
+        {isOpen && (
+          <ContactChannelPanel
+            caseId={caseNumber}
+            passcode={passcode}
+            hasContactEmail={Boolean(grantedCase.hasContactEmail)}
+            onChanged={() =>
+              setGrantedCase((prev) => ({ ...prev, hasContactEmail: !prev.hasContactEmail }))
+            }
+          />
+        )}
       </div>
     </ReporterLayout>
   )

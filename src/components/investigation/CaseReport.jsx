@@ -298,10 +298,27 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         >
           {canViewReporterIdentity ? (
             <DetailList
-              items={Object.entries(report.restrictedReporterIdentity).map(([key, value]) => [
-                humanize(key),
-                String(value),
-              ])}
+              items={[
+                ['Status', report.restrictedReporterIdentity.status],
+                ['Details on file', report.restrictedReporterIdentity.detailsOnFile],
+                ['Access', report.restrictedReporterIdentity.access],
+                // Present only when the case CHANGED tier mid-investigation -
+                // i.e. the reporter filed anonymously and later chose to
+                // identify themselves. A case that was confidential from its
+                // first message has no such row, and the difference matters to
+                // whoever reads this: the early part of the thread was written
+                // by someone the investigator could not name.
+                ...(report.restrictedReporterIdentity.tierChanged
+                  ? [
+                      [
+                        'Identified themselves',
+                        `${formatTimestamp(report.restrictedReporterIdentity.tierChanged.at)} (${
+                          report.restrictedReporterIdentity.tierChanged.by
+                        }) - ${report.restrictedReporterIdentity.tierChanged.note}`,
+                      ],
+                    ]
+                  : []),
+              ].filter(([, value]) => value)}
             />
           ) : (
             <Alert variant="error">

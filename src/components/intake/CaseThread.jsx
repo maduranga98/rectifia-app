@@ -26,6 +26,13 @@ function messageAuthorLabel(message) {
   if (message.type === 'manual_log') return 'Investigator log'
   if (message.sender === 'ai') return 'AI assistant'
   if (message.sender === 'investigator') return 'Case Handler'
+  // Written only server-side, and only by
+  // functions/src/intake/identityTransition.js: a note that the reporter
+  // identified themselves, or added or removed a contact address. It carries
+  // no identity content, and both the reporter and the handler see the same
+  // text - the change is meant to be legible in the timeline, which is
+  // different from being explained to one side.
+  if (message.sender === 'system') return 'Case record'
   return 'Reporter'
 }
 
@@ -35,6 +42,9 @@ function messageAuthorLabel(message) {
 // message to anyone.
 function bubbleClasses(message, mine) {
   if (message.type === 'manual_log') return 'tone-high border w-full'
+  // Full-width and neutral, like a manual log entry: a record of something that
+  // happened to the case, not a message from anyone to anyone.
+  if (message.sender === 'system') return 'border border-line bg-canvas text-muted w-full'
   if (mine) return 'bg-navy text-white border border-navy'
   if (message.sender === 'ai') return 'border border-navy-200 bg-navy-50 text-charcoal'
   return 'border border-line bg-surface text-charcoal'
@@ -224,7 +234,10 @@ function CaseThread({ caseId, mode, passcode }) {
             )
           }
 
-          const mine = message.type !== 'manual_log' && message.sender === mySender
+          const mine =
+            message.type !== 'manual_log' &&
+            message.sender !== 'system' &&
+            message.sender === mySender
           return (
             <div
               key={message.id}
