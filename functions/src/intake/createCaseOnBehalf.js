@@ -210,6 +210,10 @@ exports.createCaseOnBehalf = onCall({ secrets: [encryptionKeySecret] }, async (r
     enteredByRole: role,
     reporterInformedOfTier: true,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    // Explicit null, not an absent field: functions/src/retention/
+    // applyRetention.js's Tier 1 sweep queries identityPurgedAt == null,
+    // which only matches documents where the field genuinely exists.
+    identityPurgedAt: null,
   }
 
   // Anonymous tier writes no identity key at all - not an empty object, not a

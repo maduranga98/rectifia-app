@@ -59,6 +59,14 @@ const {
   restorePolicyDocument,
   deletePolicyDocument,
 } = require('./src/policy/managePolicyDocument')
+const { applyRetention } = require('./src/retention/applyRetention')
+const { setLegalHold, releaseLegalHold, listLegalHolds } = require('./src/retention/legalHold')
+const {
+  requestCaseDeletion,
+  approveDeletionRequest,
+  declineDeletionRequest,
+} = require('./src/retention/deletionRequest')
+const { previewRetention } = require('./src/retention/previewRetention')
 
 exports.submitCase = submitCase
 exports.createCaseOnBehalf = createCaseOnBehalf
@@ -126,3 +134,16 @@ exports.tagPolicyChunks = tagPolicyChunks
 exports.archivePolicyDocument = archivePolicyDocument
 exports.restorePolicyDocument = restorePolicyDocument
 exports.deletePolicyDocument = deletePolicyDocument
+// Module 23: Data Retention, Deletion & Legal Hold. applyRetention is the
+// daily scheduled sweep; the rest are onCall - legal holds and the
+// reporter-initiated erasure request are both human-decided actions on a
+// case, and previewRetention is the companyAdmin-only dry run RetentionPage.jsx
+// requires before a shortened window can be saved.
+exports.applyRetention = applyRetention
+exports.setLegalHold = setLegalHold
+exports.releaseLegalHold = releaseLegalHold
+exports.listLegalHolds = listLegalHolds
+exports.requestCaseDeletion = requestCaseDeletion
+exports.approveDeletionRequest = approveDeletionRequest
+exports.declineDeletionRequest = declineDeletionRequest
+exports.previewRetention = previewRetention

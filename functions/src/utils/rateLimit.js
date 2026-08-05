@@ -92,6 +92,13 @@ const limits = {
   upgradeToConfidential: limit('upgradeToConfidential', 'RATE_LIMIT_UPGRADE_TO_CONFIDENTIAL', 5),
   addContactEmail: limit('addContactEmail', 'RATE_LIMIT_ADD_CONTACT_EMAIL', 5),
   removeContactEmail: limit('removeContactEmail', 'RATE_LIMIT_REMOVE_CONTACT_EMAIL', 5),
+  // The reporter-initiated erasure request (module 23,
+  // functions/src/retention/deletionRequest.js), scoped per case like the
+  // identity transitions above. It only ever flips a case into
+  // deletionRequested.pending once - a second call while one is already
+  // pending is rejected on that state, not on this limit - so this exists
+  // purely to bound retries after a network error, not repeated use.
+  requestCaseDeletion: limit('requestCaseDeletion', 'RATE_LIMIT_REQUEST_CASE_DELETION', 5),
 }
 
 // Resolves a configured limit to a usable number. Anything that is not a

@@ -180,6 +180,10 @@ exports.submitCase = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
       // than createdAt.
       reportedAt: admin.firestore.FieldValue.serverTimestamp(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Explicit null, not an absent field: functions/src/retention/
+      // applyRetention.js's Tier 1 sweep queries identityPurgedAt == null,
+      // which only matches documents where the field genuinely exists.
+      identityPurgedAt: null,
     })
 
   return { caseId, passcode }
