@@ -353,6 +353,47 @@ function drawFinalActionSection(doc, report) {
   keyValue(doc, 'Notes', action.actionNotes)
 }
 
+function drawExternalSharesSection(doc, report) {
+  sectionHeading(doc, '9. External Advisor Shares')
+  doc
+    .font(FONT_ITALIC)
+    .fontSize(8.5)
+    .fillColor(COLORS.muted)
+    .text(
+      'Who this case was shared with outside the organisation, and when. Recipient email addresses and access tokens are never printed here.',
+      { width: contentWidth(doc) }
+    )
+  doc.moveDown(0.5)
+
+  const shares = report.externalShares || []
+  if (shares.length === 0) {
+    emptyState(doc, 'No external shares were ever created for this case.')
+    return
+  }
+
+  shares.forEach((share, index) => {
+    ensureRoom(doc, 60)
+    keyValue(
+      doc,
+      `Share ${index + 1} — ${share.recipientOrganisation ?? 'Unknown organisation'}`,
+      `${humanize(share.status)}${share.scope ? ` · ${share.scope} scope` : ''}`
+    )
+    keyValue(doc, 'Recipient', share.recipientName)
+    keyValue(doc, 'Purpose', share.purpose)
+    keyValue(doc, 'Created', formatTimestamp(share.createdAt))
+    keyValue(doc, 'Expires', formatTimestamp(share.expiresAt))
+    keyValue(
+      doc,
+      'Access',
+      `${share.accessCount ?? 0} access(es)${share.lastAccessedAt ? `, last ${formatTimestamp(share.lastAccessedAt)}` : ''}`
+    )
+    if (share.status === 'revoked') {
+      keyValue(doc, 'Revoked', `${formatTimestamp(share.revokedAt)}${share.revokedReason ? ` — ${share.revokedReason}` : ''}`)
+    }
+    doc.moveDown(0.3)
+  })
+}
+
 function drawPolicySection(doc, report) {
   sectionHeading(doc, '8. Policy In Effect')
   const policies = report.policyInEffect || []
@@ -518,6 +559,7 @@ async function renderReportPdf({ report, companyName, generatedAt, generatedByLa
       drawComplianceSection(doc, report)
       drawFinalActionSection(doc, report)
       drawPolicySection(doc, report)
+      drawExternalSharesSection(doc, report)
       drawIdentityAppendix(doc, identityAppendix)
 
       // Page count is only known once every section has been laid out, so

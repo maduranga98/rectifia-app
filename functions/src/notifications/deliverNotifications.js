@@ -258,6 +258,23 @@ async function buildEmailForNotification(firestore, data, { getCompanyName }) {
       return { recipients, subject, text, html: null }
     }
 
+    case 'externalShareExpired': {
+      // Module 27. recipientEmail is resolved and stamped onto the
+      // notification at write time (functions/src/sharing/expireShares.js),
+      // the same 'staffInvite' pattern this file already follows for a
+      // single, already-known recipient rather than a role lookup.
+      if (!data.recipientEmail) throw new Error('no_recipient')
+      const subject = 'An external case share has expired'
+      const text = [
+        `Access for the external share to ${data.recipientOrganisation ?? 'the recipient'} has expired.`,
+        '',
+        `Case: ${data.caseId ?? 'unknown'}`,
+        '',
+        'Create a fresh share, with a fresh purpose statement, if continued access is needed - expired shares cannot be renewed or extended.',
+      ].join('\n')
+      return { recipients: [data.recipientEmail], subject, text, html: null }
+    }
+
     case 'acknowledgmentDeadlineRisk':
     case 'feedbackDeadlineRisk': {
       const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['hrCoordinator'])

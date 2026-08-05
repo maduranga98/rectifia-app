@@ -14,6 +14,7 @@ import CaseReport from '../../components/investigation/CaseReport'
 import InvestigationChecklist from '../../components/investigation/InvestigationChecklist'
 import RelatedPatternNotice from '../../components/investigation/RelatedPatternNotice'
 import DeletionRequestPanel from '../../components/investigation/DeletionRequestPanel'
+import ShareCasePanel from '../../components/investigation/ShareCasePanel'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -55,6 +56,7 @@ const TABS = [
   { path: 'compliance', label: 'Compliance', badge: (c) => (hasPendingDeadline(c) ? { dot: true } : null) },
   { path: 'patterns', label: 'Patterns' },
   { path: 'identity', label: 'Identity', confidentialOnly: true },
+  { path: 'share', label: 'External share' },
   { path: 'action', label: 'Action & report' },
 ]
 
@@ -239,6 +241,7 @@ function CaseWorkspacePage() {
             )
           }
         />
+        <Route path="share" element={<ShareCasePanel caseId={caseId} />} />
         <Route path="action" element={<ActionReportPanel caseData={caseData} caseId={caseId} onChanged={refresh} />} />
         <Route path="*" element={<Navigate to="thread" replace />} />
       </Routes>

@@ -282,6 +282,49 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         />
       </Card>
 
+      <Card
+        title="External shares"
+        description="Who this case was shared with outside the organisation - who saw this case is part of the case history."
+      >
+        {!report.externalShares || report.externalShares.length === 0 ? (
+          <p className="text-sm text-muted">No external shares were ever created for this case.</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-line-soft">
+            {report.externalShares.map((share, index) => (
+              <li key={index} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-charcoal">
+                    {share.recipientOrganisation ?? 'Unknown organisation'}
+                  </span>
+                  <Badge
+                    tone={
+                      share.status === 'revoked'
+                        ? 'tone-critical'
+                        : share.status === 'expired'
+                          ? 'tone-neutral'
+                          : 'tone-low'
+                    }
+                    dot
+                  >
+                    {humanize(share.status)}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted">
+                  {share.recipientName} · {share.scope} scope · created {formatTimestamp(share.createdAt)} · expires{' '}
+                  {formatTimestamp(share.expiresAt)}
+                </p>
+                <p className="mt-1 text-sm text-charcoal">{share.purpose}</p>
+                <p className="mt-1 text-xs text-muted">
+                  {share.accessCount ?? 0} access(es)
+                  {share.lastAccessedAt ? `, last ${formatTimestamp(share.lastAccessedAt)}` : ''}
+                  {share.status === 'revoked' && share.revokedReason ? ` · revoked: ${share.revokedReason}` : ''}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       {report.restrictedReporterIdentity && (
         <Card
           title="Restricted - reporter identity"

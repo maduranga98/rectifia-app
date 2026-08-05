@@ -176,7 +176,13 @@ async function loadCaseForHandler(firestore, caseId, uid, action = 'case_handler
     outcome: 'granted',
     caseId,
   })
-  return { caseRef, snapshot }
+  // `role` is returned alongside the case for callers that need to
+  // distinguish caseHandler from companyAdmin beyond "assigned to this
+  // case" - module 27's external share creation is one: a Company Admin
+  // must never create, view, or extend a share even in the (currently
+  // unreachable in practice) case that one somehow became a case's
+  // assignedHandlerId.
+  return { caseRef, snapshot, role }
 }
 
 // The triage counterpart of loadCaseForHandler above. Same identity rule -

@@ -8,6 +8,7 @@ if (!admin.apps.length) {
 }
 
 const MESSAGES_SUBCOLLECTION = 'messages'
+const EXTERNAL_SHARES_COLLECTION = 'externalShares'
 
 function toMillis(value) {
   return typeof value?.toMillis === 'function' ? value.toMillis() : value ?? null
@@ -58,6 +59,36 @@ async function compileReport(firestore, caseId, uid) {
 
   const messagesSnapshot = await caseRef.collection(MESSAGES_SUBCOLLECTION).orderBy('timestamp', 'asc').get()
   const timeline = messagesSnapshot.docs.map(serializeMessage)
+
+  // Module 27: every external share this case has ever had, active or not.
+  // "Who saw this case is part of the case history" - metadata only, the
+  // same discipline every field in this report already follows: no
+  // recipient email (it is encrypted in the vault and this function never
+  // decrypts it), no token material, nothing that could itself be used to
+  // reach a share link.
+  const sharesSnapshot = await firestore
+    .collection(EXTERNAL_SHARES_COLLECTION)
+    .where('caseId', '==', caseId)
+    .orderBy('createdAt', 'desc')
+    .get()
+  const externalShares = sharesSnapshot.docs.map((doc) => {
+    const data = doc.data()
+    return {
+      recipientName: data.recipientName ?? null,
+      recipientOrganisation: data.recipientOrganisation ?? null,
+      purpose: data.purpose ?? null,
+      scope: data.scope ?? null,
+      status: data.status ?? null,
+      createdAt: toMillis(data.createdAt),
+      expiresAt: toMillis(data.expiresAt),
+      accessCount: data.accessCount ?? 0,
+      lastAccessedAt: toMillis(data.lastAccessedAt),
+      acceptedName: data.acceptedName ?? null,
+      acceptedAt: toMillis(data.acceptedAt),
+      revokedAt: toMillis(data.revokedAt),
+      revokedReason: data.revokedReason ?? null,
+    }
+  })
 
   const evidence = timeline.flatMap((message) =>
     (message.attachments || []).map((attachment) => ({
@@ -117,6 +148,7 @@ async function compileReport(firestore, caseId, uid) {
     evidence,
     manualLogEntries,
     policyInEffect,
+    externalShares,
     consistencyCheck: caseData.consistencyCheck
       ? {
           status: caseData.consistencyCheck.status ?? null,

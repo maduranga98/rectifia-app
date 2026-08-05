@@ -99,6 +99,13 @@ const limits = {
   // pending is rejected on that state, not on this limit - so this exists
   // purely to bound retries after a network error, not repeated use.
   requestCaseDeletion: limit('requestCaseDeletion', 'RATE_LIMIT_REQUEST_CASE_DELETION', 5),
+  // Module 27's external share view (functions/src/sharing/accessShare.js).
+  // The token is 32 random bytes - not brute-forceable in any practical
+  // sense - so this is defence in depth rather than the primary control, the
+  // same posture validateCaseAccess has toward a guessable Case ID. Loose
+  // enough to cover a normal viewing session (initial load, an accidental
+  // refresh) without tripping on legitimate use.
+  getSharedCase: limit('getSharedCase', 'RATE_LIMIT_GET_SHARED_CASE', 20),
 }
 
 // Resolves a configured limit to a usable number. Anything that is not a
