@@ -3,7 +3,12 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
 const { enforceRateLimit } = require('../utils/rateLimit')
-const { queuePulseInvitesForCompany, CADENCE_DAYS } = require('./schedulePulseChecks')
+const {
+  queuePulseInvitesForCompany,
+  notifyMissingQuestionSet,
+  NoPublishedQuestionSetError,
+  CADENCE_DAYS,
+} = require('./schedulePulseChecks')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -76,7 +81,24 @@ exports.sendPulseChecksNow = onCall(async (request) => {
     scope: `company:${companyId}`,
   })
 
-  const { queued } = await queuePulseInvitesForCompany(firestore, companySnap, cadenceDays)
+  // A company with no published questionnaire does not send. The admin pressing
+  // the button is told directly rather than watching it report success and
+  // wondering later why nobody answered - and the same notification the
+  // scheduler writes is recorded, so the gap is visible afterwards too.
+  let queued
+  try {
+    ;({ queued } = await queuePulseInvitesForCompany(firestore, companySnap, cadenceDays))
+  } catch (err) {
+    if (err instanceof NoPublishedQuestionSetError) {
+      await notifyMissingQuestionSet(firestore, companyId)
+      throw new HttpsError(
+        'failed-precondition',
+        'Publish your pulse-check questionnaire before sending a check-in. Nothing was sent.'
+      )
+    }
+    throw err
+  }
+
   logger.info('sendPulseChecksNow: queued invites', { companyId, queued, actorUid: uid })
 
   return { queued }

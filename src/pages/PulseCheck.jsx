@@ -81,6 +81,10 @@ function PulseCheck() {
   //         | 'rate_limited' | 'error'
   const [status, setStatus] = useState('loading')
   const [invite, setInvite] = useState(null)
+  // The questionnaire this invite was minted with, resolved server-side and
+  // returned by the same validate call - one round trip, not two, and it is the
+  // set this specific link was sent with rather than whatever is published now.
+  const [questionSet, setQuestionSet] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -95,6 +99,7 @@ function PulseCheck() {
         if (cancelled) return
         if (result.valid) {
           setInvite(result.invite)
+          setQuestionSet(result.questionSet ?? null)
           setStatus('valid')
         } else {
           // Coarse reason from the server; anything unrecognised is treated as
@@ -148,7 +153,12 @@ function PulseCheck() {
           : 'A short, confidential check-in from your organization.'
       }
     >
-      <PulseSurveyForm inviteId={inviteId} token={token} companyName={invite?.companyName} />
+      <PulseSurveyForm
+        inviteId={inviteId}
+        token={token}
+        companyName={invite?.companyName}
+        questionSet={questionSet}
+      />
     </ReporterLayout>
   )
 }

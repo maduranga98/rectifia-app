@@ -9,6 +9,7 @@ import DepartmentsPage from './company-admin/DepartmentsPage'
 import PoliciesPage from './company-admin/PoliciesPage'
 import StaffPage from './company-admin/StaffPage'
 import EmployeesPage from './company-admin/EmployeesPage'
+import PulseQuestionsPage from './company-admin/PulseQuestionsPage'
 import RoutingRulesPage from './company-admin/RoutingRulesPage'
 import BillingPage from './company-admin/BillingPage'
 import SettingsPage from './company-admin/SettingsPage'
@@ -44,6 +45,9 @@ const NAV_ITEMS = [
   { to: '/admin/employees', label: 'Employees', icon: 'pulse' },
   { to: '/admin/routing', label: 'Routing rules', icon: 'routing' },
   { to: '/admin/billing', label: 'Billing', icon: 'billing' },
+  // Sits next to Settings deliberately: pulseCheckCadence (how often check-ins
+  // go out) lives there, and this is what those check-ins ask.
+  { to: '/admin/pulse-questions', label: 'Pulse questions', icon: 'pulse' },
   { to: '/admin/settings', label: 'Settings', icon: 'settings' },
 ]
 
@@ -54,6 +58,7 @@ const PAGE_TITLES = {
   policies: 'Policies',
   staff: 'Staff',
   employees: 'Employees',
+  'pulse-questions': 'Pulse check questions',
   routing: 'Routing rules',
   billing: 'Subscription & billing',
   settings: 'Company settings',
@@ -90,6 +95,10 @@ function Admin() {
           <Route path="policies" element={<PoliciesPage companyId={companyId} />} />
           <Route path="staff" element={<StaffPage companyId={companyId} />} />
           <Route path="employees" element={<EmployeesPage companyId={companyId} />} />
+          <Route
+            path="pulse-questions"
+            element={<PulseQuestionsPage companyId={companyId} />}
+          />
           <Route path="routing" element={<RoutingRulesPage companyId={companyId} />} />
           <Route path="billing" element={<BillingPage companyId={companyId} />} />
           <Route path="settings" element={<SettingsPage companyId={companyId} />} />

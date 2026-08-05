@@ -266,6 +266,30 @@ service cloud.firestore {
       allow write: if isCompanyAdmin(companyId);
     }
 
+    // Published pulse-check questionnaires (module 21), one immutable document
+    // per version. A version records the exact question list - core plus the
+    // company's supplementary questions - that was live when it was published,
+    // and every pulse response stores the version it answered.
+    //
+    // Read is open to any staff of the company: this is the questions, not the
+    // answers, and the HR-side reader, the admin editor, the preview and the
+    // trend markers all need it. Nothing here is identifying.
+    //
+    // Write is Admin SDK only - not "Company Admin only", not even
+    // "create-only". Publishing goes exclusively through publishQuestionSet in
+    // functions/src/pulse/questionSet.js, which allocates the next version
+    // number under a transaction and create()s the document. If a published
+    // version were client-writable, an admin could rewrite the wording of a
+    // version months of stored responses point at, and every one of those
+    // responses would silently start resolving to a question that was never
+    // asked - which is the exact failure the versioning exists to prevent.
+    // Removing a supplementary question changes the NEXT version, never a past
+    // one, so there is no legitimate client write path here at all.
+    match /companies/{companyId}/questionSets/{version} {
+      allow read: if isCompanyStaff(companyId);
+      allow write: if false;
+    }
+
     // Case-count rollup for the Company Admin overview page (module 15),
     // maintained by functions/src/company/syncCompanyStats.js from
     // caseMetadata - counts and breakdowns only (byStatus/byPriority/
