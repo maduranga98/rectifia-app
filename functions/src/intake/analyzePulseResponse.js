@@ -6,6 +6,7 @@ const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
 const { notifyCrisisContact } = require('./routeCase')
 const { PULSE_INVITES_COLLECTION, verifyInviteToken } = require('./pulseInvites')
+const { MIN_RESPONSES_FOR_AGGREGATE, summaryDocId } = require('./pulseThresholds')
 const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
 
 if (!admin.apps.length) {
@@ -14,18 +15,8 @@ if (!admin.apps.length) {
 
 const PULSE_RESPONSES_COLLECTION = 'pulseResponses'
 const PULSE_SUMMARIES_COLLECTION = 'pulseSummaries'
+const PULSE_SUMMARY_TOTALS_COLLECTION = 'pulseSummaryTotals'
 const HISTORY_LOOKBACK = 4
-
-// A department/period aggregate is withheld from the Manager and Company Admin
-// roles until at least this many people have responded. This is a PRIVACY
-// FLOOR, not a display preference: below it an "average" is really an
-// individual's sentiment wearing an aggregate's clothes - "avg. across 1
-// response" is that person's score, attributed - which is exactly what the
-// Pulse Check trust contract promises cannot reach a manager. It is deliberately
-// hard-coded and never made configurable per company (a customer lowering it to
-// 1 would defeat the guarantee the module is sold on), and it never applies to
-// HR Coordinator / Pulse Check Reviewer, who read every aggregate unconditionally.
-const MIN_AGGREGATE_RESPONSES = 5
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY')
 const MODEL = 'claude-opus-5'
@@ -194,27 +185,51 @@ async function analyzeWithClaude(answers, history) {
 // no client-side filtering step to get wrong.
 async function updatePulseSummary(firestore, { companyId, department, sentimentScore }) {
   const period = currentPeriod()
-  const summaryId = `${companyId}__${department || 'unspecified'}__${period}`
-  const ref = firestore.collection(PULSE_SUMMARIES_COLLECTION).doc(summaryId)
+  const summaryId = summaryDocId(companyId, department, period)
+  const totalsRef = firestore.collection(PULSE_SUMMARY_TOTALS_COLLECTION).doc(summaryId)
+  const summaryRef = firestore.collection(PULSE_SUMMARIES_COLLECTION).doc(summaryId)
 
   await firestore.runTransaction(async (tx) => {
-    const snapshot = await tx.get(ref)
+    // The raw accumulator lives ONLY in pulseSummaryTotals (Admin SDK only per
+    // firestore.rules). sentimentScoreSum never leaves this collection, so it
+    // can never be divided-out client-side to reconstruct an individual score
+    // from a below-floor department.
+    const snapshot = await tx.get(totalsRef)
     const existing = snapshot.exists ? snapshot.data() : { responseCount: 0, sentimentScoreSum: 0 }
     const responseCount = (existing.responseCount || 0) + 1
+    const sentimentScoreSum = (existing.sentimentScoreSum || 0) + sentimentScore
+    const suppressed = responseCount < MIN_RESPONSES_FOR_AGGREGATE
+
     tx.set(
-      ref,
+      totalsRef,
       {
         companyId,
         department: department || 'unspecified',
         period,
         responseCount,
-        sentimentScoreSum: (existing.sentimentScoreSum || 0) + sentimentScore,
-        // Recomputed on every increment - not just at creation - so a
-        // department that crosses MIN_AGGREGATE_RESPONSES flips to visible
-        // automatically on the response that takes it over the line, with no
-        // separate backfill. firestore.rules keys the Manager / Company Admin
-        // read on this exact field.
-        suppressed: responseCount < MIN_AGGREGATE_RESPONSES,
+        sentimentScoreSum,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    )
+
+    // The Manager-readable projection. It deliberately carries NO
+    // sentimentScoreSum - only the finished averageSentiment, and only once the
+    // department has crossed MIN_RESPONSES_FOR_AGGREGATE. Below the floor
+    // averageSentiment is written as null and suppressed as true, so the number
+    // that could re-identify one person's answer is never written into a
+    // Manager-readable document in the first place - not filtered out later.
+    // suppressed flips to false automatically on the response that crosses the
+    // line; firestore.rules keys the Manager / Company Admin read on it.
+    tx.set(
+      summaryRef,
+      {
+        companyId,
+        department: department || 'unspecified',
+        period,
+        responseCount,
+        suppressed,
+        averageSentiment: suppressed ? null : Math.round(sentimentScoreSum / responseCount),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }

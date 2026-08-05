@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { getCompanyStats } from '../../services/companyStatsService'
 import { assignCompanySlug, getCompany } from '../../services/companyService'
@@ -315,6 +316,22 @@ function OverviewPage({ companyId }) {
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
+
+      {/* Persistent while crisisContact is unset: a crisis-flagged report
+          bypasses normal routing and notifies this contact directly, so with
+          none configured the highest-severity path silently reaches no one.
+          Only shown once the company doc has loaded, so it never flashes during
+          the initial fetch. */}
+      {!firstLoad && company && !company.crisisContact && (
+        <Alert variant="warning" title="No crisis contact configured">
+          Reports flagged with crisis language currently have no recipient — the notification is
+          generated but reaches no one. Set a named crisis contact on the{' '}
+          <Link to="/admin/settings" className="font-medium underline">
+            Settings
+          </Link>{' '}
+          page.
+        </Alert>
+      )}
 
       <section className="flex flex-col gap-3">
         <SectionHeading hint="Share these QR codes or links so employees can file confidential reports - and find their way back to one they already filed.">

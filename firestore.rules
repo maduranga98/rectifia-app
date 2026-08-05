@@ -49,9 +49,16 @@ service cloud.firestore {
     // others it is company structure/config, not case content, so a Company
     // Admin may write it directly - but only through this allowlist, so a write
     // touching any other field still fails outright.
+    // crisisContact is the { name, email, phone } record
+    // functions/src/intake/routeCase.js notifies when a report is crisis-
+    // flagged (Settings page). It is a contact record, not a staff account or
+    // claim - deliberately not bound to a uid, since the recipient may be an
+    // external EAP provider or counsellor with no login - so writing it grants
+    // no case-content access and stays inside this same field allowlist rather
+    // than widening the company doc to a blanket admin-writable document.
     function companyAdminEditableFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig']);
+        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact']);
     }
     function claimsMissingSlug() {
       return (!('slug' in resource.data) || resource.data.slug == null)
@@ -410,6 +417,17 @@ service cloud.firestore {
         || ((isManager(resource.data.companyId) || isCompanyAdmin(resource.data.companyId))
             && resource.data.suppressed == false);
       allow write: if false;
+    }
+    // The raw accumulator behind each pulseSummaries projection - responseCount
+    // and sentimentScoreSum only, written under the same doc id in the same
+    // transaction by analyzePulseResponse.js. sentimentScoreSum is exactly the
+    // field that, divided by responseCount, would reconstruct one person's
+    // score for a below-floor department, so it lives here where NO client role
+    // has a rules path at all - the same fully-sealed posture as
+    // identityAccessAuditLog below. The Manager-readable pulseSummaries doc
+    // never contains it.
+    match /pulseSummaryTotals/{summaryId} {
+      allow read, write: if false;
     }
 
     // Audit trail for functions/src/utils/identityVault.js's decryptIdentity

@@ -6,6 +6,14 @@ import Card from '../ui/Card'
 import EmptyState from '../ui/EmptyState'
 import Icon from '../ui/Icon'
 
+// Mirrors functions/src/intake/pulseThresholds.js. It is duplicated rather
+// than imported because that module is Admin-SDK server code in a separate
+// package - this constant is only ever used to word the "hidden until N
+// responses" label, never to decide suppression (the server already wrote
+// suppressed/averageSentiment before this UI runs), so a drift here can change
+// the copy but can never weaken the privacy floor.
+const MIN_RESPONSES_FOR_AGGREGATE = 5
+
 const TREND_TONE = {
   improving: 'tone-low',
   stable: 'tone-neutral',
@@ -48,20 +56,17 @@ function ManagerAggregateView({ companyId }) {
 
   if (error) return <Alert variant="error">{error}</Alert>
 
-  // A suppressed department is filtered out server-side (the query can only
-  // return departments over the privacy floor), so an empty result covers two
-  // cases that must not read as a bug: no responses yet, OR responses exist but
-  // no department has reached the minimum needed to show an average without
-  // exposing an individual. The copy names the floor rather than implying
-  // there is simply no data - and deliberately shows no counts, since even a
-  // count would reveal how few people have responded.
+  // An empty result now means exactly one thing - no department has any
+  // responses yet - because suppressed departments are no longer filtered out
+  // server-side; they come back and render as cards below. So this copy no
+  // longer has to hedge between "no data" and "data hidden by the floor".
   if (summaries.length === 0) {
     return (
       <Card padded={false}>
         <EmptyState
           icon="pulse"
-          title="Not enough responses yet to show a summary"
-          description="Department averages appear once enough people in a department have responded. Until then, no summary is shown, so an average can never stand in for a single person's answer."
+          title="No responses yet"
+          description="Department averages appear here once people start responding. An average is only ever shown once enough people in a department have responded that it can't stand in for a single person's answer."
         />
       </Card>
     )
@@ -70,7 +75,13 @@ function ManagerAggregateView({ companyId }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {summaries.map((s) => {
-        const tone = SENTIMENT_TONE(s.averageSentiment)
+        // A suppressed department is not dropped - low participation is itself
+        // something a manager should see. It renders as a card showing the
+        // response count and an explicit "hidden until N responses" state in
+        // place of a number, never the number itself (which was never written
+        // into this doc). averageSentiment is null for a suppressed department,
+        // so there is nothing here to divide-out or leak.
+        const tone = s.suppressed ? 'tone-neutral' : SENTIMENT_TONE(s.averageSentiment)
         return (
           <Card key={s.id} className="relative overflow-hidden p-5 pl-6">
             <span
@@ -79,12 +90,23 @@ function ManagerAggregateView({ companyId }) {
             />
             <p className="truncate font-medium text-charcoal">{s.department}</p>
             <p className="text-xs text-muted">{s.period}</p>
-            <p className="mt-3 text-3xl font-semibold tabular-nums text-charcoal">
-              {s.averageSentiment ?? '-'}
-            </p>
-            <p className="text-xs text-muted">
-              avg. sentiment across {s.responseCount} response{s.responseCount === 1 ? '' : 's'}
-            </p>
+            {s.suppressed ? (
+              <>
+                <p className="mt-3 text-sm font-medium text-muted">Sentiment hidden</p>
+                <p className="text-xs text-muted">
+                  until {MIN_RESPONSES_FOR_AGGREGATE} responses &middot; {s.responseCount} so far
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-3xl font-semibold tabular-nums text-charcoal">
+                  {s.averageSentiment ?? '-'}
+                </p>
+                <p className="text-xs text-muted">
+                  avg. sentiment across {s.responseCount} response{s.responseCount === 1 ? '' : 's'}
+                </p>
+              </>
+            )}
           </Card>
         )
       })}

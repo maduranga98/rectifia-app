@@ -7,6 +7,13 @@ const CASES_COLLECTION = 'cases'
 const proposeActionCallable = httpsCallable(functions, 'proposeAction')
 const closeCaseCallable = httpsCallable(functions, 'closeCase')
 const reviewConsistencyFlagCallable = httpsCallable(functions, 'reviewConsistencyFlag')
+const revealIdentityCallable = httpsCallable(functions, 'revealIdentity')
+
+// Mirrors MIN_REASON_LENGTH in functions/src/utils/identityVault.js. Duplicated
+// rather than imported (that is server-only Cloud Functions code) purely to
+// gate the reveal button and message the requirement; the server enforces the
+// real check, so a drift here can change the copy but never weaken the control.
+export const MIN_REASON_LENGTH = 10
 
 export const ACTION_CATEGORIES = [
   'no_action',
@@ -81,5 +88,18 @@ export async function closeCase(caseId) {
 export async function reviewConsistencyFlag(caseId, note) {
   requireHandlerUid()
   const result = await reviewConsistencyFlagCallable({ caseId, note })
+  return result.data
+}
+
+// Reveals a confidential reporter's identity on a case the caller is entitled
+// to (the assigned handler, or a Super Admin - resolved and enforced entirely
+// server-side by functions/src/investigation/revealIdentity.js). The reason is
+// required and logged; there is no way to decrypt without one. The plaintext
+// comes back only in this response - it is never written to the case or any
+// log - so the caller holds it in memory for the session and re-requests it
+// (with a fresh reason) if it needs it again. Returns { field, identity }.
+export async function revealReporterIdentity(caseId, reason) {
+  requireHandlerUid()
+  const result = await revealIdentityCallable({ caseId, field: 'reporterIdentity', reason })
   return result.data
 }

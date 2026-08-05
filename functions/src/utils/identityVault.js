@@ -88,25 +88,46 @@ async function writeAuditEntry(firestore, entry) {
 
 // Split-key access, by design: the AES key above lives only in Secret
 // Manager and decrypts the bytes, but the bytes are never handed back on
-// key possession alone. Every call must also carry `auth` - a Firebase
-// Auth token verified against Firebase Auth's own signing keys, a trust
-// root this module never touches and can't leak alongside the AES secret -
-// proving the caller currently holds the `superAdmin` custom claim, plus a
-// non-empty, logged `reason`. A compromised IDENTITY_VAULT_ENCRYPTION_KEY
-// secret by itself therefore decrypts nothing: the caller still needs a
-// live Super Admin session to get past the checks below. There is no
-// "admin can decrypt anything" path - callers that don't pass `auth`,
-// `reason`, and `caseId` don't get a decrypt, they get a logged denial.
-async function decryptIdentity({ envelope, auth, reason, caseId, field, firestore }) {
+// key possession alone. A compromised IDENTITY_VAULT_ENCRYPTION_KEY secret
+// by itself therefore decrypts nothing.
+//
+// This module is deliberately policy-FREE about *who* may decrypt. It does
+// not know the role vocabulary and does not decide authorization - the call
+// site does that and hands in an already-resolved `authorizedAs` string
+// (e.g. 'assignedHandler', 'superAdmin') describing the grant it permitted.
+// The vault's job is narrower and unchanging: refuse without an authorization
+// result, a documented `reason` of at least MIN_REASON_LENGTH, and a
+// `caseId`; record who/when/case/reason/authorizedAs on every attempt,
+// granted or denied; and never return the value on anything less. That keeps
+// the one place policy could drift - "which roles count" - out in the
+// callables (see functions/src/investigation/revealIdentity.js), each of
+// which is explicit about who it let through and why.
+//
+// The earlier hardcoded `auth.token.role === 'superAdmin'` check lived here
+// and could never pass: Super Admin is superAdmins/{uid} allowlist
+// membership, not a custom claim (see src/constants/roles.js), so it gated
+// out everyone. Resolving authorization at the call site fixes that and lets
+// the assigned investigator reveal identity on their own case (Blueprint
+// §7.1) without this module having to learn either rule.
+async function decryptIdentity({
+  envelope,
+  authorizedAs,
+  actorUid,
+  actorEmail,
+  reason,
+  caseId,
+  field,
+  firestore,
+}) {
   const db = firestore || admin.firestore()
-  const actorUid = auth?.uid ?? null
-  const actorEmail = auth?.token?.email ?? null
-  const actorRole = auth?.token?.role ?? null
+  const uid = actorUid ?? null
+  const email = actorEmail ?? null
 
   const deny = async (code, message) => {
     await writeAuditEntry(db, {
-      actorUid,
-      actorEmail,
+      actorUid: uid,
+      actorEmail: email,
+      authorizedAs: authorizedAs ?? null,
       caseId: caseId ?? null,
       field: field ?? null,
       reason: reason ?? null,
@@ -116,11 +137,11 @@ async function decryptIdentity({ envelope, auth, reason, caseId, field, firestor
     throw new HttpsError(code, message)
   }
 
-  if (!auth || !actorUid) {
-    return deny('unauthenticated', 'Sign in as a Super Admin to decrypt identity data')
-  }
-  if (actorRole !== 'superAdmin') {
-    return deny('permission-denied', 'Only a Super Admin may decrypt identity data')
+  // Defensive: a caller that resolved no authorization must not reach a
+  // decrypt. Real callers throw before getting here, so this only catches a
+  // programming error - and logs it as the denial it is.
+  if (!authorizedAs) {
+    return deny('permission-denied', 'No authorization was established to decrypt identity data')
   }
   if (typeof reason !== 'string' || reason.trim().length < MIN_REASON_LENGTH) {
     return deny(
@@ -137,8 +158,9 @@ async function decryptIdentity({ envelope, auth, reason, caseId, field, firestor
     plaintext = decryptWithKey(envelope)
   } catch (err) {
     await writeAuditEntry(db, {
-      actorUid,
-      actorEmail,
+      actorUid: uid,
+      actorEmail: email,
+      authorizedAs,
       caseId,
       field: field ?? null,
       reason,
@@ -149,8 +171,9 @@ async function decryptIdentity({ envelope, auth, reason, caseId, field, firestor
   }
 
   await writeAuditEntry(db, {
-    actorUid,
-    actorEmail,
+    actorUid: uid,
+    actorEmail: email,
+    authorizedAs,
     caseId,
     field: field ?? null,
     reason,
@@ -164,4 +187,5 @@ module.exports = {
   encryptionKeySecret,
   encryptIdentity,
   decryptIdentity,
+  MIN_REASON_LENGTH,
 }
