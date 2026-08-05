@@ -212,6 +212,59 @@ export async function assignCompanySlug(companyId, name) {
   return slug
 }
 
+// A permissive email shape check - enough to catch a typo'd address, not a
+// full RFC validator (that belongs to the mail system, not a settings form).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// At least a few digits once separators/formatting are stripped; deliberately
+// loose so international formats aren't rejected.
+function isWellFormedPhone(phone) {
+  return (phone.match(/\d/g)?.length ?? 0) >= 6
+}
+
+// Writes companies/{companyId}.crisisContact, the exact field
+// functions/src/intake/routeCase.js reads in notifyCrisisContact(): a plain
+// contact record { name, email, phone }, NOT a staff uid or role. A
+// crisis-flagged report bypasses normal routing and notifies this person
+// directly, so it may be someone with no login at all - an EAP provider or an
+// external counsellor - which is exactly why it is stored as a contact record
+// here rather than bound to an account.
+//
+// Validation mirrors the form: a name is required, and at least one of email /
+// phone must be present and well-formed (a contact with no reachable channel
+// notifies nobody). Both are stored when given; the reader tolerates a null
+// email or phone, so an unused channel is persisted as null rather than an
+// empty string. Field-scoped writes are permitted for this company's own
+// Company Admin by firestore.rules (companyAdminEditableFields).
+export async function updateCompanyCrisisContact(companyId, crisisContact) {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  const name = String(crisisContact?.name ?? '').trim()
+  const email = String(crisisContact?.email ?? '').trim()
+  const phone = String(crisisContact?.phone ?? '').trim()
+
+  if (!name) {
+    throw new Error('A contact name is required')
+  }
+  if (!email && !phone) {
+    throw new Error('Enter at least an email or a phone number for the crisis contact')
+  }
+  if (email && !EMAIL_RE.test(email)) {
+    throw new Error('Enter a valid email address for the crisis contact')
+  }
+  if (phone && !isWellFormedPhone(phone)) {
+    throw new Error('Enter a valid phone number for the crisis contact')
+  }
+
+  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
+    crisisContact: {
+      name,
+      email: email || null,
+      phone: phone || null,
+    },
+  })
+}
+
 export async function updateCompanyJurisdictions(companyId, jurisdictions) {
   const invalidJurisdictions = jurisdictions.filter(
     (j) => !JURISDICTIONS.includes(j)

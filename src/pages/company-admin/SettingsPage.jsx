@@ -8,6 +8,7 @@ import {
   getCompany,
   getStrictestJurisdiction,
   sendPulseChecksNow,
+  updateCompanyCrisisContact,
   updateCompanyFollowUpConfig,
   updateCompanyJurisdictions,
   updateCompanyPulseCadence,
@@ -118,6 +119,14 @@ function SettingsPage({ companyId }) {
   const [disabledCategories, setDisabledCategories] = useState([])
   const [savingFollowUp, setSavingFollowUp] = useState(false)
 
+  // Crisis contact is staged locally and saved explicitly, same pattern as
+  // jurisdictions: the three fields the reader (routeCase.js) expects, edited
+  // freely and written as one { name, email, phone } record on save.
+  const [crisisName, setCrisisName] = useState('')
+  const [crisisEmail, setCrisisEmail] = useState('')
+  const [crisisPhone, setCrisisPhone] = useState('')
+  const [savingCrisisContact, setSavingCrisisContact] = useState(false)
+
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -138,6 +147,10 @@ function SettingsPage({ companyId }) {
       setDisabledCategories(
         Array.isArray(followUp?.disabledCategories) ? followUp.disabledCategories : []
       )
+      const crisisContact = companyData?.crisisContact
+      setCrisisName(crisisContact?.name ?? '')
+      setCrisisEmail(crisisContact?.email ?? '')
+      setCrisisPhone(crisisContact?.phone ?? '')
       const active = employees.filter((e) => e.status !== 'inactive')
       setRosterSize(active.length)
       setAwaitingContactCount(active.filter((e) => !e.email).length)
@@ -243,11 +256,40 @@ function SettingsPage({ companyId }) {
     }
   }
 
+  async function handleSaveCrisisContact() {
+    setSavingCrisisContact(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await updateCompanyCrisisContact(companyId, {
+        name: crisisName,
+        email: crisisEmail,
+        phone: crisisPhone,
+      })
+      await refresh()
+      setNotice('Crisis contact saved. Crisis-flagged reports will now notify this person directly.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingCrisisContact(false)
+    }
+  }
+
   const cadence = cadenceOf(company)
   const parsedIntervals = parseIntervals(intervalsText)
   const strictestJurisdiction = getStrictestJurisdiction(jurisdictions)
   const savedJurisdictions = company?.jurisdictions ?? []
   const jurisdictionsChanged = !sameSet(jurisdictions, savedJurisdictions)
+
+  const savedCrisisContact = company?.crisisContact ?? {}
+  const crisisContactChanged =
+    crisisName.trim() !== (savedCrisisContact.name ?? '') ||
+    crisisEmail.trim() !== (savedCrisisContact.email ?? '') ||
+    crisisPhone.trim() !== (savedCrisisContact.phone ?? '')
+  // Mirrors the service's validation so the save button reflects whether a save
+  // would succeed - name required, plus at least one contact channel filled in.
+  const crisisContactValid =
+    crisisName.trim().length > 0 && (crisisEmail.trim().length > 0 || crisisPhone.trim().length > 0)
 
   if (loading && !company) {
     return (
@@ -260,12 +302,83 @@ function SettingsPage({ companyId }) {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <p className="max-w-2xl text-sm text-muted">
-        Company-wide settings: how often Pulse Checks go out, and which jurisdictions drive
-        compliance deadlines.
+        Company-wide settings: who is notified when a report is flagged as a crisis, how often
+        Pulse Checks go out, and which jurisdictions drive compliance deadlines.
       </p>
 
       {error && <Alert variant="error">{error}</Alert>}
       {notice && <Alert variant="success">{notice}</Alert>}
+
+      <Card
+        title="Crisis contact"
+        description="The one person notified directly when a report is flagged with crisis language. These reports bypass normal case routing entirely and reach this person out of band, so it should be a named individual who can act immediately — not a shared inbox or a distribution list."
+        footer={
+          <div className="flex items-center gap-3">
+            <Button
+              variant="primary"
+              onClick={handleSaveCrisisContact}
+              loading={savingCrisisContact}
+              loadingLabel="Saving"
+              disabled={!crisisContactChanged || !crisisContactValid}
+            >
+              Save crisis contact
+            </Button>
+            {crisisContactChanged && <span className="text-xs text-muted">Unsaved changes</span>}
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {!company?.crisisContact && (
+            <Alert variant="warning" title="No crisis contact set">
+              Until this is set, reports flagged with crisis language have no one to notify. Add a
+              named contact below.
+            </Alert>
+          )}
+
+          <label className="flex flex-col gap-1.5 text-sm sm:max-w-md">
+            <span className="font-medium text-charcoal">Contact name</span>
+            <input
+              type="text"
+              value={crisisName}
+              onChange={(e) => setCrisisName(e.target.value)}
+              placeholder="e.g. Dr. Jordan Lee, EAP counsellor"
+              className="field"
+              autoComplete="off"
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-charcoal">Email</span>
+              <input
+                type="email"
+                value={crisisEmail}
+                onChange={(e) => setCrisisEmail(e.target.value)}
+                placeholder="name@example.com"
+                className="field"
+                autoComplete="off"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm">
+              <span className="font-medium text-charcoal">Phone</span>
+              <input
+                type="tel"
+                value={crisisPhone}
+                onChange={(e) => setCrisisPhone(e.target.value)}
+                placeholder="+1 555 123 4567"
+                className="field"
+                autoComplete="off"
+              />
+            </label>
+          </div>
+
+          <p className="text-xs text-muted">
+            A name is required, plus at least one way to reach them — an email, a phone number, or
+            both. This can be an external provider such as an Employee Assistance Programme; they do
+            not need a login on this platform.
+          </p>
+        </div>
+      </Card>
 
       <Card
         title="Pulse Check cadence"

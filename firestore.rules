@@ -49,9 +49,16 @@ service cloud.firestore {
     // others it is company structure/config, not case content, so a Company
     // Admin may write it directly - but only through this allowlist, so a write
     // touching any other field still fails outright.
+    // crisisContact is the { name, email, phone } record
+    // functions/src/intake/routeCase.js notifies when a report is crisis-
+    // flagged (Settings page). It is a contact record, not a staff account or
+    // claim - deliberately not bound to a uid, since the recipient may be an
+    // external EAP provider or counsellor with no login - so writing it grants
+    // no case-content access and stays inside this same field allowlist rather
+    // than widening the company doc to a blanket admin-writable document.
     function companyAdminEditableFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig']);
+        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact']);
     }
     function claimsMissingSlug() {
       return (!('slug' in resource.data) || resource.data.slug == null)
