@@ -16,6 +16,17 @@ const PULSE_RESPONSES_COLLECTION = 'pulseResponses'
 const PULSE_SUMMARIES_COLLECTION = 'pulseSummaries'
 const HISTORY_LOOKBACK = 4
 
+// A department/period aggregate is withheld from the Manager and Company Admin
+// roles until at least this many people have responded. This is a PRIVACY
+// FLOOR, not a display preference: below it an "average" is really an
+// individual's sentiment wearing an aggregate's clothes - "avg. across 1
+// response" is that person's score, attributed - which is exactly what the
+// Pulse Check trust contract promises cannot reach a manager. It is deliberately
+// hard-coded and never made configurable per company (a customer lowering it to
+// 1 would defeat the guarantee the module is sold on), and it never applies to
+// HR Coordinator / Pulse Check Reviewer, who read every aggregate unconditionally.
+const MIN_AGGREGATE_RESPONSES = 5
+
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY')
 const MODEL = 'claude-opus-5'
 
@@ -189,14 +200,21 @@ async function updatePulseSummary(firestore, { companyId, department, sentimentS
   await firestore.runTransaction(async (tx) => {
     const snapshot = await tx.get(ref)
     const existing = snapshot.exists ? snapshot.data() : { responseCount: 0, sentimentScoreSum: 0 }
+    const responseCount = (existing.responseCount || 0) + 1
     tx.set(
       ref,
       {
         companyId,
         department: department || 'unspecified',
         period,
-        responseCount: (existing.responseCount || 0) + 1,
+        responseCount,
         sentimentScoreSum: (existing.sentimentScoreSum || 0) + sentimentScore,
+        // Recomputed on every increment - not just at creation - so a
+        // department that crosses MIN_AGGREGATE_RESPONSES flips to visible
+        // automatically on the response that takes it over the line, with no
+        // separate backfill. firestore.rules keys the Manager / Company Admin
+        // read on this exact field.
+        suppressed: responseCount < MIN_AGGREGATE_RESPONSES,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true }

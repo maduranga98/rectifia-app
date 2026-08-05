@@ -436,11 +436,16 @@ function OverviewPage({ companyId }) {
         {firstLoad ? (
           <SkeletonList rows={2} />
         ) : pulseSummaries.length === 0 ? (
+          // Departments below the minimum-response privacy floor are withheld
+          // server-side, so an empty result means either no responses yet or
+          // none of them has reached the threshold. Either way the message
+          // names the floor instead of implying there is no data, and shows no
+          // counts - a count would itself reveal how few people responded.
           <Card padded={false}>
             <EmptyState
               icon="pulse"
-              title="No pulse check data yet"
-              description="Department sentiment averages appear here once employees start submitting pulse checks."
+              title="Not enough responses yet to show a summary"
+              description="Department sentiment averages appear once enough people in a department have responded. Below that minimum, no average is shown, so it can never stand in for one person's answer."
             />
           </Card>
         ) : (

@@ -48,13 +48,20 @@ function ManagerAggregateView({ companyId }) {
 
   if (error) return <Alert variant="error">{error}</Alert>
 
+  // A suppressed department is filtered out server-side (the query can only
+  // return departments over the privacy floor), so an empty result covers two
+  // cases that must not read as a bug: no responses yet, OR responses exist but
+  // no department has reached the minimum needed to show an average without
+  // exposing an individual. The copy names the floor rather than implying
+  // there is simply no data - and deliberately shows no counts, since even a
+  // count would reveal how few people have responded.
   if (summaries.length === 0) {
     return (
       <Card padded={false}>
         <EmptyState
           icon="pulse"
-          title="No pulse data yet"
-          description="Department averages appear here once your team starts submitting pulse checks."
+          title="Not enough responses yet to show a summary"
+          description="Department averages appear once enough people in a department have responded. Until then, no summary is shown, so an average can never stand in for a single person's answer."
         />
       </Card>
     )

@@ -7,6 +7,7 @@ import {
   PULSE_CADENCES,
   getCompany,
   getStrictestJurisdiction,
+  sendPulseChecksNow,
   updateCompanyFollowUpConfig,
   updateCompanyJurisdictions,
   updateCompanyPulseCadence,
@@ -67,7 +68,7 @@ function cadenceOf(company) {
 
 function formatDateTime(value) {
   const ms = value?.toMillis?.() ?? (typeof value === 'number' ? value : null)
-  if (!ms) return 'Never'
+  if (!ms) return 'Never sent'
   return new Date(ms).toLocaleString(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -88,10 +89,20 @@ function SettingsPage({ companyId }) {
   // Active roster count only (schedulePulseChecks.js skips inactive employees),
   // so the number shown is who a send would actually reach.
   const [rosterSize, setRosterSize] = useState(0)
+  // Of those, how many have no email on file - the ones whose invite parks in
+  // awaiting_contact_info until an address is added on the Employees page. This
+  // is derived from the roster the client can already read; the notification
+  // docs that actually carry that status are Cloud-Functions-only.
+  const [awaitingContactCount, setAwaitingContactCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
   const [savingCadence, setSavingCadence] = useState(false)
+  // "Send check-in now" - a confirmation gate and an in-flight flag. The send
+  // is company-wide and supersedes outstanding links, so it never fires on a
+  // single click.
+  const [confirmSend, setConfirmSend] = useState(false)
+  const [sending, setSending] = useState(false)
 
   // Jurisdiction edits are staged locally and saved explicitly, so an admin
   // toggling several jurisdictions triggers one write - and one deadline
@@ -127,7 +138,9 @@ function SettingsPage({ companyId }) {
       setDisabledCategories(
         Array.isArray(followUp?.disabledCategories) ? followUp.disabledCategories : []
       )
-      setRosterSize(employees.filter((e) => e.status !== 'inactive').length)
+      const active = employees.filter((e) => e.status !== 'inactive')
+      setRosterSize(active.length)
+      setAwaitingContactCount(active.filter((e) => !e.email).length)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -156,6 +169,27 @@ function SettingsPage({ companyId }) {
       setError(err.message)
     } finally {
       setSavingCadence(false)
+    }
+  }
+
+  async function handleSendNow() {
+    setSending(true)
+    setError(null)
+    setNotice(null)
+    try {
+      const { queued } = await sendPulseChecksNow()
+      setConfirmSend(false)
+      await refresh()
+      setNotice(
+        queued === 0
+          ? 'No invites were queued — there is no one active on the roster.'
+          : `Queued a pulse check for ${queued} employee${queued === 1 ? '' : 's'}. Delivery goes out shortly.`
+      )
+    } catch (err) {
+      setConfirmSend(false)
+      setError(err.message)
+    } finally {
+      setSending(false)
     }
   }
 
@@ -253,7 +287,7 @@ function SettingsPage({ companyId }) {
             </Select>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <StatTile
               label="Active roster"
               value={rosterSize}
@@ -262,12 +296,30 @@ function SettingsPage({ companyId }) {
               hint="People a send would reach"
             />
             <StatTile
+              label="Awaiting contact info"
+              value={awaitingContactCount}
+              icon="mail"
+              tone={awaitingContactCount > 0 ? 'tone-medium' : 'tone-neutral'}
+              hint="On the roster but with no email"
+            />
+            <StatTile
               label="Last sent"
               value={formatDateTime(company?.lastPulseCheckSentAt)}
               icon="clock"
               tone="tone-neutral"
             />
           </div>
+
+          {awaitingContactCount > 0 && (
+            <p className="text-xs text-muted">
+              {awaitingContactCount} roster member{awaitingContactCount === 1 ? ' has' : 's have'} no
+              email on file, so their invite waits until an address is added. Add one on the{' '}
+              <Link to="/admin/employees" className="font-medium underline">
+                Employees
+              </Link>{' '}
+              page.
+            </p>
+          )}
 
           {rosterSize === 0 && cadence !== 'off' && (
             <Alert variant="warning" title="No one on the roster">
@@ -278,8 +330,68 @@ function SettingsPage({ companyId }) {
               page.
             </Alert>
           )}
+
+          <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
+            <Button
+              variant="secondary"
+              icon="pulse"
+              onClick={() => setConfirmSend(true)}
+              disabled={savingCadence || sending || rosterSize === 0 || cadence === 'off'}
+            >
+              Send check-in now
+            </Button>
+            <span className="text-xs text-muted">
+              {cadence === 'off'
+                ? 'Set a cadence above before sending a check-in on demand.'
+                : rosterSize === 0
+                  ? 'Add employees before sending a check-in.'
+                  : 'Queues a check-in for everyone active right now, outside the schedule.'}
+            </span>
+          </div>
         </div>
       </Card>
+
+      {confirmSend && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="send-now-title"
+        >
+          <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
+            <h2 id="send-now-title" className="text-lg font-semibold text-charcoal">
+              Send a pulse check now?
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              This queues a check-in for{' '}
+              <strong className="text-charcoal">
+                {rosterSize} active employee{rosterSize === 1 ? '' : 's'}
+              </strong>{' '}
+              right away, regardless of the cadence schedule. Any outstanding pulse-check links are
+              superseded — an employee still holding an older link will be sent a fresh one instead.
+            </p>
+            {awaitingContactCount > 0 && (
+              <p className="mt-2 text-xs text-muted">
+                {awaitingContactCount} of them ha{awaitingContactCount === 1 ? 's' : 've'} no email on
+                file and will wait for an address before delivery.
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setConfirmSend(false)} disabled={sending}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleSendNow}
+                loading={sending}
+                loadingLabel="Sending"
+              >
+                Send now
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card
         title="Jurisdictions"

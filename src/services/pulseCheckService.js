@@ -65,12 +65,25 @@ export async function listPulseResponses(companyId) {
 }
 
 // Department/period aggregates only - no individual attribution. This is
-// the only pulse-check read available to the Manager role; it is a
-// genuinely different collection, populated by a Cloud Function aggregation
-// step, not a filtered view of listPulseResponses.
+// the only pulse-check read available to the Manager and Company Admin roles;
+// it is a genuinely different collection, populated by a Cloud Function
+// aggregation step, not a filtered view of listPulseResponses.
+//
+// The where('suppressed','==',false) is not a cosmetic filter: firestore.rules
+// grants these two roles read access to a summary ONLY when suppressed is
+// false, and a Firestore security rule that tests resource.data requires the
+// query to constrain that field or the entire query is rejected (not silently
+// filtered). So this clause is what makes the read succeed at all, and the
+// server-side rule - not this line - is what actually withholds a department
+// that is still below the minimum-response privacy floor. HR Coordinator /
+// Pulse Check Reviewer never call this; they read individual responses instead.
 export async function listPulseSummaries(companyId) {
   const snapshot = await getDocs(
-    query(collection(firestore, PULSE_SUMMARIES_COLLECTION), where('companyId', '==', companyId))
+    query(
+      collection(firestore, PULSE_SUMMARIES_COLLECTION),
+      where('companyId', '==', companyId),
+      where('suppressed', '==', false)
+    )
   )
   return snapshot.docs.map((d) => {
     const data = d.data()

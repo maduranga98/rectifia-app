@@ -21,15 +21,22 @@ const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a
 
 // Statuses this worker owns. 'pending' is a fresh queued send; 'failed' is a
 // previous attempt we may retry; 'sending' is a claim in flight (reclaimed
-// only if stale, i.e. a crash between claim and result). 'sent',
-// 'awaiting_contact_info', 'resolved', and any already-exhausted 'failed' doc
-// are deliberately left untouched:
-//   - 'awaiting_contact_info' is set by schedulePulseChecks.js for employees
-//     with no email on file. They are parked on purpose, NOT failed, so this
-//     worker must never claim, send, or fail them.
+// only if stale, i.e. a crash between claim and result). 'sent', 'resolved',
+// and any already-exhausted 'failed' doc are deliberately left untouched:
 //   - a 'failed' doc that has used up its attempts is left for manual
 //     inspection rather than retried forever.
+//
+// 'awaiting_contact_info' is set by schedulePulseChecks.js for employees with
+// no email on file. It is now also claimed here - but on a different track: a
+// claimed awaiting_contact_info doc re-reads the employee roster doc, and only
+// becomes a normal send if an email has since been filled in. If none has, it
+// is returned to 'awaiting_contact_info' WITHOUT spending an attempt, so an
+// employee the company simply hasn't given an address for is never exhausted
+// by the retry cap for a reason outside their control.
 const MAX_ATTEMPTS = 3
+
+const AWAITING_CONTACT_STATUS = 'awaiting_contact_info'
+const EMPLOYEES_SUBCOLLECTION = 'employees'
 
 // A claim older than this in 'sending' is assumed abandoned (the run that
 // claimed it crashed before writing a terminal status) and may be reclaimed,
@@ -242,6 +249,12 @@ async function claimNotification(firestore, ref) {
       const claimedAtMs = data.claimedAt && data.claimedAt.toMillis ? data.claimedAt.toMillis() : 0
       const stale = Date.now() - claimedAtMs >= STALE_SENDING_MS
       claimable = stale && attemptsUsed(data) < MAX_ATTEMPTS
+    } else if (data.status === AWAITING_CONTACT_STATUS) {
+      // Always claimable, with no attemptCount gate: the whole point of the
+      // awaiting-contact track is that it must never be exhausted by the retry
+      // cap. Whether it turns into a send or is re-parked is decided after the
+      // claim, once the employee roster doc has been re-read.
+      claimable = true
     }
 
     if (!claimable) return null
@@ -255,14 +268,17 @@ async function claimNotification(firestore, ref) {
 }
 
 // Gathers the candidate notifications for this run: freshly queued ('pending'),
-// retryable ('failed' under the attempt cap), and stale in-flight claims
-// ('sending' past the staleness threshold). 'awaiting_contact_info' is never
-// queried, so parked pulse invites are never touched.
+// retryable ('failed' under the attempt cap), stale in-flight claims ('sending'
+// past the staleness threshold), and parked pulse invites
+// ('awaiting_contact_info', with no attempt gate). The last are picked up on
+// every run so an address filled in on the roster is noticed promptly, and are
+// re-parked without cost if it still isn't there.
 async function loadCandidates(firestore) {
-  const [pendingSnap, failedSnap, sendingSnap] = await Promise.all([
+  const [pendingSnap, failedSnap, sendingSnap, awaitingSnap] = await Promise.all([
     firestore.collection(NOTIFICATIONS_COLLECTION).where('status', '==', 'pending').get(),
     firestore.collection(NOTIFICATIONS_COLLECTION).where('status', '==', 'failed').get(),
     firestore.collection(NOTIFICATIONS_COLLECTION).where('status', '==', 'sending').get(),
+    firestore.collection(NOTIFICATIONS_COLLECTION).where('status', '==', AWAITING_CONTACT_STATUS).get(),
   ])
 
   const refs = new Map()
@@ -276,7 +292,27 @@ async function loadCandidates(firestore) {
     const stale = Date.now() - claimedAtMs >= STALE_SENDING_MS
     if (stale && attemptsUsed(data) < MAX_ATTEMPTS) refs.set(d.id, d.ref)
   })
+  awaitingSnap.docs.forEach((d) => refs.set(d.id, d.ref))
   return [...refs.values()]
+}
+
+// Re-reads the roster employee doc a parked pulse invite is waiting on and, if
+// an email has since been filled in, persists it to the notification's
+// recipientEmail so the normal delivery path can pick up from there. Returns
+// the resolved email, or null if the roster still has none. Called only for
+// notifications claimed out of 'awaiting_contact_info'.
+async function resolveAwaitingContactEmail(firestore, ref, claimed) {
+  if (!claimed.companyId || !claimed.employeeId) return null
+  const employeeSnap = await firestore
+    .collection(COMPANIES_COLLECTION)
+    .doc(claimed.companyId)
+    .collection(EMPLOYEES_SUBCOLLECTION)
+    .doc(claimed.employeeId)
+    .get()
+  const email = employeeSnap.exists ? employeeSnap.data().email || null : null
+  if (!email) return null
+  await ref.update({ recipientEmail: email })
+  return email
 }
 
 // Runs every 15 minutes. Claims each queued notification atomically, delivers
@@ -300,6 +336,26 @@ exports.deliverNotifications = onSchedule(
         // Another overlapping run already took it, or it is no longer
         // claimable - nothing to do.
         continue
+      }
+
+      // A doc claimed out of 'awaiting_contact_info' takes a detour: it only
+      // becomes a real send if the roster now has an address for the employee.
+      // If it still doesn't, park it again without spending an attempt, so the
+      // retry cap can never exhaust an invite over a missing address the
+      // employee has no way to supply.
+      if (claimed.status === AWAITING_CONTACT_STATUS) {
+        const email = await resolveAwaitingContactEmail(firestore, ref, claimed)
+        if (!email) {
+          skipped += 1
+          await ref.update({
+            status: AWAITING_CONTACT_STATUS,
+            claimedAt: admin.firestore.FieldValue.delete(),
+          })
+          continue
+        }
+        // Reflect the resolved address on the in-memory copy so the normal
+        // delivery flow below builds the email for the right recipient.
+        claimed.recipientEmail = email
       }
 
       const priorAttempts = attemptsUsed(claimed)
