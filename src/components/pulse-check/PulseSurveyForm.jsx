@@ -3,6 +3,8 @@ import { submitPulseResponse } from '../../services/pulseCheckService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
+import CrisisResources from '../shared/CrisisResources'
+import { textIndicatesCrisis } from '../shared/crisisTextCheck'
 import EmptyState from '../ui/EmptyState'
 import { Textarea } from '../ui/Field'
 
@@ -88,8 +90,21 @@ function PulseSurveyForm({ inviteId, token, companyName, onSubmitted }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+  // Sticky, in-tab only. The free-text answer is checked in the browser as it
+  // is typed; nothing about it, and nothing about this panel being shown, is
+  // ever sent to a server or recorded. (analyzePulseResponse.js does its own
+  // server-side crisisFlag detection after submission, untouched by this - this
+  // is the reporter-facing half that offers help in the moment.)
+  const [showResources, setShowResources] = useState(false)
 
   const company = companyName || 'your organization'
+
+  function handleChange(question, value) {
+    setValues({ ...values, [question.id]: value })
+    if (question.freeText && textIndicatesCrisis(value)) {
+      setShowResources(true)
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -122,6 +137,8 @@ function PulseSurveyForm({ inviteId, token, companyName, onSubmitted }) {
             <p className="mb-2 text-sm font-medium text-charcoal">Who sees your response</p>
             <WhoSeesThis />
           </div>
+
+          {showResources && <CrisisResources />}
         </div>
       </Card>
     )
@@ -141,17 +158,22 @@ function PulseSurveyForm({ inviteId, token, companyName, onSubmitted }) {
               label={q.label}
               rows={3}
               value={values[q.id] ?? ''}
-              onChange={(e) => setValues({ ...values, [q.id]: e.target.value })}
+              onChange={(e) => handleChange(q, e.target.value)}
             />
           ) : (
             <ScaleInput
               key={q.id}
               question={q}
               value={values[q.id]}
-              onChange={(value) => setValues({ ...values, [q.id]: value })}
+              onChange={(value) => handleChange(q, value)}
             />
           )
         )}
+
+        {/* Appears the moment the in-browser check trips, without gating the
+            check-in. Pulse checks never learn a jurisdiction here, so every
+            regional route plus the international fallback is offered. */}
+        {showResources && <CrisisResources />}
 
         <div className="rounded-lg border border-line bg-navy-50 p-4">
           <p className="mb-2 text-sm font-medium text-charcoal">Who sees your response</p>

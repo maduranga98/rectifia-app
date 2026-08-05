@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Button from '../ui/Button'
+import CrisisResources from './CrisisResources'
 import Icon from '../ui/Icon'
 import Logo from '../ui/Logo'
 
@@ -41,6 +43,11 @@ function ReporterLayout({
 }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  // A persistent, low-key way to reach support resources from every
+  // reporter-facing screen - no trigger has to fire, and nothing has to be
+  // answered first. It expands a panel in place; it is never a modal that has
+  // to be dismissed, and opening it is not recorded anywhere.
+  const [showSupport, setShowSupport] = useState(false)
 
   // A plain <Link> can't ask first, and the answers live in React state that
   // unmounting would drop silently - so this navigates by hand, behind a
@@ -56,6 +63,14 @@ function ReporterLayout({
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4">
           <Logo size="md" />
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowSupport((open) => !open)}
+              className="text-xs text-muted underline hover:text-charcoal"
+              aria-expanded={showSupport}
+            >
+              Need support now?
+            </button>
             {!isTrackingRoute(pathname) && (
               <Button size="sm" icon="search" onClick={trackExistingCase}>
                 Track an existing case
@@ -67,6 +82,15 @@ function ReporterLayout({
             </span>
           </div>
         </div>
+        {/* Expands in place, below the chrome and above the page. It pushes the
+            page down rather than covering it - the reporter is never blocked
+            from what they were doing. The layout never knows a jurisdiction, so
+            every regional route plus the international fallback is offered. */}
+        {showSupport && (
+          <div className="mx-auto w-full max-w-3xl px-5 pb-4">
+            <CrisisResources />
+          </div>
+        )}
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:py-12">
