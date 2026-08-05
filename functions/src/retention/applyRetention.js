@@ -290,8 +290,18 @@ async function sweepPulseResponses(firestore, companyId, policy) {
 async function sweepHousekeeping(firestore) {
   const now = admin.firestore.Timestamp.now()
 
+  // Only a still-'pending' invite is swept here, never a 'used' one - a used
+  // invite is the only evidence that a pulseResponse came from a genuinely
+  // single-use credential (see the inviteId field analyzePulseResponse.js
+  // stamps on the response, and the join functions/src/security/
+  // integrityCheck.js runs against it weekly). Deleting a used invite by its
+  // expiresAt alone - which this did before module 26 - would routinely
+  // orphan that pointer on every response older than the invite's expiry
+  // window, which is exactly the "retention sweep failing halfway" scenario
+  // that integrity check exists to catch, not a housekeeping non-event.
   const expiredInvites = await firestore
     .collection(PULSE_INVITES_COLLECTION)
+    .where('status', '==', 'pending')
     .where('expiresAt', '<=', now)
     .limit(HOUSEKEEPING_BATCH_SIZE)
     .get()

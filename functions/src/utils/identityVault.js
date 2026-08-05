@@ -32,17 +32,19 @@ function getKey() {
   return key
 }
 
-// Encrypts a reporter identity / burner email mapping / any other
-// confidential-tier field before it's written to Firestore. Returns an
-// envelope, never a bare string, because AES-GCM needs its IV and auth tag
-// to decrypt later and those aren't secret - only the key is.
-function encryptIdentity(value) {
+// The parameterised core of encryptIdentity/decryptWithKey, taking an
+// explicit key buffer rather than reading getKey() itself. Everything below
+// this line is a thin wrapper over these two - encryptIdentity/decryptWithKey
+// bind them to the live Secret Manager key, and rotateEnvelopeKey (module 26)
+// is the one caller that legitimately needs to name two different keys in the
+// same operation.
+function encryptWithKey(value, key) {
   if (value === undefined || value === null || value === '') {
-    throw new Error('encryptIdentity() requires a non-empty value')
+    throw new Error('encryptWithKey() requires a non-empty value')
   }
   const plaintext = typeof value === 'string' ? value : JSON.stringify(value)
   const iv = crypto.randomBytes(IV_LENGTH)
-  const cipher = crypto.createCipheriv(ALGORITHM, getKey(), iv)
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
   const ciphertext = Buffer.concat([
     cipher.update(plaintext, 'utf8'),
     cipher.final(),
@@ -55,7 +57,7 @@ function encryptIdentity(value) {
   }
 }
 
-function decryptWithKey(envelope) {
+function decryptWithKeyBuffer(envelope, key) {
   const { ciphertext, iv, authTag } = envelope || {}
   if (!ciphertext || !iv || !authTag) {
     throw new Error(
@@ -64,7 +66,7 @@ function decryptWithKey(envelope) {
   }
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
-    getKey(),
+    key,
     Buffer.from(iv, 'base64')
   )
   decipher.setAuthTag(Buffer.from(authTag, 'base64'))
@@ -77,6 +79,40 @@ function decryptWithKey(envelope) {
   } catch {
     return plaintext
   }
+}
+
+// Encrypts a reporter identity / burner email mapping / any other
+// confidential-tier field before it's written to Firestore. Returns an
+// envelope, never a bare string, because AES-GCM needs its IV and auth tag
+// to decrypt later and those aren't secret - only the key is.
+function encryptIdentity(value) {
+  return encryptWithKey(value, getKey())
+}
+
+function decryptWithKey(envelope) {
+  return decryptWithKeyBuffer(envelope, getKey())
+}
+
+// Module 26's key-rotation primitive. Re-encrypts one vault envelope under a
+// new key without ever handing plaintext back to the caller - the migration
+// in functions/src/security/keyRotation.js never sees a reporter identity, it
+// only ever sees ciphertext going in and ciphertext coming out. That is what
+// makes "per record, fully logged, never a bulk plaintext dump" a property of
+// this module rather than a discipline the caller has to maintain itself.
+//
+// Takes raw hex key material for both keys rather than reading defineSecret()
+// itself: a rotation run needs the OUTGOING key (to decrypt what is currently
+// stored) and the INCOMING key (to re-encrypt it) at the same time, which no
+// single `secrets: [...]` declaration on this module can express - the
+// caller declares both secrets and resolves the hex values itself.
+function rotateEnvelopeKey(envelope, { oldKeyHex, newKeyHex }) {
+  const oldKey = Buffer.from(String(oldKeyHex ?? ''), 'hex')
+  const newKey = Buffer.from(String(newKeyHex ?? ''), 'hex')
+  if (oldKey.length !== 32 || newKey.length !== 32) {
+    throw new Error('rotateEnvelopeKey() requires two 32-byte, hex-encoded keys')
+  }
+  const plaintext = decryptWithKeyBuffer(envelope, oldKey)
+  return encryptWithKey(plaintext, newKey)
 }
 
 // The one writer for identityAccessAuditLog. Exported (as
@@ -208,6 +244,7 @@ module.exports = {
   encryptionKeySecret,
   encryptIdentity,
   decryptIdentity,
+  rotateEnvelopeKey,
   writeIdentityAuditEntry: writeAuditEntry,
   AUDIT_COLLECTION,
   MIN_REASON_LENGTH,

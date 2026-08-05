@@ -1,6 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
-const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
+const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { resolveRetentionPolicy, CONFIGURABLE_KEYS } = require('./retentionPolicy')
 
 if (!admin.apps.length) {
@@ -108,10 +108,19 @@ exports.previewRetention = onCall(async (request) => {
   }
 
   const firestore = admin.firestore()
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, 'preview_retention')
   if (role !== 'companyAdmin') {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action: 'preview_retention',
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_company_admin',
+    })
     throw new HttpsError('permission-denied', 'Only a Company Admin may preview retention')
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action: 'preview_retention', outcome: 'granted' })
 
   const companySnapshot = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
   if (!companySnapshot.exists) {

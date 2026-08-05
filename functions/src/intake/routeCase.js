@@ -2,7 +2,7 @@ const { onDocumentUpdated } = require('firebase-functions/v2/firestore')
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
-const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
+const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -385,11 +385,37 @@ exports.reassignCase = onCall(async (request) => {
   // record for loadCallerRole to find.
   const REASSIGN_ROLES = ['companyAdmin', 'hrCoordinator']
   const superAdmin = await isSuperAdminUid(firestore, actorUid)
-  if (!superAdmin) {
-    const actorRole = await loadCallerRole(firestore, companyId, actorUid)
+  if (superAdmin) {
+    await logPrivilegedAction(firestore, {
+      uid: actorUid,
+      companyId,
+      role: 'superAdmin',
+      action: 'case_reassign',
+      outcome: 'granted',
+      caseId,
+    })
+  } else {
+    const actorRole = await loadCallerRole(firestore, companyId, actorUid, 'case_reassign')
     if (!REASSIGN_ROLES.includes(actorRole)) {
+      await logPrivilegedAction(firestore, {
+        uid: actorUid,
+        companyId,
+        role: actorRole,
+        action: 'case_reassign',
+        outcome: 'denied:permission-denied',
+        caseId,
+        detail: 'role_not_reassign_role',
+      })
       throw new HttpsError('permission-denied', 'You do not have permission to reassign cases')
     }
+    await logPrivilegedAction(firestore, {
+      uid: actorUid,
+      companyId,
+      role: actorRole,
+      action: 'case_reassign',
+      outcome: 'granted',
+      caseId,
+    })
   }
 
   const staffSnapshot = await firestore

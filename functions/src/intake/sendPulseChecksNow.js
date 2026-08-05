@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
-const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
+const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { enforceRateLimit } = require('../utils/rateLimit')
 const {
   queuePulseInvitesForCompany,
@@ -47,13 +47,22 @@ exports.sendPulseChecksNow = onCall(async (request) => {
     )
   }
 
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, 'send_pulse_checks_now')
   if (!SEND_PULSE_ROLES.includes(role)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action: 'send_pulse_checks_now',
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_send_pulse_role',
+    })
     throw new HttpsError(
       'permission-denied',
       'Only a Company Admin or HR Coordinator may send a pulse check on demand'
     )
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action: 'send_pulse_checks_now', outcome: 'granted' })
 
   const companyRef = firestore.collection(COMPANIES_COLLECTION).doc(companyId)
   const companySnap = await companyRef.get()

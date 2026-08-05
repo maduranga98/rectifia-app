@@ -1,6 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
-const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
+const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { deletePolicyObject } = require('./policyStorage')
 
 if (!admin.apps.length) {
@@ -14,14 +14,22 @@ const CHUNKS_SUBCOLLECTION = 'chunks'
 // Admin of the company that owns it. Company is taken from the caller's own
 // custom claim, then checked against the document - a policyId from another
 // company is refused even if guessed. Returns the doc ref and data.
-async function loadOwnedPolicy(firestore, request, policyId) {
+async function loadOwnedPolicy(firestore, request, policyId, action) {
   const uid = requireAuthUid(request)
   const companyId = request.auth?.token?.companyId
   if (!companyId) {
     throw new HttpsError('permission-denied', 'Your account is not linked to a company')
   }
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, action)
   if (role !== 'companyAdmin') {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action,
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_company_admin',
+    })
     throw new HttpsError('permission-denied', 'Only a Company Admin may manage policy documents')
   }
   if (typeof policyId !== 'string' || !policyId) {
@@ -33,8 +41,17 @@ async function loadOwnedPolicy(firestore, request, policyId) {
     throw new HttpsError('not-found', 'No such policy document')
   }
   if (snapshot.data().companyId !== companyId) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action,
+      outcome: 'denied:permission-denied',
+      detail: 'wrong_company_policy',
+    })
     throw new HttpsError('permission-denied', 'That policy document belongs to another company')
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action, outcome: 'granted' })
   return { ref, data: snapshot.data() }
 }
 
@@ -46,7 +63,7 @@ async function loadOwnedPolicy(firestore, request, policyId) {
 exports.archivePolicyDocument = onCall(async (request) => {
   const firestore = admin.firestore()
   const { policyId } = request.data || {}
-  const { ref, data } = await loadOwnedPolicy(firestore, request, policyId)
+  const { ref, data } = await loadOwnedPolicy(firestore, request, policyId, 'policy_archive')
   if (data.status !== 'active') {
     throw new HttpsError('failed-precondition', 'Only an active policy document can be archived')
   }
@@ -61,7 +78,7 @@ exports.archivePolicyDocument = onCall(async (request) => {
 exports.restorePolicyDocument = onCall(async (request) => {
   const firestore = admin.firestore()
   const { policyId } = request.data || {}
-  const { ref, data } = await loadOwnedPolicy(firestore, request, policyId)
+  const { ref, data } = await loadOwnedPolicy(firestore, request, policyId, 'policy_restore')
   if (data.status !== 'archived') {
     throw new HttpsError('failed-precondition', 'Only an archived policy document can be restored')
   }
@@ -82,7 +99,7 @@ exports.restorePolicyDocument = onCall(async (request) => {
 exports.deletePolicyDocument = onCall(async (request) => {
   const firestore = admin.firestore()
   const { policyId } = request.data || {}
-  const { ref, data } = await loadOwnedPolicy(firestore, request, policyId)
+  const { ref, data } = await loadOwnedPolicy(firestore, request, policyId, 'policy_delete')
 
   // Storage object first: if this fails we have not yet orphaned Firestore.
   await deletePolicyObject(data.storagePath)

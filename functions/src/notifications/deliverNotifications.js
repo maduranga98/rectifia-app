@@ -222,6 +222,42 @@ async function buildEmailForNotification(firestore, data, { getCompanyName }) {
       return { recipients, subject, text, html: null }
     }
 
+    case 'accessReviewPending': {
+      // Module 26 (CC6.2/CC6.3): a quarterly access review has been compiled
+      // and is waiting for a Company Admin to attest it. Awareness-only, same
+      // as deletionRequestPending above - the attestation itself happens on
+      // SecurityDashboard's counterpart in the Company Admin's own console,
+      // not by anything this delivery does.
+      const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['companyAdmin'])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const subject = `Your quarterly access review (${data.period ?? 'this period'}) is ready to attest`
+      const text = [
+        `A staff access review for ${data.period ?? 'this period'} has been compiled and needs your sign-off.`,
+        '',
+        data.dormantCount
+          ? `${data.dormantCount} account(s) appear dormant (no sign-in or privileged action in the review window).`
+          : 'No accounts appear dormant this period.',
+        '',
+        'Open the review to attest a keep/revoke decision for every account.',
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
+    case 'keyRotationDue': {
+      // Module 26: a tracked encryption/API key has passed its configured
+      // rotation age (see functions/src/security/keyRotation.js). Advisory
+      // only - nothing here rotates the key or revokes anything.
+      const recipients = await resolveSuperAdminEmails(firestore)
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const subject = `Key rotation is overdue: ${data.keyId ?? 'unknown key'}`
+      const text = [
+        `${data.keyId ?? 'A tracked key'} is ${data.ageDays ?? '?'} days old, past the ${data.thresholdDays ?? '?'}-day rotation threshold.`,
+        '',
+        'Open the Security Dashboard for the documented rotation path.',
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
     case 'acknowledgmentDeadlineRisk':
     case 'feedbackDeadlineRisk': {
       const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['hrCoordinator'])

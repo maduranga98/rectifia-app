@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
-const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
+const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const {
   CORE_VERSION,
   QUESTION_TYPES,
@@ -267,7 +267,8 @@ exports.getPublishedQuestionSet = onCall(async (request) => {
   if (!companyId || companyId !== request.auth?.token?.companyId) {
     throw new HttpsError('permission-denied', 'You may only read your own company\'s questionnaire')
   }
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, 'question_set_read')
+  await logPrivilegedAction(firestore, { uid, companyId, role, action: 'question_set_read', outcome: 'granted' })
 
   const companySnap = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
   if (!companySnap.exists) {
@@ -303,13 +304,22 @@ exports.saveSupplementaryQuestions = onCall(async (request) => {
   if (!companyId || (request.data?.companyId && request.data.companyId !== companyId)) {
     throw new HttpsError('permission-denied', 'You may only edit your own company\'s questionnaire')
   }
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, 'question_set_save_draft')
   if (!EDIT_ROLES.includes(role)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action: 'question_set_save_draft',
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_edit_role',
+    })
     throw new HttpsError(
       'permission-denied',
       'Only a Company Admin may change the pulse-check questionnaire'
     )
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action: 'question_set_save_draft', outcome: 'granted' })
 
   const questions = validateSupplementaryQuestions(request.data?.questions ?? [])
 
@@ -340,13 +350,22 @@ exports.publishQuestionSet = onCall(async (request) => {
       'You may only publish your own company\'s questionnaire'
     )
   }
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, 'question_set_publish')
   if (!EDIT_ROLES.includes(role)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action: 'question_set_publish',
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_edit_role',
+    })
     throw new HttpsError(
       'permission-denied',
       'Only a Company Admin may publish the pulse-check questionnaire'
     )
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action: 'question_set_publish', outcome: 'granted' })
 
   const companyRef = firestore.collection(COMPANIES_COLLECTION).doc(companyId)
 

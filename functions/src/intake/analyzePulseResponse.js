@@ -160,6 +160,12 @@ exports.submitPulseResponse = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) =>
       employeeId: invite.employeeId,
       companyId: invite.companyId,
       department: invite.department ?? null,
+      // The single-use invite this response spent, in the same transaction
+      // that flips it to 'used' below. Module 26's weekly integrity check
+      // (functions/src/security/integrityCheck.js) joins on this to confirm
+      // no response exists without a genuinely spent invite behind it - the
+      // one fact this document could not previously prove on its own.
+      inviteId: inviteRef.id,
       answers: validatedAnswers,
       // The questionnaire this response answered. Every later reader - the
       // Claude prompt, the HR response list - resolves the wording through

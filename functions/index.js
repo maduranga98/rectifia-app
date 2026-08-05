@@ -74,6 +74,12 @@ const {
   setBenchmarkOptIn,
   getBenchmarkCatalog,
 } = require('./src/benchmark/benchmarkAccess')
+const { accessReview, attestAccessReview, getAccessReviewForAttestation } = require('./src/security/accessReview')
+const { keyRotationCheck, recordKeyRotation, rotateIdentityVaultKey } = require('./src/security/keyRotation')
+const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomalyDetection')
+const { integrityCheck } = require('./src/security/integrityCheck')
+const { backupVerification, attestRestoreTest } = require('./src/security/backupVerification')
+const { getSecurityDashboard } = require('./src/security/securityDashboard')
 
 exports.submitCase = submitCase
 exports.createCaseOnBehalf = createCaseOnBehalf
@@ -169,3 +175,24 @@ exports.computeBenchmarks = computeBenchmarks
 exports.getBenchmarksForCompany = getBenchmarksForCompany
 exports.setBenchmarkOptIn = setBenchmarkOptIn
 exports.getBenchmarkCatalog = getBenchmarkCatalog
+// Module 26: Security Control & Evidence Layer. Five scheduled controls
+// (accessReview quarterly, keyRotationCheck weekly, anomalyDetection daily,
+// integrityCheck weekly, backupVerification monthly) plus the onCall
+// counterparts a human uses to act on what they find: attesting a review,
+// recording/executing a key rotation, reviewing an alert, attesting a
+// restore test. None of these revoke access, delete data, or block a user -
+// see the "advisory only" comment on each module. getSecurityDashboard is the
+// one read path for src/pages/superadmin/SecurityDashboard.jsx, which has no
+// direct Firestore access to any of this module's sealed collections.
+exports.accessReview = accessReview
+exports.attestAccessReview = attestAccessReview
+exports.getAccessReviewForAttestation = getAccessReviewForAttestation
+exports.keyRotationCheck = keyRotationCheck
+exports.recordKeyRotation = recordKeyRotation
+exports.rotateIdentityVaultKey = rotateIdentityVaultKey
+exports.anomalyDetection = anomalyDetection
+exports.reviewSecurityAlert = reviewSecurityAlert
+exports.integrityCheck = integrityCheck
+exports.backupVerification = backupVerification
+exports.attestRestoreTest = attestRestoreTest
+exports.getSecurityDashboard = getSecurityDashboard

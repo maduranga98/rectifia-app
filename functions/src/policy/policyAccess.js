@@ -1,6 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
-const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
+const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const {
   POLICY_PREFIX,
   requireAllowedContentType,
@@ -29,7 +29,7 @@ const DOWNLOAD_ROLES = ['companyAdmin', 'caseHandler', 'hrCoordinator']
 // Company Admin of one company upload into another's policy shelf. loadCallerRole
 // then re-checks that claim against the staff subcollection, so a stale claim on
 // a deactivated account still fails.
-async function callerCompanyAndRole(firestore, request) {
+async function callerCompanyAndRole(firestore, request, action) {
   const uid = requireAuthUid(request)
   const companyId = request.auth?.token?.companyId
   if (!companyId) {
@@ -38,7 +38,7 @@ async function callerCompanyAndRole(firestore, request) {
       'Your account is not linked to a company'
     )
   }
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, action)
   return { uid, companyId, role }
 }
 
@@ -73,10 +73,19 @@ exports.requestPolicyUploadUrl = onCall(async (request) => {
 
   await enforceRateLimit(firestore, 'requestPolicyUploadUrl', request)
 
-  const { companyId, role, uid } = await callerCompanyAndRole(firestore, request)
+  const { companyId, role, uid } = await callerCompanyAndRole(firestore, request, 'policy_upload_url')
   if (role !== 'companyAdmin') {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action: 'policy_upload_url',
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_company_admin',
+    })
     throw new HttpsError('permission-denied', 'Only a Company Admin may upload policy documents')
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action: 'policy_upload_url', outcome: 'granted' })
 
   const { title, fileName, contentType, sizeBytes } = request.data || {}
   const cleanTitle = typeof title === 'string' ? title.trim().slice(0, 200) : ''
@@ -126,10 +135,19 @@ exports.requestPolicyUploadUrl = onCall(async (request) => {
 // another company is refused even if it is guessed.
 exports.requestPolicyDownloadUrl = onCall(async (request) => {
   const firestore = admin.firestore()
-  const { companyId, role } = await callerCompanyAndRole(firestore, request)
+  const { companyId, role, uid } = await callerCompanyAndRole(firestore, request, 'policy_download_url')
   if (!DOWNLOAD_ROLES.includes(role)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action: 'policy_download_url',
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_download_role',
+    })
     throw new HttpsError('permission-denied', 'You do not have permission to open policy documents')
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action: 'policy_download_url', outcome: 'granted' })
 
   const { policyId } = request.data || {}
   if (typeof policyId !== 'string' || !policyId) {

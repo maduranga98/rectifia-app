@@ -12,6 +12,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import AcceptInvitePage from './pages/AcceptInvitePage'
 import SuperAdminLoginPage from './pages/SuperAdminLoginPage'
 import SuperAdminDashboardPage from './pages/SuperAdminDashboardPage'
+import SecurityDashboard from './pages/superadmin/SecurityDashboard'
 import { ROLES } from './constants/roles'
 
 function App() {
@@ -69,6 +70,17 @@ function App() {
           element={
             <ProtectedRoute requireSuperAdmin loginPath="/super-admin/login">
               <SuperAdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Module 26: Security Control & Evidence Layer. Same guard as
+            /super-admin above - Super Admin allowlist membership, not a
+            custom claim. */}
+        <Route
+          path="/super-admin/security"
+          element={
+            <ProtectedRoute requireSuperAdmin loginPath="/super-admin/login">
+              <SecurityDashboard />
             </ProtectedRoute>
           }
         />

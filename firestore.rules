@@ -729,5 +729,106 @@ service cloud.firestore {
     match /rateLimits/{counterId} {
       allow read, write: if false;
     }
+
+    // Module 26: Security Control & Evidence Layer. Every collection below is
+    // written only by the Admin SDK - a scheduled control
+    // (functions/src/security/*.js) or one of its onCall counterparts - so
+    // every match block here denies client writes outright, the same
+    // "Admin-SDK-write-only, append-only" posture identityAccessAuditLog and
+    // the other three pre-existing audit logs already hold. Where a Super
+    // Admin needs to browse the evidence directly, read is opened to that one
+    // role; two collections are pure server-internal working state (a
+    // resumable scan cursor, a rolling anomaly baseline) with no operator
+    // value in a UI at all and stay fully sealed, the same way rateLimits
+    // above does.
+
+    // Findings + control-run collections a Super Admin reads directly on
+    // SecurityDashboard.jsx - securityAlerts, keyRotationLog and
+    // keyRotationState, integrityFindings, backupVerifications and
+    // securityControlRuns. None of these can ever contain case content: every
+    // writer in functions/src/security/ is built from other metadata-only
+    // collections (privilegedActionLog, the four pre-existing audit logs,
+    // caseMetadata, staff docs, Storage object listings) and never reads
+    // cases/{caseId} or a messages subcollection.
+    match /securityAlerts/{alertId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /keyRotationLog/{entryId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /keyRotationState/{keyId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /integrityFindings/{findingId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /backupVerifications/{period} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+    match /securityControlRuns/{runId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
+    // The quarterly CC6.2/CC6.3 artifact (functions/src/security/
+    // accessReview.js). Deliberately NOT opened to a Company Admin here, even
+    // for their own company's row - a Company Admin who needs to see what
+    // they are attesting reads it through getAccessReviewForAttestation
+    // (Admin SDK, re-checks the staff role server-side), not a Firestore
+    // rule, so this stays at the same "Super Admin read, Admin-SDK write
+    // only" posture as securityAlerts and keyRotationLog above. Attestation
+    // itself only ever happens through attestAccessReview, never a direct
+    // write - a review a Company Admin could edit in place after signing it
+    // would not be an attestation.
+    match /accessReviews/{reviewId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
+
+    // Module 26's chokepoint-level privileged-action trail (functions/src/
+    // utils/staffAuth.js's logPrivilegedAction) - who attempted which action
+    // type, granted or denied, when. Same fully-sealed posture as
+    // identityAccessAuditLog, triageAccessLog, staffIntakeAuditLog and
+    // evidenceAccessLog above: no client role, INCLUDING Super Admin, gets a
+    // read path, because a mutable audit trail is not an audit trail and this
+    // is the one log every other log in this app already treats that way.
+    // accessReview.js and anomalyDetection.js read it with the Admin SDK to
+    // build their own Super-Admin-readable artifacts (accessReviews,
+    // securityAlerts) - that derived read is how this log's contents reach a
+    // screen, never a direct query.
+    match /privilegedActionLog/{entryId} {
+      allow read, write: if false;
+    }
+
+    // Pure server-internal working state with no operator-facing meaning of
+    // its own: a resumable scan position for integrityCheck.js's rotating
+    // weekly sweep, and the rolling per-key exponential-moving-average
+    // anomalyDetection.js compares each day's count against. Neither is
+    // evidence an auditor would ask to see - the FINDINGS these states help
+    // produce (integrityFindings, securityAlerts) are the evidence - so
+    // unlike the collections above, opening Super Admin read here would only
+    // add a screen nobody needs to look at.
+    match /integrityCheckCursors/{checkId} {
+      allow read, write: if false;
+    }
+    match /anomalyBaselines/{key} {
+      allow read, write: if false;
+    }
+
+    // CI vulnerability-scan results (npm audit, recorded by the CI pipeline -
+    // see the repo's GitHub Actions workflow and functions/scripts/
+    // recordDependencyScan.js). Change management and vulnerability
+    // management are both tested by an auditor asking "show me your scan
+    // history", so this is readable evidence like securityAlerts above, not
+    // sealed like privilegedActionLog.
+    match /dependencyScans/{scanId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
+    }
   }
 }

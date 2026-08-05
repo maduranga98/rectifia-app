@@ -126,6 +126,13 @@ function subjectSignatureFields(data) {
 // caseMetadata/{caseId} to the HR Coordinator role directly, so this mirror
 // - not any rule on cases/{caseId} itself - is what makes "metadata only" an
 // enforceable server-side guarantee rather than a client-side filter.
+// Exported so functions/src/security/integrityCheck.js can re-derive exactly
+// what a case's mirror SHOULD contain and diff it against what is actually
+// stored, without a second, hand-maintained copy of this allowlist drifting
+// from the real one - the drift check would otherwise be checking the
+// mirror against its own stale idea of itself.
+exports.pickMetadata = pickMetadata
+
 exports.syncCaseMetadata = onDocumentWritten('cases/{caseId}', async (event) => {
   const after = event.data.after
   const firestore = admin.firestore()

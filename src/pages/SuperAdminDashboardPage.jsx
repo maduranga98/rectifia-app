@@ -97,6 +97,7 @@ function SuperAdminDashboardPage() {
       navItems={[
         { id: 'companies', label: 'Companies', icon: 'company' },
         { id: 'manualAssignment', label: 'Manual assignment', icon: 'routing' },
+        { label: 'Security', icon: 'shield', to: '/super-admin/security' },
       ]}
       activeId={section}
       onSelect={setSection}

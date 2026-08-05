@@ -1,0 +1,56 @@
+name: Dependency vulnerability scan
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Two independent package trees - the root app and Cloud Functions -
+      # each gets its own audit and its own recorded evidence row, since a
+      # vulnerability in one is not a vulnerability in the other.
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install functions dependencies
+        run: npm ci
+        working-directory: functions
+
+      # `npm audit --json` exits non-zero the moment ANY vulnerability
+      # (including low/moderate) exists, which is not this gate's threshold -
+      # so the exit code is deliberately not what decides pass/fail here.
+      # `|| true` captures the JSON report regardless, and the explicit
+      # severity check below is what actually fails the job.
+      - name: Audit root dependencies
+        run: npm audit --json > root-audit.json || true
+      - name: Audit functions dependencies
+        run: npm audit --json > ../functions-audit.json || true
+        working-directory: functions
+
+      # Recorded before the gate is evaluated, so a failing scan's result is
+      # captured in dependencyScans exactly like a passing one - see the
+      # module 26 requirement that a control's evidence is written whether
+      # or not it finds anything. Skipped gracefully (not failed) when the
+      # service-account secret isn't configured, e.g. on a fork's pull
+      # request - recordDependencyScan.js itself never fails the job either,
+      # see its own comment on why.
+      - name: Authenticate to Firebase for evidence recording
+        if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RECTIFIA_59A1E }}
+      - name: Record scan evidence
+        if: always() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        working-directory: functions
+        run: |
+          node scripts/recordDependencyScan.js root ../root-audit.json
+          node scripts/recordDependencyScan.js functions ../functions-audit.json
+
+      # The actual gate. Change management and vulnerability management are
+      # both tested here: a high or critical finding in EITHER package tree
+      # fails the build, not just a warning in the log.
+      - name: Fail on high/critical findings
+        run: node scripts/checkAuditSeverity.cjs
