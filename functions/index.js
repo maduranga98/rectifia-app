@@ -68,6 +68,12 @@ const {
   declineDeletionRequest,
 } = require('./src/retention/deletionRequest')
 const { previewRetention } = require('./src/retention/previewRetention')
+const { computeBenchmarks } = require('./src/benchmark/computeBenchmarks')
+const {
+  getBenchmarksForCompany,
+  setBenchmarkOptIn,
+  getBenchmarkCatalog,
+} = require('./src/benchmark/benchmarkAccess')
 
 exports.submitCase = submitCase
 exports.createCaseOnBehalf = createCaseOnBehalf
@@ -152,3 +158,14 @@ exports.requestCaseDeletion = requestCaseDeletion
 exports.approveDeletionRequest = approveDeletionRequest
 exports.declineDeletionRequest = declineDeletionRequest
 exports.previewRetention = previewRetention
+// Module 25: Cross-Company Benchmark Pool. computeBenchmarks is the monthly
+// scheduled recompute over the currently-opted-in set - the pool is
+// computed, not accumulated, so withdrawal takes effect completely on the
+// next run. The two onCalls are read (any staff of an opted-in company sees
+// only their own cell) and opt-in (companyAdmin, with an explicit
+// acknowledgement flag). The catalog is a small read of the industries and
+// bands the form needs.
+exports.computeBenchmarks = computeBenchmarks
+exports.getBenchmarksForCompany = getBenchmarksForCompany
+exports.setBenchmarkOptIn = setBenchmarkOptIn
+exports.getBenchmarkCatalog = getBenchmarkCatalog

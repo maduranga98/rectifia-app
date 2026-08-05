@@ -667,6 +667,55 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Module 25's cross-company benchmark pool. Three collections, and the
+    // access model is deliberately not "readable by any staff of any company":
+    // reading a cell requires the caller's company to be currently opted in
+    // to CONTRIBUTING to the pool. A pool that can be read without
+    // contributing collapses into a one-way intelligence product, and every
+    // company opts out of contributing. That gate is not a rules predicate
+    // because it needs to load two Firestore docs (the caller's staff role
+    // and the opt-in state) and then hand back four exact cells - it lives
+    // in functions/src/benchmark/benchmarkAccess.js. So client rules stay
+    // fully sealed here, and every read goes through the callable.
+    //
+    // Cells hold aggregate statistics only, never a company's identity: a
+    // cell that clears MIN_COMPANIES_PER_CELL and MIN_CASES_PER_CELL
+    // publishes rounded medians, quartiles, and a rounded action
+    // distribution; below either threshold the document is written with
+    // suppressed:true and NO statistics - not computed and withheld at read
+    // time, not computed at all. Even so, the direct client path is closed:
+    // "you may only read a cell your company also fed" is a rule the
+    // callable enforces and this collection has no equivalent way to say.
+    match /benchmarkCells/{cellId} {
+      allow read, write: if false;
+    }
+
+    // The opt-in state and its append-only history. Written only by
+    // setBenchmarkOptIn (Admin SDK) so the actor uid and server timestamp on
+    // every change are trustworthy - a client-writable opt-in doc could be
+    // backdated or attributed to another admin, and neither is acceptable on
+    // a control the company is expected to withdraw. History entries are
+    // sealed for the same reason the identity audit log is sealed: a
+    // mutable record of who opted in and when is not a record.
+    match /benchmarkOptIns/{companyId} {
+      allow read, write: if false;
+      match /history/{historyId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Per-run summary, doc id == YYYY-MM. Counts only - opted-in company
+    // count, published cell count, suppressed cell count, thresholds - never
+    // a company id and never a cell coordinate. This is the one document
+    // Super Admin has a legitimate operational reason to read ("did the
+    // pool compute this month, how many cells cleared"), but the rules
+    // stay closed and any Super Admin read goes through a callable so that
+    // the "aggregate statistics only, never raw case data" constraint is
+    // enforced by there being no client path at all.
+    match /benchmarkRuns/{runId} {
+      allow read, write: if false;
+    }
+
     // Rate-limit counters (functions/src/utils/rateLimit.js). Written only by
     // the Admin SDK inside the limiter's transaction; a client that could
     // read these could measure how close it is to a limit, and one that could
