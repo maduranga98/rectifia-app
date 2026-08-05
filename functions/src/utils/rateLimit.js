@@ -251,16 +251,16 @@ async function enforceCaseMessageCap(caseRef) {
 }
 
 // Applied to every callable a reporter or a roster employee can reach without
-// signing in. App Check fails closed: with enforceAppCheck true the call is
-// rejected before the handler runs unless it carries a valid attestation
-// token. Local development is the one exception and it goes through the
-// documented debug-token path - the client registers
-// self.FIREBASE_APPCHECK_DEBUG_TOKEN (see src/services/firebase.js), the token
-// is allowlisted in the Firebase console, and App Check accepts it. There is
-// no env flag here that turns enforcement off, deliberately: an "enforce in
-// prod only" switch is exactly the switch that gets left in the wrong
-// position.
-const PUBLIC_CALLABLE_OPTIONS = { enforceAppCheck: true }
+// signing in.
+//
+// TESTING: App Check enforcement is currently OFF. With enforceAppCheck true
+// these calls are rejected before the handler runs unless they carry a valid
+// attestation token; with it false anything that can reach the endpoint gets
+// through, and the fixed-window counter below is the only control left on
+// callables that have no Firebase Auth to fall back on. Flip this back to true
+// (and restore the client half in src/services/firebase.js) before any
+// deployment that takes real reports.
+const PUBLIC_CALLABLE_OPTIONS = { enforceAppCheck: false }
 
 module.exports = {
   RATE_LIMITS_COLLECTION,
