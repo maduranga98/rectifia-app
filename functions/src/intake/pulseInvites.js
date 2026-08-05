@@ -20,10 +20,17 @@ const TOKEN_BYTES = 32
 const SALT_BYTES = 16
 const DAY_MS = 24 * 60 * 60 * 1000
 
-// Same brute-force ceiling shape as the case-ID allocation in
-// generateCaseAccess.js: 10 validation attempts per invite id, after which the
-// token can no longer be guessed against that known id.
-const MAX_VALIDATION_ATTEMPTS = 10
+// This counter is NOT what makes the token unguessable - 32 random bytes
+// already puts guessing a specific invite's token far out of reach, with or
+// without a ceiling. What it bounds is write amplification: someone who knows
+// (or scrapes) a valid invite id can otherwise hammer validatePulseInvite and
+// force an unbounded number of Firestore transactions against that one
+// document. So the budget only has to be small enough to cap that cost, not
+// small enough to matter cryptographically - which is why it can be generous
+// enough that a real employee never reaches it. Only failed token
+// verifications count against it (a correct token resets it to 0), so the
+// budget is spent exclusively by callers who do not hold the token.
+const MAX_VALIDATION_ATTEMPTS = 20
 
 function randomToken() {
   return crypto.randomBytes(TOKEN_BYTES).toString('hex')
@@ -119,16 +126,25 @@ exports.validatePulseInvite = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) =>
     if (attempts >= MAX_VALIDATION_ATTEMPTS) {
       throw new HttpsError('resource-exhausted', 'Too many attempts for this invite')
     }
-    // Count this attempt regardless of outcome, so a brute-force run against a
-    // known invite id burns through the budget whether or not each guess is
-    // right.
-    tx.update(ref, { validationAttempts: attempts + 1 })
-
     // Whether the invite is used/expired/unknown is only disclosed to a caller
     // who actually holds the matching token; a wrong token always looks the
     // same ('invalid') regardless of the invite's real state.
     if (!verifyInviteToken(token, data.tokenHash, data.tokenSalt)) {
+      // Only a FAILED verification spends the budget. Counting every call -
+      // including successful ones - meant an employee who opened their own
+      // valid link often enough permanently bricked it, locking themselves out
+      // of a check-in they were entitled to with no recovery path.
+      tx.update(ref, { validationAttempts: attempts + 1 })
       return { valid: false, reason: 'invalid' }
+    }
+
+    // Reaching this line requires holding the 256-bit token, so clearing the
+    // counter cannot help a brute-forcer: they can't get here without already
+    // having won. It does stop stray failed attempts (a truncated link, a
+    // mangled copy/paste) accumulating over an invite's life until the real
+    // employee is refused.
+    if (attempts !== 0) {
+      tx.update(ref, { validationAttempts: 0 })
     }
 
     // Expire lazily: an invite past its cadence window is dead even if the
