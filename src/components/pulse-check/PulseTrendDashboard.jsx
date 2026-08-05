@@ -39,23 +39,29 @@ function humanize(value) {
   return typeof value === 'string' ? value.replace(/_/g, ' ') : value
 }
 
-// Manager-facing view. This ONLY ever calls listPulseSummaries -
-// department/period aggregates with no individual attribution - never
-// listPulseResponses. That's a genuinely different data source populated by
-// a Cloud Function aggregation step (functions/src/intake/
-// analyzePulseResponse.js), not a client-side filter of individual records,
-// and firestore.rules backs that up: the manager role has no read path to
-// pulseResponses at all.
-function ManagerAggregateView({ companyId, departments }) {
+// Department/period aggregate view, with no individual attribution. This ONLY
+// ever calls listPulseSummaries - a genuinely different data source populated
+// by a Cloud Function aggregation step (functions/src/intake/
+// analyzePulseResponse.js), not a client-side filter of individual records.
+//
+// Two callers, two scopings, both enforced by firestore.rules:
+//   - Manager: `departments` is the manager's own claim; the query MUST carry a
+//     matching where('department','in',...) or the rules reject it. A manager
+//     with no departments is failed closed BEFORE querying (an unscoped query
+//     the rules would reject anyway).
+//   - Pulse Check Reviewer: `departments` is undefined - this role reads every
+//     company aggregate unconditionally, the same rules path it already has.
+// The suppression behaviour is identical for both: listPulseSummaries reads the
+// pre-projected averageSentiment (null below the floor) verbatim and never
+// divides a sum by a count.
+export function AggregateTrendsView({ companyId, departments }) {
   const [summaries, setSummaries] = useState([])
   const [error, setError] = useState(null)
 
-  // A manager's pulse visibility is scoped to their own department(s) via the
-  // `departments` custom claim. With no departments assigned the query would be
-  // unscoped and firestore.rules would reject it, so this fails closed BEFORE
-  // querying and says so explicitly - an empty grid here would read as "no
-  // pulse data yet", which is a different and misleading thing.
-  const hasScope = Array.isArray(departments) && departments.length > 0
+  // Scoped mode (a manager) requires at least one department; unscoped mode (a
+  // reviewer) passes `departments === undefined` and always queries.
+  const scoped = departments !== undefined
+  const hasScope = !scoped || (Array.isArray(departments) && departments.length > 0)
 
   useEffect(() => {
     if (!hasScope) return
@@ -137,7 +143,7 @@ function ManagerAggregateView({ companyId, departments }) {
 // a named individual response and its AI summary. Reachable only because
 // firestore.rules grants those two roles (and only those two) read access
 // to pulseResponses/{responseId}.
-function IndividualResponsesView({ companyId }) {
+export function IndividualResponsesView({ companyId }) {
   const [responses, setResponses] = useState([])
   const [error, setError] = useState(null)
 
@@ -223,28 +229,9 @@ function IndividualResponsesView({ companyId }) {
   )
 }
 
-// Renders one of two entirely separate views depending on role. A manager
-// never receives the branch that can see pulseResponses - not because this
-// component chooses to hide it, but because that branch's own data call
-// would be denied by firestore.rules for a manager's auth token.
-function PulseTrendDashboard({ companyId, role, departments }) {
-  const canSeeIndividualResponses = role === 'hrCoordinator' || role === 'pulseCheckReviewer'
-
-  return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        {canSeeIndividualResponses
-          ? 'Individual pulse check responses with their AI sentiment summaries.'
-          : 'Department and period averages. Individual responses are never attributed to a person here.'}
-      </p>
-
-      {canSeeIndividualResponses ? (
-        <IndividualResponsesView companyId={companyId} />
-      ) : (
-        <ManagerAggregateView companyId={companyId} departments={departments} />
-      )}
-    </div>
-  )
-}
-
-export default PulseTrendDashboard
+// This component used to branch internally on role between individual
+// responses and department aggregates. That split is now two separate pages
+// (PulseResponsesPage, PulseTrendsPage) so each role's nav names exactly the
+// view it lands on; the two views above are exported for those pages to render
+// directly. Nothing here decides access - each view's own data call is what a
+// wrong role's auth token is denied on by firestore.rules.

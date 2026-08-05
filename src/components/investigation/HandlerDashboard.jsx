@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { listAssignedCases } from '../../services/handlerService'
 import { deadlineDisplay, nextDeadlineMs, toMillis } from '../../utils/caseDeadlines'
 import Alert from '../ui/Alert'
@@ -96,7 +95,6 @@ function sortForHandler(cases, sortKey) {
 // rejects any case document whose assignedHandlerId doesn't match it, so
 // this list can never include another handler's cases even read-only.
 function HandlerDashboard({ onSelectCase }) {
-  const navigate = useNavigate()
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -136,16 +134,12 @@ function HandlerDashboard({ onSelectCase }) {
         <p className="text-sm text-muted">
           {openCount} open case{openCount === 1 ? '' : 's'} assigned to you.
         </p>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* A handler who has just taken a report by phone is standing at
-              this screen, not hunting through a menu for the form. */}
-          <Button icon="plus" variant="primary" onClick={() => navigate('/intake')}>
-            File a report on someone&apos;s behalf
-          </Button>
-          <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
-            Refresh
-          </Button>
-        </div>
+        {/* Filing a report on someone's behalf is now a nav entry (/intake)
+            rather than a button here, so it is reachable from every page rather
+            than only this one. */}
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
+          Refresh
+        </Button>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
