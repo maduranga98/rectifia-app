@@ -9,6 +9,7 @@ import {
 } from '../../services/caseThreadService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
+import CrisisResources from '../shared/CrisisResources'
 import EmptyState from '../ui/EmptyState'
 import Icon from '../ui/Icon'
 
@@ -112,6 +113,11 @@ function CaseThread({ caseId, mode, passcode }) {
   const [showLogForm, setShowLogForm] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
+  // Reporter-side only. Distress can surface long after intake, so support
+  // resources are reachable from the ongoing thread at any time - no trigger
+  // has to fire and nothing has to be answered. Toggling this open is not
+  // recorded anywhere.
+  const [showResources, setShowResources] = useState(false)
   const pollRef = useRef(null)
 
   const refresh = useCallback(async () => {
@@ -270,6 +276,27 @@ function CaseThread({ caseId, mode, passcode }) {
           </Button>
         </div>
       </form>
+
+      {mode === 'reporter' && (
+        <div className="border-t border-line-soft pt-3">
+          <button
+            type="button"
+            onClick={() => setShowResources((open) => !open)}
+            className="inline-flex items-center gap-1.5 text-xs text-muted underline hover:text-charcoal"
+            aria-expanded={showResources}
+          >
+            <Icon name="shield" className="h-3.5 w-3.5" />
+            Need support now?
+          </button>
+          {showResources && (
+            <div className="mt-3">
+              {/* The reporter's tab holds no jurisdiction, so every regional
+                  route plus the international fallback is offered. */}
+              <CrisisResources />
+            </div>
+          )}
+        </div>
+      )}
 
       {mode === 'investigator' && (
         <div className="rounded-lg border border-gold-200 bg-gold-50 p-3">

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import ReporterLayout from '../components/shared/ReporterLayout'
 import CategorySelect from '../components/intake/CategorySelect'
 import QuestionnaireForm from '../components/intake/QuestionnaireForm'
+import CrisisResources from '../components/shared/CrisisResources'
 import { CATEGORIES } from '../data/categories'
 import { resolveCompanySlug, submitCase } from '../services/caseAccessService'
 import Alert from '../components/ui/Alert'
@@ -58,6 +59,13 @@ function Submit() {
   const [filing, setFiling] = useState(false)
   const [fileError, setFileError] = useState(null)
   const [completed, setCompleted] = useState(null)
+  // Sticky: once the in-browser crisis check has tripped, support resources
+  // stay offered for the rest of this session, including on the confirmation
+  // screen if the report was filed under that condition. This lives only in
+  // this tab's memory - it is never written to the case, sent to a server, or
+  // logged. That a reporter saw the resources must not become a readable
+  // signal about them anywhere.
+  const [crisisTriggered, setCrisisTriggered] = useState(false)
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
   // The last settled slug lookup, tagged with the slug it was for. Tagging lets
@@ -225,8 +233,21 @@ function Submit() {
             Change category
           </Button>
           <div className="card p-6">
-            <QuestionnaireForm category={category} onSubmit={handleQuestionnaireSubmit} />
+            <QuestionnaireForm
+              category={category}
+              onSubmit={handleQuestionnaireSubmit}
+              onCrisisResourcesTrigger={() => setCrisisTriggered(true)}
+            />
           </div>
+
+          {/* Appears the moment the in-browser check trips, alongside the form
+              the reporter is still filling in - never over it. Nothing about
+              this panel blocks, gates, or interrupts the submission; the
+              reporter carries on exactly as they were. The anonymous reporting
+              flow never learns the company's jurisdictions, so no set is passed
+              and every regional route plus the international fallback is
+              offered - the reporter may be anywhere. */}
+          {crisisTriggered && <CrisisResources />}
         </div>
       )}
 
@@ -387,12 +408,18 @@ function Submit() {
                   setCategory(null)
                   setCopied(false)
                   setCopyFailed(false)
+                  setCrisisTriggered(false)
                 }}
               >
                 File another report
               </Button>
             </div>
           </div>
+
+          {/* Shown again here only if the report was filed under a triggering
+              condition. The reporter has finished the task they came to do;
+              this is a quiet, final offer of support, not a gate on leaving. */}
+          {crisisTriggered && <CrisisResources />}
         </div>
       )}
     </ReporterLayout>

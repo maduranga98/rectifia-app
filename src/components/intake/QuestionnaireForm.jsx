@@ -6,6 +6,7 @@ import burnoutQuestions from '../../data/questionnaires/burnout'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import { Select, Textarea } from '../ui/Field'
+import { textIndicatesCrisis } from '../shared/crisisTextCheck'
 
 const QUESTIONNAIRES = {
   harassment: harassmentQuestions,
@@ -65,8 +66,15 @@ function buildResponses(questions, answers) {
 // question has an answer.
 // onCrisisCheckField(questionId, value): optional, fired on every change to
 // a `triggersCrisisCheck` field. This is only a wiring point for module 6's
-// detector - no detection happens here.
-function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
+// server-side detector - no server detection happens here.
+// onCrisisResourcesTrigger(): optional, fired the first time the lightweight
+// client-side check trips on a `triggersCrisisCheck` field. This is the
+// reporter-facing half: it lets the page offer support resources in the
+// moment, entirely in the browser, without waiting for the server's crisisFlag
+// (which only arrives after submission). The partial draft is never sent
+// anywhere for this - see crisisTextCheck.js. Whether the resources were shown
+// is deliberately not recorded anywhere.
+function QuestionnaireForm({ category, onSubmit, onCrisisCheckField, onCrisisResourcesTrigger }) {
   const questions = QUESTIONNAIRES[category]
   const [answers, setAnswers] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -80,6 +88,13 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField }) {
     setAnswers((current) => ({ ...current, [question.id]: value }))
     if (question.triggersCrisisCheck) {
       onCrisisCheckField?.(question.id, value)
+      // The lightweight, in-browser check. Runs on the value already in hand;
+      // nothing is transmitted for it. Once tripped we signal the page, which
+      // decides how to surface resources - showing them must never interrupt
+      // or gate what the reporter is doing.
+      if (textIndicatesCrisis(value)) {
+        onCrisisResourcesTrigger?.()
+      }
     }
   }
 
