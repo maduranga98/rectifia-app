@@ -1,8 +1,49 @@
 const { HttpsError } = require('firebase-functions/v2/https')
+const admin = require('firebase-admin')
 
 const CASES_COLLECTION = 'cases'
 const COMPANIES_COLLECTION = 'companies'
 const STAFF_SUBCOLLECTION = 'staff'
+
+// Module 26. Every staff-facing callable ultimately resolves "who is calling,
+// with what role, and are they allowed to do this" through this file - it is
+// the one chokepoint every privileged action passes through, whether directly
+// (loadCallerRole) or via one of the three wrappers below. That makes it the
+// right place to close the gap the four pre-existing audit logs
+// (identityAccessAuditLog, triageAccessLog, staffIntakeAuditLog,
+// evidenceAccessLog) never covered: everything that is NOT a decrypt, a
+// triage read, a staff-filed intake, or an evidence access - proposeAction,
+// closeCase, reassignCase, legal holds, policy management, benchmark opt-in,
+// pulse-check administration, and more - previously left no actor-level trace
+// at all.
+//
+// Metadata only, same discipline as the other four logs: who (uid), which
+// company, what role, what action *type* (a short label the call site
+// chooses, e.g. 'case_handler_action', 'legal_hold_set'), granted or denied,
+// and a caseId if one is in scope. Never a questionnaire answer, a narrative,
+// an identity, or evidence content - this collection describes the act of
+// calling a privileged function, not what the function touched.
+const PRIVILEGED_ACTION_LOG_COLLECTION = 'privilegedActionLog'
+
+async function logPrivilegedAction(firestore, { uid, companyId, role, action, outcome, caseId, detail }) {
+  try {
+    await firestore.collection(PRIVILEGED_ACTION_LOG_COLLECTION).add({
+      uid: uid ?? null,
+      companyId: companyId ?? null,
+      role: role ?? null,
+      action: action ?? 'unknown',
+      outcome,
+      caseId: caseId ?? null,
+      detail: detail ?? null,
+      at: admin.firestore.FieldValue.serverTimestamp(),
+    })
+  } catch {
+    // A failure to write the audit trail must never fail - or silently swallow
+    // the outcome of - the privileged action itself. Every call site awaits
+    // this with its own .catch(() => {}) already; this is a second backstop
+    // for a call site that forgets to.
+  }
+}
 
 // Roles allowed to act on a case's investigation. companyAdmin is included
 // because a Company Admin can stand in for / oversee the assigned handler;
@@ -43,8 +84,25 @@ function requireAuthUid(request) {
 // account is and what role it holds - keyed by the Firebase Auth uid rather
 // than any client-supplied id. Throws 'permission-denied' if the caller is
 // not a staff member of this company. Returns the staff role string.
-async function loadCallerRole(firestore, companyId, uid) {
+//
+// `action` is an optional label the call site passes so a structural denial
+// here (no company, not staff) lands in privilegedActionLog under the same
+// action type its caller would have used for a granted call - a denial is
+// worth exactly as much of an accountability trail as a grant. The final
+// "was this role actually allowed to do this" decision is a business rule
+// each call site knows and this function does not, so a *grant* is never
+// logged here - only by whoever makes that final call (the three wrappers
+// below, or the callable itself when it calls loadCallerRole directly).
+async function loadCallerRole(firestore, companyId, uid, action = 'staff_role_check') {
   if (!companyId) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId: null,
+      role: null,
+      action,
+      outcome: 'denied:permission-denied',
+      detail: 'no_company',
+    })
     throw new HttpsError('permission-denied', 'This case is not associated with a company')
   }
   const snapshot = await firestore
@@ -54,6 +112,14 @@ async function loadCallerRole(firestore, companyId, uid) {
     .doc(uid)
     .get()
   if (!snapshot.exists) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role: null,
+      action,
+      outcome: 'denied:permission-denied',
+      detail: 'not_staff',
+    })
     throw new HttpsError('permission-denied', 'You are not a staff member of this company')
   }
   return snapshot.data().role
@@ -64,7 +130,7 @@ async function loadCallerRole(firestore, companyId, uid) {
 // be a caseHandler or companyAdmin in the case's company AND be the handler
 // this case is actually assigned to. This is the identity-verification gate
 // that used to trust a caller-supplied investigatorId.
-async function loadCaseForHandler(firestore, caseId, uid) {
+async function loadCaseForHandler(firestore, caseId, uid, action = 'case_handler_action') {
   if (!caseId) {
     throw new HttpsError('invalid-argument', 'caseId is required')
   }
@@ -76,14 +142,40 @@ async function loadCaseForHandler(firestore, caseId, uid) {
   }
 
   const caseData = snapshot.data()
-  const role = await loadCallerRole(firestore, caseData.companyId, uid)
+  const role = await loadCallerRole(firestore, caseData.companyId, uid, action)
   if (!HANDLER_ROLES.includes(role)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId: caseData.companyId,
+      role,
+      action,
+      outcome: 'denied:permission-denied',
+      caseId,
+      detail: 'role_not_handler',
+    })
     throw new HttpsError('permission-denied', 'You do not have permission to act on this case')
   }
   if (caseData.assignedHandlerId !== uid) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId: caseData.companyId,
+      role,
+      action,
+      outcome: 'denied:permission-denied',
+      caseId,
+      detail: 'not_assigned_handler',
+    })
     throw new HttpsError('permission-denied', 'This case is not assigned to you')
   }
 
+  await logPrivilegedAction(firestore, {
+    uid,
+    companyId: caseData.companyId,
+    role,
+    action,
+    outcome: 'granted',
+    caseId,
+  })
   return { caseRef, snapshot }
 }
 
@@ -98,7 +190,7 @@ async function loadCaseForHandler(firestore, caseId, uid) {
 // of interest) are decided by the caller, getCaseForTriage.js, because those
 // rejections have to be written to the triage access log along with the
 // company and role established here.
-async function loadCaseForTriage(firestore, caseId, uid) {
+async function loadCaseForTriage(firestore, caseId, uid, action = 'case_triage_read') {
   if (!caseId) {
     throw new HttpsError('invalid-argument', 'caseId is required')
   }
@@ -110,11 +202,33 @@ async function loadCaseForTriage(firestore, caseId, uid) {
   }
 
   const caseData = snapshot.data()
-  const role = await loadCallerRole(firestore, caseData.companyId, uid)
+  const role = await loadCallerRole(firestore, caseData.companyId, uid, action)
   if (!TRIAGE_ROLES.includes(role)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId: caseData.companyId,
+      role,
+      action,
+      outcome: 'denied:permission-denied',
+      caseId,
+      detail: 'role_not_triage',
+    })
     throw new HttpsError('permission-denied', 'You do not have permission to triage cases')
   }
 
+  // getCaseForTriage.js writes its own, richer entry to triageAccessLog for
+  // this same read (it additionally knows the case's status and routing
+  // reason, which this function does not check). This entry is deliberately
+  // still written - it is the generic "a privileged action was granted" trail
+  // every action type gets, not a replacement for that more specific log.
+  await logPrivilegedAction(firestore, {
+    uid,
+    companyId: caseData.companyId,
+    role,
+    action,
+    outcome: 'granted',
+    caseId,
+  })
   return { caseRef, snapshot, role }
 }
 
@@ -128,21 +242,38 @@ async function loadCaseForTriage(firestore, caseId, uid) {
 // re-resolving the reporter's slug server-side. The claim is then checked
 // against the staff subcollection by loadCallerRole, so a stale claim on a
 // deactivated account still fails.
-async function requireIntakeRole(firestore, request, uid) {
+async function requireIntakeRole(firestore, request, uid, action = 'staff_intake') {
   const companyId = request.auth?.token?.companyId
   if (!companyId) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId: null,
+      role: null,
+      action,
+      outcome: 'denied:permission-denied',
+      detail: 'no_company_claim',
+    })
     throw new HttpsError(
       'permission-denied',
       'Your account is not linked to a company, so it cannot file a case'
     )
   }
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, action)
   if (!INTAKE_ROLES.includes(role)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action,
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_intake',
+    })
     throw new HttpsError(
       'permission-denied',
       'Only a Case Handler or HR Coordinator may file a case on behalf of a reporter'
     )
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action, outcome: 'granted' })
   return { companyId, role }
 }
 
@@ -155,4 +286,6 @@ module.exports = {
   loadCaseForHandler,
   loadCaseForTriage,
   requireIntakeRole,
+  logPrivilegedAction,
+  PRIVILEGED_ACTION_LOG_COLLECTION,
 }

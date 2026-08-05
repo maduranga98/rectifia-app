@@ -1,6 +1,6 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
-const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
+const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -26,7 +26,7 @@ async function isSuperAdmin(firestore, uid) {
 // case against every retention sweep is a company-level legal decision, not
 // an investigation step, and it should not require being the assigned
 // handler to place or lift.
-async function loadCaseForHoldManagement(firestore, request, caseId) {
+async function loadCaseForHoldManagement(firestore, request, caseId, action) {
   const uid = requireAuthUid(request)
   if (typeof caseId !== 'string' || !caseId) {
     throw new HttpsError('invalid-argument', 'caseId is required')
@@ -40,17 +40,44 @@ async function loadCaseForHoldManagement(firestore, request, caseId) {
   const caseData = snapshot.data()
 
   if (await isSuperAdmin(firestore, uid)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId: caseData.companyId ?? null,
+      role: 'superAdmin',
+      action,
+      outcome: 'granted',
+      caseId,
+    })
     return { uid, caseRef, caseData }
   }
 
   const companyId = request.auth?.token?.companyId
   if (!companyId || companyId !== caseData.companyId) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId: companyId ?? null,
+      role: null,
+      action,
+      outcome: 'denied:permission-denied',
+      caseId,
+      detail: 'wrong_company',
+    })
     throw new HttpsError('permission-denied', 'This case belongs to another company')
   }
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, action)
   if (role !== 'companyAdmin') {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action,
+      outcome: 'denied:permission-denied',
+      caseId,
+      detail: 'role_not_company_admin',
+    })
     throw new HttpsError('permission-denied', 'Only a Company Admin or Super Admin may manage legal holds')
   }
+  await logPrivilegedAction(firestore, { uid, companyId, role, action, outcome: 'granted', caseId })
   return { uid, caseRef, caseData }
 }
 
@@ -78,7 +105,7 @@ async function writeDeletionLog(firestore, entry) {
 exports.setLegalHold = onCall(async (request) => {
   const { caseId, reason } = request.data || {}
   const firestore = admin.firestore()
-  const { uid, caseRef, caseData } = await loadCaseForHoldManagement(firestore, request, caseId)
+  const { uid, caseRef, caseData } = await loadCaseForHoldManagement(firestore, request, caseId, 'legal_hold_set')
   const cleanReason = requireReason(reason)
 
   if (caseData.legalHold?.active === true) {
@@ -109,7 +136,7 @@ exports.setLegalHold = onCall(async (request) => {
 exports.releaseLegalHold = onCall(async (request) => {
   const { caseId, reason } = request.data || {}
   const firestore = admin.firestore()
-  const { uid, caseRef, caseData } = await loadCaseForHoldManagement(firestore, request, caseId)
+  const { uid, caseRef, caseData } = await loadCaseForHoldManagement(firestore, request, caseId, 'legal_hold_release')
   const cleanReason = requireReason(reason)
 
   if (caseData.legalHold?.active !== true) {
@@ -153,10 +180,19 @@ exports.listLegalHolds = onCall(async (request) => {
     if (!tokenCompanyId || tokenCompanyId !== companyId) {
       throw new HttpsError('permission-denied', 'You may only view legal holds for your own company')
     }
-    const role = await loadCallerRole(firestore, companyId, uid)
+    const role = await loadCallerRole(firestore, companyId, uid, 'list_legal_holds')
     if (role !== 'companyAdmin') {
+      await logPrivilegedAction(firestore, {
+        uid,
+        companyId,
+        role,
+        action: 'list_legal_holds',
+        outcome: 'denied:permission-denied',
+        detail: 'role_not_company_admin',
+      })
       throw new HttpsError('permission-denied', 'Only a Company Admin or Super Admin may view legal holds')
     }
+    await logPrivilegedAction(firestore, { uid, companyId, role, action: 'list_legal_holds', outcome: 'granted' })
   }
 
   const snapshot = await firestore

@@ -85,6 +85,22 @@
         { "fieldPath": "caseId", "order": "ASCENDING" },
         { "fieldPath": "exportedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "pulseInvites",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "privilegedActionLog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "at", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

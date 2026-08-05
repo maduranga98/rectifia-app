@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
-const { requireAuthUid, loadCallerRole } = require('../utils/staffAuth')
+const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const {
   CATEGORIES,
   INDUSTRIES,
@@ -57,7 +57,8 @@ exports.getBenchmarksForCompany = onCall(async (request) => {
   }
   // Membership verified against the staff subcollection, not the claim alone -
   // a stale claim on a deactivated account still fails.
-  await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, 'benchmark_read')
+  await logPrivilegedAction(firestore, { uid, companyId, role, action: 'benchmark_read', outcome: 'granted' })
 
   const [companySnap, optInSnap] = await Promise.all([
     firestore.collection(COMPANIES_COLLECTION).doc(companyId).get(),
@@ -136,13 +137,28 @@ exports.setBenchmarkOptIn = onCall(async (request) => {
       'You may only change your own company\'s benchmark opt-in'
     )
   }
-  const role = await loadCallerRole(firestore, companyId, uid)
+  const role = await loadCallerRole(firestore, companyId, uid, 'benchmark_opt_in_change')
   if (!OPT_IN_ROLES.includes(role)) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action: 'benchmark_opt_in_change',
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_company_admin',
+    })
     throw new HttpsError(
       'permission-denied',
       'Only a Company Admin may change benchmark opt-in'
     )
   }
+  await logPrivilegedAction(firestore, {
+    uid,
+    companyId,
+    role,
+    action: 'benchmark_opt_in_change',
+    outcome: 'granted',
+  })
 
   const optedIn = request.data?.optedIn === true
   const acknowledged = request.data?.acknowledged === true
