@@ -396,7 +396,19 @@ service cloud.firestore {
     // role to pulseResponses above, so neither can ever reach an individual
     // record no matter how the client queries.
     match /pulseSummaries/{summaryId} {
-      allow read: if isManager(resource.data.companyId) || isHrCoordinator(resource.data.companyId) || isPulseReviewer(resource.data.companyId) || isCompanyAdmin(resource.data.companyId);
+      // HR Coordinator and Pulse Check Reviewer read every aggregate
+      // unconditionally - they already have a rules path to the individual
+      // pulseResponses above, so the minimum-response floor would protect
+      // nothing from them. Manager and Company Admin read an aggregate only
+      // once it is no longer suppressed: below MIN_AGGREGATE_RESPONSES (see
+      // analyzePulseResponse.js) an "average" is really one person's score
+      // attributed, which these two roles must never see. The suppressed==false
+      // check here is what enforces the floor; the client query must carry a
+      // matching where('suppressed','==',false) or Firestore rejects it whole.
+      allow read: if isHrCoordinator(resource.data.companyId)
+        || isPulseReviewer(resource.data.companyId)
+        || ((isManager(resource.data.companyId) || isCompanyAdmin(resource.data.companyId))
+            && resource.data.suppressed == false);
       allow write: if false;
     }
 
