@@ -3,6 +3,7 @@ const admin = require('firebase-admin')
 const crypto = require('crypto')
 const { hashPasscode } = require('./generateCaseAccess')
 const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
+const { resolveQuestionSet } = require('../pulse/questionSet')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -58,7 +59,23 @@ function verifyInviteToken(token, tokenHash, tokenSalt) {
 // than one live invite per employee, and a lost invite is simply replaced by
 // the next send - the same deliberate no-recovery stance as the Case ID +
 // passcode model, so there is no resend or recovery path here on purpose.
-async function createPulseInvite(firestore, { companyId, employeeId, department, cadenceDays }) {
+//
+// questionSetVersion is stamped HERE, at mint time, not read when the invite is
+// answered. An employee holding a link sent before a company published a new
+// questionnaire answers the questionnaire they were actually sent - and the
+// stored response can always be resolved back to that exact wording. null means
+// the company had published nothing when the invite was minted, which resolves
+// to the core-only set.
+//
+// isTest marks an invite created by sendTestPulseInvite.js for a staff member
+// previewing the real delivery. It rides through to the response document, and
+// everything downstream (analyzePulseResponse, updatePulseSummary, the HR list,
+// the employee's own trend history) skips it - a test must never move a
+// department average or count toward the k-anonymity floor.
+async function createPulseInvite(
+  firestore,
+  { companyId, employeeId, department, cadenceDays, questionSetVersion = null, isTest = false }
+) {
   if (!companyId || !employeeId) {
     throw new Error('companyId and employeeId are required to create a pulse invite')
   }
@@ -80,6 +97,8 @@ async function createPulseInvite(firestore, { companyId, employeeId, department,
     usedAt: null,
     status: 'pending',
     validationAttempts: 0,
+    questionSetVersion: Number.isInteger(questionSetVersion) ? questionSetVersion : null,
+    isTest: isTest === true,
   })
 
   return { inviteId: ref.id, token }
@@ -173,17 +192,31 @@ exports.validatePulseInvite = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) =>
 
     return {
       valid: true,
-      invite: { companyId: data.companyId, department: data.department ?? null },
+      invite: {
+        companyId: data.companyId,
+        department: data.department ?? null,
+        questionSetVersion: data.questionSetVersion ?? null,
+        isTest: data.isTest === true,
+      },
     }
   })
 
-  // Resolve the company's display name outside the transaction (no write
-  // depends on it) so the form can show the employee which organization the
-  // check-in is for - the only way they can tell a genuine invite from a
-  // phishing link. companyId itself is never surfaced to the page.
+  // Resolve the company's display name and the invite's question set outside
+  // the transaction (no write depends on either) so the form can show the
+  // employee which organization the check-in is for - the only way they can
+  // tell a genuine invite from a phishing link - and render the questionnaire
+  // without a second round trip. companyId itself is never surfaced to the page.
+  //
+  // The set resolved here is the one stamped on the invite when it was minted,
+  // NOT the company's current published set: an employee answers the
+  // questionnaire they were sent, even if a publish landed in between.
   if (result.valid) {
-    const companySnap = await firestore.collection(COMPANIES_COLLECTION).doc(result.invite.companyId).get()
+    const [companySnap, questionSet] = await Promise.all([
+      firestore.collection(COMPANIES_COLLECTION).doc(result.invite.companyId).get(),
+      resolveQuestionSet(result.invite.companyId, result.invite.questionSetVersion),
+    ])
     result.invite.companyName = companySnap.exists ? companySnap.data().name ?? null : null
+    result.questionSet = questionSet
   }
 
   return result

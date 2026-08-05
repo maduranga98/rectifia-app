@@ -36,6 +36,47 @@ function isDue(company, cadenceDays) {
 const PENDING_STATUS = 'pending'
 const AWAITING_CONTACT_STATUS = 'awaiting_contact_info'
 
+// Raised when a company has no published question set. Both queueing paths - the
+// daily scheduler and the on-demand send - refuse rather than sending invites
+// nobody configured, and say so instead of appearing to work.
+//
+// A company with nothing published would still get a perfectly answerable
+// core-only survey (resolveQuestionSet falls back to core), so this is not a
+// technical necessity - it is a deliberate one. Publishing is the step where a
+// named person signs off on what an entire workforce is about to be asked, and
+// a company that has never taken that step should be told, once, rather than
+// discovering months later that everyone was asked something nobody chose.
+class NoPublishedQuestionSetError extends Error {
+  constructor(companyId) {
+    super('This company has no published pulse-check questionnaire')
+    this.name = 'NoPublishedQuestionSetError'
+    this.companyId = companyId
+  }
+}
+
+// Writes the "we did not send" notification. Queued to the Company Admin, the
+// one role that can fix it, and idempotent per company: a daily scheduler that
+// wrote one of these every morning would be noise, not a signal, so an
+// unacknowledged notice is left in place rather than duplicated.
+async function notifyMissingQuestionSet(firestore, companyId) {
+  const existing = await firestore
+    .collection(NOTIFICATIONS_COLLECTION)
+    .where('type', '==', 'pulseQuestionSetMissing')
+    .where('companyId', '==', companyId)
+    .where('status', '==', PENDING_STATUS)
+    .limit(1)
+    .get()
+  if (!existing.empty) return
+
+  await firestore.collection(NOTIFICATIONS_COLLECTION).add({
+    type: 'pulseQuestionSetMissing',
+    audience: 'companyAdmin',
+    companyId,
+    status: PENDING_STATUS,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  })
+}
+
 // The single per-company queueing loop, shared by the daily scheduler above and
 // the on-demand trigger in sendPulseChecksNow.js so the two can never drift.
 // Given a company doc and the cadence (in days) to size the invite window with,
@@ -47,7 +88,20 @@ const AWAITING_CONTACT_STATUS = 'awaiting_contact_info'
 // queues nothing and, matching the scheduler's long-standing behaviour, leaves
 // lastPulseCheckSentAt untouched so the company becomes due again the moment a
 // roster is imported rather than waiting out another full cadence.
+//
+// Throws NoPublishedQuestionSetError if the company has never published a
+// questionnaire. Each caller decides how to report that (the scheduler writes a
+// notification, the on-demand send returns an error to the admin pressing the
+// button), but neither of them sends.
 async function queuePulseInvitesForCompany(firestore, companyDoc, cadenceDays) {
+  // Read at the top of the send, once, and stamped identically onto every
+  // invite in it: everyone in a single send answers the same questionnaire even
+  // if a publish lands mid-loop.
+  const questionSetVersion = companyDoc.data().activeQuestionSetVersion
+  if (!Number.isInteger(questionSetVersion) || questionSetVersion < 1) {
+    throw new NoPublishedQuestionSetError(companyDoc.id)
+  }
+
   const employeesSnapshot = await companyDoc.ref.collection(EMPLOYEES_SUBCOLLECTION).get()
   if (employeesSnapshot.empty) {
     logger.info('queuePulseInvitesForCompany: no employees on roster, skipping', {
@@ -91,6 +145,9 @@ async function queuePulseInvitesForCompany(firestore, companyDoc, cadenceDays) {
       employeeId: employeeDoc.id,
       department: employee.department ?? null,
       cadenceDays,
+      // Fixed when the invite is minted, not when it is answered. An employee
+      // holding a link sent before a publish answers what they were sent.
+      questionSetVersion,
     })
 
     const notificationRef = firestore.collection(NOTIFICATIONS_COLLECTION).doc()
@@ -138,10 +195,22 @@ exports.schedulePulseChecks = onSchedule('every day 01:00', async () => {
     try {
       await queuePulseInvitesForCompany(firestore, companyDoc, cadenceDays)
     } catch (err) {
+      // A missing questionnaire is a configuration gap, not a fault: it is
+      // reported to the Company Admin who can close it, and logged at info so
+      // it doesn't sit in the error stream every morning until they do.
+      if (err instanceof NoPublishedQuestionSetError) {
+        logger.info('schedulePulseChecks: no published question set, not sending', {
+          companyId: companyDoc.id,
+        })
+        await notifyMissingQuestionSet(firestore, companyDoc.id)
+        continue
+      }
       logger.error('schedulePulseChecks: failed to queue invites', { companyId: companyDoc.id, error: err.message })
     }
   }
 })
 
 exports.queuePulseInvitesForCompany = queuePulseInvitesForCompany
+exports.notifyMissingQuestionSet = notifyMissingQuestionSet
+exports.NoPublishedQuestionSetError = NoPublishedQuestionSetError
 exports.CADENCE_DAYS = CADENCE_DAYS

@@ -35,6 +35,12 @@ const { submitPulseResponse, analyzePulseResponse } = require('./src/intake/anal
 const { validatePulseInvite } = require('./src/intake/pulseInvites')
 const { schedulePulseChecks } = require('./src/intake/schedulePulseChecks')
 const { sendPulseChecksNow } = require('./src/intake/sendPulseChecksNow')
+const {
+  getPublishedQuestionSet,
+  saveSupplementaryQuestions,
+  publishQuestionSet,
+} = require('./src/pulse/questionSet')
+const { sendTestPulseInvite } = require('./src/pulse/testInvite')
 const { registerPushSubscription, sendCaseUpdate } = require('./src/notifications/sendCaseUpdate')
 const { sendContactEmailUpdate } = require('./src/notifications/sendContactEmailUpdate')
 const { deliverNotifications } = require('./src/notifications/deliverNotifications')
@@ -92,6 +98,13 @@ exports.validatePulseInvite = validatePulseInvite
 exports.analyzePulseResponse = analyzePulseResponse
 exports.schedulePulseChecks = schedulePulseChecks
 exports.sendPulseChecksNow = sendPulseChecksNow
+// Module 21. The questionnaire is a versioned, server-owned artifact: the core
+// set is code (src/pulse/coreQuestions.js) and a company's supplementary
+// questions are published as immutable versions, never edited in place.
+exports.getPublishedQuestionSet = getPublishedQuestionSet
+exports.saveSupplementaryQuestions = saveSupplementaryQuestions
+exports.publishQuestionSet = publishQuestionSet
+exports.sendTestPulseInvite = sendTestPulseInvite
 exports.registerPushSubscription = registerPushSubscription
 exports.sendCaseUpdate = sendCaseUpdate
 // The email half of the same update notification - same decoy template pool,

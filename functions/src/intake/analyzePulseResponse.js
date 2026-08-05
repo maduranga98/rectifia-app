@@ -8,6 +8,8 @@ const { notifyCrisisContact } = require('./routeCase')
 const { PULSE_INVITES_COLLECTION, verifyInviteToken } = require('./pulseInvites')
 const { MIN_RESPONSES_FOR_AGGREGATE, summaryDocId } = require('./pulseThresholds')
 const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
+const { resolveQuestionSet, validateAnswers, describeAnswers } = require('../pulse/questionSet')
+const { CORE_QUESTION_IDS } = require('../pulse/coreQuestions')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -95,6 +97,30 @@ exports.submitPulseResponse = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) =>
   const inviteRef = firestore.collection(PULSE_INVITES_COLLECTION).doc(inviteId)
   const responseRef = firestore.collection(PULSE_RESPONSES_COLLECTION).doc()
 
+  // The questionnaire this invite was minted with. Resolving it needs a read of
+  // an immutable document that no write depends on, so it happens outside the
+  // transaction; the version is re-asserted inside it below.
+  //
+  // Until module 21 the client was the only definition of a valid response:
+  // submitPulseResponse stored whatever {questionId, value} pairs it was given,
+  // so an unknown questionId or a scale value of 9000 landed straight in the
+  // document the analysis and the department averages are built from. Because
+  // the version is stamped at mint time, this validates against the
+  // questionnaire the employee was actually sent, not whatever is published now.
+  //
+  // Resolving here is safe because it produces no observable output. VALIDATING
+  // the answers is not, and deliberately does not happen here: an
+  // 'invalid-argument' rejection is an oracle for whether a given questionId
+  // exists in this company's questionnaire, so it must come only AFTER the
+  // token has been verified - which is why the validate call sits inside the
+  // transaction below rather than next to this read.
+  const preflight = await inviteRef.get()
+  if (!preflight.exists) {
+    throw new HttpsError('permission-denied', 'Invalid or expired pulse-check invite')
+  }
+  const inviteQuestionSetVersion = preflight.data().questionSetVersion ?? null
+  const questionSet = await resolveQuestionSet(preflight.data().companyId, inviteQuestionSetVersion)
+
   await firestore.runTransaction(async (tx) => {
     const snapshot = await tx.get(inviteRef)
     if (!snapshot.exists) {
@@ -115,12 +141,34 @@ exports.submitPulseResponse = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) =>
     if (!verifyInviteToken(token, invite.tokenHash, invite.tokenSalt)) {
       throw new HttpsError('permission-denied', 'Invalid or expired pulse-check invite')
     }
+    // The version is written once at mint time and never updated, so this can
+    // only differ if the invite document was tampered with between the
+    // preflight read and here - in which case the answers were validated
+    // against a set this invite no longer claims, and the submission is refused
+    // rather than stored under a version it was not checked against.
+    if ((invite.questionSetVersion ?? null) !== inviteQuestionSetVersion) {
+      throw new HttpsError('aborted', 'This invite changed while it was being submitted')
+    }
+
+    // Only now, with the token verified, is it safe to say anything about what
+    // this company's questionnaire contains. Throwing here aborts the
+    // transaction, so a rejected submission leaves the invite unspent and
+    // still answerable.
+    const validatedAnswers = validateAnswers(questionSet, answers)
 
     tx.set(responseRef, {
       employeeId: invite.employeeId,
       companyId: invite.companyId,
       department: invite.department ?? null,
-      answers,
+      answers: validatedAnswers,
+      // The questionnaire this response answered. Every later reader - the
+      // Claude prompt, the HR response list - resolves the wording through
+      // THIS number, never through whatever is published today.
+      questionSetVersion: inviteQuestionSetVersion,
+      // A staff member's own preview of the real link (see
+      // functions/src/pulse/testInvite.js). Excluded from analysis, aggregates,
+      // trend history and the HR list by default.
+      isTest: invite.isTest === true,
       submittedAt: admin.firestore.FieldValue.serverTimestamp(),
     })
     tx.update(inviteRef, {
@@ -132,13 +180,41 @@ exports.submitPulseResponse = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) =>
   return { responseId: responseRef.id }
 })
 
-async function analyzeWithClaude(answers, history) {
+// Keeps only the answers to CORE questions. Used for the history half of the
+// trend comparison: core questions are identical across every company and every
+// published version by design, so core answers are the one thing that is always
+// comparable. Supplementary answers feed theme extraction on the CURRENT
+// response and nothing else - never sentimentScore, never trendFlag, never an
+// aggregate.
+function coreAnswersOnly(answers) {
+  return (Array.isArray(answers) ? answers : []).filter((a) =>
+    CORE_QUESTION_IDS.includes(a.questionId)
+  )
+}
+
+// `history` entries are { answers, questionSet, coreVersionChanged } - each
+// resolved through ITS OWN questionSetVersion by the caller, so a prior
+// response is described with the wording it was actually answering.
+async function analyzeWithClaude(answers, questionSet, history) {
   const client = new Anthropic({ apiKey: anthropicApiKey.value() })
 
+  // Prior responses are rendered core-only. A company can add or remove
+  // supplementary questions between sends, so including them would mean
+  // comparing a response that had five questions against one that had four and
+  // reading the difference as a change in how someone feels.
   const historyText = history.length
     ? history
-        .map((h, i) => `Prior response ${i + 1} (most recent first): ${JSON.stringify(h.answers)}`)
-        .join('\n')
+        .map((h, i) => {
+          const versionNote = h.coreVersionChanged
+            ? '\n  NOTE: the core questions were reworded between this prior response and the ' +
+              'current one. Differences in wording are not differences in sentiment.'
+            : ''
+          return (
+            `Prior response ${i + 1} (most recent first), core questions only:\n` +
+            `${describeAnswers(h.questionSet, coreAnswersOnly(h.answers))}${versionNote}`
+          )
+        })
+        .join('\n\n')
     : 'No prior responses on file.'
 
   const response = await client.messages.create({
@@ -147,7 +223,12 @@ async function analyzeWithClaude(answers, history) {
     system:
       'You analyze employee wellness pulse-check survey responses. Assess sentiment, extract themes, ' +
       'flag a longitudinal trend by comparing against the prior responses provided, and flag an active safety ' +
-      'crisis only when the current response genuinely indicates one.',
+      'crisis only when the current response genuinely indicates one.\n\n' +
+      'Questions marked [company-added] are extra questions this employer added. Use them for themes ' +
+      'only. Base sentimentScore and trendFlag on the standard questions alone - they are the only ones ' +
+      'every employee across every period answers identically, so they are the only comparable ones.\n\n' +
+      'Prior responses are shown with the wording that was in front of the employee at the time. If a ' +
+      'note says the wording changed, do not read the change in wording as a change in mood.',
     output_config: {
       effort: 'medium',
       format: { type: 'json_schema', schema: ANALYSIS_OUTPUT_SCHEMA },
@@ -155,7 +236,7 @@ async function analyzeWithClaude(answers, history) {
     messages: [
       {
         role: 'user',
-        content: `Current response: ${JSON.stringify(answers)}\n\n${historyText}`,
+        content: `Current response:\n${describeAnswers(questionSet, answers)}\n\n${historyText}`,
       },
     ],
   })
@@ -183,6 +264,15 @@ async function analyzeWithClaude(answers, history) {
 // get combined into a summary - Manager-facing views never touch
 // pulseResponses directly (firestore.rules denies it outright), so there is
 // no client-side filtering step to get wrong.
+//
+// Two things must stay true of what reaches here, and both are enforced before
+// the call rather than inside it:
+//   - sentimentScore is derived from CORE answers only (analyzeWithClaude's
+//     system prompt), so a company adding a question can never shift a
+//     department average, and MIN_RESPONSES_FOR_AGGREGATE keeps meaning what
+//     pulseThresholds.js says it means.
+//   - test responses never get here at all (the isTest early return in the
+//     trigger), so they cannot inflate responseCount toward the floor.
 async function updatePulseSummary(firestore, { companyId, department, sentimentScore }) {
   const period = currentPeriod()
   const summaryId = summaryDocId(companyId, department, period)
@@ -252,22 +342,54 @@ exports.analyzePulseResponse = onDocumentCreated(
     const responseId = event.params.responseId
     const firestore = admin.firestore()
 
+    // A test response (functions/src/pulse/testInvite.js) stops here. No Claude
+    // call, no sentimentScore, no aggregate, no crisis notification: a staff
+    // member checking what the questionnaire looks like must not be able to
+    // move a department average, and must not be able to unlock a suppressed
+    // one by testing MIN_RESPONSES_FOR_AGGREGATE times.
+    if (data.isTest === true) {
+      logger.info('analyzePulseResponse: skipping test response', { responseId })
+      return
+    }
+
+    const currentQuestionSet = await resolveQuestionSet(data.companyId, data.questionSetVersion)
+
+    // Over-fetched, then filtered: a test response sitting in this employee's
+    // history would otherwise become a data point in their trend line.
     const historySnapshot = await firestore
       .collection(PULSE_RESPONSES_COLLECTION)
       .where('employeeId', '==', data.employeeId)
       .where('companyId', '==', data.companyId)
       .orderBy('submittedAt', 'desc')
-      .limit(HISTORY_LOOKBACK + 1)
+      .limit(HISTORY_LOOKBACK * 2 + 1)
       .get()
 
-    const history = historySnapshot.docs
-      .filter((d) => d.id !== responseId)
+    const historyDocs = historySnapshot.docs
+      .filter((d) => d.id !== responseId && d.data().isTest !== true)
       .slice(0, HISTORY_LOOKBACK)
       .map((d) => d.data())
 
+    // Each prior response is resolved through ITS OWN version, so it is
+    // described with the wording it was answering rather than today's. Where the
+    // CORE version differs from the current response's, that is called out in
+    // the prompt: a reworded core question must never read as a change in mood.
+    const history = await Promise.all(
+      historyDocs.map(async (h) => {
+        const questionSet = await resolveQuestionSet(data.companyId, h.questionSetVersion)
+        return {
+          answers: h.answers,
+          questionSet,
+          coreVersionChanged:
+            questionSet.coreVersion != null &&
+            currentQuestionSet.coreVersion != null &&
+            questionSet.coreVersion !== currentQuestionSet.coreVersion,
+        }
+      })
+    )
+
     let result
     try {
-      result = await analyzeWithClaude(data.answers, history)
+      result = await analyzeWithClaude(data.answers, currentQuestionSet, history)
     } catch (err) {
       logger.error('analyzePulseResponse: analysis failed', { responseId, error: err.message })
       throw err

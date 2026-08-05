@@ -13,8 +13,16 @@ const validatePulseInviteCallable = httpsCallable(functions, 'validatePulseInvit
 // account, so this token is their only credential - there is no sign-in step.
 //
 // Returns one of:
-//   { valid: true, invite: { companyId, department, companyName } }
+//   { valid: true,
+//     invite: { companyId, department, companyName, questionSetVersion, isTest },
+//     questionSet: { version, coreVersion, questions[] } }
 //   { valid: false, reason: 'used' | 'expired' | 'invalid' }
+//
+// `questionSet` comes back from this same call rather than a second one: the
+// form has to know what to render before it can render anything, and the answer
+// depends on the invite, so splitting it into its own round trip would only add
+// a hop. It is the set the invite was MINTED with, not whatever the company has
+// published today - an employee answers the questionnaire they were sent.
 // `companyName` is shown to the employee so they can tell a genuine invite
 // from a phishing link; `reason` lets the page explain used/expired/invalid
 // distinctly - and 'used' is a confirmation, not an error (their response is
@@ -54,14 +62,27 @@ export async function submitPulseResponse({ inviteId, token, answers }) {
 
 // Individual, named responses plus their AI analysis - readable only by HR
 // Coordinator / Pulse Check Reviewer per firestore.rules. There is no
-// client-side filtering here: a Manager's auth token simply has no rules
+// client-side access control here: a Manager's auth token simply has no rules
 // path to this collection, so calling this as a Manager fails at the
 // Firestore layer, not because the UI chose not to show it.
-export async function listPulseResponses(companyId) {
+//
+// Test responses (functions/src/pulse/testInvite.js - a staff member mailing
+// themselves the real link to see what employees get) are excluded by default.
+// They carry no analysis at all, since analyzePulseResponse skips them
+// outright, so leaving them in the list would show rows with no sentiment and
+// no trend and make the module look broken. `includeTests` brings them back for
+// the one case where they matter: checking that a test actually arrived.
+//
+// This is a display filter, not a privacy control - the privacy-relevant
+// exclusion (out of every aggregate and every trend) happens server-side before
+// anything reaches here.
+export async function listPulseResponses(companyId, { includeTests = false } = {}) {
   const snapshot = await getDocs(
     query(collection(firestore, PULSE_RESPONSES_COLLECTION), where('companyId', '==', companyId))
   )
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+  return snapshot.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((r) => includeTests || r.isTest !== true)
 }
 
 // Firestore rejects an `in` filter with more than 30 values, so a manager

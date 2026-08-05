@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listPulseResponses, listPulseSummaries } from '../../services/pulseCheckService'
+import {
+  getPublishedQuestionSet,
+  indexQuestionSetsByVersion,
+  listQuestionSetVersions,
+  sortQuestions,
+} from '../../services/pulseQuestionService'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
 import Card from '../ui/Card'
@@ -54,7 +60,17 @@ function humanize(value) {
 // The suppression behaviour is identical for both: listPulseSummaries reads the
 // pre-projected averageSentiment (null below the floor) verbatim and never
 // divides a sum by a count.
-export function AggregateTrendsView({ companyId, departments }) {
+// `publishPeriods` is the set of 'YYYY-MM' periods in which the questionnaire
+// was republished, supplied by PulseTrendsPage. A card in one of those periods
+// carries a marker, because a step in a department's average that lines up with
+// a publish has a second candidate explanation - the questions changed - and a
+// reader who cannot see that will attribute it entirely to how people feel.
+//
+// The marker is a caution, not a verdict: only supplementary questions can
+// change here, and those never feed sentimentScore, so a publish is not
+// expected to move the average. It is shown precisely so someone can rule that
+// out rather than wonder.
+export function AggregateTrendsView({ companyId, departments, publishPeriods }) {
   const [summaries, setSummaries] = useState([])
   const [error, setError] = useState(null)
 
@@ -107,6 +123,7 @@ export function AggregateTrendsView({ companyId, departments }) {
         // into this doc). averageSentiment is null for a suppressed department,
         // so there is nothing here to divide-out or leak.
         const tone = s.suppressed ? 'tone-neutral' : SENTIMENT_TONE(s.averageSentiment)
+        const publishedThisPeriod = publishPeriods?.has?.(s.period)
         return (
           <Card key={s.id} className="relative overflow-hidden p-5 pl-6">
             <span
@@ -115,6 +132,12 @@ export function AggregateTrendsView({ companyId, departments }) {
             />
             <p className="truncate font-medium text-charcoal">{s.department}</p>
             <p className="text-xs text-muted">{s.period}</p>
+            {publishedThisPeriod && (
+              <p className="mt-1 flex items-center gap-1 text-[0.6875rem] text-subtle">
+                <Icon name="alert" className="h-3 w-3" />
+                Questionnaire changed this period
+              </p>
+            )}
             {s.suppressed ? (
               <>
                 <p className="mt-3 text-sm font-medium text-muted">Sentiment hidden</p>
@@ -139,22 +162,105 @@ export function AggregateTrendsView({ companyId, departments }) {
   )
 }
 
+// One response's answers, each shown beside the question that was actually put
+// to the person - resolved through THAT response's own questionSetVersion, not
+// the questionnaire published today.
+//
+// This matters most exactly when it is easiest to get wrong. A company can add,
+// reword, or remove its own questions at any time, and each publish freezes a
+// new version. An HR Coordinator reading a response from six months ago against
+// today's questionnaire would see answers lined up under questions that were
+// never asked - and there would be nothing on screen to suggest anything was
+// amiss. Where a version cannot be resolved at all, the answer is shown against
+// its raw id and labelled as unavailable rather than guessed at.
+function ResponseAnswers({ response, questionSetsByVersion, coreFallback }) {
+  const answers = Array.isArray(response.answers) ? response.answers : []
+  if (answers.length === 0) return null
+
+  const version = Number(response.questionSetVersion)
+  // A response with no version at all - one submitted before this company ever
+  // published, or before the questionnaire was versioned - is resolved against
+  // the core set. That is not a guess: core questions are identical for every
+  // company and across every version by design, so a core answer's wording is
+  // known even when no version document exists. A response that names a version
+  // which does not resolve gets no fallback: its supplementary wording is
+  // genuinely unrecoverable and is labelled that way rather than filled in.
+  const questionSet = Number.isInteger(version) ? questionSetsByVersion.get(version) : coreFallback
+  const byId = new Map(sortQuestions(questionSet?.questions).map((q) => [q.id, q]))
+
+  return (
+    <div className="mt-3 flex flex-col gap-2">
+      {answers.map((answer) => {
+        const question = byId.get(answer.questionId)
+        const blank = answer.value === '' || answer.value == null
+        return (
+          <div key={answer.questionId} className="rounded-lg bg-navy-50 px-3 py-2">
+            <p className="text-xs text-muted">
+              {question ? question.text : `Question wording unavailable (${answer.questionId})`}
+              {question?.tier === 'supplementary' && (
+                <span className="ml-1.5 text-subtle">· added by your company</span>
+              )}
+            </p>
+            <p className="text-sm text-charcoal">
+              {blank ? (
+                <span className="text-subtle">No answer</span>
+              ) : question?.type === 'scale' ? (
+                <>
+                  {answer.value}
+                  {question.scaleLabels?.[Number(answer.value) - 1] && (
+                    <span className="text-muted">
+                      {' '}
+                      · {question.scaleLabels[Number(answer.value) - 1]}
+                    </span>
+                  )}
+                </>
+              ) : (
+                answer.value
+              )}
+            </p>
+          </div>
+        )
+      })}
+      <p className="text-[0.6875rem] text-subtle">
+        {Number.isInteger(version)
+          ? `Questionnaire version ${version} — the wording this person actually saw.`
+          : 'Standard questions only — this response predates any published version.'}
+      </p>
+    </div>
+  )
+}
+
 // HR Coordinator / Pulse Check Reviewer view - the only roles that ever see
 // a named individual response and its AI summary. Reachable only because
 // firestore.rules grants those two roles (and only those two) read access
 // to pulseResponses/{responseId}.
 export function IndividualResponsesView({ companyId }) {
   const [responses, setResponses] = useState([])
+  const [questionSetsByVersion, setQuestionSetsByVersion] = useState(() => new Map())
+  const [coreFallback, setCoreFallback] = useState(null)
+  const [includeTests, setIncludeTests] = useState(false)
   const [error, setError] = useState(null)
 
   const refresh = useCallback(async () => {
     try {
-      const rows = await listPulseResponses(companyId)
+      // Every published version, not just the current one: each response is
+      // rendered against the version it answered, and older responses point at
+      // older versions.
+      const [rows, versions, current] = await Promise.all([
+        listPulseResponses(companyId, { includeTests }),
+        listQuestionSetVersions(companyId),
+        // Always resolves to something - the server falls back to the core-only
+        // set for a company that has never published - so there is always a set
+        // to render a version-less response against.
+        getPublishedQuestionSet(companyId),
+      ])
+      setQuestionSetsByVersion(indexQuestionSetsByVersion(versions))
+      setCoreFallback(current.published)
       setResponses(rows.sort((a, b) => (b.submittedAt?.toMillis?.() ?? 0) - (a.submittedAt?.toMillis?.() ?? 0)))
     } catch (err) {
       setError(err.message)
     }
-  }, [companyId])
+  }, [companyId, includeTests])
 
   useEffect(() => {
     refresh()
@@ -162,19 +268,37 @@ export function IndividualResponsesView({ companyId }) {
 
   if (error) return <Alert variant="error">{error}</Alert>
 
+  const crisisCount = responses.filter((r) => r.crisisFlag).length
+
+  // The test filter is rendered above the empty state, not inside the populated
+  // branch: someone who has just turned tests ON and found nothing needs the
+  // toggle in front of them to turn it back off.
+  const testFilter = (
+    <label className="flex cursor-pointer items-center gap-2 self-start text-xs text-muted">
+      <input
+        type="checkbox"
+        checked={includeTests}
+        onChange={(e) => setIncludeTests(e.target.checked)}
+        className="h-3.5 w-3.5"
+      />
+      Show test check-ins
+    </label>
+  )
+
   if (responses.length === 0) {
     return (
-      <Card padded={false}>
-        <EmptyState
-          icon="pulse"
-          title="No responses yet"
-          description="Individual pulse check responses and their AI summaries land here as they come in."
-        />
-      </Card>
+      <div className="flex flex-col gap-3">
+        {testFilter}
+        <Card padded={false}>
+          <EmptyState
+            icon="pulse"
+            title="No responses yet"
+            description="Individual pulse check responses and their AI summaries land here as they come in."
+          />
+        </Card>
+      </div>
     )
   }
-
-  const crisisCount = responses.filter((r) => r.crisisFlag).length
 
   return (
     <div className="flex flex-col gap-4">
@@ -183,6 +307,8 @@ export function IndividualResponsesView({ companyId }) {
           Crisis contact has already been triggered automatically for these.
         </Alert>
       )}
+
+      {testFilter}
 
       <Card
         title="Individual responses"
@@ -198,6 +324,7 @@ export function IndividualResponsesView({ companyId }) {
                   <p className="text-xs text-muted">{r.department ?? 'Unspecified department'}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {r.isTest && <Badge tone="tone-neutral">Test</Badge>}
                   {r.crisisFlag && (
                     <Badge tone="tone-critical" icon="alert">
                       Crisis flagged
@@ -209,7 +336,20 @@ export function IndividualResponsesView({ companyId }) {
                 </div>
               </div>
 
+              {r.isTest && (
+                <p className="mt-2 text-xs text-muted">
+                  A staff member&apos;s own test of the check-in link. It is not analysed and is
+                  excluded from every average and every trend.
+                </p>
+              )}
+
               {r.sentimentSummary && <p className="mt-2 text-sm text-charcoal">{r.sentimentSummary}</p>}
+
+              <ResponseAnswers
+                response={r}
+                questionSetsByVersion={questionSetsByVersion}
+                coreFallback={coreFallback}
+              />
 
               {Array.isArray(r.themes) && r.themes.length > 0 && (
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
