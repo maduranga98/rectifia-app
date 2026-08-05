@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   ACTION_CATEGORIES,
+  MIN_REASON_LENGTH,
   closeCase,
   getAssignedCase,
   proposeAction,
   reviewConsistencyFlag,
+  revealReporterIdentity,
 } from '../../services/handlerService'
 import ComplianceCountdown from '../dashboard/ComplianceCountdown'
 import CaseThread from '../intake/CaseThread'
@@ -166,6 +168,173 @@ function ConsistencyFlagBanner({ caseData, onChanged }) {
 
       {error && <Alert variant="error">{error}</Alert>}
     </div>
+  )
+}
+
+const IDENTITY_FIELD_LABELS = {
+  name: 'Name',
+  email: 'Email',
+  phone: 'Phone',
+  jobTitle: 'Job title',
+  notes: 'Notes',
+}
+
+// Renders one revealed identity field/value pair per line. `identity` is the
+// decrypted object returned by the callable - it lives only in the parent's
+// component state for this session and is never persisted.
+function RevealedIdentity({ identity }) {
+  const entries = Object.entries(identity ?? {}).filter(([, value]) => value != null && value !== '')
+  if (entries.length === 0) {
+    return <p className="text-sm text-muted">No identity fields were stored.</p>
+  }
+  return (
+    <dl className="flex flex-col divide-y divide-line-soft">
+      {entries.map(([key, value]) => (
+        <div key={key} className="py-2 first:pt-0 last:pb-0">
+          <dt className="text-xs font-medium uppercase tracking-[0.04em] text-muted">
+            {IDENTITY_FIELD_LABELS[key] ?? humanize(key)}
+          </dt>
+          <dd className="mt-1 text-sm text-charcoal">
+            {Array.isArray(value) ? value.join(', ') : String(value)}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+// Confidential-tier reporter identity, revealed on demand behind a logged
+// reason (Blueprint §7.1). Rendered only for confidential-tier cases - an
+// anonymous case has no such card at all. The revealed plaintext is held in
+// this component's state only: it is never cached or persisted, and unmounting
+// (leaving the case) drops it, so returning re-requests it with a fresh reason.
+//
+// Two confidential states are shown distinctly, because they are genuinely
+// different situations for an investigator: an identity IS on file (the report
+// was filed on the reporter's behalf via createCaseOnBehalf, which vaulted
+// their details) versus NONE is on file (the reporter self-submitted and chose
+// confidential, so submitCase recorded the tier but vaulted nothing - there is
+// simply nobody named to reveal).
+function ReporterIdentityCard({ caseData }) {
+  const [expanded, setExpanded] = useState(false)
+  const [reason, setReason] = useState('')
+  const [identity, setIdentity] = useState(null)
+  const [revealing, setRevealing] = useState(false)
+  const [error, setError] = useState(null)
+
+  // The case doc carries the identity envelope's *key names* (fieldsOnFile) and
+  // metadata, never the plaintext; its mere presence is how we tell "identity
+  // on file" from "confidential but self-submitted, nothing vaulted".
+  const record = caseData.reporterIdentity
+  const hasIdentityOnFile = Boolean(record)
+  const fieldsOnFile = Array.isArray(record?.fieldsOnFile) ? record.fieldsOnFile : []
+  const reasonValid = reason.trim().length >= MIN_REASON_LENGTH
+
+  async function handleReveal() {
+    if (!reasonValid) return
+    setRevealing(true)
+    setError(null)
+    try {
+      const result = await revealReporterIdentity(caseData.id, reason)
+      setIdentity(result.identity)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRevealing(false)
+    }
+  }
+
+  return (
+    <Card title="Reporter identity" padded={false}>
+      <div className="px-5 py-4">
+        {!expanded ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted">
+              This is a confidential-tier report.{' '}
+              {hasIdentityOnFile
+                ? 'Reporter identity details are on file and can be revealed with a logged reason.'
+                : 'The reporter self-submitted and provided no identity details, so there is nothing to reveal.'}
+            </p>
+            <Button
+              variant="secondary"
+              icon="shield"
+              className="self-start"
+              onClick={() => setExpanded(true)}
+            >
+              {hasIdentityOnFile ? 'Reveal reporter identity' : 'Show identity status'}
+            </Button>
+          </div>
+        ) : !hasIdentityOnFile ? (
+          <div className="flex flex-col gap-3">
+            <Alert variant="info" title="No identity on file">
+              This reporter filed confidentially through the web form and chose not to provide any
+              identifying details. Nothing was stored, so there is nothing to reveal here - the
+              case thread is the only channel back to them.
+            </Alert>
+            <Button variant="ghost" className="self-start" onClick={() => setExpanded(false)}>
+              Hide
+            </Button>
+          </div>
+        ) : identity ? (
+          <div className="flex flex-col gap-3">
+            <Alert variant="warning" title="Identity revealed - this access has been logged">
+              Your identity, this case, and your reason are recorded in the access log. This is
+              shown for this session only and is not stored here; leaving and returning will require
+              a fresh reason.
+            </Alert>
+            <RevealedIdentity identity={identity} />
+            <Button
+              variant="ghost"
+              className="self-start"
+              onClick={() => {
+                setIdentity(null)
+                setReason('')
+              }}
+            >
+              Hide identity
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-charcoal">
+              {fieldsOnFile.length > 0
+                ? `On file for this reporter: ${fieldsOnFile
+                    .map((f) => (IDENTITY_FIELD_LABELS[f] ?? f).toLowerCase())
+                    .join(', ')}.`
+                : 'Reporter identity details are on file.'}
+            </p>
+            <Alert variant="warning" title="Revealing identity is logged and attributable">
+              Revealing a confidential reporter&apos;s identity is a deliberate act. Before you
+              proceed, know that your identity, this case, the time, and the reason you type below
+              are written to the access log. Only do this when you have a documented reason to.
+            </Alert>
+            <Textarea
+              label="Reason for revealing this identity"
+              rows={3}
+              placeholder="Record why this reporter's identity needs to be revealed (min. 10 characters)."
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            <div className="flex items-center gap-3">
+              <Button
+                variant="danger"
+                icon="shield"
+                onClick={handleReveal}
+                loading={revealing}
+                loadingLabel="Revealing"
+                disabled={!reasonValid}
+              >
+                Reveal identity
+              </Button>
+              <Button variant="ghost" onClick={() => setExpanded(false)} disabled={revealing}>
+                Cancel
+              </Button>
+            </div>
+            {error && <Alert variant="error">{error}</Alert>}
+          </div>
+        )}
+      </div>
+    </Card>
   )
 }
 
@@ -399,6 +568,11 @@ function CaseDetailView({ caseId }) {
         </div>
 
         <div className="flex flex-col gap-5">
+          {/* Only confidential-tier cases carry a revealable identity. An
+              anonymous case never renders this card - there is nothing behind
+              it - so its absence is itself accurate. */}
+          {caseData.tier === 'confidential' && <ReporterIdentityCard caseData={caseData} />}
+
           <Card title="Compliance deadlines">
             <ComplianceCountdown caseData={caseData} />
           </Card>
