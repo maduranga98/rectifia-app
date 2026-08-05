@@ -35,6 +35,14 @@ const { deliverNotifications } = require('./src/notifications/deliverNotificatio
 const { scheduleFollowUps } = require('./src/followup/scheduleFollowUps')
 const { runFollowUps } = require('./src/followup/runFollowUps')
 const { submitFollowUpResponse } = require('./src/followup/submitFollowUpResponse')
+const { requestPolicyUploadUrl, requestPolicyDownloadUrl } = require('./src/policy/policyAccess')
+const { ingestPolicyDocument } = require('./src/policy/ingestPolicyDocument')
+const { tagPolicyChunks } = require('./src/policy/tagPolicyChunks')
+const {
+  archivePolicyDocument,
+  restorePolicyDocument,
+  deletePolicyDocument,
+} = require('./src/policy/managePolicyDocument')
 
 exports.submitCase = submitCase
 exports.createCaseOnBehalf = createCaseOnBehalf
@@ -79,3 +87,10 @@ exports.deliverNotifications = deliverNotifications
 exports.scheduleFollowUps = scheduleFollowUps
 exports.runFollowUps = runFollowUps
 exports.submitFollowUpResponse = submitFollowUpResponse
+exports.requestPolicyUploadUrl = requestPolicyUploadUrl
+exports.requestPolicyDownloadUrl = requestPolicyDownloadUrl
+exports.ingestPolicyDocument = ingestPolicyDocument
+exports.tagPolicyChunks = tagPolicyChunks
+exports.archivePolicyDocument = archivePolicyDocument
+exports.restorePolicyDocument = restorePolicyDocument
+exports.deletePolicyDocument = deletePolicyDocument

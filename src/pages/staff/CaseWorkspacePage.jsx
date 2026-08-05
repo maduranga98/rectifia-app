@@ -4,6 +4,7 @@ import { getAssignedCase } from '../../services/handlerService'
 import {
   ActionForm,
   ConsistencyFlags,
+  PolicyReferences,
   QuestionnaireAnswers,
   ReporterIdentityCard,
 } from '../../components/investigation/CaseDetailView'
@@ -49,6 +50,7 @@ const TABS = [
   { path: 'questionnaire', label: 'Questionnaire' },
   { path: 'checklist', label: 'Checklist' },
   { path: 'consistency', label: 'Consistency', badge: (c) => (hasUnreviewedFlag(c) ? { dot: true } : null) },
+  { path: 'policy', label: 'Policy references' },
   { path: 'compliance', label: 'Compliance', badge: (c) => (hasPendingDeadline(c) ? { dot: true } : null) },
   { path: 'patterns', label: 'Patterns' },
   { path: 'identity', label: 'Identity', confidentialOnly: true },
@@ -200,6 +202,7 @@ function CaseWorkspacePage() {
             </Card>
           }
         />
+        <Route path="policy" element={<PolicyReferences caseData={caseData} />} />
         <Route
           path="compliance"
           element={

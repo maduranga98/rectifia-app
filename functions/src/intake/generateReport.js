@@ -65,6 +65,27 @@ exports.generateReport = onCall(async (request) => {
 
   const manualLogEntries = timeline.filter((message) => message.type === 'manual_log')
 
+  // "Policy in effect": the distinct policy documents (title + version) whose
+  // clauses grounded this case's AI steps, taken from the citations recorded on
+  // the case doc at the time. Records provenance, not the clause text - the
+  // report states which written policy was in force when the case was worked,
+  // which is exactly what a later reader needs and what versioning preserves
+  // even after a document is re-uploaded or archived. Empty for cases worked
+  // before any policy was uploaded.
+  const citations = Array.isArray(caseData.policyCitations) ? caseData.policyCitations : []
+  const policyInEffect = Object.values(
+    citations.reduce((acc, citation) => {
+      const policyId = citation?.policyId
+      if (!policyId || acc[policyId]) return acc
+      acc[policyId] = {
+        policyId,
+        title: citation.title ?? null,
+        version: typeof citation.version === 'number' ? citation.version : null,
+      }
+      return acc
+    }, {})
+  )
+
   const report = {
     caseId,
     summary: {
@@ -79,6 +100,7 @@ exports.generateReport = onCall(async (request) => {
     timeline,
     evidence,
     manualLogEntries,
+    policyInEffect,
     consistencyCheck: caseData.consistencyCheck
       ? {
           status: caseData.consistencyCheck.status ?? null,

@@ -245,6 +245,25 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         )}
       </Card>
 
+      <Card title="Policy in effect" padded={(report.policyInEffect?.length ?? 0) > 0}>
+        {!report.policyInEffect || report.policyInEffect.length === 0 ? (
+          <p className="text-sm text-muted">
+            No company policy was in effect for this case's category when it was created.
+          </p>
+        ) : (
+          <ul className="divide-y divide-line-soft">
+            {report.policyInEffect.map((policy) => (
+              <li key={policy.policyId} className="flex items-center justify-between gap-3 px-5 py-3">
+                <span className="text-sm text-charcoal">{policy.title ?? 'Policy document'}</span>
+                {policy.version != null && (
+                  <span className="text-xs text-muted">Version {policy.version}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <Card title="Final action taken">
         <DetailList
           items={[

@@ -4,6 +4,7 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
 const { buildScoringPrompt } = require('./prompts/scoringPrompt')
+const { getPolicyContext } = require('../policy/retrievePolicyContext')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -51,8 +52,11 @@ function determineQueuePriority(severityScore) {
   return 'low'
 }
 
-async function scoreWithClaude(category, responses) {
-  const { system, user } = buildScoringPrompt(category, responses)
+// policyContext is the optional grounding string from getPolicyContext(). When
+// omitted or empty the prompt is byte-identical to the ungrounded one, which is
+// what keeps a company that has uploaded no policy scoring exactly as today.
+async function scoreWithClaude(category, responses, policyContext) {
+  const { system, user } = buildScoringPrompt(category, responses, policyContext)
   const client = new Anthropic({ apiKey: anthropicApiKey.value() })
 
   const response = await client.messages.create({
@@ -107,7 +111,7 @@ exports.scoreCase = onDocumentCreated(
     const snapshot = event.data
     if (!snapshot) return
 
-    const { category, responses } = snapshot.data()
+    const { category, responses, companyId } = snapshot.data()
 
     if (!category || !Array.isArray(responses) || responses.length === 0) {
       // The case document was created before a questionnaire was submitted
@@ -116,10 +120,20 @@ exports.scoreCase = onDocumentCreated(
     }
 
     const caseId = event.params.caseId
+
+    // Ground the scoring prompt against the company's own written policy for
+    // this category, if any has been uploaded. getPolicyContext degrades to
+    // { text: '', citations: [] } when nothing is available, so this is a
+    // no-op for a company with no policies and never blocks scoring.
+    const { text: policyContext, citations: policyCitations } = await getPolicyContext(
+      companyId,
+      category
+    )
+
     let result
 
     try {
-      result = await scoreWithClaude(category, responses)
+      result = await scoreWithClaude(category, responses, policyContext)
     } catch (err) {
       logger.error('scoreCase: scoring request failed', { caseId, error: err.message })
       throw err
@@ -142,6 +156,7 @@ exports.scoreCase = onDocumentCreated(
         priorityFlag: 'high',
         flaggedAt: admin.firestore.FieldValue.serverTimestamp(),
         scoredAt: admin.firestore.FieldValue.serverTimestamp(),
+        policyCitations,
       })
       return
     }
@@ -153,6 +168,9 @@ exports.scoreCase = onDocumentCreated(
       reasoning: result.reasoning,
       queuePriority: determineQueuePriority(result.severityScore),
       scoredAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Exactly which policy chunks grounded this score, so PolicyReferences and
+      // the final report show real provenance rather than a claim of grounding.
+      policyCitations,
     })
   }
 )
