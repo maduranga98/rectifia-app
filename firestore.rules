@@ -640,6 +640,33 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Module 24's export record: one entry per PDF a case's report was
+    // rendered into (functions/src/reports/exportReportPdf.js, the only
+    // writer, Admin SDK only). Fields are metadata about the export event -
+    // who, when, the Storage path, the two content hashes, whether identity
+    // was included, page/byte counts - never the case content itself, so
+    // opening read access here is the same class of exposure as
+    // deletionLog above, not the class evidenceAccessLog and the identity
+    // logs are sealed against.
+    //
+    // Two readers: the case's own assigned handler (get() into the case doc,
+    // same assignedHandlerId check cases/{caseId} enforces directly), so an
+    // investigator can see that this case's report left the system three
+    // times last month; and Company Admin, company-wide, so a DPA-style
+    // question ("how many times has this case's report been exported, and by
+    // whom") has an answer without a Super Admin needing to be looped in.
+    // Super Admin is not given a blanket read here on purpose - a report
+    // export is scoped to the one company and the one assigned handler who
+    // can also generate it, and Super Admin has no exportReportPdf access
+    // path of its own to match (see the callable's own comment on why it has
+    // no Super Admin branch).
+    match /reportExports/{exportId} {
+      allow read: if isCompanyAdmin(resource.data.companyId)
+        || (request.auth != null
+          && get(/databases/$(database)/documents/cases/$(resource.data.caseId)).data.assignedHandlerId == request.auth.uid);
+      allow write: if false;
+    }
+
     // Rate-limit counters (functions/src/utils/rateLimit.js). Written only by
     // the Admin SDK inside the limiter's transaction; a client that could
     // read these could measure how close it is to a limit, and one that could

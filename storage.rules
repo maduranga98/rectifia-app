@@ -38,6 +38,20 @@ service firebase.storage {
       allow read, write: if false;
     }
 
+    // Module 24's exported closed-case PDFs. Same lockdown, same reason as
+    // case-evidence above, and higher stakes: a case report is the single
+    // most sensitive document this system produces, not one attachment out
+    // of several. functions/src/reports/exportReportPdf.js writes the file
+    // here with the Admin SDK after the caller passes the exact same
+    // authorization generateReport.js requires (the assigned handler, no new
+    // access path), and hands back a 15-minute v4 signed URL - never a
+    // permanent one, and never persisted anywhere the client can read it
+    // back out. Signed URLs use the service account's own credentials and
+    // bypass these rules, so denying everything here does not affect them.
+    match /case-reports/{caseId}/{fileName} {
+      allow read, write: if false;
+    }
+
     // Nothing else in this bucket is client-accessible either. Stated
     // explicitly rather than left to the implicit default, so a future path
     // added under a new prefix is denied by this rule rather than by nobody
