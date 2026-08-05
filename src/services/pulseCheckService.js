@@ -69,25 +69,34 @@ export async function listPulseResponses(companyId) {
 // it is a genuinely different collection, populated by a Cloud Function
 // aggregation step, not a filtered view of listPulseResponses.
 //
-// The where('suppressed','==',false) is not a cosmetic filter: firestore.rules
-// grants these two roles read access to a summary ONLY when suppressed is
-// false, and a Firestore security rule that tests resource.data requires the
-// query to constrain that field or the entire query is rejected (not silently
-// filtered). So this clause is what makes the read succeed at all, and the
-// server-side rule - not this line - is what actually withholds a department
-// that is still below the minimum-response privacy floor. HR Coordinator /
-// Pulse Check Reviewer never call this; they read individual responses instead.
+// This intentionally does NOT filter on suppressed: a suppressed department
+// still renders as a card (showing its responseCount and a "hidden until N
+// responses" state), because a department with too few responses to average is
+// itself a signal a manager should see, not something to silently drop. The
+// privacy guarantee no longer lives in a query filter: averageSentiment is a
+// pre-projected field, written as null server-side for any below-floor
+// department, so the number that could re-identify one person's answer never
+// reaches this collection at all. This service reads that field verbatim - it
+// never divides a sum by a count, because the raw sentimentScoreSum lives only
+// in pulseSummaryTotals, to which no client role has any rules path.
+//
+// A doc with no `suppressed` field predates this change (when the projection
+// carried sentimentScoreSum instead); treat it as suppressed and drop any
+// averageSentiment it may carry - fail closed rather than surface a legacy
+// average that might sit below the floor. HR Coordinator / Pulse Check Reviewer
+// never call this; they read individual responses instead.
 export async function listPulseSummaries(companyId) {
   const snapshot = await getDocs(
-    query(
-      collection(firestore, PULSE_SUMMARIES_COLLECTION),
-      where('companyId', '==', companyId),
-      where('suppressed', '==', false)
-    )
+    query(collection(firestore, PULSE_SUMMARIES_COLLECTION), where('companyId', '==', companyId))
   )
   return snapshot.docs.map((d) => {
     const data = d.data()
-    const averageSentiment = data.responseCount > 0 ? Math.round(data.sentimentScoreSum / data.responseCount) : null
-    return { id: d.id, ...data, averageSentiment }
+    const suppressed = data.suppressed !== false
+    return {
+      id: d.id,
+      ...data,
+      suppressed,
+      averageSentiment: suppressed ? null : data.averageSentiment ?? null,
+    }
   })
 }

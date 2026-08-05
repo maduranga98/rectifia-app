@@ -411,6 +411,17 @@ service cloud.firestore {
             && resource.data.suppressed == false);
       allow write: if false;
     }
+    // The raw accumulator behind each pulseSummaries projection - responseCount
+    // and sentimentScoreSum only, written under the same doc id in the same
+    // transaction by analyzePulseResponse.js. sentimentScoreSum is exactly the
+    // field that, divided by responseCount, would reconstruct one person's
+    // score for a below-floor department, so it lives here where NO client role
+    // has a rules path at all - the same fully-sealed posture as
+    // identityAccessAuditLog below. The Manager-readable pulseSummaries doc
+    // never contains it.
+    match /pulseSummaryTotals/{summaryId} {
+      allow read, write: if false;
+    }
 
     // Audit trail for functions/src/utils/identityVault.js's decryptIdentity
     // calls - every attempt to decrypt a confidential-tier reporter identity
