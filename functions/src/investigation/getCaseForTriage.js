@@ -56,6 +56,19 @@ function pickResponses(responses) {
 // Nothing from cases/{caseId}/messages is read at all - the thread is
 // handler-only and stays that way; there is no subcollection read in this
 // file to widen later.
+//
+// Module 20 is the first live test of that promise, and it passes without a
+// line changing here: cases can now carry `reporterIdentity` (written when a
+// reporter self-reveals) and `contactEmail` on top of the fields this payload
+// was written against, and neither appears below, so neither reaches a triage
+// viewer. That is the allowlist doing its job rather than luck - the case
+// document is never spread, so a new upstream field is absent by default and
+// can only ever appear here by someone typing it into this function.
+//
+// Neither belongs in triage on its own terms either. Triage answers one
+// question - who should work this case - and the identity of the reporter is
+// not an input to it. The tier is not returned here either, for the same
+// reason it never was: this payload is about the report, not the reporter.
 function buildTriagePayload(caseId, caseData) {
   return {
     caseId,

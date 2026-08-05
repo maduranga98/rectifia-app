@@ -147,12 +147,45 @@ exports.generateReport = onCall(async (request) => {
   // than merged into `summary` so a consumer can gate rendering it behind
   // its own access control instead of it riding along with the rest of the
   // report by default.
+  //
+  // The tier read here is the case's CURRENT tier, which since module 20 is no
+  // longer necessarily the tier it was filed at: a reporter can move their own
+  // case from anonymous to confidential mid-investigation
+  // (functions/src/intake/identityTransition.js). Keying off the current value
+  // is what makes the section appear at all for those cases - but presenting a
+  // self-revealed reporter identically to one who was confidential from the
+  // first message would quietly lose something an investigator needs. When the
+  // reporter was anonymous for the first three weeks, that is a fact about how
+  // the case was worked: the early thread was written by someone the
+  // investigator could not name, and the disclosure has a date the reader can
+  // line up against the timeline. So `tierChanged` carries the transition and
+  // its timestamp whenever one happened.
+  //
+  // `contactEmail` is not reported here at all, in any form - not the
+  // ciphertext, not a presence flag. Whether a reporter chose to be reachable
+  // is a delivery detail of their own, it is not evidence, and a report is a
+  // document that gets exported and circulated. The one place it is legible is
+  // the reporter's own case view.
+  //
+  // tierChangedBy is always 'reporter' today, because there is no other writer
+  // - no staff path can change a case's tier. It is reported rather than
+  // assumed so that a reader is told who made the change instead of inferring
+  // it, and so a future writer could not appear here unlabelled.
   if (caseData.tier === 'confidential' && caseData.reporterIdentity) {
     report.restrictedReporterIdentity = {
       status: 'On file, encrypted in the identity vault',
       detailsOnFile: (caseData.reporterIdentity.fieldsOnFile ?? []).join(', ') || 'unspecified',
       access:
         'Decryption requires a Super Admin, a documented legal reason, and is recorded in the identity access audit log.',
+      tierChanged: caseData.tierChangedAt
+        ? {
+            from: 'anonymous',
+            to: 'confidential',
+            at: toMillis(caseData.tierChangedAt),
+            by: caseData.tierChangedBy ?? 'reporter',
+            note: 'This case was filed anonymously. The reporter later chose to identify themselves; nobody asked them to, and it cannot be reversed.',
+          }
+        : null,
     }
   }
 

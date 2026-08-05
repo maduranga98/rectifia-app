@@ -95,7 +95,8 @@ exports.validateCaseAccess = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => 
     return { valid: false }
   }
 
-  const { passcodeHash, passcodeSalt, status, createdAt } = snapshot.data()
+  const caseData = snapshot.data()
+  const { passcodeHash, passcodeSalt, status, createdAt } = caseData
   const candidateHash = hashPasscode(passcode, passcodeSalt)
 
   const expected = Buffer.from(passcodeHash, 'hex')
@@ -108,5 +109,30 @@ exports.validateCaseAccess = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => 
     return { valid: false }
   }
 
-  return { valid: true, case: { caseId, status, createdAt } }
+  // tier and hasContactEmail are here so the reporter's own case view can show
+  // them the state of their own choices (module 20): whether they are still
+  // anonymous, and whether they have a contact address on file. Both are about
+  // the reader themselves, and this response only ever reaches someone who has
+  // just proved they hold the passcode.
+  //
+  // hasContactEmail is a boolean and never the address - not the plaintext,
+  // not the envelope. The panel needs to know whether to offer "add" or
+  // "remove", which presence alone answers; shipping the ciphertext to a
+  // browser to answer the same question would put it somewhere it could be
+  // kept. Same for the identity: the tier says the reporter identified
+  // themselves, and reading what they said still goes through revealIdentity.
+  return {
+    valid: true,
+    case: {
+      caseId,
+      status,
+      createdAt,
+      // Same reading normalizeTier() applies in submitCase.js - a case written
+      // before the field existed has no tier and is anonymous - repeated
+      // literally rather than imported, because submitCase.js already requires
+      // this module and importing back would close the cycle.
+      tier: caseData.tier === 'confidential' ? 'confidential' : 'anonymous',
+      hasContactEmail: Boolean(caseData.contactEmail),
+    },
+  }
 })

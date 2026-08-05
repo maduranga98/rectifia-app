@@ -277,3 +277,13 @@ exports.createCaseOnBehalf = onCall({ secrets: [encryptionKeySecret] }, async (r
     backdateWarning: backdatedDays > BACKDATE_WARNING_DAYS,
   }
 })
+
+// Exported so functions/src/intake/identityTransition.js can apply the exact
+// same identity allowlist, length cap, and fields-on-file derivation when a
+// reporter identifies themselves mid-case (Blueprint §7.2). A second copy of
+// IDENTITY_FIELDS living in that module would be free to drift - one path
+// would start accepting a field the other rejects, and the two would disagree
+// about what "a name and a phone number are on file" means.
+exports.IDENTITY_FIELDS = IDENTITY_FIELDS
+exports.buildIdentityPayload = buildIdentityPayload
+exports.identityFieldsOnFile = identityFieldsOnFile

@@ -13,8 +13,16 @@ const SUPER_ADMINS_COLLECTION = 'superAdmins'
 // The entire decryptable surface. A reveal call names a case and ONE of these
 // field names - there is deliberately no "decrypt arbitrary field" path, so a
 // new confidential field can only be exposed here by an explicit edit to this
-// allowlist, never by being added upstream. Today the only vaulted field is
-// reporterIdentity (createCaseOnBehalf.js).
+// allowlist, never by being added upstream. reporterIdentity is written by
+// createCaseOnBehalf.js and, since module 20, by identityTransition.js.
+//
+// Still exactly one field after module 20, and `contactEmail` is deliberately
+// not added to it. A contact address is a delivery detail, not evidence about
+// the report, so there is no investigative question a staff decrypt of it
+// answers - and the reporter is told they can withdraw it at any time, which
+// would not be true of a value staff could pull out of the vault on demand.
+// The only reader of that field is the automated, audited delivery path in
+// functions/src/notifications/sendContactEmailUpdate.js.
 const REVEALABLE_FIELDS = new Set(['reporterIdentity'])
 
 // Super Admin is superAdmins/{uid} allowlist membership, not a custom claim -
@@ -76,6 +84,14 @@ exports.revealIdentity = onCall({ secrets: [encryptionKeySecret] }, async (reque
   // An anonymous-tier case has nothing vaulted. Refuse explicitly - even for a
   // Super Admin - rather than returning an empty result that could read as "no
   // identity found" when the truth is "this tier never holds one".
+  //
+  // Since module 20 this check legitimately passes for cases that STARTED
+  // anonymous and were moved to confidential by the reporter themselves
+  // (functions/src/intake/identityTransition.js). That is the intended
+  // outcome, and it needs no special case here: the transition writes the same
+  // reporterIdentity envelope shape, so a self-revealed identity is revealed
+  // through this one path like any other. What distinguishes the two is the
+  // audit trail, not the code - see the `action` passed below.
   if (caseData.tier !== 'confidential') {
     throw new HttpsError(
       'permission-denied',
@@ -104,6 +120,13 @@ exports.revealIdentity = onCall({ secrets: [encryptionKeySecret] }, async (reque
     caseId,
     field,
     firestore,
+    // Explicit rather than left to the vault's default, so the log distinguishes
+    // this - a staff member decrypting someone else's identity under a
+    // documented reason - from 'reporter_self_reveal', which is a reporter
+    // volunteering their own. Both touch the same field on the same case and
+    // would otherwise be near-indistinguishable rows in identityAccessAuditLog,
+    // which is the one place that difference matters most.
+    action: 'staff_reveal',
   })
 
   return { field, identity }

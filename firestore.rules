@@ -144,6 +144,31 @@ service cloud.firestore {
     // Super Admin session and a documented reason and audits every attempt.
     // For anonymous-tier cases the field is absent entirely, so there is
     // nothing to read even in ciphertext.
+    //
+    // Module 20 adds two more reporter-controlled facts to this document and
+    // changes nothing about the rules below, deliberately:
+    //
+    //   - `reporterIdentity` can now appear on a case that was filed
+    //     anonymously, because a reporter may choose to identify themselves
+    //     mid-case (functions/src/intake/identityTransition.js). Its shape and
+    //     its protection are identical either way: an envelope, unreadable
+    //     without the Secret Manager key, and unreachable from any client rule.
+    //     "Anonymous cases have no identity field" is no longer a thing any
+    //     reader may assume; "no client can read the identity" still is.
+    //
+    //   - `contactEmail` is a second envelope, holding the address a reporter
+    //     optionally supplied so we can mail them a content-free "there is an
+    //     update" notice. It is subject to the exact same rule: unreadable by
+    //     every client role, caseHandler included. The handler read below hands
+    //     over the whole document, so - as with reporterIdentity - what keeps
+    //     the address out of that read is that the field does not contain one.
+    //
+    // Neither field may ever be moved to a client-readable collection, and
+    // neither may be decrypted by anything but the audited server paths:
+    // revealIdentity.js for the identity, sendContactEmailUpdate.js for the
+    // address. Every decrypt of either writes an identityAccessAuditLog entry
+    // whether it succeeds or fails, and that collection is denied to every
+    // client below - a mutable audit trail is not an audit trail.
     match /cases/{caseId} {
       // Writes still only ever happen through Cloud Functions with the
       // Admin SDK (generateCaseAccess.js, scoreCase.js, routeCase.js,
@@ -477,6 +502,14 @@ service cloud.firestore {
     // reason. Written only by identityVault.js with the Admin SDK; no client
     // role, including Super Admin, gets a rules path to read or write it
     // directly, since a mutable audit trail isn't an audit trail.
+    //
+    // Since module 20 it also records the events that CHANGE what the vault
+    // holds without decrypting anything: a reporter identifying themselves
+    // mid-case ('reporter_self_reveal'), and a contact address being added or
+    // removed. Every entry carries an `action`, so a staff decrypt
+    // ('staff_reveal') and a reporter's own disclosure never read alike. They
+    // share this one collection rather than getting a second so that "what has
+    // ever happened to this case's identity data" is one query.
     match /identityAccessAuditLog/{entryId} {
       allow read, write: if false;
     }

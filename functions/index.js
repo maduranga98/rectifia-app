@@ -8,6 +8,11 @@ const {
   requestEvidenceUploadUrl,
   requestEvidenceDownloadUrl,
 } = require('./src/intake/evidenceAccess')
+const {
+  upgradeToConfidential,
+  addContactEmail,
+  removeContactEmail,
+} = require('./src/intake/identityTransition')
 const { aiFollowUp } = require('./src/intake/aiFollowUp')
 const { generateChecklist, updateChecklistItem } = require('./src/intake/generateChecklist')
 const { storeReferenceCase } = require('./src/consistency/storeReferenceCase')
@@ -31,6 +36,7 @@ const { validatePulseInvite } = require('./src/intake/pulseInvites')
 const { schedulePulseChecks } = require('./src/intake/schedulePulseChecks')
 const { sendPulseChecksNow } = require('./src/intake/sendPulseChecksNow')
 const { registerPushSubscription, sendCaseUpdate } = require('./src/notifications/sendCaseUpdate')
+const { sendContactEmailUpdate } = require('./src/notifications/sendContactEmailUpdate')
 const { deliverNotifications } = require('./src/notifications/deliverNotifications')
 const { scheduleFollowUps } = require('./src/followup/scheduleFollowUps')
 const { runFollowUps } = require('./src/followup/runFollowUps')
@@ -53,6 +59,11 @@ exports.reassignCase = reassignCase
 exports.getCaseThread = getCaseThread
 exports.postReporterMessage = postReporterMessage
 exports.postInvestigatorMessage = postInvestigatorMessage
+// Blueprint §7.2 / §8. Reporter-initiated only - each is authenticated by Case
+// ID + passcode and has no staff-callable counterpart, by design.
+exports.upgradeToConfidential = upgradeToConfidential
+exports.addContactEmail = addContactEmail
+exports.removeContactEmail = removeContactEmail
 exports.requestEvidenceUploadUrl = requestEvidenceUploadUrl
 exports.requestEvidenceDownloadUrl = requestEvidenceDownloadUrl
 exports.aiFollowUp = aiFollowUp
@@ -83,6 +94,9 @@ exports.schedulePulseChecks = schedulePulseChecks
 exports.sendPulseChecksNow = sendPulseChecksNow
 exports.registerPushSubscription = registerPushSubscription
 exports.sendCaseUpdate = sendCaseUpdate
+// The email half of the same update notification - same decoy template pool,
+// same rotation, different transport.
+exports.sendContactEmailUpdate = sendContactEmailUpdate
 exports.deliverNotifications = deliverNotifications
 exports.scheduleFollowUps = scheduleFollowUps
 exports.runFollowUps = runFollowUps
