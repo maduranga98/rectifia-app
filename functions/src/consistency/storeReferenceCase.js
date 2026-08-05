@@ -58,5 +58,12 @@ exports.storeReferenceCase = onDocumentUpdated(`${CASES_COLLECTION}/{caseId}`, a
     // the people involved.
     source: after.source ?? 'reporter',
     closedAt: admin.firestore.FieldValue.serverTimestamp(),
+    // reportedAt is the case's own reportedAt (functions/src/intake/submitCase.js) -
+    // a coarse timestamp, not identity - so the cross-company benchmark pool
+    // (functions/src/benchmark/computeBenchmarks.js) can compute median days
+    // from open to close without needing to reach back into the cases
+    // collection it must never read. The consistency check itself does not
+    // use this field.
+    reportedAt: after.reportedAt ?? null,
   })
 })

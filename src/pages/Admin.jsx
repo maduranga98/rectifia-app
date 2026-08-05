@@ -14,6 +14,7 @@ import RoutingRulesPage from './company-admin/RoutingRulesPage'
 import BillingPage from './company-admin/BillingPage'
 import SettingsPage from './company-admin/SettingsPage'
 import RetentionPage from './company-admin/RetentionPage'
+import BenchmarkPage from './company-admin/BenchmarkPage'
 
 // Company Admin's whole surface: the shell's navigation plus the overview
 // and four settings sub-pages it routes to. CompanyAdminPanel used to hold
@@ -51,6 +52,12 @@ const NAV_ITEMS = [
   { to: '/admin/pulse-questions', label: 'Pulse questions', icon: 'pulse' },
   { to: '/admin/settings', label: 'Settings', icon: 'settings' },
   { to: '/admin/retention', label: 'Data retention', icon: 'clock' },
+  // Module 25's opt-in control. Deliberately at the end of the nav rather
+  // than under Settings: opting in publishes an aggregate representation of
+  // this company's closed cases to every other opted-in reader, which is
+  // consequential enough to be its own decision rather than a checkbox on a
+  // settings screen.
+  { to: '/admin/benchmark', label: 'Benchmark pool', icon: 'overview' },
 ]
 
 const PAGE_TITLES = {
@@ -65,6 +72,7 @@ const PAGE_TITLES = {
   billing: 'Subscription & billing',
   settings: 'Company settings',
   retention: 'Data retention & deletion',
+  benchmark: 'Cross-company benchmark pool',
 }
 
 function Admin() {
@@ -106,6 +114,7 @@ function Admin() {
           <Route path="billing" element={<BillingPage companyId={companyId} />} />
           <Route path="settings" element={<SettingsPage companyId={companyId} />} />
           <Route path="retention" element={<RetentionPage companyId={companyId} />} />
+          <Route path="benchmark" element={<BenchmarkPage companyId={companyId} />} />
           <Route path="*" element={<Navigate to="overview" replace />} />
         </Routes>
       ) : (

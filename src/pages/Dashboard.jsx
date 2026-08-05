@@ -16,6 +16,7 @@ import MyCasesPage from './staff/MyCasesPage'
 import CaseWorkspacePage from './staff/CaseWorkspacePage'
 import PulseResponsesPage from './staff/PulseResponsesPage'
 import PulseTrendsPage from './staff/PulseTrendsPage'
+import BenchmarkPage from './staff/BenchmarkPage'
 import StaffIntake from './StaffIntake'
 
 // Which nav each staff role gets. This replaces the old VIEWS_BY_ROLE state
@@ -38,6 +39,7 @@ const NAV_BY_ROLE = {
     { to: '/dashboard/follow-ups', label: 'Follow-ups', icon: 'clock' },
     { to: '/dashboard/pulse-responses', label: 'Pulse checks', icon: 'pulse' },
     { to: '/dashboard/trends', label: 'Trends', icon: 'overview' },
+    { to: '/dashboard/benchmark', label: 'Benchmark', icon: 'overview' },
     { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
   ],
   [ROLES.CASE_HANDLER]: [
@@ -82,6 +84,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases }) {
         <Route path="follow-ups" element={<FollowUpsPage {...companyCases} />} />
         <Route path="pulse-responses" element={<PulseResponsesPage companyId={companyId} />} />
         <Route path="trends" element={<PulseTrendsPage companyId={companyId} role={role} />} />
+        <Route path="benchmark" element={<BenchmarkPage companyId={companyId} />} />
         <Route path="intake" element={<StaffIntake />} />
         <Route path="*" element={toIndex} />
       </Routes>
