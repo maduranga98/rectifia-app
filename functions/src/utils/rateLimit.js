@@ -63,6 +63,7 @@ const limits = {
   // this one has to clear 450/hour of entirely legitimate traffic per case.
   getCaseThread: limit('getCaseThread', 'RATE_LIMIT_GET_CASE_THREAD', 600),
   registerPushSubscription: limit('registerPushSubscription', 'RATE_LIMIT_REGISTER_PUSH', 10),
+  unregisterPushSubscription: limit('unregisterPushSubscription', 'RATE_LIMIT_UNREGISTER_PUSH', 10),
   validatePulseInvite: limit('validatePulseInvite', 'RATE_LIMIT_VALIDATE_PULSE_INVITE', 20),
   submitPulseResponse: limit('submitPulseResponse', 'RATE_LIMIT_SUBMIT_PULSE_RESPONSE', 5),
   // A whole-company pulse-check send, scoped per company (see the scope

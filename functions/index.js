@@ -41,7 +41,11 @@ const {
   publishQuestionSet,
 } = require('./src/pulse/questionSet')
 const { sendTestPulseInvite } = require('./src/pulse/testInvite')
-const { registerPushSubscription, sendCaseUpdate } = require('./src/notifications/sendCaseUpdate')
+const {
+  registerPushSubscription,
+  unregisterPushSubscription,
+  sendCaseUpdate,
+} = require('./src/notifications/sendCaseUpdate')
 const { sendContactEmailUpdate } = require('./src/notifications/sendContactEmailUpdate')
 const { deliverNotifications } = require('./src/notifications/deliverNotifications')
 const { scheduleFollowUps } = require('./src/followup/scheduleFollowUps')
@@ -106,6 +110,7 @@ exports.saveSupplementaryQuestions = saveSupplementaryQuestions
 exports.publishQuestionSet = publishQuestionSet
 exports.sendTestPulseInvite = sendTestPulseInvite
 exports.registerPushSubscription = registerPushSubscription
+exports.unregisterPushSubscription = unregisterPushSubscription
 exports.sendCaseUpdate = sendCaseUpdate
 // The email half of the same update notification - same decoy template pool,
 // same rotation, different transport.
