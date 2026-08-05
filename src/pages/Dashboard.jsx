@@ -16,6 +16,7 @@ import MyCasesPage from './staff/MyCasesPage'
 import CaseWorkspacePage from './staff/CaseWorkspacePage'
 import PulseResponsesPage from './staff/PulseResponsesPage'
 import PulseTrendsPage from './staff/PulseTrendsPage'
+import StaffIntake from './StaffIntake'
 
 // Which nav each staff role gets. This replaces the old VIEWS_BY_ROLE state
 // switch: every capability now has its own nav entry and its own URL, so a
@@ -23,8 +24,8 @@ import PulseTrendsPage from './staff/PulseTrendsPage'
 // This is a navigation map, not an access-control layer - hiding a nav item
 // stops nothing; the callables and firestore.rules are the enforcement layer,
 // and a role reads exactly what it read before regardless of what is listed
-// here. "File a report" links to the existing /intake route, previously only
-// reachable as a button buried inside two dashboards.
+// here. "File a report" links to /dashboard/intake, a page that was previously
+// only reachable as a button buried inside two dashboards.
 //
 // companyAdmin has no entry here at all: its whole surface is /admin, and
 // RootRedirect sends it straight to /admin/overview on sign-in.
@@ -35,12 +36,13 @@ const NAV_BY_ROLE = {
     { to: '/dashboard/triage', label: 'Awaiting triage', icon: 'inbox' },
     { to: '/dashboard/patterns', label: 'Patterns', icon: 'sparkle' },
     { to: '/dashboard/follow-ups', label: 'Follow-ups', icon: 'clock' },
-    { to: '/dashboard/pulse', label: 'Pulse checks', icon: 'pulse' },
-    { to: '/intake', label: 'File a report', icon: 'plus' },
+    { to: '/dashboard/pulse-responses', label: 'Pulse checks', icon: 'pulse' },
+    { to: '/dashboard/trends', label: 'Trends', icon: 'overview' },
+    { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
   ],
   [ROLES.CASE_HANDLER]: [
     { to: '/dashboard/my-cases', label: 'My cases', icon: 'cases' },
-    { to: '/intake', label: 'File a report', icon: 'plus' },
+    { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
   ],
   [ROLES.PULSE_CHECK_REVIEWER]: [
     { to: '/dashboard/pulse-responses', label: 'Pulse responses', icon: 'pulse' },
@@ -50,15 +52,15 @@ const NAV_BY_ROLE = {
 }
 
 // The first /dashboard page a role is entitled to - where the index route and
-// any unentitled path both land, rather than an empty shell. "File a report"
-// (/intake) is skipped: it leaves the dashboard entirely.
+// any unentitled path both land, rather than an empty shell. Every nav entry is
+// now a /dashboard/* path, so the first one is always this landing page.
 function indexPathFor(navItems) {
   return navItems.find((item) => item.to.startsWith('/dashboard/'))?.to ?? '/dashboard'
 }
 
 function titleFor(pathname, navItems) {
   if (/^\/dashboard\/cases\/[^/]+/.test(pathname)) return 'Case workspace'
-  const match = navItems.find((item) => item.to !== '/intake' && pathname.startsWith(item.to))
+  const match = navItems.find((item) => pathname.startsWith(item.to))
   return match?.label ?? 'Dashboard'
 }
 
@@ -78,7 +80,9 @@ function DashboardRoutes({ role, companyId, departments, companyCases }) {
         <Route path="triage" element={<HRTriagePage companyId={companyId} {...companyCases} />} />
         <Route path="patterns" element={<PatternsPage companyId={companyId} />} />
         <Route path="follow-ups" element={<FollowUpsPage {...companyCases} />} />
-        <Route path="pulse" element={<PulseResponsesPage companyId={companyId} />} />
+        <Route path="pulse-responses" element={<PulseResponsesPage companyId={companyId} />} />
+        <Route path="trends" element={<PulseTrendsPage companyId={companyId} role={role} />} />
+        <Route path="intake" element={<StaffIntake />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -90,6 +94,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases }) {
         <Route index element={toIndex} />
         <Route path="my-cases" element={<MyCasesPage />} />
         <Route path="cases/:caseId/*" element={<CaseWorkspacePage />} />
+        <Route path="intake" element={<StaffIntake />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -138,6 +143,15 @@ function Dashboard() {
   const { user, role, companyId, departments } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // A Company Admin's entire surface is /admin; it has no /dashboard nav and no
+  // /dashboard routes, so a typed or bookmarked /dashboard/* path would fall
+  // through to the empty shell. Send it to /admin/overview, matching the
+  // reasoning in RootRedirect, rather than giving companyAdmin a NAV_BY_ROLE
+  // entry - the Company Admin surface is /admin and must stay there.
+  if (role === ROLES.COMPANY_ADMIN) {
+    return <Navigate to="/admin/overview" replace />
+  }
 
   const navItems = NAV_BY_ROLE[role] ?? []
 
