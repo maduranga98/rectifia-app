@@ -1,6 +1,7 @@
 const { onCall } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
+const { resolveResponse } = require('../reports/questionCatalog')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -44,11 +45,14 @@ function serializeMessage(doc) {
 // Compiles the final case report for CaseReport.jsx / PDF export. This is a
 // read/compile operation only - every Firestore call below is a read, and
 // nothing on the case, its thread, or anything else is ever written back.
-exports.generateReport = onCall(async (request) => {
-  const uid = requireAuthUid(request)
-  const { caseId } = request.data || {}
-
-  const firestore = admin.firestore()
+//
+// Exported (as compileReport) so functions/src/reports/exportReportPdf.js can
+// call the exact same compile logic generateReport's onCall handler below
+// uses, rather than re-querying Firestore or building a second serialization
+// path that could drift from what CaseReport.jsx renders on screen. The
+// caller supplies an already-authenticated uid; authorization (loadCaseForHandler)
+// happens inside, identically for both callers.
+async function compileReport(firestore, caseId, uid) {
   const { caseRef, snapshot: caseSnapshot } = await loadCaseForHandler(firestore, caseId, uid)
   const caseData = caseSnapshot.data()
 
@@ -86,6 +90,17 @@ exports.generateReport = onCall(async (request) => {
     }, {})
   )
 
+  // The questionnaire the reporter originally answered, with each question's
+  // text resolved alongside its answer (functions/src/reports/questionCatalog.js)
+  // rather than left as a bare questionId. `responses` lives directly on the
+  // case doc (submitCase.js / createCaseOnBehalf.js write it there, not in a
+  // subcollection), so this needs no extra Firestore read. A case created
+  // before a questionnaire was submitted has no `responses` yet, hence the
+  // array fallback.
+  const questionnaire = Array.isArray(caseData.responses)
+    ? caseData.responses.map((response) => resolveResponse(caseData.category, response))
+    : []
+
   const report = {
     caseId,
     summary: {
@@ -98,6 +113,7 @@ exports.generateReport = onCall(async (request) => {
       priority: caseData.priority ?? null,
     },
     timeline,
+    questionnaire,
     evidence,
     manualLogEntries,
     policyInEffect,
@@ -189,5 +205,15 @@ exports.generateReport = onCall(async (request) => {
     }
   }
 
+  return { report, caseData, caseRef }
+}
+
+exports.compileReport = compileReport
+
+exports.generateReport = onCall(async (request) => {
+  const uid = requireAuthUid(request)
+  const { caseId } = request.data || {}
+  const firestore = admin.firestore()
+  const { report } = await compileReport(firestore, caseId, uid)
   return { report }
 })

@@ -19,6 +19,7 @@ const { storeReferenceCase } = require('./src/consistency/storeReferenceCase')
 const { checkConsistency } = require('./src/consistency/checkConsistency')
 const { detectPatterns } = require('./src/patterns/detectPatterns')
 const { generateReport } = require('./src/intake/generateReport')
+const { exportReportPdf } = require('./src/reports/exportReportPdf')
 const { scheduleDeadlines } = require('./src/compliance/scheduleDeadlines')
 const { checkOverdueDeadlines } = require('./src/compliance/checkOverdueDeadlines')
 const { proposeAction, closeCase, reviewConsistencyFlag } = require('./src/investigation/caseActions')
@@ -91,6 +92,10 @@ exports.storeReferenceCase = storeReferenceCase
 exports.checkConsistency = checkConsistency
 exports.detectPatterns = detectPatterns
 exports.generateReport = generateReport
+// Module 24: server-side PDF export of the same compiled report, rendered
+// inside the Function (pdfkit, no headless browser) and handed back only as
+// a 15-minute signed URL - see functions/src/reports/exportReportPdf.js.
+exports.exportReportPdf = exportReportPdf
 exports.scheduleDeadlines = scheduleDeadlines
 exports.checkOverdueDeadlines = checkOverdueDeadlines
 exports.proposeAction = proposeAction

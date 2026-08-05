@@ -77,6 +77,14 @@
         { "fieldPath": "companyId", "order": "ASCENDING" },
         { "fieldPath": "submittedAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "reportExports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caseId", "order": "ASCENDING" },
+        { "fieldPath": "exportedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

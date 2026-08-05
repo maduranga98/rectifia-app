@@ -3,10 +3,10 @@ import { getEvidenceDownloadUrl } from '../../services/caseThreadService'
 import { generateReport } from '../../services/reportService'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
-import Button from '../ui/Button'
 import Card from '../ui/Card'
 import Logo from '../ui/Logo'
 import { SkeletonList } from '../ui/Loading'
+import ReportExportButton from './ReportExportButton'
 
 function formatTimestamp(ms) {
   if (!ms) return '—'
@@ -102,19 +102,6 @@ function EvidenceRow({ caseId, item }) {
   )
 }
 
-// No PDF/document-generation library exists anywhere else in this codebase
-// (no jsPDF, pdfmake, or puppeteer), so this uses the browser's native
-// print-to-PDF: a print stylesheet hides everything except the report body,
-// and "Export as PDF" just triggers window.print(), where "Save as PDF" is
-// a print destination in every major browser. No new dependency required.
-function ExportPdfButton() {
-  return (
-    <Button variant="primary" icon="document" onClick={() => window.print()} className="print:hidden">
-      Export as PDF
-    </Button>
-  )
-}
-
 // Renders the final case report compiled by
 // functions/src/intake/generateReport.js - a read-only compile, so opening
 // this view never changes case data.
@@ -167,8 +154,13 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
             <p className="text-sm text-muted">{report.caseId}</p>
           </div>
         </div>
-        <ExportPdfButton />
       </div>
+
+      <ReportExportButton
+        caseId={caseId}
+        hasRestrictedIdentity={Boolean(report.restrictedReporterIdentity)}
+        canIncludeIdentity={canViewReporterIdentity}
+      />
 
       <Card title="Case summary">
         <DetailList
