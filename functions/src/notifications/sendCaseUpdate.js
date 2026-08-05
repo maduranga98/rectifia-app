@@ -1,3 +1,4 @@
+const crypto = require('crypto')
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { defineSecret } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
@@ -17,6 +18,15 @@ const PUSH_SUBSCRIPTIONS_COLLECTION = 'pushSubscriptions'
 const vapidPublicKey = defineSecret('VAPID_PUBLIC_KEY')
 const vapidPrivateKey = defineSecret('VAPID_PRIVATE_KEY')
 const vapidSubject = defineSecret('VAPID_SUBJECT')
+
+// The Notification "tag" is echoed onto the device and visible in some OS
+// notification centers. Sending the raw Case ID as the tag would leak the
+// exact case reference we spent the whole decoy-template design avoiding.
+// A truncated hash is a stable per-case dedup key (a second push replaces
+// the first rather than stacking) with no reverse path to the Case ID.
+function tagForCase(caseId) {
+  return 'r-' + crypto.createHash('sha256').update(String(caseId)).digest('hex').slice(0, 16)
+}
 
 // Registers (or replaces) the anonymous reporter's push subscription for one
 // case. Keyed only by Case ID - never combined with the reporter's device
@@ -47,6 +57,23 @@ exports.registerPushSubscription = onCall(PUBLIC_CALLABLE_OPTIONS, async (reques
       keys: subscription.keys,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     })
+
+  return { success: true }
+})
+
+// Reporter-initiated "turn off notifications for this case" - same Case ID +
+// passcode credential as the register side, no staff role involved. A
+// reporter on a shared or work device must be able to remove the server-side
+// record from the exact screen they enabled it on.
+exports.unregisterPushSubscription = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
+  const { caseId, passcode } = request.data || {}
+
+  await enforceRateLimit(admin.firestore(), 'unregisterPushSubscription', request)
+
+  const firestore = admin.firestore()
+  await verifyReporterAccess(firestore, caseId, passcode)
+
+  await firestore.collection(PUSH_SUBSCRIPTIONS_COLLECTION).doc(caseId).delete()
 
   return { success: true }
 })
@@ -96,10 +123,19 @@ exports.sendCaseUpdate = onCall(
 
     webpush.setVapidDetails(vapidSubject.value(), vapidPublicKey.value(), vapidPrivateKey.value())
 
+    // Payload is exactly { title, body, tag }. The service worker
+    // (public/sw.js) shows these verbatim and adds nothing. The tag is a
+    // one-way hash of the caseId - it is a stable per-case dedup key but
+    // reveals nothing about the case if intercepted at any layer that can
+    // see the raw payload (push service, OS notification center, etc).
     try {
       await webpush.sendNotification(
         { endpoint: subscription.endpoint, keys: subscription.keys },
-        JSON.stringify({ title: template.subject, body: template.body, preview: template.preview })
+        JSON.stringify({
+          title: template.subject,
+          body: template.body,
+          tag: tagForCase(caseId),
+        })
       )
     } catch (err) {
       logger.error('sendCaseUpdate: push send failed', { caseId, error: err.message })

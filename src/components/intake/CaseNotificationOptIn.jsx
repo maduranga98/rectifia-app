@@ -1,5 +1,13 @@
-import { useState } from 'react'
-import { subscribeToCaseUpdates } from '../../services/pushNotificationService'
+import { useEffect, useRef, useState } from 'react'
+import {
+  subscribeToCaseUpdates,
+  unsubscribeFromCaseUpdates,
+} from '../../services/pushNotificationService'
+import {
+  isIOS,
+  isStandalone,
+  onPushSubscriptionChange,
+} from '../../services/serviceWorkerRegistration'
 import { env } from '../../config/env'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
@@ -50,6 +58,27 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
   )
   const [status, setStatus] = useState('idle') // idle | working | done | error
   const [error, setError] = useState(null)
+  const [disableStatus, setDisableStatus] = useState('idle') // idle | working | done | error
+  const [disableError, setDisableError] = useState(null)
+
+  // Browsers silently rotate push subscriptions; the service worker relays
+  // that event as a message and we re-register here because this view still
+  // holds the credentials the server needs to verify the reporter. If the
+  // reporter hasn't opted in yet on this device, do nothing - a rotation on
+  // a subscription that doesn't exist is a no-op.
+  const statusRef = useRef(status)
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
+  useEffect(() => {
+    if (!supported || !caseId || !passcode) return undefined
+    return onPushSubscriptionChange(() => {
+      if (statusRef.current !== 'done') return
+      subscribeToCaseUpdates(caseId, passcode).catch((err) => {
+        console.warn('[push] re-subscribe after rotation failed', err)
+      })
+    })
+  }, [supported, caseId, passcode])
 
   async function enable() {
     setStatus('working')
@@ -74,7 +103,43 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
     }
   }
 
+  async function disable() {
+    setDisableStatus('working')
+    setDisableError(null)
+    try {
+      await unsubscribeFromCaseUpdates(caseId, passcode)
+      setDisableStatus('done')
+      setStatus('idle')
+    } catch (err) {
+      setDisableStatus('error')
+      setDisableError(err.message)
+    }
+  }
+
   const wrapper = `flex flex-col gap-2 rounded-lg border border-line bg-surface p-4 ${className}`
+
+  // iOS gate: Web Push on Safari requires the app to be installed to the Home
+  // Screen first. pushManager.subscribe() throws in mobile Safari otherwise,
+  // and no amount of retrying fixes it. Show install instructions instead of a
+  // broken Enable button. This runs before the generic `supported` check
+  // because Safari does expose the APIs - it just refuses to use them until
+  // installed.
+  if (isIOS() && !isStandalone()) {
+    return (
+      <div className={wrapper}>
+        <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
+          <Icon name="mail" className="h-4 w-4 text-muted" />
+          Get notified when there&apos;s a reply
+        </p>
+        <p className="text-sm text-muted">
+          On iPhone and iPad, notifications only work once this site is added to your Home Screen.
+          Tap the Share button in Safari, choose <strong>Add to Home Screen</strong>, then open
+          Rectifia from your home screen and come back to this page to turn them on.
+        </p>
+        <NoDetailsNote />
+      </div>
+    )
+  }
 
   // Unsupported: no service worker, push API, Notification API, or configured
   // key. Say so plainly and point back to the manual route - never a dead button.
@@ -114,12 +179,40 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
   }
 
   if (status === 'done') {
+    // Subscribed state. Always offer a one-click "turn off" here: a reporter
+    // who enabled notifications on a shared or work device needs to be able
+    // to undo that from the same screen they enabled it on.
     return (
       <div className={wrapper}>
         <Alert variant="success" title="You'll be notified of replies">
           This device will get a notification when there&apos;s a reply on your case. It won&apos;t
           say anything about the case itself — just that there&apos;s an update to check.
         </Alert>
+        {disableStatus === 'done' ? (
+          <Alert variant="info">
+            Notifications are off for this device. Reopen this page any time to turn them back on.
+          </Alert>
+        ) : (
+          <>
+            <p className="text-xs text-muted">
+              On a shared or work device, turn notifications off before you leave — otherwise the
+              next person using this browser will see the update prompts.
+            </p>
+            {disableStatus === 'error' && disableError && (
+              <Alert variant="error">{disableError}</Alert>
+            )}
+            <div>
+              <Button
+                variant="ghost"
+                onClick={disable}
+                loading={disableStatus === 'working'}
+                loadingLabel="Turning off"
+              >
+                Turn off on this device
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     )
   }
