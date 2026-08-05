@@ -19,6 +19,14 @@ const validatePulseInviteCallable = httpsCallable(functions, 'validatePulseInvit
 // from a phishing link; `reason` lets the page explain used/expired/invalid
 // distinctly - and 'used' is a confirmation, not an error (their response is
 // already on file).
+//
+// Failures are thrown, not folded into `reason`, and the caller is expected to
+// tell them apart by `err.code` rather than showing one message for
+// everything: 'resource-exhausted' means the invite is over its attempt budget
+// (a new link arrives with the next check-in - there is deliberately no resend
+// path), while 'unavailable'/'internal' and outright network failures are
+// transient problems on our side and worth retrying. Validating never spends
+// the invite, so a retry is always safe.
 export async function validatePulseInvite({ inviteId, token }) {
   if (!inviteId || !token) {
     throw new Error('A valid pulse-check invite is required')

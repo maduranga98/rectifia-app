@@ -38,6 +38,38 @@ const INVALID_STATES = {
     description:
       "The link may be incomplete or mistyped. Please open the most recent link from your invitation email exactly as it was sent.",
   },
+  // Deliberately does NOT tell the employee to re-open the link from their
+  // email: that is the one action guaranteed to fail while this invite is over
+  // its attempt budget, and sending them round that loop is what made the old
+  // shared 'invalid' copy actively misleading here.
+  rate_limited: {
+    icon: 'alert',
+    title: 'Too many attempts on this link',
+    description:
+      'This check-in link has been opened too many times and is no longer accepting attempts. A new link will arrive with your next check-in - no action is needed from you now.',
+  },
+  // Ours, not theirs, and probably transient - so it must not read as a dead
+  // link. Never carries the underlying code; that goes to the console only.
+  error: {
+    icon: 'alert',
+    title: "We couldn't open your check-in",
+    description:
+      'Something went wrong on our side while loading this check-in. Please try again in a few minutes - your link is fine.',
+  },
+}
+
+// Maps a callable failure onto one of the INVALID_STATES keys. Firebase's
+// callable client reports its status as either 'resource-exhausted' or
+// 'functions/resource-exhausted' depending on how the error surfaces, so the
+// prefix is stripped before matching.
+function statusForError(err) {
+  const code = String(err?.code ?? '').replace(/^functions\//, '')
+  if (code === 'resource-exhausted') return 'rate_limited'
+  if (code === 'unavailable' || code === 'internal') return 'error'
+  // A request that never reached the function at all (offline, DNS, CORS,
+  // blocked request) is our problem to retry, not a bad link.
+  if (code === 'deadline-exceeded' || err instanceof TypeError) return 'error'
+  return 'invalid'
 }
 
 function PulseCheck() {
@@ -46,6 +78,7 @@ function PulseCheck() {
   const token = searchParams.get('t')
 
   // status: 'loading' | 'valid' | 'used' | 'expired' | 'invalid'
+  //         | 'rate_limited' | 'error'
   const [status, setStatus] = useState('loading')
   const [invite, setInvite] = useState(null)
 
@@ -68,10 +101,14 @@ function PulseCheck() {
           // an invalid link rather than guessed at.
           setStatus(INVALID_STATES[result.reason] ? result.reason : 'invalid')
         }
-      } catch {
-        // Network error, rate-limited invite, or any unexpected failure: fall
-        // back to the invalid-link copy rather than a raw error string.
-        if (!cancelled) setStatus('invalid')
+      } catch (err) {
+        // A bare catch here made this the single hardest failure in the app to
+        // diagnose: an employee reports a dead link and there is nothing in a
+        // production browser session to say whether it was rate limiting, a
+        // cold function, or an offline device. The code goes to the console;
+        // the UI still only ever shows the plain-language copy above.
+        console.error('validatePulseInvite failed', { code: err?.code })
+        if (!cancelled) setStatus(statusForError(err))
       }
     }
 
