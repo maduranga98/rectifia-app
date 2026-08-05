@@ -15,6 +15,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [role, setRole] = useState(null)
   const [companyId, setCompanyId] = useState(null)
+  // Manager pulse-visibility scope, from the `departments` custom claim. Empty
+  // for every other role and for a manager who has none assigned yet.
+  const [departments, setDepartments] = useState([])
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -35,10 +38,12 @@ export function AuthProvider({ children }) {
           ])
           setRole(claims.role)
           setCompanyId(claims.companyId)
+          setDepartments(claims.departments)
           setIsSuperAdmin(superAdmin)
         } else {
           setRole(null)
           setCompanyId(null)
+          setDepartments([])
           setIsSuperAdmin(false)
         }
       } catch {
@@ -46,6 +51,7 @@ export function AuthProvider({ children }) {
         // permanent spinner - the guards below re-route to the login page.
         setRole(null)
         setCompanyId(null)
+        setDepartments([])
         setIsSuperAdmin(false)
       } finally {
         setLoading(false)
@@ -62,11 +68,12 @@ export function AuthProvider({ children }) {
     ])
     setRole(claims.role)
     setCompanyId(claims.companyId)
+    setDepartments(claims.departments)
     setIsSuperAdmin(superAdmin)
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, role, companyId, isSuperAdmin, loading, refreshClaims }}>
+    <AuthContext.Provider value={{ user, role, companyId, departments, isSuperAdmin, loading, refreshClaims }}>
       {children}
     </AuthContext.Provider>
   )

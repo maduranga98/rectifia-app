@@ -412,10 +412,24 @@ service cloud.firestore {
       // attributed, which these two roles must never see. The suppressed==false
       // check here is what enforces the floor; the client query must carry a
       // matching where('suppressed','==',false) or Firestore rejects it whole.
+      //
+      // A Manager is additionally scoped to their own department(s): the
+      // `departments` custom claim (set by inviteStaff.js / updateStaffDepartments.js)
+      // is an array of department name strings, and a manager may only read an
+      // aggregate whose department is in that array. This is deliberately a
+      // token-only check - it reads request.auth.token exclusively and never
+      // get()s a staff doc - so the departments list is a `where('department','in',...)`
+      // the manager's own listPulseSummaries query must carry. `departments is list`
+      // fails a manager with no (or a malformed) claim closed rather than erroring
+      // the whole disjunction. Company Admin's access is unchanged: still every
+      // non-suppressed aggregate for its company, no department predicate.
       allow read: if isHrCoordinator(resource.data.companyId)
         || isPulseReviewer(resource.data.companyId)
-        || ((isManager(resource.data.companyId) || isCompanyAdmin(resource.data.companyId))
-            && resource.data.suppressed == false);
+        || (isCompanyAdmin(resource.data.companyId) && resource.data.suppressed == false)
+        || (isManager(resource.data.companyId)
+            && resource.data.suppressed == false
+            && request.auth.token.departments is list
+            && resource.data.department in request.auth.token.departments);
       allow write: if false;
     }
     // The raw accumulator behind each pulseSummaries projection - responseCount

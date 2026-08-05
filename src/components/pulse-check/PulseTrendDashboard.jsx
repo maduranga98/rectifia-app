@@ -46,20 +46,39 @@ function humanize(value) {
 // analyzePulseResponse.js), not a client-side filter of individual records,
 // and firestore.rules backs that up: the manager role has no read path to
 // pulseResponses at all.
-function ManagerAggregateView({ companyId }) {
+function ManagerAggregateView({ companyId, departments }) {
   const [summaries, setSummaries] = useState([])
   const [error, setError] = useState(null)
 
+  // A manager's pulse visibility is scoped to their own department(s) via the
+  // `departments` custom claim. With no departments assigned the query would be
+  // unscoped and firestore.rules would reject it, so this fails closed BEFORE
+  // querying and says so explicitly - an empty grid here would read as "no
+  // pulse data yet", which is a different and misleading thing.
+  const hasScope = Array.isArray(departments) && departments.length > 0
+
   useEffect(() => {
-    listPulseSummaries(companyId).then(setSummaries).catch((err) => setError(err.message))
-  }, [companyId])
+    if (!hasScope) return
+    listPulseSummaries(companyId, departments)
+      .then(setSummaries)
+      .catch((err) => setError(err.message))
+  }, [companyId, departments, hasScope])
+
+  if (!hasScope) {
+    return (
+      <Alert variant="warning" title="No departments assigned to your account">
+        Your account isn&apos;t scoped to any department yet, so there are no team pulse results to
+        show. Ask your Company Admin to assign your department(s) to your account.
+      </Alert>
+    )
+  }
 
   if (error) return <Alert variant="error">{error}</Alert>
 
-  // An empty result now means exactly one thing - no department has any
-  // responses yet - because suppressed departments are no longer filtered out
-  // server-side; they come back and render as cards below. So this copy no
-  // longer has to hedge between "no data" and "data hidden by the floor".
+  // An empty result now means exactly one thing - no department in your scope
+  // has any responses yet - because suppressed departments are no longer
+  // filtered out server-side; they come back and render as cards below. So this
+  // copy no longer has to hedge between "no data" and "data hidden by the floor".
   if (summaries.length === 0) {
     return (
       <Card padded={false}>
@@ -208,7 +227,7 @@ function IndividualResponsesView({ companyId }) {
 // never receives the branch that can see pulseResponses - not because this
 // component chooses to hide it, but because that branch's own data call
 // would be denied by firestore.rules for a manager's auth token.
-function PulseTrendDashboard({ companyId, role }) {
+function PulseTrendDashboard({ companyId, role, departments }) {
   const canSeeIndividualResponses = role === 'hrCoordinator' || role === 'pulseCheckReviewer'
 
   return (
@@ -222,7 +241,7 @@ function PulseTrendDashboard({ companyId, role }) {
       {canSeeIndividualResponses ? (
         <IndividualResponsesView companyId={companyId} />
       ) : (
-        <ManagerAggregateView companyId={companyId} />
+        <ManagerAggregateView companyId={companyId} departments={departments} />
       )}
     </div>
   )

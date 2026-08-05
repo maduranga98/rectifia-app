@@ -1,17 +1,41 @@
 import { httpsCallable } from 'firebase/functions'
-import { functions } from './firebase'
+import { auth, functions } from './firebase'
 
 const inviteStaffCallable = httpsCallable(functions, 'inviteStaff')
+const updateStaffDepartmentsCallable = httpsCallable(functions, 'updateStaffDepartments')
 
 // Invites a new staff member: creates their auth account, stamps role +
 // companyId as custom claims, and queues a set-your-password link (see
 // functions/src/staff/inviteStaff.js). Only a signed-in Company Admin can
 // call this successfully - the function itself re-checks the actor's custom
 // claims server-side, this is not a client-side-only gate.
-export async function inviteStaff({ companyId, email, role, actorId }) {
+//
+// `departments` is the manager pulse-visibility scope: an array of department
+// name strings, stamped into the manager's `departments` custom claim. It is
+// only meaningful for role === 'manager' (the server ignores it otherwise), and
+// the names must be the exact strings the pulse summaries carry - see
+// firestore.rules' pulseSummaries clause.
+export async function inviteStaff({ companyId, email, role, actorId, departments }) {
   if (!companyId || !email || !role) {
     throw new Error('companyId, email, and role are required')
   }
-  const result = await inviteStaffCallable({ companyId, email, role, actorId })
+  const result = await inviteStaffCallable({ companyId, email, role, actorId, departments })
+  return result.data
+}
+
+// Sets the `departments` scope claim on an existing staff member without
+// re-inviting them - the migration path for managers who predate the claim.
+// Only a Company Admin for the company can call this (re-checked server-side).
+// The server revokes the target's refresh tokens so the new claim takes effect
+// on their next request; we additionally force-refresh the *caller's* own token
+// so anything reading claims in this session is not left stale either.
+export async function updateStaffDepartments({ companyId, staffId, departments }) {
+  if (!companyId || !staffId) {
+    throw new Error('companyId and staffId are required')
+  }
+  const result = await updateStaffDepartmentsCallable({ companyId, staffId, departments })
+  if (auth.currentUser) {
+    await auth.currentUser.getIdToken(true)
+  }
   return result.data
 }

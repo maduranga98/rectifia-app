@@ -64,6 +64,30 @@ export async function listPulseResponses(companyId) {
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
 }
 
+// Firestore rejects an `in` filter with more than 30 values, so a manager
+// scoped to more than 30 departments (unlikely, but possible) has their filter
+// split into several queries whose results are merged.
+const FIRESTORE_IN_LIMIT = 30
+
+function chunk(values, size) {
+  const chunks = []
+  for (let i = 0; i < values.length; i += size) {
+    chunks.push(values.slice(i, i + size))
+  }
+  return chunks
+}
+
+function projectSummary(d) {
+  const data = d.data()
+  const suppressed = data.suppressed !== false
+  return {
+    id: d.id,
+    ...data,
+    suppressed,
+    averageSentiment: suppressed ? null : data.averageSentiment ?? null,
+  }
+}
+
 // Department/period aggregates only - no individual attribution. This is
 // the only pulse-check read available to the Manager and Company Admin roles;
 // it is a genuinely different collection, populated by a Cloud Function
@@ -85,18 +109,43 @@ export async function listPulseResponses(companyId) {
 // averageSentiment it may carry - fail closed rather than surface a legacy
 // average that might sit below the floor. HR Coordinator / Pulse Check Reviewer
 // never call this; they read individual responses instead.
-export async function listPulseSummaries(companyId) {
+//
+// `departments` is the Manager scope. When passed, the query MUST carry a
+// matching where('department','in',...) or firestore.rules rejects the read
+// whole - the manager clause on pulseSummaries requires the department be in the
+// manager's `departments` claim, and Firestore refuses a query broader than what
+// the rules allow. The names must be read off the caller's ID token claim, never
+// a Firestore lookup. Company Admin passes no `departments` and reads every
+// non-suppressed aggregate for its company, unchanged. An empty scope is caller
+// error - fail closed and return nothing rather than issue an unscoped query the
+// rules would reject anyway.
+export async function listPulseSummaries(companyId, departments) {
+  if (departments !== undefined) {
+    if (!Array.isArray(departments) || departments.length === 0) {
+      return []
+    }
+    const snapshots = await Promise.all(
+      chunk(departments, FIRESTORE_IN_LIMIT).map((names) =>
+        getDocs(
+          query(
+            collection(firestore, PULSE_SUMMARIES_COLLECTION),
+            where('companyId', '==', companyId),
+            where('department', 'in', names)
+          )
+        )
+      )
+    )
+    // De-duplicate by doc id: the chunks are disjoint department sets, so this
+    // is only defensive, but a manager should never see a department doubled.
+    const byId = new Map()
+    for (const snapshot of snapshots) {
+      for (const d of snapshot.docs) byId.set(d.id, projectSummary(d))
+    }
+    return Array.from(byId.values())
+  }
+
   const snapshot = await getDocs(
     query(collection(firestore, PULSE_SUMMARIES_COLLECTION), where('companyId', '==', companyId))
   )
-  return snapshot.docs.map((d) => {
-    const data = d.data()
-    const suppressed = data.suppressed !== false
-    return {
-      id: d.id,
-      ...data,
-      suppressed,
-      averageSentiment: suppressed ? null : data.averageSentiment ?? null,
-    }
-  })
+  return snapshot.docs.map(projectSummary)
 }
