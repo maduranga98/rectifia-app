@@ -29,6 +29,9 @@ const { validatePulseInvite } = require('./src/intake/pulseInvites')
 const { schedulePulseChecks } = require('./src/intake/schedulePulseChecks')
 const { registerPushSubscription, sendCaseUpdate } = require('./src/notifications/sendCaseUpdate')
 const { deliverNotifications } = require('./src/notifications/deliverNotifications')
+const { scheduleFollowUps } = require('./src/followup/scheduleFollowUps')
+const { runFollowUps } = require('./src/followup/runFollowUps')
+const { submitFollowUpResponse } = require('./src/followup/submitFollowUpResponse')
 
 exports.submitCase = submitCase
 exports.createCaseOnBehalf = createCaseOnBehalf
@@ -67,3 +70,6 @@ exports.schedulePulseChecks = schedulePulseChecks
 exports.registerPushSubscription = registerPushSubscription
 exports.sendCaseUpdate = sendCaseUpdate
 exports.deliverNotifications = deliverNotifications
+exports.scheduleFollowUps = scheduleFollowUps
+exports.runFollowUps = runFollowUps
+exports.submitFollowUpResponse = submitFollowUpResponse

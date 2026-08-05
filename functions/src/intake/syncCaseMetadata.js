@@ -53,6 +53,15 @@ function pickMetadata(data) {
     tier: normalizeTier(data.tier),
     source: data.source ?? 'reporter',
     intakeMethod: data.intakeMethod ?? null,
+    // Retaliation follow-up (functions/src/followup/*), metadata only. The HR
+    // Coordinator sees the coarse per-case rollup status and when the next
+    // prompt is due - counts and statuses, never the reporter's free-text
+    // answer, which is case content and never lives on this case at all.
+    // 'no_response' here means UNKNOWN (the reporter did not return); it must
+    // never be read or shown as evidence that no retaliation occurred.
+    // Deliberately nothing identity-bearing is added.
+    followUpStatus: data.followUpStatus ?? null,
+    nextFollowUpAt: data.nextFollowUpAt ?? null,
     ...subjectSignatureFields(data),
   }
 }
