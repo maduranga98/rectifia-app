@@ -35,7 +35,7 @@ const VIEWS_BY_ROLE = {
 // already built but were not rendered on any route, which is why signing in
 // as staff previously showed nothing but a heading.
 function Dashboard() {
-  const { user, role, companyId } = useAuth()
+  const { user, role, companyId, departments } = useAuth()
   const navigate = useNavigate()
   const views = VIEWS_BY_ROLE[role] ?? []
   const [activeView, setActiveView] = useState(views[0]?.id ?? null)
@@ -71,7 +71,7 @@ function Dashboard() {
       case 'cases':
         return <HRCoordinatorDashboard companyId={companyId} />
       case 'pulse':
-        return <PulseTrendDashboard companyId={companyId} role={role} />
+        return <PulseTrendDashboard companyId={companyId} role={role} departments={departments} />
       case 'myCases':
         return selectedCaseId ? (
           <div className="mx-auto flex max-w-4xl flex-col gap-4">

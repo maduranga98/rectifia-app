@@ -25,6 +25,28 @@ const ROLE_LABELS = {
   pulseCheckReviewer: 'Pulse Check Reviewer',
 }
 
+// Normalises a raw departments input into the array-of-strings form the
+// `departments` custom claim carries: trimmed, empties dropped, de-duplicated.
+// The claim stores department *names* verbatim (the same string form
+// pulseSummaries.department carries), never ids - see firestore.rules'
+// pulseSummaries clause, which compares resource.data.department against this
+// array. A non-array input yields an empty list rather than throwing, so a
+// caller that omits departments simply gets a manager with none (which the
+// pulse dashboard surfaces as "no departments assigned", never a silent grid).
+function normalizeDepartments(departments) {
+  if (!Array.isArray(departments)) return []
+  const seen = new Set()
+  const result = []
+  for (const value of departments) {
+    const name = String(value ?? '').trim()
+    if (name && !seen.has(name)) {
+      seen.add(name)
+      result.push(name)
+    }
+  }
+  return result
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -83,13 +105,19 @@ async function requireCompanyAdmin(actorUid, companyId) {
 // routeCase.js and checkOverdueDeadlines.js already use for notifications) -
 // this just writes the notifications doc the delivery module reads.
 exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
-  const { companyId, email, role, actorId } = request.data || {}
+  const { companyId, email, role, actorId, departments } = request.data || {}
   if (!companyId || !email || !role) {
     throw new HttpsError('invalid-argument', 'companyId, email, and role are required')
   }
   if (!VALID_ROLES.includes(role)) {
     throw new HttpsError('invalid-argument', `role must be one of ${VALID_ROLES.join(', ')}`)
   }
+
+  // Department scoping only means anything for a Manager: the pulseSummaries
+  // rule gates that one role on resource.data.department being in this claim.
+  // For every other role the claim would be inert, so it is only stamped for a
+  // manager - keeping other roles' tokens exactly as they were.
+  const managerDepartments = role === 'manager' ? normalizeDepartments(departments) : []
 
   await requireCompanyAdmin(actorId ?? request.auth?.uid, companyId)
 
@@ -111,7 +139,15 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
     throw new HttpsError('internal', 'Could not create the staff account')
   }
 
-  await admin.auth().setCustomUserClaims(userRecord.uid, { role, companyId })
+  // Custom claims are the only thing firestore.rules trusts for role/scope
+  // checks - never a Firestore field. The `departments` claim is the manager's
+  // pulse-visibility scope; it is set here, alongside role + companyId, and is
+  // only present for a manager.
+  await admin.auth().setCustomUserClaims(userRecord.uid, {
+    role,
+    companyId,
+    ...(role === 'manager' ? { departments: managerDepartments } : {}),
+  })
 
   await admin
     .firestore()
@@ -125,6 +161,11 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
       status: 'invited',
       invitedBy: actorId ?? request.auth?.uid ?? null,
       invitedAt: admin.firestore.FieldValue.serverTimestamp(),
+      // A display-only mirror of the claim for the Staff page (a claim can't be
+      // read off another user's account from the client). This copy is never
+      // read for authorization - firestore.rules reads request.auth.token
+      // exclusively - so it can't become a scope-escalation path.
+      ...(role === 'manager' ? { departments: managerDepartments } : {}),
     })
 
   const inviteLink = await admin.auth().generatePasswordResetLink(email)

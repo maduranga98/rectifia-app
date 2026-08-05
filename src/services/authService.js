@@ -54,9 +54,16 @@ export async function markInviteAccepted() {
 // boundary. Pass forceRefresh after an action that just changed claims.
 export async function getUserClaims(user, forceRefresh = false) {
   const tokenResult = await user.getIdTokenResult(forceRefresh)
+  // `departments` is the Manager pulse-visibility scope (an array of department
+  // name strings). Read off the ID token here, never a Firestore lookup, so the
+  // manager pulse query can carry a matching where('department','in',...) that
+  // firestore.rules requires. Absent for every non-manager role; defaulted to
+  // [] so a manager with no claim fails closed (sees no departments) rather than
+  // reading as "unset".
   return {
     role: tokenResult.claims.role ?? null,
     companyId: tokenResult.claims.companyId ?? null,
+    departments: Array.isArray(tokenResult.claims.departments) ? tokenResult.claims.departments : [],
   }
 }
 

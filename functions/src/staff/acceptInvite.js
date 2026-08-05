@@ -12,6 +12,12 @@ const STAFF_SUBCOLLECTION = 'staff'
 // password (AcceptInvitePage) and signed in. Trusts request.auth for the
 // uid/companyId - the same custom claims stamped by inviteStaff.js - so a
 // staff member can only ever activate their own doc, never anyone else's.
+//
+// It deliberately does NOT re-stamp custom claims: role, companyId and (for a
+// manager) the `departments` scope are set once by inviteStaff.js and must
+// survive acceptance untouched. Re-issuing claims here would risk dropping the
+// departments claim and silently un-scoping a manager, so acceptance only ever
+// touches the staff doc's status.
 exports.acceptInvite = onCall(async (request) => {
   const uid = request.auth?.uid
   const companyId = request.auth?.token?.companyId

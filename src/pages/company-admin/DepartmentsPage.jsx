@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createDepartment, getCompany, updateCompanyDepartments } from '../../services/companyService'
 import { listStaff } from '../../services/routingService'
+import { listEmployees } from '../../services/employeeService'
 import Alert from '../../components/ui/Alert'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -14,6 +15,7 @@ import { SkeletonList } from '../../components/ui/Loading'
 function DepartmentsPage({ companyId }) {
   const [company, setCompany] = useState(null)
   const [staff, setStaff] = useState([])
+  const [employees, setEmployees] = useState([])
   const [newDeptName, setNewDeptName] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -23,9 +25,14 @@ function DepartmentsPage({ companyId }) {
     setLoading(true)
     setError(null)
     try {
-      const [companyData, staffRows] = await Promise.all([getCompany(companyId), listStaff(companyId)])
+      const [companyData, staffRows, employeeRows] = await Promise.all([
+        getCompany(companyId),
+        listStaff(companyId),
+        listEmployees(companyId),
+      ])
       setCompany(companyData)
       setStaff(staffRows)
+      setEmployees(employeeRows)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -79,6 +86,22 @@ function DepartmentsPage({ companyId }) {
 
   const departments = company?.departments ?? []
 
+  // Department identity is a plain string on both sides but they can drift: an
+  // employee's `department` (free text from the roster form or a CSV import) is
+  // never normalised against this configured list, and pulseSummaries.department
+  // carries that same unnormalised string. A manager's pulse scope claim must
+  // match that exact string, so a department that exists on employees but not
+  // here is invisible to scoping and to routing - surfaced (not rewritten) so
+  // the admin can reconcile the two by hand.
+  const configuredNames = new Set(departments.map((d) => String(d.name ?? '').trim()))
+  const unlistedDepartments = Array.from(
+    new Set(
+      employees
+        .map((e) => String(e.department ?? '').trim())
+        .filter((name) => name && !configuredNames.has(name))
+    )
+  )
+
   // The add form is duplicated into the empty state on purpose: with no
   // departments there is nothing above it to anchor to, and a lone input
   // under a "No departments yet." line reads as a broken page.
@@ -105,6 +128,16 @@ function DepartmentsPage({ companyId }) {
       </p>
 
       {error && <Alert variant="error">{error}</Alert>}
+
+      {unlistedDepartments.length > 0 && (
+        <Alert variant="warning" title="Some employee departments aren't in this list">
+          These department names appear on employee records but not in your departments above:{' '}
+          <span className="font-medium">{unlistedDepartments.join(', ')}</span>. Pulse summaries and
+          manager scoping use the exact name as it appears on employees, so add a matching
+          department (or correct the employee records) to route and scope them. Nothing is changed
+          automatically.
+        </Alert>
+      )}
 
       {loading && !company ? (
         <SkeletonList rows={3} />

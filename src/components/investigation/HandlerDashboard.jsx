@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listAssignedCases } from '../../services/handlerService'
-import { deadlineDisplay, nextDeadlineMs } from '../../utils/caseDeadlines'
+import { deadlineDisplay, nextDeadlineMs, toMillis } from '../../utils/caseDeadlines'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
 import EmptyState from '../ui/EmptyState'
+import { Select } from '../ui/Field'
 import Icon from '../ui/Icon'
 import { SkeletonList } from '../ui/Loading'
 
@@ -20,33 +21,73 @@ const STATUS_TONE = {
 // Lower rank sorts first. Anything without a priority sorts after low.
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 }
 
+// The sort control's options. 'default' is the triage order below; the other
+// two are single-key orderings a handler can switch to. All three are applied
+// client-side over the already-fetched list - no Firestore orderBy, no index.
+const SORT_OPTIONS = [
+  { value: 'default', label: 'Triage order (default)' },
+  { value: 'deadline', label: 'Nearest deadline' },
+  { value: 'recent', label: 'Most recently assigned' },
+]
+
 function formatTimestamp(value) {
-  if (!value) return null
-  const ms = typeof value.toMillis === 'function' ? value.toMillis() : value
-  return new Date(ms).toLocaleString()
+  const ms = toMillis(value)
+  return ms === null ? null : new Date(ms).toLocaleString()
+}
+
+// Closed cases need no action, so they sink to the bottom in every ordering -
+// a handler is looking at their live queue, not a done pile, whichever sort
+// they pick. Returns 0/1 so it can lead every comparator below.
+function closedRank(caseRow) {
+  return caseRow.status === 'closed' ? 1 : 0
+}
+
+// Most-recently-assigned first. A missing assignedAt sorts oldest (0) rather
+// than newest, so an un-timestamped case never jumps the top of the list.
+function assignedMs(caseRow) {
+  return toMillis(caseRow.assignedAt) ?? 0
 }
 
 // Default triage order for a handler's own queue: the things that can't wait
 // float to the top. Closed cases sink to the bottom regardless of anything
-// else (they need no action); among the rest, a crisis-flagged case outranks
-// everything, then higher priority, then the nearest compliance deadline. A
-// case with no deadline sorts last within its tier rather than first.
-function sortForHandler(cases) {
-  return [...cases].sort((a, b) => {
-    const aClosed = a.status === 'closed' ? 1 : 0
-    const bClosed = b.status === 'closed' ? 1 : 0
-    if (aClosed !== bClosed) return aClosed - bClosed
+// else; among the rest, a crisis-flagged case outranks everything, then higher
+// priority, then the nearest compliance deadline, and finally the most recently
+// assigned case. A case with no deadline sorts last within its tier rather than
+// first.
+function byDefault(a, b) {
+  const closed = closedRank(a) - closedRank(b)
+  if (closed !== 0) return closed
 
-    const aCrisis = a.crisisFlag ? 0 : 1
-    const bCrisis = b.crisisFlag ? 0 : 1
-    if (aCrisis !== bCrisis) return aCrisis - bCrisis
+  const crisis = (a.crisisFlag ? 0 : 1) - (b.crisisFlag ? 0 : 1)
+  if (crisis !== 0) return crisis
 
-    const aPriority = PRIORITY_RANK[a.priority] ?? 3
-    const bPriority = PRIORITY_RANK[b.priority] ?? 3
-    if (aPriority !== bPriority) return aPriority - bPriority
+  const priority = (PRIORITY_RANK[a.priority] ?? 3) - (PRIORITY_RANK[b.priority] ?? 3)
+  if (priority !== 0) return priority
 
-    return (nextDeadlineMs(a) ?? Infinity) - (nextDeadlineMs(b) ?? Infinity)
-  })
+  const deadline = (nextDeadlineMs(a) ?? Infinity) - (nextDeadlineMs(b) ?? Infinity)
+  if (deadline !== 0) return deadline
+
+  return assignedMs(b) - assignedMs(a)
+}
+
+// Nearest pending deadline first; a case with no deadline sorts last.
+function byDeadline(a, b) {
+  const closed = closedRank(a) - closedRank(b)
+  if (closed !== 0) return closed
+  return (nextDeadlineMs(a) ?? Infinity) - (nextDeadlineMs(b) ?? Infinity)
+}
+
+// Most recently assigned first.
+function byRecent(a, b) {
+  const closed = closedRank(a) - closedRank(b)
+  if (closed !== 0) return closed
+  return assignedMs(b) - assignedMs(a)
+}
+
+const SORTERS = { default: byDefault, deadline: byDeadline, recent: byRecent }
+
+function sortForHandler(cases, sortKey) {
+  return [...cases].sort(SORTERS[sortKey] ?? byDefault)
 }
 
 // Lists only the cases assigned to the signed-in Case Handler. The
@@ -59,6 +100,7 @@ function HandlerDashboard({ onSelectCase }) {
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [sortKey, setSortKey] = useState('default')
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -85,7 +127,7 @@ function HandlerDashboard({ onSelectCase }) {
     return () => clearInterval(id)
   }, [])
 
-  const sortedCases = useMemo(() => sortForHandler(cases), [cases])
+  const sortedCases = useMemo(() => sortForHandler(cases, sortKey), [cases, sortKey])
   const openCount = cases.filter((c) => c.status !== 'closed').length
 
   return (
@@ -119,7 +161,26 @@ function HandlerDashboard({ onSelectCase }) {
           />
         </Card>
       ) : (
-        <ul className="flex flex-col gap-2.5">
+        <>
+          {/* Sorting is presentation only - it reorders the list already
+              fetched, with no Firestore orderBy and no filtering (a handler's
+              queue is their own assignments and short by construction). */}
+          <div className="flex items-center justify-end">
+            <Select
+              label="Sort by"
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value)}
+              className="w-56 py-1.5 text-sm"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <ul className="flex flex-col gap-2.5">
           {sortedCases.map((c) => {
             const assignedAt = formatTimestamp(c.assignedAt)
             const isCrisis = Boolean(c.crisisFlag)
@@ -186,7 +247,8 @@ function HandlerDashboard({ onSelectCase }) {
               </li>
             )
           })}
-        </ul>
+          </ul>
+        </>
       )}
     </div>
   )

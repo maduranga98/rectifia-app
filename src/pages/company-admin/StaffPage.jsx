@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listStaff, updateStaffStatus } from '../../services/routingService'
+import { getCompany } from '../../services/companyService'
+import { updateStaffDepartments } from '../../services/staffService'
 import { ROLES, ROLE_LABELS } from '../../constants/roles'
 import StaffInvite from '../../components/dashboard/StaffInvite'
 import Alert from '../../components/ui/Alert'
@@ -19,16 +21,22 @@ function initials(member) {
 // settings only, never case content.
 function StaffPage({ companyId }) {
   const [staff, setStaff] = useState([])
+  const [companyDepartments, setCompanyDepartments] = useState([])
   const [showInvite, setShowInvite] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pendingId, setPendingId] = useState(null)
+  // The staff id currently being department-edited, plus the working selection.
+  const [editingId, setEditingId] = useState(null)
+  const [editSelection, setEditSelection] = useState([])
 
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      setStaff(await listStaff(companyId))
+      const [staffRows, company] = await Promise.all([listStaff(companyId), getCompany(companyId)])
+      setStaff(staffRows)
+      setCompanyDepartments(company?.departments ?? [])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -55,6 +63,32 @@ function StaffPage({ companyId }) {
     setPendingId(member.id)
     try {
       await updateStaffStatus(companyId, member.id, current === 'suspended' ? 'active' : 'suspended')
+      await refresh()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  function startEditDepartments(member) {
+    setError(null)
+    setEditingId(member.id)
+    setEditSelection(Array.isArray(member.departments) ? member.departments : [])
+  }
+
+  function toggleEditDepartment(name) {
+    setEditSelection((current) =>
+      current.includes(name) ? current.filter((d) => d !== name) : [...current, name]
+    )
+  }
+
+  async function handleSaveDepartments(member) {
+    setError(null)
+    setPendingId(member.id)
+    try {
+      await updateStaffDepartments({ companyId, staffId: member.id, departments: editSelection })
+      setEditingId(null)
       await refresh()
     } catch (err) {
       setError(err.message)
@@ -117,39 +151,118 @@ function StaffPage({ companyId }) {
                 const suspended = status === 'suspended'
                 const isLastActiveAdmin =
                   s.role === ROLES.COMPANY_ADMIN && !suspended && activeAdminCount <= 1
+                const isManager = s.role === ROLES.MANAGER
+                const assignedDepartments = Array.isArray(s.departments) ? s.departments : []
+                const editing = editingId === s.id
 
                 return (
-                  <li key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 hover:bg-navy-50/40">
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                        suspended ? 'bg-line-soft text-muted' : 'bg-navy text-white'
-                      }`}
-                      aria-hidden="true"
-                    >
-                      {initials(s)}
-                    </span>
+                  <li key={s.id} className="flex flex-col gap-3 px-5 py-3.5 hover:bg-navy-50/40">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                          suspended ? 'bg-line-soft text-muted' : 'bg-navy text-white'
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {initials(s)}
+                      </span>
 
-                    <div className="min-w-0 flex-1">
-                      <p className={`truncate text-sm font-medium ${suspended ? 'text-muted' : 'text-charcoal'}`}>
-                        {s.name ?? s.email ?? s.id}
-                      </p>
-                      {s.name && s.email && <p className="truncate text-xs text-muted">{s.email}</p>}
+                      <div className="min-w-0 flex-1">
+                        <p className={`truncate text-sm font-medium ${suspended ? 'text-muted' : 'text-charcoal'}`}>
+                          {s.name ?? s.email ?? s.id}
+                        </p>
+                        {s.name && s.email && <p className="truncate text-xs text-muted">{s.email}</p>}
+                      </div>
+
+                      <Badge tone="tone-info">{ROLE_LABELS[s.role] ?? s.role}</Badge>
+                      <Badge tone={suspended ? 'tone-critical' : 'tone-low'} dot>
+                        {suspended ? 'Suspended' : 'Active'}
+                      </Badge>
+
+                      {isManager && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => (editing ? setEditingId(null) : startEditDepartments(s))}
+                          disabled={pendingId === s.id}
+                        >
+                          {editing ? 'Cancel' : 'Edit departments'}
+                        </Button>
+                      )}
+
+                      <Button
+                        variant={suspended ? 'secondary' : 'dangerGhost'}
+                        size="sm"
+                        onClick={() => handleToggleStatus(s)}
+                        disabled={isLastActiveAdmin || pendingId === s.id}
+                        title={isLastActiveAdmin ? 'Cannot suspend the last active Company Admin' : undefined}
+                      >
+                        {suspended ? 'Reactivate' : 'Suspend'}
+                      </Button>
                     </div>
 
-                    <Badge tone="tone-info">{ROLE_LABELS[s.role] ?? s.role}</Badge>
-                    <Badge tone={suspended ? 'tone-critical' : 'tone-low'} dot>
-                      {suspended ? 'Suspended' : 'Active'}
-                    </Badge>
+                    {isManager && !editing && (
+                      <div className="flex flex-wrap items-center gap-1.5 pl-12">
+                        <span className="text-xs text-muted">Pulse scope:</span>
+                        {assignedDepartments.length === 0 ? (
+                          <span className="text-xs font-medium text-high">
+                            No departments assigned - this manager sees no pulse results
+                          </span>
+                        ) : (
+                          assignedDepartments.map((name) => (
+                            <Badge key={name} tone="tone-neutral">
+                              {name}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                    )}
 
-                    <Button
-                      variant={suspended ? 'secondary' : 'dangerGhost'}
-                      size="sm"
-                      onClick={() => handleToggleStatus(s)}
-                      disabled={isLastActiveAdmin || pendingId === s.id}
-                      title={isLastActiveAdmin ? 'Cannot suspend the last active Company Admin' : undefined}
-                    >
-                      {suspended ? 'Reactivate' : 'Suspend'}
-                    </Button>
+                    {isManager && editing && (
+                      <div className="flex flex-col gap-2 pl-12">
+                        {companyDepartments.length === 0 ? (
+                          <p className="text-xs text-muted">
+                            No departments are configured. Add departments on the Departments page
+                            first.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {companyDepartments.map((dept) => {
+                              const checked = editSelection.includes(dept.name)
+                              return (
+                                <label
+                                  key={dept.id ?? dept.name}
+                                  className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${
+                                    checked
+                                      ? 'border-navy bg-navy-50 text-charcoal'
+                                      : 'border-line-soft text-muted'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleEditDepartment(dept.name)}
+                                    className="h-4 w-4"
+                                  />
+                                  {dept.name}
+                                </label>
+                              )
+                            })}
+                          </div>
+                        )}
+                        <div>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleSaveDepartments(s)}
+                            loading={pendingId === s.id}
+                            loadingLabel="Saving"
+                          >
+                            Save departments
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </li>
                 )
               })}
