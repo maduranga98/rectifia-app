@@ -67,11 +67,25 @@ function formatResponses(responses) {
   return responses.map(formatResponse).join('\n')
 }
 
+// The wrapper for injected company policy context. Kept here so every AI call
+// site that grounds against policy frames it identically: reference material
+// that informs what detail matters and what procedure applies, never what the
+// outcome should be. An empty policyContext produces an empty string, so a
+// company that has uploaded nothing yields a prompt byte-identical to today's.
+const POLICY_CONTEXT_PREAMBLE = `The following is the company's own written policy, provided as reference material only. Use it to understand what detail matters and what procedure the company's own rules make relevant. It does not change how you score or what you decide - it never tells you the outcome, only informs what the account should be measured against. Do not quote it as a finding, and do not conclude that the reported conduct violates it.`
+
+function formatPolicyContext(policyContext) {
+  if (typeof policyContext !== 'string' || !policyContext.trim()) return ''
+  return `\n\nCompany policy context (reference only):\n${POLICY_CONTEXT_PREAMBLE}\n\n${policyContext.trim()}`
+}
+
 // category: one of the CATEGORIES ids in src/data/categories.js.
 // responses: the { questionId, type, value, severityWeight, crisisCheckCandidate }
 // array produced by QuestionnaireForm.jsx.
+// policyContext: optional string from retrievePolicyContext.getPolicyContext().
+// When absent or empty the returned prompt is identical to the ungrounded one.
 // Returns { system, user } ready to pass to the Messages API.
-function buildScoringPrompt(category, responses) {
+function buildScoringPrompt(category, responses, policyContext) {
   const rubric = CATEGORY_RUBRICS[category]
   if (!rubric) {
     throw new Error(`No scoring rubric for case category "${category}"`)
@@ -80,9 +94,9 @@ function buildScoringPrompt(category, responses) {
   const user = `Category: ${category}\n\nQuestionnaire responses:\n${formatResponses(responses)}`
 
   return {
-    system: `${BASE_INSTRUCTIONS}\n\n${rubric}`,
+    system: `${BASE_INSTRUCTIONS}\n\n${rubric}${formatPolicyContext(policyContext)}`,
     user,
   }
 }
 
-module.exports = { buildScoringPrompt }
+module.exports = { buildScoringPrompt, formatPolicyContext }

@@ -13,6 +13,13 @@ import Button from '../ui/Button'
 import Card from '../ui/Card'
 import EmptyState from '../ui/EmptyState'
 import { Select, Textarea, Input } from '../ui/Field'
+import PolicyReferences from './PolicyReferences'
+
+// Re-exported as one of this file's case panels so the workspace places it
+// alongside the checklist and consistency-flag panels. It renders the policy
+// clauses that grounded this case (from case.policyCitations) as read-only
+// provenance - see PolicyReferences.jsx.
+export { PolicyReferences }
 
 // The building blocks of a Case Handler's single-case workspace. This file used
 // to also hold the component that stacked them all into one scroll; that layout

@@ -6,6 +6,7 @@ import Alert from '../components/ui/Alert'
 import OverviewPage from './company-admin/OverviewPage'
 import CasesPage from './company-admin/CasesPage'
 import DepartmentsPage from './company-admin/DepartmentsPage'
+import PoliciesPage from './company-admin/PoliciesPage'
 import StaffPage from './company-admin/StaffPage'
 import EmployeesPage from './company-admin/EmployeesPage'
 import RoutingRulesPage from './company-admin/RoutingRulesPage'
@@ -38,6 +39,7 @@ const NAV_ITEMS = [
   { to: '/admin/overview', label: 'Overview', icon: 'overview' },
   { to: '/admin/cases', label: 'Cases', icon: 'cases' },
   { to: '/admin/departments', label: 'Departments', icon: 'departments' },
+  { to: '/admin/policies', label: 'Policies', icon: 'document' },
   { to: '/admin/staff', label: 'Staff', icon: 'staff' },
   { to: '/admin/employees', label: 'Employees', icon: 'pulse' },
   { to: '/admin/routing', label: 'Routing rules', icon: 'routing' },
@@ -49,6 +51,7 @@ const PAGE_TITLES = {
   overview: 'Overview',
   cases: 'Cases',
   departments: 'Departments',
+  policies: 'Policies',
   staff: 'Staff',
   employees: 'Employees',
   routing: 'Routing rules',
@@ -84,6 +87,7 @@ function Admin() {
           <Route path="overview" element={<OverviewPage companyId={companyId} />} />
           <Route path="cases" element={<CasesPage companyId={companyId} />} />
           <Route path="departments" element={<DepartmentsPage companyId={companyId} />} />
+          <Route path="policies" element={<PoliciesPage companyId={companyId} />} />
           <Route path="staff" element={<StaffPage companyId={companyId} />} />
           <Route path="employees" element={<EmployeesPage companyId={companyId} />} />
           <Route path="routing" element={<RoutingRulesPage companyId={companyId} />} />

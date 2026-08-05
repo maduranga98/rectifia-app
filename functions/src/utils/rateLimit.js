@@ -72,6 +72,10 @@ const limits = {
   sendPulseChecksNow: limit('sendPulseChecksNow', 'RATE_LIMIT_SEND_PULSE_CHECKS_NOW', 1),
   requestEvidenceUploadUrl: limit('requestEvidenceUploadUrl', 'RATE_LIMIT_EVIDENCE_UPLOAD', 20),
   requestEvidenceDownloadUrl: limit('requestEvidenceDownloadUrl', 'RATE_LIMIT_EVIDENCE_DOWNLOAD', 60),
+  // A Company Admin uploading policy documents. Each upload triggers text
+  // extraction, chunking, and a Haiku tagging call per chunk, so it is bounded
+  // like the other upload-url callables rather than left open.
+  requestPolicyUploadUrl: limit('requestPolicyUploadUrl', 'RATE_LIMIT_POLICY_UPLOAD', 20),
   // A reporter answering a post-closure follow-up prompt (and possibly filing
   // one retaliation case from it). Low volume by nature - a handful of prompts
   // ever exist per case - but filing spends a Claude scoring call on the new

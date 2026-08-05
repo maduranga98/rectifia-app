@@ -167,6 +167,33 @@ service cloud.firestore {
       }
     }
 
+    // Company policy documents (module 19). A Company Admin uploads and manages
+    // their organisation's own written policies; any staff of the company may
+    // read the document metadata (title, status, version, chunk count, category
+    // coverage) so the investigation roles can see what grounding exists and
+    // open the source via a signed URL. Following the same per-company scoping
+    // pattern as routingRules/employees above: read by any staff of that
+    // company, write by that company's Company Admin only. The parent-doc write
+    // grant covers status flips (archive/restore) issued via the manage
+    // callables, but every uploaded file's bytes stay signed-URL only, and the
+    // chunks below are Admin-SDK only. This grants Company Admin no case-content
+    // access: a policy document is company structure, never a case.
+    match /companyPolicies/{policyId} {
+      allow read: if isCompanyStaff(resource.data.companyId);
+      allow create: if isCompanyAdmin(request.resource.data.companyId);
+      allow update, delete: if isCompanyAdmin(resource.data.companyId);
+
+      // Chunks are extracted, tagged, and read entirely server-side
+      // (ingestPolicyDocument.js, tagPolicyChunks.js, retrievePolicyContext.js
+      // with the Admin SDK). Any staff of the owning company may read them if
+      // they hold a path to the parent, but no client ever writes one - the
+      // chunking is not a client-authored surface.
+      match /chunks/{chunkId} {
+        allow read: if isCompanyStaff(get(/databases/$(database)/documents/companyPolicies/$(policyId)).data.companyId);
+        allow write: if false;
+      }
+    }
+
     // Case routing configuration (module 7). Company Admin accounts now
     // exist (see functions/src/staff/inviteStaff.js), so this is gated by
     // custom claims instead of the earlier no-auth placeholder. Any staff

@@ -5,6 +5,8 @@ const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
 const { scoreWithClaude } = require('./scoreCase')
 const { notifyCrisisContact } = require('./routeCase')
+const { getPolicyContext } = require('../policy/retrievePolicyContext')
+const { formatPolicyContext } = require('./prompts/scoringPrompt')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -50,13 +52,17 @@ function buildTranscript(messages) {
     .join('\n')
 }
 
-async function generateFollowUp({ apiKey, category, evidenceScore, reasoning, transcript }) {
+async function generateFollowUp({ apiKey, category, evidenceScore, reasoning, transcript, policyContext }) {
   const client = new Anthropic({ apiKey })
 
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 1024,
-    system: FOLLOW_UP_SYSTEM_PROMPT,
+    // Grounding is appended to the system prompt only when policy exists, so a
+    // company with no uploaded policy asks the same follow-ups as today. It
+    // informs which detail the company's own procedure makes material - never
+    // what to conclude, and the reporter never sees policy content itself.
+    system: `${FOLLOW_UP_SYSTEM_PROMPT}${formatPolicyContext(policyContext)}`,
     output_config: {
       effort: 'low',
       format: { type: 'json_schema', schema: FOLLOW_UP_SCHEMA },
@@ -122,9 +128,16 @@ exports.aiFollowUp = onDocumentCreated(
       },
     ]
 
+    // Same grounding as the initial scoring pass. Degrades to empty when the
+    // company has uploaded no policy for this category.
+    const { text: policyContext, citations: policyCitations } = await getPolicyContext(
+      caseData.companyId ?? null,
+      category
+    )
+
     let result
     try {
-      result = await scoreWithClaude(category, combinedResponses)
+      result = await scoreWithClaude(category, combinedResponses, policyContext)
     } catch (err) {
       logger.error('aiFollowUp: rescoring failed', { caseId, error: err.message })
       return
@@ -139,6 +152,8 @@ exports.aiFollowUp = onDocumentCreated(
       evidenceScore: result.evidenceScore,
       reasoning: result.reasoning,
       scoredAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Refresh provenance to whatever grounded this rescore.
+      policyCitations,
     }
 
     const newlyInCrisis = result.crisisFlag === true && caseData.crisisFlag !== true
@@ -170,6 +185,7 @@ exports.aiFollowUp = onDocumentCreated(
         evidenceScore: result.evidenceScore,
         reasoning: result.reasoning,
         transcript,
+        policyContext,
       })
     } catch (err) {
       logger.error('aiFollowUp: follow-up generation failed', { caseId, error: err.message })

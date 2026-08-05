@@ -26,6 +26,18 @@ service firebase.storage {
       allow read, write: if false;
     }
 
+    // Company policy documents (module 19) are closed to every client for the
+    // same reason and in the same way as case evidence above. A Company Admin
+    // uploads through a short-lived V4 signed URL minted by
+    // functions/src/policy/policyAccess.js after the caller is verified as a
+    // Company Admin of the owning company; the investigation roles download
+    // through the same callable path. Signed URLs use the service account's own
+    // credentials and bypass these rules, so denying everything here does not
+    // affect them. All access is signed-URL only, same as case-evidence.
+    match /company-policies/{companyId}/{policyId}/{fileName} {
+      allow read, write: if false;
+    }
+
     // Nothing else in this bucket is client-accessible either. Stated
     // explicitly rather than left to the implicit default, so a future path
     // added under a new prefix is denied by this rule rather than by nobody

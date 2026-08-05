@@ -4,6 +4,8 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
 const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
+const { getPolicyContext } = require('../policy/retrievePolicyContext')
+const { formatPolicyContext } = require('./prompts/scoringPrompt')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -93,13 +95,17 @@ function buildTranscript(messages) {
     .join('\n')
 }
 
-async function generateChecklistWithClaude({ apiKey, category, responses, transcript }) {
+async function generateChecklistWithClaude({ apiKey, category, responses, transcript, policyContext }) {
   const client = new Anthropic({ apiKey })
 
   const response = await client.messages.create({
     model: MODEL,
     max_tokens: 4096,
-    system: CHECKLIST_SYSTEM_PROMPT,
+    // Grounding lets checklist items reference the procedure the company's own
+    // policy actually requires (e.g. a written acknowledgment within N days).
+    // Appended only when policy exists; empty otherwise, so an ungrounded
+    // company's checklist is unchanged. It never states a conclusion.
+    system: `${CHECKLIST_SYSTEM_PROMPT}${formatPolicyContext(policyContext)}`,
     output_config: {
       effort: 'medium',
       format: { type: 'json_schema', schema: CHECKLIST_SCHEMA },
@@ -151,6 +157,11 @@ exports.generateChecklist = onCall({ secrets: [anthropicApiKey] }, async (reques
   const messagesSnapshot = await caseRef.collection(MESSAGES_SUBCOLLECTION).orderBy('timestamp', 'asc').get()
   const transcript = buildTranscript(messagesSnapshot.docs.map((doc) => doc.data()))
 
+  const { text: policyContext, citations: policyCitations } = await getPolicyContext(
+    caseData.companyId ?? null,
+    category
+  )
+
   let result
   try {
     result = await generateChecklistWithClaude({
@@ -158,6 +169,7 @@ exports.generateChecklist = onCall({ secrets: [anthropicApiKey] }, async (reques
       category,
       responses,
       transcript,
+      policyContext,
     })
   } catch (err) {
     logger.error('generateChecklist: generation failed', { caseId, error: err.message })
@@ -178,6 +190,10 @@ exports.generateChecklist = onCall({ secrets: [anthropicApiKey] }, async (reques
     checklist,
     checklistGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
     checklistGeneratedBy: uid,
+    // Record which policy chunks grounded this checklist, so provenance shown
+    // on the case is real. Merges with whatever scoring recorded for the same
+    // category (identical citation set when the active policy hasn't changed).
+    policyCitations,
   })
 
   return { checklist: checklist.map(serializeChecklistItem) }
