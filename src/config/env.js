@@ -11,12 +11,7 @@ export const env = {
   },
   useEmulators: import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true",
   vapidPublicKey: import.meta.env.VITE_VAPID_PUBLIC_KEY,
-  // App Check. The reCAPTCHA v3 site key is public by design - it identifies
-  // the site to reCAPTCHA and is meaningless without the secret half, which
-  // lives in the Firebase project. Required in production builds; see
-  // src/services/firebase.js.
-  recaptchaSiteKey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
-  // Local development only. A token registered under App Check -> Manage debug
-  // tokens; ignored entirely in a production build.
-  appCheckDebugToken: import.meta.env.VITE_APPCHECK_DEBUG_TOKEN,
+  // App Check config (recaptchaSiteKey / appCheckDebugToken) removed for
+  // testing along with the App Check initialization in
+  // src/services/firebase.js. Restore both together.
 };
