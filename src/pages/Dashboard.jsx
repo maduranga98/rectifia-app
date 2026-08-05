@@ -1,55 +1,157 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLES, ROLE_LABELS } from '../constants/roles'
+import { useCompanyCases } from '../hooks/useCompanyCases'
 import AppShell from '../components/shared/AppShell'
-import HRCoordinatorDashboard from '../components/dashboard/HRCoordinatorDashboard'
-import HandlerDashboard from '../components/investigation/HandlerDashboard'
-import CaseDetailView from '../components/investigation/CaseDetailView'
-import PulseTrendDashboard from '../components/pulse-check/PulseTrendDashboard'
 import Alert from '../components/ui/Alert'
-import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
+import HROverviewPage from './staff/HROverviewPage'
+import HRCasesPage from './staff/HRCasesPage'
+import HRTriagePage from './staff/HRTriagePage'
+import PatternsPage from './staff/PatternsPage'
+import FollowUpsPage from './staff/FollowUpsPage'
+import MyCasesPage from './staff/MyCasesPage'
+import CaseWorkspacePage from './staff/CaseWorkspacePage'
+import PulseResponsesPage from './staff/PulseResponsesPage'
+import PulseTrendsPage from './staff/PulseTrendsPage'
 
-// Which views each role actually gets. This mirrors the role design the
-// Cloud Functions and firestore.rules already enforce - it is a navigation
-// map, not an access control layer: hiding a nav item here stops nothing,
-// the underlying reads are what a wrong role gets denied on.
-const VIEWS_BY_ROLE = {
+// Which nav each staff role gets. This replaces the old VIEWS_BY_ROLE state
+// switch: every capability now has its own nav entry and its own URL, so a
+// staff surface is bookmarkable and shareable rather than a hidden in-page tab.
+// This is a navigation map, not an access-control layer - hiding a nav item
+// stops nothing; the callables and firestore.rules are the enforcement layer,
+// and a role reads exactly what it read before regardless of what is listed
+// here. "File a report" links to the existing /intake route, previously only
+// reachable as a button buried inside two dashboards.
+//
+// companyAdmin has no entry here at all: its whole surface is /admin, and
+// RootRedirect sends it straight to /admin/overview on sign-in.
+const NAV_BY_ROLE = {
   [ROLES.HR_COORDINATOR]: [
-    { id: 'cases', label: 'Case oversight', icon: 'cases' },
-    { id: 'pulse', label: 'Pulse checks', icon: 'pulse' },
+    { to: '/dashboard/overview', label: 'Overview', icon: 'overview' },
+    { to: '/dashboard/cases', label: 'All cases', icon: 'cases' },
+    { to: '/dashboard/triage', label: 'Awaiting triage', icon: 'inbox' },
+    { to: '/dashboard/patterns', label: 'Patterns', icon: 'sparkle' },
+    { to: '/dashboard/follow-ups', label: 'Follow-ups', icon: 'clock' },
+    { to: '/dashboard/pulse', label: 'Pulse checks', icon: 'pulse' },
+    { to: '/intake', label: 'File a report', icon: 'plus' },
   ],
-  [ROLES.CASE_HANDLER]: [{ id: 'myCases', label: 'My cases', icon: 'cases' }],
-  [ROLES.MANAGER]: [{ id: 'pulse', label: 'Team wellness', icon: 'pulse' }],
-  [ROLES.PULSE_CHECK_REVIEWER]: [{ id: 'pulse', label: 'Pulse checks', icon: 'pulse' }],
-  // Company Admin has no view here at all: its whole surface is the settings
-  // panel on /admin, and RootRedirect sends it straight to /admin/overview on
-  // sign-in, so it never lands on /dashboard through the normal flow.
+  [ROLES.CASE_HANDLER]: [
+    { to: '/dashboard/my-cases', label: 'My cases', icon: 'cases' },
+    { to: '/intake', label: 'File a report', icon: 'plus' },
+  ],
+  [ROLES.PULSE_CHECK_REVIEWER]: [
+    { to: '/dashboard/pulse-responses', label: 'Pulse responses', icon: 'pulse' },
+    { to: '/dashboard/trends', label: 'Trends', icon: 'overview' },
+  ],
+  [ROLES.MANAGER]: [{ to: '/dashboard/wellness', label: 'Team wellness', icon: 'pulse' }],
 }
 
-// Renders the dashboard each staff role is entitled to. These components
-// (HRCoordinatorDashboard, HandlerDashboard, PulseTrendDashboard) were all
-// already built but were not rendered on any route, which is why signing in
-// as staff previously showed nothing but a heading.
+// The first /dashboard page a role is entitled to - where the index route and
+// any unentitled path both land, rather than an empty shell. "File a report"
+// (/intake) is skipped: it leaves the dashboard entirely.
+function indexPathFor(navItems) {
+  return navItems.find((item) => item.to.startsWith('/dashboard/'))?.to ?? '/dashboard'
+}
+
+function titleFor(pathname, navItems) {
+  if (/^\/dashboard\/cases\/[^/]+/.test(pathname)) return 'Case workspace'
+  const match = navItems.find((item) => item.to !== '/intake' && pathname.startsWith(item.to))
+  return match?.label ?? 'Dashboard'
+}
+
+// The nested route table for each role - the presentation counterpart of what
+// that role can already read. A path a role is not entitled to falls through to
+// the catch-all and redirects to that role's index.
+function DashboardRoutes({ role, companyId, departments, companyCases }) {
+  const index = indexPathFor(NAV_BY_ROLE[role] ?? [])
+  const toIndex = <Navigate to={index} replace />
+
+  if (role === ROLES.HR_COORDINATOR) {
+    return (
+      <Routes>
+        <Route index element={toIndex} />
+        <Route path="overview" element={<HROverviewPage {...companyCases} />} />
+        <Route path="cases" element={<HRCasesPage companyId={companyId} {...companyCases} />} />
+        <Route path="triage" element={<HRTriagePage companyId={companyId} {...companyCases} />} />
+        <Route path="patterns" element={<PatternsPage companyId={companyId} />} />
+        <Route path="follow-ups" element={<FollowUpsPage {...companyCases} />} />
+        <Route path="pulse" element={<PulseResponsesPage companyId={companyId} />} />
+        <Route path="*" element={toIndex} />
+      </Routes>
+    )
+  }
+
+  if (role === ROLES.CASE_HANDLER) {
+    return (
+      <Routes>
+        <Route index element={toIndex} />
+        <Route path="my-cases" element={<MyCasesPage />} />
+        <Route path="cases/:caseId/*" element={<CaseWorkspacePage />} />
+        <Route path="*" element={toIndex} />
+      </Routes>
+    )
+  }
+
+  if (role === ROLES.PULSE_CHECK_REVIEWER) {
+    return (
+      <Routes>
+        <Route index element={toIndex} />
+        <Route path="pulse-responses" element={<PulseResponsesPage companyId={companyId} />} />
+        <Route path="trends" element={<PulseTrendsPage companyId={companyId} role={role} />} />
+        <Route path="*" element={toIndex} />
+      </Routes>
+    )
+  }
+
+  if (role === ROLES.MANAGER) {
+    return (
+      <Routes>
+        <Route index element={toIndex} />
+        <Route
+          path="wellness"
+          element={<PulseTrendsPage companyId={companyId} role={role} departments={departments} />}
+        />
+        <Route path="*" element={toIndex} />
+      </Routes>
+    )
+  }
+
+  return (
+    <Card padded={false} className="mx-auto max-w-2xl">
+      <EmptyState
+        title="Nothing to show yet"
+        description={`No dashboard is configured for the ${ROLE_LABELS[role] ?? role} role yet.`}
+      />
+    </Card>
+  )
+}
+
+// The staff dashboard: owns the AppShell chrome and a nested <Routes> table,
+// exactly as Admin.jsx does for the Company Admin surface. The active nav item
+// and the page title are derived from the URL, not from useState - a case a
+// handler is working now lives at its own route, so there is no selectedCaseId
+// or activeView held here at all.
 function Dashboard() {
   const { user, role, companyId, departments } = useAuth()
   const navigate = useNavigate()
-  const views = VIEWS_BY_ROLE[role] ?? []
-  const [activeView, setActiveView] = useState(views[0]?.id ?? null)
-  // Case Handlers open a case inline rather than at /case/:caseId - that
-  // route is the anonymous reporter's tracking page, a different view of a
-  // case entirely.
-  const [selectedCaseId, setSelectedCaseId] = useState(null)
+  const location = useLocation()
+
+  const navItems = NAV_BY_ROLE[role] ?? []
+
+  // One shared load of the company case metadata for the HR Coordinator's
+  // pages, kept here so it survives navigation between them. Inert for every
+  // other role.
+  const companyCases = useCompanyCases(companyId, { enabled: role === ROLES.HR_COORDINATOR })
 
   async function handleSignOut() {
     await signOutUser()
     navigate('/login', { replace: true })
   }
 
-  function renderView() {
+  function renderBody() {
     if (!role) {
       return (
         <Alert variant="error" title="No role assigned">
@@ -58,7 +160,6 @@ function Dashboard() {
         </Alert>
       )
     }
-
     if (!companyId) {
       return (
         <Alert variant="error" title="Account not linked to a company">
@@ -66,53 +167,27 @@ function Dashboard() {
         </Alert>
       )
     }
-
-    switch (activeView) {
-      case 'cases':
-        return <HRCoordinatorDashboard companyId={companyId} />
-      case 'pulse':
-        return <PulseTrendDashboard companyId={companyId} role={role} departments={departments} />
-      case 'myCases':
-        return selectedCaseId ? (
-          <div className="mx-auto flex max-w-4xl flex-col gap-4">
-            <Button icon="back" onClick={() => setSelectedCaseId(null)} className="self-start">
-              Back to my cases
-            </Button>
-            <CaseDetailView caseId={selectedCaseId} />
-          </div>
-        ) : (
-          <HandlerDashboard onSelectCase={setSelectedCaseId} />
-        )
-      default:
-        return (
-          <Card padded={false} className="mx-auto max-w-2xl">
-            <EmptyState
-              title="Nothing to show yet"
-              description={`No dashboard is configured for the ${ROLE_LABELS[role] ?? role} role yet.`}
-            />
-          </Card>
-        )
-    }
+    return (
+      <DashboardRoutes
+        role={role}
+        companyId={companyId}
+        departments={departments}
+        companyCases={companyCases}
+      />
+    )
   }
-
-  const activeLabel = views.find((v) => v.id === activeView)?.label
 
   return (
     <AppShell
       scopeLabel={role ? ROLE_LABELS[role] ?? role : 'Staff'}
-      navItems={views}
-      activeId={activeView}
-      onSelect={(id) => {
-        setActiveView(id)
-        setSelectedCaseId(null)
-      }}
+      navItems={navItems}
       userEmail={user?.email}
       roleLabel={role ? ROLE_LABELS[role] ?? role : 'Staff'}
       onSignOut={handleSignOut}
       eyebrow="Dashboard"
-      title={selectedCaseId ? 'Case detail' : activeLabel ?? 'Overview'}
+      title={titleFor(location.pathname, navItems)}
     >
-      {renderView()}
+      {renderBody()}
     </AppShell>
   )
 }

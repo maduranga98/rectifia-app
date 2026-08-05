@@ -1,27 +1,25 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   ACTION_CATEGORIES,
   MIN_REASON_LENGTH,
   closeCase,
-  getAssignedCase,
   proposeAction,
   reviewConsistencyFlag,
   revealReporterIdentity,
 } from '../../services/handlerService'
-import ComplianceCountdown from '../dashboard/ComplianceCountdown'
-import CaseThread from '../intake/CaseThread'
-import CaseReport from './CaseReport'
-import InvestigationChecklist from './InvestigationChecklist'
-import RelatedPatternNotice from './RelatedPatternNotice'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
 import EmptyState from '../ui/EmptyState'
 import { Select, Textarea, Input } from '../ui/Field'
-import { SkeletonList } from '../ui/Loading'
 
-const POLL_INTERVAL_MS = 8000
+// The building blocks of a Case Handler's single-case workspace. This file used
+// to also hold the component that stacked them all into one scroll; that layout
+// is now CaseWorkspacePage, which arranges these same pieces - their internals
+// unchanged - into URL-addressable tabs. Each is exported so the workspace can
+// place it on its own tab. The consistency check's close-gating still lives in
+// ActionForm exactly as before.
 
 const CONSISTENCY_TONE = {
   insufficient_data: 'tone-neutral',
@@ -34,7 +32,7 @@ function humanize(value) {
   return typeof value === 'string' ? value.replace(/_/g, ' ') : value
 }
 
-function ConsistencyFlags({ caseData }) {
+export function ConsistencyFlags({ caseData }) {
   const check = caseData.consistencyCheck
   if (!check) {
     return (
@@ -60,7 +58,7 @@ function ConsistencyFlags({ caseData }) {
   )
 }
 
-function QuestionnaireAnswers({ caseData }) {
+export function QuestionnaireAnswers({ caseData }) {
   const responses = Array.isArray(caseData.responses) ? caseData.responses : []
   if (responses.length === 0) {
     return (
@@ -215,7 +213,7 @@ function RevealedIdentity({ identity }) {
 // their details) versus NONE is on file (the reporter self-submitted and chose
 // confidential, so submitCase recorded the tier but vaulted nothing - there is
 // simply nobody named to reveal).
-function ReporterIdentityCard({ caseData }) {
+export function ReporterIdentityCard({ caseData }) {
   const [expanded, setExpanded] = useState(false)
   const [reason, setReason] = useState('')
   const [identity, setIdentity] = useState(null)
@@ -343,7 +341,7 @@ function ReporterIdentityCard({ caseData }) {
 // which is what starts module 10's consistency check running. Closing the
 // case is a second, separate step gated on that check having finished
 // against the current proposal - see handlerService.closeCase.
-function ActionForm({ caseData, onChanged }) {
+export function ActionForm({ caseData, onChanged }) {
   const [actionCategory, setActionCategory] = useState(ACTION_CATEGORIES[0])
   const [notes, setNotes] = useState('')
   const [effectiveDate, setEffectiveDate] = useState('')
@@ -465,136 +463,3 @@ function ActionForm({ caseData, onChanged }) {
     </div>
   )
 }
-
-// Combines everything a Case Handler needs to work a single case: the
-// questionnaire responses, the case thread (module 8), the investigation
-// checklist (module 9), consistency flags (module 10), the compliance
-// countdown (module 11), and the action-taking form (module 12). Fetching
-// the case doc goes through handlerService.getAssignedCase(), which
-// firestore.rules only permits when this case is assigned to the
-// signed-in handler - there is no separate "is this case mine" check here
-// because there doesn't need to be one.
-//
-// Two columns on wide screens: the thread and the action the handler is
-// working through on the left, the reference material they keep glancing at
-// (deadlines, consistency, checklist) on the right. The old single stacked
-// column put the compliance countdown five scrolls above the button it
-// governs.
-function CaseDetailView({ caseId }) {
-  const [caseData, setCaseData] = useState(null)
-  const [error, setError] = useState(null)
-  const [showReport, setShowReport] = useState(false)
-
-  const refresh = useCallback(async () => {
-    try {
-      const result = await getAssignedCase(caseId)
-      setCaseData(result)
-    } catch (err) {
-      setError(err.message)
-    }
-  }, [caseId])
-
-  useEffect(() => {
-    refresh()
-    const id = setInterval(refresh, POLL_INTERVAL_MS)
-    return () => clearInterval(id)
-  }, [refresh])
-
-  if (error) return <Alert variant="error">{error}</Alert>
-  if (!caseData) return <SkeletonList rows={4} />
-
-  const closed = caseData.status === 'closed'
-
-  // A closed case has a compiled report to show. CaseReport is a self-
-  // contained, read-only view (it fetches via generateReport on its own), so
-  // rather than squeezing it into a card it replaces the working layout
-  // entirely, with a way back to the case summary.
-  if (closed && showReport) {
-    return (
-      <div className="flex flex-col gap-5">
-        <Button
-          variant="secondary"
-          icon="back"
-          className="self-start print:hidden"
-          onClick={() => setShowReport(false)}
-        >
-          Back to case
-        </Button>
-        <CaseReport caseId={caseId} />
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-xl font-semibold text-charcoal">
-          Case {caseData.caseId ?? caseData.id}
-        </h2>
-        <Badge tone={closed ? 'tone-low' : 'tone-info'} dot>
-          {humanize(caseData.status) ?? 'open'}
-        </Badge>
-        {caseData.priority === 'high' && (
-          <Badge tone="tone-high" dot>
-            High priority
-          </Badge>
-        )}
-        {caseData.category && <span className="text-sm text-muted">{humanize(caseData.category)}</span>}
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] xl:items-start">
-        <div className="flex flex-col gap-5">
-          <Card title="Questionnaire answers">
-            <QuestionnaireAnswers caseData={caseData} />
-          </Card>
-
-          <Card title="Case thread" description="Messages between the reporter and you.">
-            <CaseThread caseId={caseId} mode="investigator" />
-          </Card>
-
-          <Card
-            title={closed ? 'Case outcome' : 'Take action'}
-            description={closed ? undefined : 'Proposing an action starts the consistency check.'}
-            actions={
-              closed ? (
-                <Button variant="primary" icon="document" onClick={() => setShowReport(true)}>
-                  View report
-                </Button>
-              ) : undefined
-            }
-          >
-            <ActionForm caseData={caseData} onChanged={refresh} />
-          </Card>
-        </div>
-
-        <div className="flex flex-col gap-5">
-          {/* Only confidential-tier cases carry a revealable identity. An
-              anonymous case never renders this card - there is nothing behind
-              it - so its absence is itself accurate. */}
-          {caseData.tier === 'confidential' && <ReporterIdentityCard caseData={caseData} />}
-
-          <Card title="Compliance deadlines">
-            <ComplianceCountdown caseData={caseData} />
-          </Card>
-
-          {/* Alongside the consistency flag, not merged into it: the two
-              answer different questions. The consistency check compares the
-              action proposed here against how comparable closed cases were
-              resolved; a pattern signal says nothing about actions at all,
-              only that other open or closed cases share this case's
-              department and role tier. Renders nothing when this case is not
-              in a signal. */}
-          <RelatedPatternNotice caseId={caseId} />
-
-          <Card title="Consistency check" padded={Boolean(caseData.consistencyCheck)}>
-            <ConsistencyFlags caseData={caseData} />
-          </Card>
-
-          <InvestigationChecklist caseId={caseId} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default CaseDetailView

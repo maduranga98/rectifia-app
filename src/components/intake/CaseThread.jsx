@@ -9,6 +9,7 @@ import {
 } from '../../services/caseThreadService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
+import CaseNotificationOptIn from './CaseNotificationOptIn'
 import CrisisResources from '../shared/CrisisResources'
 import EmptyState from '../ui/EmptyState'
 import FollowUpPrompt from './FollowUpPrompt'
@@ -297,6 +298,13 @@ function CaseThread({ caseId, mode, passcode }) {
           </Button>
         </div>
       </form>
+
+      {/* Persistent opt-in: shown on every visit for a reporter, so someone who
+          declined it after submitting - or later cleared the browser permission -
+          always has a way back to enabling case-thread notifications. The
+          component itself resolves what to render for each browser state,
+          including the blocked case. Keyed to the Case ID only. */}
+      {mode === 'reporter' && <CaseNotificationOptIn caseId={caseId} passcode={passcode} />}
 
       {mode === 'reporter' && (
         <div className="border-t border-line-soft pt-3">

@@ -43,7 +43,7 @@ function App() {
 
         {/* Staff routes. These were previously reachable without signing in. */}
         <Route
-          path="/dashboard"
+          path="/dashboard/*"
           element={
             <ProtectedRoute>
               <Dashboard />

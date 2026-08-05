@@ -4,6 +4,7 @@ import ReporterLayout from '../components/shared/ReporterLayout'
 import CategorySelect from '../components/intake/CategorySelect'
 import QuestionnaireForm from '../components/intake/QuestionnaireForm'
 import CrisisResources from '../components/shared/CrisisResources'
+import CaseNotificationOptIn from '../components/intake/CaseNotificationOptIn'
 import { CATEGORIES } from '../data/categories'
 import { resolveCompanySlug, submitCase } from '../services/caseAccessService'
 import Alert from '../components/ui/Alert'
@@ -387,6 +388,11 @@ function Submit() {
             </strong>{' '}
             and its messages, and filing a new report is the only way to be heard again.
           </Alert>
+
+          {/* Optional and non-blocking: the reporter has already completed
+              submission by the time they reach this screen, so ignoring this
+              changes nothing about their case. Keyed to the Case ID only. */}
+          <CaseNotificationOptIn caseId={completed.caseId} passcode={completed.passcode} />
 
           <div className="card p-6">
             <h2 className="text-sm font-semibold text-charcoal">Before you leave this page</h2>
