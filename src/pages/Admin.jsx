@@ -13,6 +13,7 @@ import PulseQuestionsPage from './company-admin/PulseQuestionsPage'
 import RoutingRulesPage from './company-admin/RoutingRulesPage'
 import BillingPage from './company-admin/BillingPage'
 import SettingsPage from './company-admin/SettingsPage'
+import RetentionPage from './company-admin/RetentionPage'
 
 // Company Admin's whole surface: the shell's navigation plus the overview
 // and four settings sub-pages it routes to. CompanyAdminPanel used to hold
@@ -49,6 +50,7 @@ const NAV_ITEMS = [
   // go out) lives there, and this is what those check-ins ask.
   { to: '/admin/pulse-questions', label: 'Pulse questions', icon: 'pulse' },
   { to: '/admin/settings', label: 'Settings', icon: 'settings' },
+  { to: '/admin/retention', label: 'Data retention', icon: 'clock' },
 ]
 
 const PAGE_TITLES = {
@@ -62,6 +64,7 @@ const PAGE_TITLES = {
   routing: 'Routing rules',
   billing: 'Subscription & billing',
   settings: 'Company settings',
+  retention: 'Data retention & deletion',
 }
 
 function Admin() {
@@ -102,6 +105,7 @@ function Admin() {
           <Route path="routing" element={<RoutingRulesPage companyId={companyId} />} />
           <Route path="billing" element={<BillingPage companyId={companyId} />} />
           <Route path="settings" element={<SettingsPage companyId={companyId} />} />
+          <Route path="retention" element={<RetentionPage companyId={companyId} />} />
           <Route path="*" element={<Navigate to="overview" replace />} />
         </Routes>
       ) : (

@@ -13,6 +13,7 @@ import CaseThread from '../../components/intake/CaseThread'
 import CaseReport from '../../components/investigation/CaseReport'
 import InvestigationChecklist from '../../components/investigation/InvestigationChecklist'
 import RelatedPatternNotice from '../../components/investigation/RelatedPatternNotice'
+import DeletionRequestPanel from '../../components/investigation/DeletionRequestPanel'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -155,6 +156,12 @@ function CaseWorkspacePage() {
         )}
         {caseData.category && <span className="text-sm text-muted">{humanize(caseData.category)}</span>}
       </div>
+
+      <DeletionRequestPanel
+        caseData={caseData}
+        onChanged={refresh}
+        onDeleted={() => navigate('/dashboard/my-cases')}
+      />
 
       <div className="flex flex-wrap gap-1 overflow-x-auto border-b border-line" role="tablist">
         {visibleTabs.map((tab) => (

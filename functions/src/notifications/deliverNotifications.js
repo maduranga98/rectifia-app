@@ -204,6 +204,24 @@ async function buildEmailForNotification(firestore, data, { getCompanyName }) {
       return { recipients: [data.recipientEmail], subject, text, html: null }
     }
 
+    case 'deletionRequestPending': {
+      // A reporter's erasure request (functions/src/retention/deletionRequest.js)
+      // is awareness-only here - the decision itself happens in the Case
+      // Handler's workspace (approveDeletionRequest/declineDeletionRequest),
+      // not by anything this delivery does.
+      const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['hrCoordinator'])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const subject = 'A reporter has requested deletion of their case'
+      const text = [
+        'A reporter has asked for their case to be permanently deleted.',
+        '',
+        `Case: ${data.caseId ?? 'unknown'}`,
+        '',
+        'This requires human review - open the case in the assigned handler\'s workspace to approve or decline it, with a written reason either way.',
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
     case 'acknowledgmentDeadlineRisk':
     case 'feedbackDeadlineRisk': {
       const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['hrCoordinator'])

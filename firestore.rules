@@ -58,7 +58,38 @@ service cloud.firestore {
     // than widening the company doc to a blanket admin-writable document.
     function companyAdminEditableFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact']);
+        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact', 'retention']);
+    }
+
+    // Module 23's four configurable retention windows (companies/{companyId}.
+    // retention), validated here rather than trusted from the client, and
+    // enforced on EVERY writer of this field - including Super Admin, via the
+    // retentionFieldValid() gate below applying to both branches of the
+    // update rule. The floors mirror functions/src/retention/retentionPolicy.js
+    // exactly and exist for the same reason documented there: employment-claim
+    // limitation periods run for years after the events a case describes, so
+    // nothing that writes through this rule - not a Company Admin, not a
+    // Super Admin acting through this same field - can configure a window
+    // shorter than the floor. Going lower than a floor requires a lawyer and a
+    // code change to the floor itself, not a client write.
+    // referenceCaseRetention deliberately has no field here at all - it is not
+    // part of this shape because it is not configurable by anyone; see
+    // REFERENCE_CASE_RETENTION in retentionPolicy.js.
+    // updatedByUid/updatedAt must match the write's own auth uid and server
+    // time, so a retention change always carries who made it and when -
+    // shortening a retention window is a consequential act.
+    function isValidRetentionUpdate() {
+      let r = request.resource.data.retention;
+      return r.identityRetentionDays is int && r.identityRetentionDays >= 90 && r.identityRetentionDays <= 1825
+        && r.caseRetentionDays is int && r.caseRetentionDays >= 1095 && r.caseRetentionDays <= 3650
+        && r.pulseResponseRetentionDays is int && r.pulseResponseRetentionDays >= 180 && r.pulseResponseRetentionDays <= 1825
+        && r.auditLogRetentionDays is int && r.auditLogRetentionDays >= 2555
+        && r.updatedByUid == request.auth.uid
+        && r.updatedAt == request.time;
+    }
+    function retentionFieldValid() {
+      return !('retention' in request.resource.data.diff(resource.data).affectedKeys())
+        || isValidRetentionUpdate();
     }
     function claimsMissingSlug() {
       return (!('slug' in resource.data) || resource.data.slug == null)
@@ -103,8 +134,9 @@ service cloud.firestore {
       allow list: if isSuperAdmin()
         || (isAnyCompanyAdmin() && request.query.limit <= 1);
       allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin()
-        || (isCompanyAdmin(companyId) && (companyAdminEditableFields() || claimsMissingSlug()));
+      allow update: if (isSuperAdmin()
+          || (isCompanyAdmin(companyId) && (companyAdminEditableFields() || claimsMissingSlug())))
+        && retentionFieldValid();
       allow delete: if isSuperAdmin();
     }
 
@@ -169,6 +201,16 @@ service cloud.firestore {
     // address. Every decrypt of either writes an identityAccessAuditLog entry
     // whether it succeeds or fails, and that collection is denied to every
     // client below - a mutable audit trail is not an audit trail.
+    //
+    // Module 23 adds three more fields, all Admin-SDK-write-only like every
+    // other field on this document: `legalHold` (functions/src/retention/
+    // legalHold.js), `deletionRequested` (functions/src/retention/
+    // deletionRequest.js) and `identityPurgedAt` (functions/src/retention/
+    // applyRetention.js's Tier 1 sweep). None of them are case content - a
+    // hold reason, a pending-erasure flag and a purge timestamp say nothing
+    // about what was reported - so the assigned handler seeing them in the
+    // same whole-document read below is not new exposure, and none is
+    // mirrored to caseMetadata for the same reason `responses` is not.
     match /cases/{caseId} {
       // Writes still only ever happen through Cloud Functions with the
       // Admin SDK (generateCaseAccess.js, scoreCase.js, routeCase.js,
@@ -580,6 +622,22 @@ service cloud.firestore {
     // able to edit the record that they read it.
     match /evidenceAccessLog/{entryId} {
       allow read, write: if false;
+    }
+
+    // Module 23's deletion record: one entry per case purged/deleted, per
+    // legal hold placed/released, and per erasure request decided (see
+    // functions/src/retention/applyRetention.js, legalHold.js,
+    // deletionRequest.js - the only writers, all Admin SDK). Deliberately
+    // readable, unlike the four audit logs above: this log's entire purpose
+    // is to let a Company Admin (or Super Admin) show that deletion happened
+    // on request - a DPA answer nobody can give from a log they cannot read.
+    // It stays write-sealed regardless, and it is scoped to hold no case
+    // content, no category, no scores and no identity by construction (see
+    // the writers) - so opening read access here is not the same class of
+    // exposure as opening any of the logs above would be.
+    match /deletionLog/{entryId} {
+      allow read: if isCompanyAdmin(resource.data.companyId) || isSuperAdmin();
+      allow write: if false;
     }
 
     // Rate-limit counters (functions/src/utils/rateLimit.js). Written only by
