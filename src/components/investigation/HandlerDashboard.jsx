@@ -134,9 +134,9 @@ function HandlerDashboard({ onSelectCase }) {
         <p className="text-sm text-muted">
           {openCount} open case{openCount === 1 ? '' : 's'} assigned to you.
         </p>
-        {/* Filing a report on someone's behalf is now a nav entry (/intake)
-            rather than a button here, so it is reachable from every page rather
-            than only this one. */}
+        {/* Filing a report on someone's behalf is now a nav entry
+            (/dashboard/intake) rather than a button here, so it is reachable
+            from every page rather than only this one. */}
         <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
           Refresh
         </Button>
