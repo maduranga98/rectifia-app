@@ -1,7 +1,7 @@
 const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
-const { createPulseInvite } = require('./pulseInvites')
+const { createPulseInvite, PULSE_INVITES_COLLECTION } = require('./pulseInvites')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -36,6 +36,86 @@ function isDue(company, cadenceDays) {
 const PENDING_STATUS = 'pending'
 const AWAITING_CONTACT_STATUS = 'awaiting_contact_info'
 
+// The single per-company queueing loop, shared by the daily scheduler above and
+// the on-demand trigger in sendPulseChecksNow.js so the two can never drift.
+// Given a company doc and the cadence (in days) to size the invite window with,
+// it queues one pulse-check invite notification per active roster employee and
+// stamps lastPulseCheckSentAt. It intentionally does NOT check isDue: cadence
+// gating is the scheduler's job, and the manual trigger bypasses it on purpose.
+//
+// Returns { queued } - the number of invites actually queued. An empty roster
+// queues nothing and, matching the scheduler's long-standing behaviour, leaves
+// lastPulseCheckSentAt untouched so the company becomes due again the moment a
+// roster is imported rather than waiting out another full cadence.
+async function queuePulseInvitesForCompany(firestore, companyDoc, cadenceDays) {
+  const employeesSnapshot = await companyDoc.ref.collection(EMPLOYEES_SUBCOLLECTION).get()
+  if (employeesSnapshot.empty) {
+    logger.info('queuePulseInvitesForCompany: no employees on roster, skipping', {
+      companyId: companyDoc.id,
+    })
+    return { queued: 0 }
+  }
+
+  const batch = firestore.batch()
+  let queued = 0
+
+  for (const employeeDoc of employeesSnapshot.docs) {
+    const employee = employeeDoc.data()
+    if (employee.status === 'inactive') continue
+
+    // One live invite per employee. Before minting a new invite, retire any
+    // invite for this same employee that is still 'pending' by marking it
+    // 'superseded' - an employee holding an older link is told a newer one
+    // exists (validatePulseInvite maps 'superseded' to reason 'expired')
+    // rather than having two live links at once. Done before createPulseInvite
+    // below so the invite we are about to create is never caught by this query.
+    const existingInvites = await firestore
+      .collection(PULSE_INVITES_COLLECTION)
+      .where('companyId', '==', companyDoc.id)
+      .where('employeeId', '==', employeeDoc.id)
+      .where('status', '==', PENDING_STATUS)
+      .get()
+    existingInvites.forEach((inviteDoc) => {
+      batch.update(inviteDoc.ref, { status: 'superseded' })
+    })
+
+    const email = employee.email || null
+    // Each queued invite carries its own single-use token. The plaintext
+    // token is returned here exactly once and lives only on the queued
+    // notification (a Cloud-Functions-only collection), for the delivery
+    // side to build the employee's link from; only its salted hash is
+    // persisted on pulseInvites. expiresAt is now + this cadence, so the
+    // invite dies when the next send is due - one live invite per employee.
+    const { inviteId, token } = await createPulseInvite(firestore, {
+      companyId: companyDoc.id,
+      employeeId: employeeDoc.id,
+      department: employee.department ?? null,
+      cadenceDays,
+    })
+
+    const notificationRef = firestore.collection(NOTIFICATIONS_COLLECTION).doc()
+    batch.set(notificationRef, {
+      type: 'pulseCheckInvite',
+      audience: 'employee',
+      companyId: companyDoc.id,
+      employeeId: employeeDoc.id,
+      department: employee.department ?? null,
+      recipientEmail: email,
+      inviteId,
+      inviteToken: token,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      status: email ? PENDING_STATUS : AWAITING_CONTACT_STATUS,
+    })
+    queued += 1
+  }
+
+  batch.update(companyDoc.ref, {
+    lastPulseCheckSentAt: admin.firestore.FieldValue.serverTimestamp(),
+  })
+  await batch.commit()
+  return { queued }
+}
+
 // Runs daily; for each company whose configured cadence has elapsed since
 // its last send, queues a pulse-check invite notification per employee.
 // The audience is companies/{companyId}/employees - the Company Admin's
@@ -56,54 +136,12 @@ exports.schedulePulseChecks = onSchedule('every day 01:00', async () => {
     if (!cadenceDays || !isDue(company, cadenceDays)) continue
 
     try {
-      const employeesSnapshot = await companyDoc.ref.collection(EMPLOYEES_SUBCOLLECTION).get()
-      if (employeesSnapshot.empty) {
-        // Nothing to send to. Leave lastPulseCheckSentAt alone so the company
-        // becomes due again immediately once a roster is imported, instead of
-        // waiting out another full cadence for a send that never happened.
-        logger.info('schedulePulseChecks: no employees on roster, skipping', { companyId: companyDoc.id })
-        continue
-      }
-
-      const batch = firestore.batch()
-
-      for (const employeeDoc of employeesSnapshot.docs) {
-        const employee = employeeDoc.data()
-        if (employee.status === 'inactive') continue
-
-        const email = employee.email || null
-        // Each queued invite carries its own single-use token. The plaintext
-        // token is returned here exactly once and lives only on the queued
-        // notification (a Cloud-Functions-only collection), for the delivery
-        // side to build the employee's link from; only its salted hash is
-        // persisted on pulseInvites. expiresAt is now + this cadence, so the
-        // invite dies when the next send is due - one live invite per employee.
-        const { inviteId, token } = await createPulseInvite(firestore, {
-          companyId: companyDoc.id,
-          employeeId: employeeDoc.id,
-          department: employee.department ?? null,
-          cadenceDays,
-        })
-
-        const notificationRef = firestore.collection(NOTIFICATIONS_COLLECTION).doc()
-        batch.set(notificationRef, {
-          type: 'pulseCheckInvite',
-          audience: 'employee',
-          companyId: companyDoc.id,
-          employeeId: employeeDoc.id,
-          department: employee.department ?? null,
-          recipientEmail: email,
-          inviteId,
-          inviteToken: token,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          status: email ? PENDING_STATUS : AWAITING_CONTACT_STATUS,
-        })
-      }
-
-      batch.update(companyDoc.ref, { lastPulseCheckSentAt: admin.firestore.FieldValue.serverTimestamp() })
-      await batch.commit()
+      await queuePulseInvitesForCompany(firestore, companyDoc, cadenceDays)
     } catch (err) {
       logger.error('schedulePulseChecks: failed to queue invites', { companyId: companyDoc.id, error: err.message })
     }
   }
 })
+
+exports.queuePulseInvitesForCompany = queuePulseInvitesForCompany
+exports.CADENCE_DAYS = CADENCE_DAYS

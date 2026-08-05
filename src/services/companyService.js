@@ -273,6 +273,19 @@ export async function updateCompanyFollowUpConfig(companyId, { intervalsDays, di
   })
 }
 
+const sendPulseChecksNowCallable = httpsCallable(functions, 'sendPulseChecksNow')
+
+// Triggers an on-demand pulse-check send for the caller's own company. Takes no
+// companyId: the callable resolves it from the caller's verified auth claim
+// server-side, so the client cannot aim a send at another company. Returns
+// { queued } - how many invites were queued - which the caller surfaces to the
+// admin. The server enforces the role (Company Admin / HR Coordinator only) and
+// the one-send-per-company-per-hour limit; nothing here needs to duplicate that.
+export async function sendPulseChecksNow() {
+  const result = await sendPulseChecksNowCallable({})
+  return result.data
+}
+
 export async function updateCompanyDepartments(companyId, departments) {
   await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
     departments,

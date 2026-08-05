@@ -65,6 +65,11 @@ const limits = {
   registerPushSubscription: limit('registerPushSubscription', 'RATE_LIMIT_REGISTER_PUSH', 10),
   validatePulseInvite: limit('validatePulseInvite', 'RATE_LIMIT_VALIDATE_PULSE_INVITE', 20),
   submitPulseResponse: limit('submitPulseResponse', 'RATE_LIMIT_SUBMIT_PULSE_RESPONSE', 5),
+  // A whole-company pulse-check send, scoped per company (see the scope
+  // argument at the call site in sendPulseChecksNow.js). One an hour is plenty:
+  // the point of the manual trigger is to send a batch on demand, not to fire
+  // repeatedly, and each press supersedes every outstanding link anyway.
+  sendPulseChecksNow: limit('sendPulseChecksNow', 'RATE_LIMIT_SEND_PULSE_CHECKS_NOW', 1),
   requestEvidenceUploadUrl: limit('requestEvidenceUploadUrl', 'RATE_LIMIT_EVIDENCE_UPLOAD', 20),
   requestEvidenceDownloadUrl: limit('requestEvidenceDownloadUrl', 'RATE_LIMIT_EVIDENCE_DOWNLOAD', 60),
   // A reporter answering a post-closure follow-up prompt (and possibly filing

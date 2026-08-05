@@ -158,6 +158,15 @@ exports.validatePulseInvite = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) =>
     if (data.status === 'used') {
       return { valid: false, reason: 'used' }
     }
+    // A 'superseded' invite is one a newer send has replaced (see
+    // queuePulseInvitesForCompany in schedulePulseChecks.js): the employee is
+    // holding an older link and a fresher one exists. Tell them their link has
+    // expired - the same thing that happens when a link ages out - rather than
+    // 'invalid', which reads as "your link is malformed" and would send them
+    // looking for a fault that isn't theirs.
+    if (data.status === 'superseded') {
+      return { valid: false, reason: 'expired' }
+    }
     if (data.status !== 'pending') {
       return { valid: false, reason: 'invalid' }
     }
