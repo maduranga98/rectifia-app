@@ -140,6 +140,13 @@ function CaseWorkspacePage() {
   const closed = caseData.status === 'closed'
   const confidential = caseData.tier === 'confidential'
   const visibleTabs = TABS.filter((t) => !t.confidentialOnly || confidential)
+  // Absolute, not relative: this workspace is three <Routes> levels deep
+  // (/dashboard/* -> the role's <Routes> -> cases/:caseId/* -> this
+  // component's own <Routes>), and a relative `to` resolves against
+  // whatever the *current* URL happens to be rather than this route's base.
+  // That's what made every tab click append another segment instead of
+  // replacing it. An absolute path sidesteps relative resolution entirely.
+  const basePath = `/dashboard/cases/${caseId}`
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
@@ -169,7 +176,7 @@ function CaseWorkspacePage() {
         {visibleTabs.map((tab) => (
           <NavLink
             key={tab.path}
-            to={tab.path}
+            to={`${basePath}/${tab.path}`}
             className={({ isActive }) =>
               `flex items-center whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
@@ -185,7 +192,7 @@ function CaseWorkspacePage() {
       </div>
 
       <Routes>
-        <Route index element={<Navigate to="thread" replace />} />
+        <Route index element={<Navigate to={`${basePath}/thread`} replace />} />
         <Route
           path="thread"
           element={
