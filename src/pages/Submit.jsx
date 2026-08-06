@@ -37,7 +37,7 @@ const REPORTER_TIERS = [
     label: 'Be identifiable to the investigator only',
     summary: 'Only the person assigned to your case sees who you are.',
     detail:
-      'Your identity is encrypted before it is stored and never appears on any dashboard, in any report, or to anyone else at your employer. The investigator can come back to you with follow-up questions, which usually makes a case easier to resolve. You are not asked for your details on this screen - this records your choice, and you decide what to share, and when, in the messages on your case.',
+      "Choosing this records your choice - it does not collect anything yet. You are not asked for your details on this screen. When you open your case, you'll be able to give the investigator your name, email, phone, or whatever you're willing to share; it is encrypted the moment you submit it, and never appears on any dashboard, in any report, or to anyone else at your employer. The investigator can come back to you with follow-up questions once you do, which usually makes a case easier to resolve. Nothing requires you to do this by a deadline, and leaving it blank is a choice you can make too.",
   },
 ]
 

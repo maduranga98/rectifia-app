@@ -35,7 +35,7 @@ if (!admin.apps.length) {
 //     "revert" that left the ciphertext in place would be a lie to the
 //     reporter; one that deleted it would destroy evidence mid-case. So the
 //     honest design is no undo at all, stated plainly before they commit
-//     (see src/components/intake/IdentityUpgradePanel.jsx).
+//     (see src/components/intake/IdentityPanel.jsx).
 //   - The contact email is not evidence. It is a delivery address, and
 //     removeContactEmail deletes the ciphertext outright. That withdrawal
 //     right is what makes offering the channel acceptable in the first place.
@@ -53,6 +53,8 @@ const MAX_EMAIL_LENGTH = 254
 const SYSTEM_MESSAGES = {
   reporterSelfReveal:
     'The reporter chose to identify themselves on this case. The case is now confidential tier rather than anonymous. Their details are held in the identity vault and are not readable from the case record; access requires an authorised reveal with a documented reason, which is logged.',
+  reporterIdentityProvided:
+    'The reporter added their identity to this case. The case was already confidential tier, so nothing about it changed. Their details are held in the identity vault and are not readable from the case record; access requires an authorised reveal with a documented reason, which is logged.',
   contactEmailAdded:
     'The reporter added a contact address so they can be notified of updates. The address is encrypted and is not readable from the case record. Notifications sent to it contain no case details.',
   contactEmailRemoved:
@@ -122,7 +124,7 @@ async function logTransition(firestore, { caseId, action, detail }) {
     actorEmail: null,
     authorizedAs: 'reporter',
     caseId,
-    field: action === 'reporter_self_reveal' ? 'reporterIdentity' : 'contactEmail',
+    field: action.startsWith('contact_email') ? 'contactEmail' : 'reporterIdentity',
     reason: 'Reporter-initiated change from their own case view',
     outcome: 'granted',
     detail: detail ?? null,
@@ -152,18 +154,27 @@ async function openTransition(firestore, endpoint, request) {
 }
 
 // ---------------------------------------------------------------------------
-// A. Anonymous -> confidential
+// A. Providing an identity: anonymous -> confidential, or filling an empty
+//    vault on a case that was already filed confidential
 // ---------------------------------------------------------------------------
 
-// The reporter who filed anonymously and has since decided the investigator
-// should know who they are. Nothing prompts this: the panel that calls it sits
-// collapsed at the foot of their own case view and is offered to nobody else.
+// Two reporters land here through different doors but the same callable:
+// one filed anonymously and has since decided the investigator should know
+// who they are; the other chose "be identifiable to the investigator only"
+// at submission - which only records the choice, per Submit.jsx - and is now
+// supplying the details that choice implied. Nothing prompts either one: the
+// panel that calls this sits collapsed at the foot of their own case view
+// and is offered to nobody else.
+//
+// The dividing line is not the case's tier, it is whether an identity is
+// already on file. A confidential-tier case with an empty vault has nothing
+// stored yet, so the write is still allowed; a case with an identity already
+// vaulted - either tier - has nothing left to add.
 //
 // What lands on the case is the same shape createCaseOnBehalf.js writes for a
 // staff-filed confidential case - an AES-GCM envelope plus the *key names* on
 // file - so every downstream reader (generateReport.js, revealIdentity.js)
-// treats a self-revealed identity through the exact same path it already knows,
-// with tierChangedAt/tierChangedBy as the only difference. Nothing here can
+// treats it through the exact same path it already knows. Nothing here can
 // read back what it just wrote.
 exports.upgradeToConfidential = onCall(
   { ...PUBLIC_CALLABLE_OPTIONS, secrets: [encryptionKeySecret] },
@@ -172,13 +183,15 @@ exports.upgradeToConfidential = onCall(
     const firestore = admin.firestore()
     const { caseRef, caseData } = await openTransition(firestore, 'upgradeToConfidential', request)
 
-    // Already confidential: a no-op, not an error. A reporter who taps twice,
-    // or returns to a stale tab, has asked for a state the case is already in -
-    // there is nothing to correct and nothing to warn them about. Erroring
-    // would also make the second call distinguishable from the first, which is
-    // a state oracle for no benefit.
-    if (normalizeTier(caseData.tier) === 'confidential') {
-      return { tier: 'confidential', changed: false }
+    const currentTier = normalizeTier(caseData.tier)
+
+    // An identity already on file - at either tier: a no-op, not an error. A
+    // reporter who taps twice, or returns to a stale tab, has asked for a
+    // state the case is already in - there is nothing to correct and nothing
+    // to warn them about. Erroring would also make the second call
+    // distinguishable from the first, which is a state oracle for no benefit.
+    if (caseData.reporterIdentity) {
+      return { tier: currentTier, changed: false }
     }
 
     const identityPayload = buildIdentityPayload(identity)
@@ -190,7 +203,12 @@ exports.upgradeToConfidential = onCall(
       )
     }
 
-    await caseRef.update({
+    // An upgrade if the case was anonymous; otherwise the case was already
+    // confidential (chosen at submission) and this is simply filling in what
+    // that choice promised, so the tier does not move.
+    const isUpgrade = currentTier !== 'confidential'
+
+    const update = {
       reporterIdentity: {
         vault: encryptIdentity(identityPayload),
         // Key names only - what lets a report say "a name and a phone number
@@ -200,20 +218,27 @@ exports.upgradeToConfidential = onCall(
         // No storedByUid: nobody stored this on the reporter's behalf.
         storedBy: 'reporter',
       },
-      tier: 'confidential',
+    }
+    if (isUpgrade) {
+      update.tier = 'confidential'
       // Recorded separately from storedAt because a later reader needs to know
       // this case *changed* tier rather than started at it. An investigator
       // reading a report where the reporter was confidential from the first
       // message is reading a different case from one where they were anonymous
       // for three weeks first, and flattening the two loses that.
-      tierChangedAt: admin.firestore.FieldValue.serverTimestamp(),
-      tierChangedBy: 'reporter',
-    })
+      update.tierChangedAt = admin.firestore.FieldValue.serverTimestamp()
+      update.tierChangedBy = 'reporter'
+    }
 
-    await appendSystemMessage(caseRef, SYSTEM_MESSAGES.reporterSelfReveal)
+    await caseRef.update(update)
+
+    await appendSystemMessage(
+      caseRef,
+      isUpgrade ? SYSTEM_MESSAGES.reporterSelfReveal : SYSTEM_MESSAGES.reporterIdentityProvided
+    )
     await logTransition(firestore, {
       caseId,
-      action: 'reporter_self_reveal',
+      action: isUpgrade ? 'reporter_self_reveal' : 'reporter_identity_provided',
       // Presence and shape, never a value.
       detail: `fieldsOnFile: ${fieldsOnFile.join(', ')}`,
     })

@@ -115,12 +115,22 @@ exports.validateCaseAccess = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => 
   // the reader themselves, and this response only ever reaches someone who has
   // just proved they hold the passcode.
   //
-  // hasContactEmail is a boolean and never the address - not the plaintext,
-  // not the envelope. The panel needs to know whether to offer "add" or
-  // "remove", which presence alone answers; shipping the ciphertext to a
-  // browser to answer the same question would put it somewhere it could be
-  // kept. Same for the identity: the tier says the reporter identified
-  // themselves, and reading what they said still goes through revealIdentity.
+  // hasContactEmail and identityOnFile are booleans and never the underlying
+  // data - not the plaintext, not the envelope. The panel needs to know
+  // whether to offer "add" or "remove" (contact email) and whether to show
+  // the identity panel or a status line (identity), which presence alone
+  // answers; shipping the ciphertext to a browser to answer the same question
+  // would put it somewhere it could be kept. Reading what either one actually
+  // says still goes through revealIdentity, gated on an authorised, logged
+  // reason - this endpoint only ever reaches someone who has just proved they
+  // hold the passcode, and even they get a boolean, not the value.
+  //
+  // identityOnFile drives CaseDetail.jsx's gating directly - not the tier -
+  // because a confidential-tier case can have an empty vault (the tier is
+  // chosen at submission; the details are supplied later, if at all) and an
+  // anonymous case can never have one. Tier alone would either hide the panel
+  // from someone who has details to give, or show it to someone who already
+  // gave them.
   return {
     valid: true,
     case: {
@@ -133,6 +143,7 @@ exports.validateCaseAccess = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => 
       // this module and importing back would close the cycle.
       tier: caseData.tier === 'confidential' ? 'confidential' : 'anonymous',
       hasContactEmail: Boolean(caseData.contactEmail),
+      identityOnFile: Boolean(caseData.reporterIdentity),
     },
   }
 })
