@@ -369,6 +369,7 @@ function SecurityDashboard() {
       scopeLabel="Lumora platform"
       navItems={[
         { id: 'companies', label: 'Companies', icon: 'company', to: '/super-admin' },
+        { id: 'manualAssignment', label: 'Manual assignment', icon: 'routing', to: '/super-admin?section=manualAssignment' },
         { id: 'security', label: 'Security', icon: 'shield', to: '/super-admin/security' },
       ]}
       activeId="security"

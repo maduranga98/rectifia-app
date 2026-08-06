@@ -6,6 +6,7 @@ import {
   createCompanyAdmin,
   createDepartment,
   getStrictestJurisdiction,
+  slugifyCompanyName,
 } from '../../services/companyService'
 import CompanyCredentials from './CompanyCredentials'
 import Alert from '../ui/Alert'
@@ -29,6 +30,13 @@ const JURISDICTION_LABELS = {
 // twice.
 function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   const [name, setName] = useState('')
+  // Prefilled from the company name (slugifyCompanyName) but editable - a
+  // Super Admin can pick a shorter or clearer reporting-link slug than what
+  // the name would auto-generate. Left blank, createCompany falls back to the
+  // name-derived slug itself. Tracks whether the admin has typed into this
+  // field directly, so it keeps auto-following the name until they do.
+  const [slug, setSlug] = useState('')
+  const [slugEdited, setSlugEdited] = useState(false)
   const [adminEmail, setAdminEmail] = useState('')
   const [jurisdictions, setJurisdictions] = useState([])
   const [subscriptionTier, setSubscriptionTier] = useState(SUBSCRIPTION_TIERS[0])
@@ -72,11 +80,11 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
       // so a retry doesn't register a duplicate company.
       const id =
         companyId ??
-        (await createCompany({ name, jurisdictions, departments, subscriptionTier }))
+        (await createCompany({ name, jurisdictions, departments, subscriptionTier, slug }))
       setCompanyId(id)
 
       const admin = await createCompanyAdmin({ companyId: id, email: adminEmail })
-      setCredentials({ email: admin.email, password: admin.password })
+      setCredentials({ email: admin.email, password: admin.password, emailDelivered: admin.emailDelivered })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -93,6 +101,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
         companyName={name}
         email={credentials.email}
         password={credentials.password}
+        emailDelivered={credentials.emailDelivered}
         onDone={() => onCreated?.(companyId)}
       />
     )
@@ -107,9 +116,24 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
           label="Company name"
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value
+            setName(value)
+            if (!slugEdited) setSlug(slugifyCompanyName(value))
+          }}
           required
           placeholder="Acme Ltd"
+        />
+        <Input
+          label="Reporting link slug"
+          type="text"
+          value={slug}
+          onChange={(e) => {
+            setSlugEdited(true)
+            setSlug(e.target.value)
+          }}
+          placeholder={slugifyCompanyName(name) || 'acme-ltd'}
+          hint="Appears in the public reporting link (/submit/:slug). Left blank, it's generated from the company name. Normalized to lowercase letters, numbers and hyphens, and must be unique platform-wide."
         />
         <Select
           label="Subscription tier"
@@ -131,7 +155,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
         onChange={(e) => setAdminEmail(e.target.value)}
         required
         placeholder="admin@company.com"
-        hint="A Company Admin account is created with this email. No invitation is sent for now - the login credentials are shown on the next screen for you to hand over."
+        hint="A Company Admin account is created with this email, and the login credentials are emailed to it directly. They're also shown on the next screen in case you need to hand them over yourself."
       />
 
       <fieldset className="flex flex-col gap-2">
