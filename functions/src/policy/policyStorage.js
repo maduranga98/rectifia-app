@@ -1,5 +1,6 @@
 const { HttpsError } = require('firebase-functions/v2/https')
 const { defineInt } = require('firebase-functions/params')
+const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 
 if (!admin.apps.length) {
@@ -150,6 +151,29 @@ function bucket() {
   return admin.storage().bucket()
 }
 
+// getSignedUrl needs the Cloud Functions runtime service account to hold
+// roles/iam.serviceAccountTokenCreator on itself (see the module comment
+// above); without it, the call throws a bare Google API error whose message
+// mentions "signBlob" or "IAM_PERMISSION_DENIED", which was previously
+// propagating uncaught and reaching the client as an opaque internal/500 with
+// no indication of the cause. This turns that specific failure into an
+// HttpsError that says what's actually wrong, and still surfaces anything
+// else (a bad path, a missing bucket) with its own message rather than
+// masking it.
+function wrapSigningError(err) {
+  const message = String(err?.message ?? '')
+  if (/signBlob|IAM_PERMISSION_DENIED|iam\.serviceAccounts\.signBlob/i.test(message)) {
+    logger.error('policyStorage: getSignedUrl failed - runtime service account is missing signBlob permission', {
+      error: message,
+    })
+    throw new HttpsError(
+      'internal',
+      'File storage is not fully configured yet (the server cannot sign upload/download links). Contact your platform administrator.'
+    )
+  }
+  throw err
+}
+
 // Mints a write-only signed URL for exactly one new object under this policy's
 // prefix. The content type is bound into the signature, so the PUT must send
 // exactly the validated type.
@@ -157,17 +181,27 @@ async function createUploadUrl(companyId, policyId, rawFileName, { contentType, 
   const fileName = sanitiseFileName(rawFileName, extension)
   const storagePath = policyPath(companyId, policyId, fileName)
   const expiresAt = Date.now() + ttlMs()
-  const [url] = await bucket()
-    .file(storagePath)
-    .getSignedUrl({ version: 'v4', action: 'write', expires: expiresAt, contentType })
+  let url
+  try {
+    ;[url] = await bucket()
+      .file(storagePath)
+      .getSignedUrl({ version: 'v4', action: 'write', expires: expiresAt, contentType })
+  } catch (err) {
+    wrapSigningError(err)
+  }
   return { fileName, storagePath, uploadUrl: url, contentType, expiresAt }
 }
 
 async function createDownloadUrl(storagePath) {
   const expiresAt = Date.now() + ttlMs()
-  const [url] = await bucket()
-    .file(storagePath)
-    .getSignedUrl({ version: 'v4', action: 'read', expires: expiresAt })
+  let url
+  try {
+    ;[url] = await bucket()
+      .file(storagePath)
+      .getSignedUrl({ version: 'v4', action: 'read', expires: expiresAt })
+  } catch (err) {
+    wrapSigningError(err)
+  }
   return { downloadUrl: url, expiresAt }
 }
 
