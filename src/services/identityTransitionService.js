@@ -14,16 +14,19 @@ const removeContactEmailCallable = httpsCallable(functions, 'removeContactEmail'
 // There is no staff-side counterpart in this file and there is not meant to be
 // one. Both actions are the reporter's alone.
 
-// Moves a case from anonymous to confidential tier and vaults the details the
-// reporter chose to give. `identity` is a subset of
+// Vaults the details the reporter chose to give. `identity` is a subset of
 // { name, email, phone, jobTitle, notes } - the same field set a staff-filed
 // confidential case uses - and at least one must be non-empty.
 //
-// Irreversible, and the panel that calls this says so before the reporter
-// commits: once the details are in the vault they are part of a live
-// investigation's record. Returns { tier, changed, fieldsOnFile }; `changed`
-// is false when the case was already confidential, which the server treats as
-// a no-op rather than an error.
+// Covers both doors IdentityPanel.jsx can call this from: a reporter moving
+// an anonymous case to confidential tier for the first time (irreversible,
+// and the panel says so before the reporter commits - once the details are in
+// the vault they are part of a live investigation's record), or a reporter
+// filling in the details on a case that was already filed confidential (tier
+// does not move, there is nothing new to undo). The server tells the two
+// apart by whether an identity is already on file, not by tier. Returns
+// { tier, changed, fieldsOnFile }; `changed` is false when an identity was
+// already stored, which the server treats as a no-op rather than an error.
 export async function upgradeToConfidential(caseId, passcode, identity) {
   const hasSomething = Object.values(identity ?? {}).some(
     (value) => typeof value === 'string' && value.trim().length > 0

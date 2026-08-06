@@ -18,17 +18,26 @@ const SUPER_ADMINS_COLLECTION = 'superAdmins'
 const LOW_SCORE_THRESHOLD = 30
 const HIGH_SEVERITY_THRESHOLD = 70
 
-// Maps a case category to the questionnaire fields (if any) that name the
-// accused person's department + role. Only toxicManagement's questionnaire
-// currently collects this by design (see
-// src/data/questionnaires/toxicManagement.js) - other categories don't yet
-// capture a structured department/role for the accused, so the
-// conflict-of-interest check is skipped for them rather than guessed at
-// from free text.
+// Maps a case category to the questionnaire fields that name the accused
+// person's department + role. harassment.js and retaliation.js deliberately
+// share the same field id pair as toxicManagement.js's original pair (see
+// the comment at the top of harassment.js) so that this map - and the
+// conflict-of-interest check below - doesn't have to care which
+// questionnaire a case came from. burnout has no subject party and is
+// absent on purpose; inventing fields for it would mean guessing a subject
+// the questionnaire never asked about.
 const ACCUSED_PROFILE_FIELDS = {
   toxicManagement: {
     departmentQuestionId: 'toxic_manager_department',
     roleQuestionId: 'toxic_manager_role',
+  },
+  harassment: {
+    departmentQuestionId: 'subject_department',
+    roleQuestionId: 'subject_role',
+  },
+  retaliation: {
+    departmentQuestionId: 'subject_department',
+    roleQuestionId: 'subject_role',
   },
 }
 
@@ -63,6 +72,28 @@ function textMatches(a, b) {
   if (!na || !nb) return false
   return na === nb || na.includes(nb) || nb.includes(na)
 }
+
+// Resolves the routing department for a case from the same questionnaire
+// answer the conflict-of-interest check reads (ACCUSED_PROFILE_FIELDS) -
+// the subject's department, never the reporter's own (not collected, and
+// collecting it would narrow the anonymity set). Returns null when the
+// category has no subject-department field or the reporter left it blank,
+// so the caller can fall back to 'unspecified' rather than routing on a
+// half-answer. Only whitespace/case are normalised here - no fuzzy matching
+// against the company's department list, which textMatches already does
+// for the conflict check with different tolerance requirements.
+function resolveRoutingDepartment(category, responses) {
+  const fields = ACCUSED_PROFILE_FIELDS[category]
+  if (!fields) return null
+
+  const raw = responses.find((r) => r.questionId === fields.departmentQuestionId)?.value
+  if (typeof raw !== 'string') return null
+
+  const normalized = raw.trim().toLowerCase().replace(/\s+/g, ' ')
+  return normalized || null
+}
+
+exports.resolveRoutingDepartment = resolveRoutingDepartment
 
 function extractAccusedProfile(category, responses) {
   const fields = ACCUSED_PROFILE_FIELDS[category]
@@ -182,6 +213,7 @@ async function sendToManualAssignment(firestore, caseRef, { companyId, caseId, c
     status: 'needs_manual_assignment',
     routingReason: reason,
     priority,
+    department: department ?? 'unspecified',
   })
 
   const audience = MANUAL_ASSIGNMENT_AUDIENCE[reason] ?? 'superAdmin'
@@ -258,6 +290,15 @@ exports.routeCase = onDocumentUpdated(CASES_COLLECTION + '/{caseId}', async (eve
   const priority = determinePriority(after.severityScore, after.evidenceScore)
   const companyId = after.companyId ?? null
 
+  // Resolution order: a department already set on the case document wins
+  // (nothing sets one today, but a future path might); otherwise resolve it
+  // from the subject-department questionnaire answer (ACCUSED_PROFILE_FIELDS
+  // - the subject's department, never the reporter's own); otherwise the
+  // honest fallback. routingRules can still be configured for an
+  // 'unspecified' bucket per category for cases that never named one.
+  const department =
+    after.department || resolveRoutingDepartment(after.category, after.responses || []) || 'unspecified'
+
   if (!companyId) {
     // Nothing to route against without knowing the company - never leave
     // this silently unassigned.
@@ -265,17 +306,13 @@ exports.routeCase = onDocumentUpdated(CASES_COLLECTION + '/{caseId}', async (eve
       companyId: null,
       caseId,
       category: after.category,
-      department: after.department ?? null,
+      department,
       reason: 'missing_company_id',
       priority,
     })
     return
   }
 
-  // The reporter's own department isn't collected by any questionnaire yet
-  // (only the accused's, for toxicManagement) - routingRules can still be
-  // configured for an 'unspecified' bucket per category until that's added.
-  const department = after.department || 'unspecified'
   const ruleId = routingRuleId(after.category, department)
   const ruleSnapshot = await firestore
     .collection(COMPANIES_COLLECTION)
@@ -318,6 +355,7 @@ exports.routeCase = onDocumentUpdated(CASES_COLLECTION + '/{caseId}', async (eve
     assignedAt: admin.firestore.FieldValue.serverTimestamp(),
     status: 'assigned',
     priority,
+    department,
   })
 })
 
@@ -485,4 +523,51 @@ exports.reassignCase = onCall(async (request) => {
   await resolveManualAssignmentNotifications(firestore, caseId, actorUid)
 
   return { success: true }
+})
+
+// One-off migration for the department-routing fix above: cases scored
+// before this deploy never had `department` resolved, so they're sitting in
+// needs_manual_assignment showing 'unspecified' even when the reporter did
+// name a subject department. This only ever writes `department` - it never
+// touches status, priority, or assignedHandlerId, so it does not retroactively
+// route anything; a case that was manually queued stays manually queued,
+// it just displays the right bucket while it waits. Super Admin only, since
+// it can touch every company's cases in one call.
+exports.backfillCaseDepartments = onCall(async (request) => {
+  const actorUid = requireAuthUid(request)
+  const firestore = admin.firestore()
+
+  const superAdmin = await isSuperAdminUid(firestore, actorUid)
+  if (!superAdmin) {
+    throw new HttpsError('permission-denied', 'Only a Super Admin can run this backfill')
+  }
+
+  const { companyId } = request.data || {}
+
+  let query = firestore.collection(CASES_COLLECTION).where('status', '==', 'needs_manual_assignment')
+  if (companyId) {
+    query = query.where('companyId', '==', companyId)
+  }
+  const snapshot = await query.get()
+
+  const batch = firestore.batch()
+  let updated = 0
+  snapshot.docs.forEach((doc) => {
+    const data = doc.data()
+    const resolved =
+      resolveRoutingDepartment(data.category, data.responses || []) || 'unspecified'
+    if (resolved === (data.department ?? 'unspecified')) return
+    batch.update(doc.ref, { department: resolved })
+    updated += 1
+  })
+  if (updated > 0) await batch.commit()
+
+  logger.info('routeCase: backfillCaseDepartments complete', {
+    actorUid,
+    companyId: companyId ?? null,
+    scanned: snapshot.size,
+    updated,
+  })
+
+  return { success: true, scanned: snapshot.size, updated }
 })

@@ -97,11 +97,19 @@ function RoutingRulesPage({ companyId }) {
   // was captured. Pre-filling the form with one of those has to add it as an
   // option, or the select silently drops the value and the rule that gets
   // written is not the one the button promised.
+  //
+  // 'unspecified' is always listed too, last, regardless of what's pre-filled -
+  // subject_department is optional on every questionnaire that asks it, so
+  // this bucket is permanently reachable in production, not just an edge case
+  // to handle when a stuck case happens to need it. Without a configurable
+  // rule for it, every case where the reporter didn't name a department queues
+  // for manual assignment forever.
   const departmentOptions = useMemo(() => {
     const names = departments.map((d) => d.name)
-    return ruleForm.department && !names.includes(ruleForm.department)
-      ? [...names, ruleForm.department]
-      : names
+    const withUnspecified = names.includes('unspecified') ? names : [...names, 'unspecified']
+    return ruleForm.department && !withUnspecified.includes(ruleForm.department)
+      ? [...withUnspecified, ruleForm.department]
+      : withUnspecified
   }, [departments, ruleForm.department])
 
   // (a) Fix the gap: pre-fill the rule form with this case's bucket so the
@@ -309,6 +317,11 @@ function RoutingRulesPage({ companyId }) {
 
             <Select
               label="Department"
+              hint={
+                ruleForm.department === 'unspecified'
+                  ? 'Reports where the reporter did not say which department the involved person works in.'
+                  : undefined
+              }
               value={ruleForm.department}
               onChange={(e) => setRuleForm({ ...ruleForm, department: e.target.value })}
             >
@@ -317,11 +330,16 @@ function RoutingRulesPage({ companyId }) {
                   No departments yet
                 </option>
               )}
-              {departmentOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
+              {departmentOptions
+                .filter((name) => name !== 'unspecified')
+                .map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              {departmentOptions.includes('unspecified') && (
+                <option value="unspecified">Unspecified</option>
+              )}
             </Select>
 
             <Select
