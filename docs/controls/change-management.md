@@ -27,13 +27,28 @@ without having first been committed and reviewed.
 
 **Dependency vulnerability scanning.** CI runs `npm audit` against both the
 root app and `functions/`, on every push and pull request, and **fails the
-build** on any high or critical finding - see the `security-scan` job in
-`.github/workflows/firebase-hosting-pull-request.yml`. This is deliberately a
-gate, not a report: a dependency with a known high/critical vulnerability
-cannot merge silently. Every run's result - packages scanned, findings by
-severity, pass/fail - is recorded to the `dependencyScans` collection via
+build** on any high or critical finding - see the `audit` job in
+`.github/workflows/dependency-audit.yml`, with the actual pass/fail decision
+made by `scripts/checkAuditSeverity.cjs`. This is deliberately a gate, not a
+report: a dependency with a known high/critical vulnerability cannot merge
+silently. Every run's result - packages scanned, findings by severity,
+pass/fail - is recorded to the `dependencyScans` collection via
 `functions/scripts/recordDependencyScan.js`, so "when did we last scan, and
 what did we find" has a durable answer beyond CI's own log retention.
+
+**Documented exceptions, not silent ones.** An advisory can legitimately not
+apply to how this codebase uses the affected package - a vulnerable code
+path (an unused transport option, a framework mode this app never enables)
+that simply isn't reached. `checkAuditSeverity.cjs` supports exactly one way
+to handle that: a narrow, per-advisory-ID allowlist entry with a written
+reason, reviewed individually, never a severity-wide bypass. As of this
+writing one entry exists - GHSA-qwww-vcr4-c8h2, a CSRF bypass in React
+Router's RSC framework mode, which this app never enables (it uses
+`react-router-dom` in classic `<BrowserRouter>` SPA mode only) - and it is
+removed the moment a fixed version ships and the dependency is upgraded to
+it. An allowlist entry is itself part of this control's evidence: an auditor
+reading the file sees exactly what was excluded, why, and when it was
+reviewed.
 
 **Change management applied to data, not just code.** Two examples already
 in this codebase, worth citing to an auditor as change management extending
