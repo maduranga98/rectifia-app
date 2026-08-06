@@ -2,7 +2,7 @@ const { validateCaseAccess } = require('./src/intake/generateCaseAccess')
 const { submitCase } = require('./src/intake/submitCase')
 const { createCaseOnBehalf } = require('./src/intake/createCaseOnBehalf')
 const { scoreCase } = require('./src/intake/scoreCase')
-const { routeCase, reassignCase } = require('./src/intake/routeCase')
+const { routeCase, reassignCase, backfillCaseDepartments } = require('./src/intake/routeCase')
 const { getCaseThread, postReporterMessage, postInvestigatorMessage } = require('./src/intake/caseThread')
 const {
   requestEvidenceUploadUrl,
@@ -91,6 +91,7 @@ exports.validateCaseAccess = validateCaseAccess
 exports.scoreCase = scoreCase
 exports.routeCase = routeCase
 exports.reassignCase = reassignCase
+exports.backfillCaseDepartments = backfillCaseDepartments
 exports.getCaseThread = getCaseThread
 exports.postReporterMessage = postReporterMessage
 exports.postInvestigatorMessage = postInvestigatorMessage
