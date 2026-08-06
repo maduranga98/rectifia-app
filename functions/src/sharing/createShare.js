@@ -277,11 +277,24 @@ exports.listCaseShares = onCall(async (request) => {
     throw new HttpsError('permission-denied', 'Only the assigned Case Handler may view this case\'s external shares')
   }
 
-  const sharesSnapshot = await firestore
-    .collection(EXTERNAL_SHARES_COLLECTION)
-    .where('caseId', '==', caseId)
-    .orderBy('createdAt', 'desc')
-    .get()
+  let sharesSnapshot
+  try {
+    sharesSnapshot = await firestore
+      .collection(EXTERNAL_SHARES_COLLECTION)
+      .where('caseId', '==', caseId)
+      .orderBy('createdAt', 'desc')
+      .get()
+  } catch (err) {
+    // A callable that throws a plain (non-HttpsError) error is collapsed by
+    // the Functions framework into a bare 500 with no detail reaching the
+    // client - the exact failure mode this query hits if the composite index
+    // on (caseId, createdAt) declared in firestore.indexes.json was never
+    // actually deployed (`firebase deploy --only firestore:indexes`) or is
+    // still building. Logging the real error here is what makes that
+    // diagnosable from Cloud Functions logs instead of a dead end.
+    logger.error('listCaseShares: query failed', { caseId, error: err.message })
+    throw err
+  }
 
   const shares = sharesSnapshot.docs.map((doc) => {
     const data = doc.data()
