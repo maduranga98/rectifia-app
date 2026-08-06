@@ -37,7 +37,7 @@ function StaffIntake() {
     )
   }
 
-  return <StaffIntakeForm />
+  return <StaffIntakeForm companyId={companyId} />
 }
 
 export default StaffIntake

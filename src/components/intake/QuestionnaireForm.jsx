@@ -24,6 +24,27 @@ function isAnswered(value) {
   return Array.isArray(value) ? value.length > 0 : value !== undefined && value !== ''
 }
 
+// The sentinel option value for a companyDepartments select's "I'd rather not
+// say" choice. Never persisted - the select's onChange below stores `null` as
+// the answer instead, the same value an unanswered department question would
+// carry downstream, since a DOM <select> can only ever hand back a string.
+const NOT_SPECIFIED_OPTION = '__not_specified__'
+
+// Builds the option list for a question whose options aren't baked into the
+// static questionnaire definition (see harassment.js's subject_department for
+// why: it has to be the company's own department list, not free text). The
+// questionnaire files stay company-agnostic - this is the one place that
+// resolves them against the company passed into the form.
+function companyDepartmentOptions(departments) {
+  return [
+    ...(departments ?? []).map((department) => ({
+      value: department.name,
+      label: department.name,
+    })),
+    { value: NOT_SPECIFIED_OPTION, label: "I'd rather not say" },
+  ]
+}
+
 // Turns raw form answers into the structured shape module 6 consumes: each
 // answered question paired with its type and whatever severity-weight
 // metadata applies to the chosen answer(s). No score is computed here - the
@@ -74,7 +95,13 @@ function buildResponses(questions, answers) {
 // (which only arrives after submission). The partial draft is never sent
 // anywhere for this - see crisisTextCheck.js. Whether the resources were shown
 // is deliberately not recorded anywhere.
-function QuestionnaireForm({ category, onSubmit, onCrisisCheckField, onCrisisResourcesTrigger }) {
+function QuestionnaireForm({
+  category,
+  departments = [],
+  onSubmit,
+  onCrisisCheckField,
+  onCrisisResourcesTrigger,
+}) {
   const questions = QUESTIONNAIRES[category]
   const [answers, setAnswers] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -153,18 +180,35 @@ function QuestionnaireForm({ category, onSubmit, onCrisisCheckField, onCrisisRes
 
       {questions.map((question) => {
         if (question.type === 'select') {
+          const isCompanyDepartmentSelect = question.dynamicOptions === 'companyDepartments'
+          const options = isCompanyDepartmentSelect
+            ? companyDepartmentOptions(departments)
+            : question.options
+          const answer = answers[question.id]
+          // A department answer of `null` ("I'd rather not say") has to render
+          // as that option, not fall back to the disabled placeholder - `??`
+          // alone would show the select as unanswered even though it has one.
+          const selectValue = isCompanyDepartmentSelect && answer === null ? NOT_SPECIFIED_OPTION : answer ?? ''
+
           return (
             <Select
               key={question.id}
               id={question.id}
               label={question.text}
-              value={answers[question.id] ?? ''}
-              onChange={(e) => setAnswer(question, e.target.value)}
+              value={selectValue}
+              onChange={(e) => {
+                const raw = e.target.value
+                if (isCompanyDepartmentSelect && raw === NOT_SPECIFIED_OPTION) {
+                  setAnswer(question, null)
+                } else {
+                  setAnswer(question, raw)
+                }
+              }}
             >
               <option value="" disabled>
                 Select an answer
               </option>
-              {question.options.map((option) => (
+              {options.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

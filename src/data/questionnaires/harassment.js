@@ -10,6 +10,17 @@
 // have a subject party share one field id pair so that grouping does not have
 // to care which questionnaire a case came from; burnout has no subject party
 // and gets neither field.
+//
+// Both fields are closed-vocabulary selects, not free text. A name typed into
+// subject_role/subject_department isn't just a display nuisance - it is a
+// matching key that routeCase.js's conflict-of-interest check compares
+// against staff records, that departmentTier.js tiers for the Consistency
+// Engine's reference pool, and that subjectSignature.js groups repeat reports
+// on. Free text broke all three silently, so subject_role's options are
+// exactly the tier vocabulary classifyRoleText produces
+// (functions/src/consistency/departmentTier.js) and subject_department is
+// resolved at render time from the company's own department list (see
+// QuestionnaireForm.jsx) rather than typed.
 const harassmentQuestions = [
   {
     id: 'harassment_conduct_type',
@@ -53,15 +64,29 @@ const harassmentQuestions = [
   {
     id: 'subject_department',
     text: 'What department does the involved person work in? (Optional)',
-    type: 'text',
+    type: 'select',
     options: null,
+    // Resolved at render time from companies/{companyId}.departments -
+    // QuestionnaireForm.jsx builds the option list, this definition stays
+    // company-agnostic. The last option ("I'd rather not say") maps to a null
+    // answer, same as leaving the question unanswered.
+    dynamicOptions: 'companyDepartments',
     severityWeight: null,
   },
   {
     id: 'subject_role',
-    text: "What is the involved person's role or title? (Optional - no names, please.)",
-    type: 'text',
-    options: null,
+    text: "What is the involved person's role or title? (Optional)",
+    type: 'select',
+    options: [
+      { value: 'junior', label: 'About the same level as me, or more junior', severityWeight: null },
+      {
+        value: 'senior',
+        label: 'Senior to me, but not a manager (lead, supervisor, principal)',
+        severityWeight: null,
+      },
+      { value: 'manager', label: 'A manager, director or executive', severityWeight: null },
+      { value: 'unspecified', label: "I'd rather not say", severityWeight: null },
+    ],
     severityWeight: null,
   },
   {

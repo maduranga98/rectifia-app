@@ -3,6 +3,7 @@ import CategorySelect from './CategorySelect'
 import QuestionnaireForm from './QuestionnaireForm'
 import CaseCredentialsHandoff from './CaseCredentialsHandoff'
 import { CATEGORIES } from '../../data/categories'
+import { getCompany } from '../../services/companyService'
 import {
   BACKDATE_WARNING_DAYS,
   INTAKE_METHODS,
@@ -41,8 +42,24 @@ const STEPS = ['How it arrived', 'What happened', 'Reporter’s choice']
 // doesn't: how it arrived, when it arrived, and confirmation that the tier
 // on the case is the reporter's own answer rather than the intake taker's
 // assumption.
-function StaffIntakeForm() {
+function StaffIntakeForm({ companyId }) {
   const [step, setStep] = useState(0)
+
+  // The subject_department select needs the company's own department list
+  // (same source RoutingRulesPage reads) - fetched once here rather than
+  // baked into the questionnaire definition, so a phoned-in report offers the
+  // same departments as the reporter's own /submit/:companySlug form.
+  const [departments, setDepartments] = useState([])
+  useEffect(() => {
+    if (!companyId) return
+    let active = true
+    getCompany(companyId).then((company) => {
+      if (active) setDepartments(company?.departments ?? [])
+    })
+    return () => {
+      active = false
+    }
+  }, [companyId])
 
   // Step 0 - the context that only exists because someone else took this
   // report down.
@@ -329,7 +346,11 @@ function StaffIntakeForm() {
                 when this submits - it hands the answers back and moves to the
                 tier step, because the tier has to be on the document at
                 creation, not added afterwards. */}
-            <QuestionnaireForm category={category} onSubmit={handleQuestionnaireSubmit} />
+            <QuestionnaireForm
+              category={category}
+              departments={departments}
+              onSubmit={handleQuestionnaireSubmit}
+            />
           </Card>
         </>
       )}

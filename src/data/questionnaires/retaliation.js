@@ -5,6 +5,11 @@
 // case missing either one just never joins a pattern group (see
 // functions/src/patterns/subjectSignature.js).
 //
+// Both are closed-vocabulary selects, not free text - see the matching
+// comment in harassment.js for why: these are matching keys for the
+// conflict-of-interest check, the Consistency Engine's tiering, and pattern
+// detection, not display fields, and free text broke all three silently.
+//
 // Question definitions for the retaliation intake questionnaire. Both
 // timeframe fields feed the temporal-correlation score module 6 computes -
 // this module only collects the raw approximate timing, it does not compute
@@ -77,15 +82,25 @@ const retaliationQuestions = [
   {
     id: 'subject_department',
     text: 'What department does the person who took that action work in? (Optional)',
-    type: 'text',
+    type: 'select',
     options: null,
+    dynamicOptions: 'companyDepartments',
     severityWeight: null,
   },
   {
     id: 'subject_role',
-    text: "What is that person's role or title? (Optional - no names, please.)",
-    type: 'text',
-    options: null,
+    text: "What is that person's role or title? (Optional)",
+    type: 'select',
+    options: [
+      { value: 'junior', label: 'About the same level as me, or more junior', severityWeight: null },
+      {
+        value: 'senior',
+        label: 'Senior to me, but not a manager (lead, supervisor, principal)',
+        severityWeight: null,
+      },
+      { value: 'manager', label: 'A manager, director or executive', severityWeight: null },
+      { value: 'unspecified', label: "I'd rather not say", severityWeight: null },
+    ],
     severityWeight: null,
   },
   {

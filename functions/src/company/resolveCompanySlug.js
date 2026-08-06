@@ -24,6 +24,14 @@ function normalizeSlug(value) {
 // reporter's Submit page can validate the link. Returns null when no company
 // owns the slug. Deliberately reads only the fields the reporter is allowed to
 // see - never returns the raw company document.
+//
+// departments is included because the intake questionnaire's subject_department
+// field is a select populated from it (see harassment.js) rather than free
+// text - the anonymous reporter has no other read path to
+// companies/{companyId}.departments, since firestore.rules gates the company
+// doc on isCompanyStaff. Department names aren't identifying on their own, so
+// exposing just the list here doesn't widen what a reporter can learn versus
+// what the resolveCompanySlug callable already intended to expose.
 async function resolveCompanyBySlug(slug) {
   const normalized = normalizeSlug(slug)
   if (!normalized) return null
@@ -38,19 +46,23 @@ async function resolveCompanyBySlug(slug) {
   if (snapshot.empty) return null
 
   const doc = snapshot.docs[0]
-  return { companyId: doc.id, companyName: doc.data().name ?? null }
+  return {
+    companyId: doc.id,
+    companyName: doc.data().name ?? null,
+    departments: doc.data().departments ?? [],
+  }
 }
 
 exports.resolveCompanyBySlug = resolveCompanyBySlug
 
 // Public, unauthenticated lookup used by the anonymous reporter's Submit page
 // to turn a /submit/:companySlug link into a company it can name on screen.
-// It deliberately exposes ONLY { companyId, companyName } for a slug the
-// caller already holds - never the full company document, and never a way to
-// list or enumerate slugs. An unknown slug returns { found: false } so the UI
-// can show a clear "this reporting link isn't valid" message instead of a
-// blank form. No auth by design: company resolution has to stay anonymous, the
-// same way case submission does.
+// It deliberately exposes ONLY { companyId, companyName, departments } for a
+// slug the caller already holds - never the full company document, and never
+// a way to list or enumerate slugs. An unknown slug returns { found: false }
+// so the UI can show a clear "this reporting link isn't valid" message
+// instead of a blank form. No auth by design: company resolution has to stay
+// anonymous, the same way case submission does.
 exports.resolveCompanySlug = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { companySlug } = request.data || {}
 
@@ -68,5 +80,10 @@ exports.resolveCompanySlug = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => 
     return { found: false }
   }
 
-  return { found: true, companyId: resolved.companyId, companyName: resolved.companyName }
+  return {
+    found: true,
+    companyId: resolved.companyId,
+    companyName: resolved.companyName,
+    departments: resolved.departments,
+  }
 })

@@ -236,6 +236,7 @@ function Submit() {
           <div className="card p-6">
             <QuestionnaireForm
               category={category}
+              departments={company.departments ?? []}
               onSubmit={handleQuestionnaireSubmit}
               onCrisisResourcesTrigger={() => setCrisisTriggered(true)}
             />

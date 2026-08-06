@@ -2,19 +2,34 @@
 // involved manager is identified by department + role only, never by name -
 // see module 10 for the anonymity rationale behind that choice. This module
 // only structures the questions; scoring happens in module 6.
+//
+// Both fields are closed-vocabulary selects, not free text - see the matching
+// comment in harassment.js for why: these are matching keys for the
+// conflict-of-interest check, the Consistency Engine's tiering, and pattern
+// detection, not display fields, and free text broke all three silently.
 const toxicManagementQuestions = [
   {
     id: 'toxic_manager_department',
-    text: 'What department does the involved manager work in?',
-    type: 'text',
+    text: 'What department does the involved manager work in? (Optional)',
+    type: 'select',
     options: null,
+    dynamicOptions: 'companyDepartments',
     severityWeight: null,
   },
   {
     id: 'toxic_manager_role',
-    text: "What is the involved manager's role or title? (No names, please.)",
-    type: 'text',
-    options: null,
+    text: "What is the involved manager's role or title? (Optional)",
+    type: 'select',
+    options: [
+      { value: 'junior', label: 'About the same level as me, or more junior', severityWeight: null },
+      {
+        value: 'senior',
+        label: 'Senior to me, but not a manager (lead, supervisor, principal)',
+        severityWeight: null,
+      },
+      { value: 'manager', label: 'A manager, director or executive', severityWeight: null },
+      { value: 'unspecified', label: "I'd rather not say", severityWeight: null },
+    ],
     severityWeight: null,
   },
   {
