@@ -5,6 +5,7 @@ export const MESSAGE_TYPES = { MESSAGE: 'message', MANUAL_LOG: 'manual_log' }
 export const SENDERS = { AI: 'ai', INVESTIGATOR: 'investigator', REPORTER: 'reporter' }
 
 const getCaseThreadCallable = httpsCallable(functions, 'getCaseThread')
+const getCaseThreadForHandlerCallable = httpsCallable(functions, 'getCaseThreadForHandler')
 const postReporterMessageCallable = httpsCallable(functions, 'postReporterMessage')
 const postInvestigatorMessageCallable = httpsCallable(functions, 'postInvestigatorMessage')
 const requestEvidenceUploadUrlCallable = httpsCallable(functions, 'requestEvidenceUploadUrl')
@@ -18,6 +19,15 @@ const requestEvidenceDownloadUrlCallable = httpsCallable(functions, 'requestEvid
 // (CaseThread.jsx) poll.
 export async function getCaseThread(caseId, passcode) {
   const result = await getCaseThreadCallable({ caseId, passcode })
+  return result.data.messages
+}
+
+// The staff counterpart of getCaseThread. The caller's identity comes from
+// their Firebase Auth ID token (attached automatically by the Cloud
+// Functions SDK) rather than a passcode - a Case Handler never holds a
+// reporter's passcode.
+export async function getCaseThreadForHandler(caseId) {
+  const result = await getCaseThreadForHandlerCallable({ caseId })
   return result.data.messages
 }
 

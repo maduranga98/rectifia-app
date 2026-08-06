@@ -123,6 +123,32 @@ exports.getCaseThread = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   return { messages: messagesSnapshot.docs.map(serializeMessage) }
 })
 
+// The staff counterpart of getCaseThread above. A Case Handler has a
+// Firebase Auth identity, not a Case ID + passcode, so this authorises with
+// loadCaseForHandler (the same assignment check postInvestigatorMessage
+// uses) instead of verifyReporterAccess. It is a separate callable rather
+// than a branch inside getCaseThread so the passcode check there can never
+// be accidentally bypassed by an auth token.
+//
+// Returns the identical { messages: [...] } shape as getCaseThread, via the
+// same serializeMessage, so CaseThread.jsx renders one data structure either
+// way regardless of which callable produced it.
+exports.getCaseThreadForHandler = onCall(async (request) => {
+  const uid = requireAuthUid(request)
+  const { caseId } = request.data || {}
+  const firestore = admin.firestore()
+  await loadCaseForHandler(firestore, caseId, uid)
+
+  const messagesSnapshot = await firestore
+    .collection(CASES_COLLECTION)
+    .doc(caseId)
+    .collection(MESSAGES_SUBCOLLECTION)
+    .orderBy('timestamp', 'asc')
+    .get()
+
+  return { messages: messagesSnapshot.docs.map(serializeMessage) }
+})
+
 // Posts a reporter message. This write is what aiFollowUp.js's onCreate
 // trigger reacts to - it's the only path through which new evidence reaches
 // a case after the original questionnaire submission.

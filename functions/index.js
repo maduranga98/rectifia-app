@@ -3,7 +3,12 @@ const { submitCase } = require('./src/intake/submitCase')
 const { createCaseOnBehalf } = require('./src/intake/createCaseOnBehalf')
 const { scoreCase } = require('./src/intake/scoreCase')
 const { routeCase, reassignCase, backfillCaseDepartments } = require('./src/intake/routeCase')
-const { getCaseThread, postReporterMessage, postInvestigatorMessage } = require('./src/intake/caseThread')
+const {
+  getCaseThread,
+  getCaseThreadForHandler,
+  postReporterMessage,
+  postInvestigatorMessage,
+} = require('./src/intake/caseThread')
 const {
   requestEvidenceUploadUrl,
   requestEvidenceDownloadUrl,
@@ -93,6 +98,7 @@ exports.routeCase = routeCase
 exports.reassignCase = reassignCase
 exports.backfillCaseDepartments = backfillCaseDepartments
 exports.getCaseThread = getCaseThread
+exports.getCaseThreadForHandler = getCaseThreadForHandler
 exports.postReporterMessage = postReporterMessage
 exports.postInvestigatorMessage = postInvestigatorMessage
 // Blueprint §7.2 / §8. Reporter-initiated only - each is authenticated by Case
