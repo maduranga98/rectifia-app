@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   addManualLogEntry,
   getCaseThread,
+  getCaseThreadForHandler,
   getEvidenceDownloadUrl,
   sendInvestigatorMessage,
   sendReporterMessage,
@@ -66,7 +67,7 @@ function formatSize(bytes) {
 // The anchor is created and clicked rather than window.open'd because the
 // signed URL only exists after an await, and a popup blocker will stop an
 // async window.open that is no longer attributable to the click.
-function AttachmentLink({ caseId, passcode, attachment, tone }) {
+function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
   const [opening, setOpening] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -74,7 +75,14 @@ function AttachmentLink({ caseId, passcode, attachment, tone }) {
     setOpening(true)
     setFailed(false)
     try {
-      const url = await getEvidenceDownloadUrl(caseId, attachment.fileName, passcode)
+      // A handler has no passcode - requestEvidenceDownloadUrl authorises
+      // an investigator by their Firebase Auth identity instead (see
+      // evidenceAccess.js's authorizeCaseAccess), so the passcode is
+      // deliberately omitted rather than passed as undefined.
+      const url =
+        mode === 'investigator'
+          ? await getEvidenceDownloadUrl(caseId, attachment.fileName)
+          : await getEvidenceDownloadUrl(caseId, attachment.fileName, passcode)
       const anchor = document.createElement('a')
       anchor.href = url
       anchor.target = '_blank'
@@ -125,6 +133,13 @@ function CaseThread({ caseId, mode, passcode }) {
   const [showLogForm, setShowLogForm] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
+  // Separate from `error` (send/log-entry failures) and, deliberately, not
+  // read by the load effect below - a failed fetch must not feed back into
+  // its own trigger, or a 400 becomes an infinite render loop (this is what
+  // used to hang the tab). A failed load stops polling instead of retrying
+  // itself; `retryToken` is bumped only by the user clicking Retry.
+  const [loadError, setLoadError] = useState(null)
+  const [retryToken, setRetryToken] = useState(0)
   // Reporter-side only. Distress can surface long after intake, so support
   // resources are reachable from the ongoing thread at any time - no trigger
   // has to fire and nothing has to be answered. Toggling this open is not
@@ -133,21 +148,41 @@ function CaseThread({ caseId, mode, passcode }) {
   const pollRef = useRef(null)
 
   const refresh = useCallback(async () => {
-    try {
-      const fetched = await getCaseThread(caseId, passcode)
-      setMessages(fetched)
-    } catch (err) {
-      setError(err.message)
+    // A reporter thread is authorised by Case ID + passcode; without a
+    // passcode there is nothing to send the server, and calling the
+    // reporter callable anyway just trades a clear error for its generic
+    // 'invalid-argument' one.
+    if (mode === 'reporter' && !passcode) {
+      setLoadError('A passcode is required to load this case.')
+      return
     }
-  }, [caseId, passcode])
+    try {
+      const fetched =
+        mode === 'investigator' ? await getCaseThreadForHandler(caseId) : await getCaseThread(caseId, passcode)
+      setMessages(fetched)
+      setLoadError(null)
+    } catch (err) {
+      // Stop polling rather than let a failed fetch keep re-firing itself -
+      // loadError is not in this effect's dependency array, so setting it
+      // here cannot retrigger the effect on its own. The user retries via
+      // the button below, which bumps retryToken.
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+      setLoadError(err.message)
+    }
+  }, [caseId, mode, passcode])
 
   useEffect(() => {
     refresh()
     // No real-time listener - the messages subcollection isn't
     // client-readable (see caseThreadService.js), so we poll instead.
     pollRef.current = setInterval(refresh, POLL_INTERVAL_MS)
-    return () => clearInterval(pollRef.current)
-  }, [refresh])
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [refresh, retryToken])
 
   async function handleSend(event) {
     event.preventDefault()
@@ -203,8 +238,24 @@ function CaseThread({ caseId, mode, passcode }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {loadError && (
+        <Alert variant="error">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>{loadError}</span>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setRetryToken((token) => token + 1)}
+            >
+              Retry
+            </Button>
+          </div>
+        </Alert>
+      )}
+
       <div className="flex max-h-[28rem] flex-col gap-3 overflow-y-auto">
-        {messages.length === 0 && (
+        {!loadError && messages.length === 0 && (
           <EmptyState
             compact
             icon="mail"
@@ -260,6 +311,7 @@ function CaseThread({ caseId, mode, passcode }) {
                       <li key={attachment.fileName ?? attachment.label}>
                         <AttachmentLink
                           caseId={caseId}
+                          mode={mode}
                           passcode={passcode}
                           attachment={attachment}
                           tone={mine ? 'text-white' : 'text-navy'}
