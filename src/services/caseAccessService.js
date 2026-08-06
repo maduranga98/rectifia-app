@@ -9,13 +9,15 @@ const validateCaseAccessCallable = httpsCallable(functions, 'validateCaseAccess'
 const resolveCompanySlugCallable = httpsCallable(functions, 'resolveCompanySlug')
 
 // Resolves a public /submit/:companySlug link to the company it belongs to,
-// returning only { found, companyId, companyName }. Used by the anonymous
-// reporter's Submit page to confirm the link is valid and to name the company
-// on screen before any category is chosen. Full company documents are never
-// exposed here - the callable (functions/src/company/resolveCompanySlug.js)
-// returns nothing but the id and display name, and there is no way to list
-// slugs. Returns { found: false } for an unknown slug so the caller can show a
-// clear "this reporting link isn't valid" message.
+// returning only { found, companyId, companyName, departments }. Used by the
+// anonymous reporter's Submit page to confirm the link is valid, to name the
+// company on screen before any category is chosen, and to populate the
+// subject_department select in QuestionnaireForm. Full company documents are
+// never exposed here - the callable
+// (functions/src/company/resolveCompanySlug.js) returns nothing but the id,
+// display name, and department list, and there is no way to list slugs.
+// Returns { found: false } for an unknown slug so the caller can show a clear
+// "this reporting link isn't valid" message.
 export async function resolveCompanySlug(companySlug) {
   const trimmed = companySlug?.trim() ?? ''
   if (!trimmed) {

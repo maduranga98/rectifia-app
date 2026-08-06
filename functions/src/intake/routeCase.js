@@ -3,6 +3,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
+const { classifyRoleText } = require('../consistency/departmentTier')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -62,15 +63,31 @@ function normalizeText(value) {
 }
 
 // Deliberately loose match (equality or substring either direction) rather
-// than exact string equality - accused department/role are free text, so a
-// reporter writing "eng" and a staff record saying "Engineering" should
-// still trip the check. Favors over-flagging (resolved by a human via the
-// manual-assignment fallback) over under-flagging a real conflict.
+// than exact string equality - accused department is a company-department
+// select value, so a reporter's "Engineering" and a staff record's " eng "
+// should still trip the check. Favors over-flagging (resolved by a human via
+// the manual-assignment fallback) over under-flagging a real conflict.
 function textMatches(a, b) {
   const na = normalizeText(a)
   const nb = normalizeText(b)
   if (!na || !nb) return false
   return na === nb || na.includes(nb) || nb.includes(na)
+}
+
+// The accused's role is a canonical tier value now (junior/senior/manager/
+// unspecified - see harassment.js's subject_role), but a staff record's
+// jobTitle is still a free-text job title ("Senior Engineering Manager").
+// Comparing them with textMatches would be meaningless - a staff record
+// holds a title, not a tier - so classifyRoleText runs over the staff side to
+// put both in the same vocabulary before comparing. 'unspecified' never
+// counts as a match on either side: it means "we don't know", not "these two
+// match", and treating it as a match would flag a conflict merely because
+// neither role could be classified.
+function rolesConflict(staffJobTitle, accusedRole) {
+  const staffTier = classifyRoleText(staffJobTitle)
+  const accusedTier = classifyRoleText(accusedRole)
+  if (staffTier === 'unspecified' || accusedTier === 'unspecified') return false
+  return staffTier === accusedTier
 }
 
 // Resolves the routing department for a case from the same questionnaire
@@ -127,7 +144,7 @@ async function findConflictedStaff(firestore, companyId, accusedProfile, candida
     const isRelevant = staffDoc.id === candidateHandlerId || staff.role === 'companyAdmin'
     if (!isRelevant) continue
 
-    if (textMatches(staff.department, accusedProfile.department) && textMatches(staff.jobTitle, accusedProfile.role)) {
+    if (textMatches(staff.department, accusedProfile.department) && rolesConflict(staff.jobTitle, accusedProfile.role)) {
       return { staffId: staffDoc.id, ...staff }
     }
   }
