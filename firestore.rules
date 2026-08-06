@@ -830,5 +830,38 @@ service cloud.firestore {
       allow read: if isSuperAdmin();
       allow write: if false;
     }
+
+    // Module 27: External Advisor Share Links. Both collections are reached
+    // only through Cloud Functions (functions/src/sharing/*.js), including
+    // for a Super Admin - unlike deletionLog/reportExports/dependencyScans
+    // above, there is no dashboard reason to open these to a direct client
+    // read.
+    //
+    // externalShares holds a scrypt hash and salt of the bearer token that
+    // is the ENTIRE access control for a shared case view - a mutable-by-
+    // client or readable-by-client document here would mean any staff
+    // account (or, if the read were ever widened, an external recipient's
+    // own client) could learn or forge what should be an unguessable
+    // 32-byte secret. It also holds an encrypted recipientEmail envelope,
+    // held to the same standard as reporterIdentity: the vault decides who
+    // may ever decrypt it, not a rules predicate on this collection - and in
+    // this module's case, nothing ever decrypts it again after creation, so
+    // there is no read path to design for at all.
+    //
+    // Company Admin has no path to either collection, matching this
+    // module's own constraint that Company Admin cannot create, view, or
+    // extend a share - there is nothing for a rule to narrow here, because
+    // the narrowing is "no path exists."
+    match /externalShares/{shareId} {
+      allow read, write: if false;
+    }
+
+    // Every attempt to open a shared-case link, granted or denied - same
+    // audit discipline as evidenceAccessLog and the other sealed logs:
+    // whoever opened this link must not be able to edit the record that
+    // they opened it, and neither can anyone else, including Super Admin.
+    match /externalAccessLog/{entryId} {
+      allow read, write: if false;
+    }
   }
 }

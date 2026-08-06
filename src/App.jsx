@@ -13,6 +13,7 @@ import AcceptInvitePage from './pages/AcceptInvitePage'
 import SuperAdminLoginPage from './pages/SuperAdminLoginPage'
 import SuperAdminDashboardPage from './pages/SuperAdminDashboardPage'
 import SecurityDashboard from './pages/superadmin/SecurityDashboard'
+import SharedCaseView from './pages/SharedCaseView'
 import { ROLES } from './constants/roles'
 
 function App() {
@@ -34,6 +35,12 @@ function App() {
             its single-use token (/pulse/:inviteId?t=<token>), so this route is
             deliberately outside ProtectedRoute, same as the reporter routes. */}
         <Route path="/pulse/:inviteId" element={<PulseCheck />} />
+        {/* Module 27: External Advisor Share Links. Reached by a bearer
+            token in the query string (?token=...), never a Firebase Auth
+            session and never the reporter's Case ID + passcode - deliberately
+            outside ProtectedRoute, same as the reporter and pulse routes
+            above, and standalone with no nav into the rest of the product. */}
+        <Route path="/shared/:shareId" element={<SharedCaseView />} />
 
         {/* Auth entry points. */}
         <Route path="/login" element={<LoginPage />} />

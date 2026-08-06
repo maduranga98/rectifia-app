@@ -80,6 +80,10 @@ const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomal
 const { integrityCheck } = require('./src/security/integrityCheck')
 const { backupVerification, attestRestoreTest } = require('./src/security/backupVerification')
 const { getSecurityDashboard } = require('./src/security/securityDashboard')
+const { createExternalShare, listCaseShares } = require('./src/sharing/createShare')
+const { getSharedCase } = require('./src/sharing/accessShare')
+const { revokeExternalShare } = require('./src/sharing/revokeShare')
+const { expireShares } = require('./src/sharing/expireShares')
 
 exports.submitCase = submitCase
 exports.createCaseOnBehalf = createCaseOnBehalf
@@ -196,3 +200,15 @@ exports.integrityCheck = integrityCheck
 exports.backupVerification = backupVerification
 exports.attestRestoreTest = attestRestoreTest
 exports.getSecurityDashboard = getSecurityDashboard
+// Module 27: External Advisor Share Links. createExternalShare/
+// listCaseShares are the assigned Case Handler's own tools (Company Admin
+// has no path to any of these three); getSharedCase is the sole
+// unauthenticated entry point an external recipient ever reaches, built
+// from scratch rather than on top of any reporter- or staff-authenticated
+// path; revokeExternalShare is immediate and available to the assigned
+// handler or a Super Admin; expireShares is the daily bookkeeping sweep.
+exports.createExternalShare = createExternalShare
+exports.listCaseShares = listCaseShares
+exports.getSharedCase = getSharedCase
+exports.revokeExternalShare = revokeExternalShare
+exports.expireShares = expireShares
