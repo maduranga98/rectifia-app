@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
+const { defineString } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { sendMail, smtpPassword } = require('../utils/email')
@@ -10,6 +11,14 @@ if (!admin.apps.length) {
 const COMPANIES_COLLECTION = 'companies'
 const STAFF_SUBCOLLECTION = 'staff'
 const NOTIFICATIONS_COLLECTION = 'notifications'
+
+// Same deploy-time param the other outbound-email modules read (see
+// notifications/sendContactEmailUpdate.js, notifications/deliverNotifications.js,
+// sharing/createShare.js) - the bare app origin, used below to turn Firebase's
+// generic password-reset action code into a link that actually lands on this
+// app's own /invite/:token screen (AcceptInvitePage), and to give the invitee a
+// plain link to Rectifia's sign-in page for later.
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a1e.web.app' })
 
 // Must stay in lockstep with ROLES in src/constants/roles.js and the role
 // checks in firestore.rules - a role added there needs adding here too.
@@ -55,9 +64,15 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
 }
 
-// Builds the plain-text + HTML invitation email. The inviteLink is the
-// Firebase password-reset link the invitee uses to set their own password.
-function buildInviteEmail({ companyName, roleLabel, inviteLink }) {
+// Builds the plain-text + HTML invitation email. inviteLink is this app's own
+// /invite/:token URL (see buildAppInviteLink below) - not Firebase's generic
+// hosted action page - so "Accept invitation" lands the invitee on
+// AcceptInvitePage, where they set a password and continue straight into the
+// dashboard. loginLink is the separate, permanent Rectifia sign-in page, given
+// alongside it so the invitee (or anyone re-reading the email later) has a
+// direct way back in after their password is already set, without having to
+// hunt for a bookmark.
+function buildInviteEmail({ companyName, roleLabel, inviteLink, loginLink }) {
   const company = companyName || 'your organization'
   const subject = `You've been invited to join ${company} on Rectifia`
   const text = [
@@ -66,23 +81,70 @@ function buildInviteEmail({ companyName, roleLabel, inviteLink }) {
     'To accept the invitation, set your password using the link below:',
     inviteLink,
     '',
+    `Already set your password? Sign in any time at ${loginLink}`,
+    '',
     "If you weren't expecting this invitation, you can safely ignore this email.",
   ].join('\n')
 
   const html = `
-    <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1a1a1a;">
-      <h2 style="margin: 0 0 16px;">You've been invited to Rectifia</h2>
-      <p>You've been invited to join <strong>${escapeHtml(company)}</strong> as a <strong>${escapeHtml(roleLabel)}</strong>.</p>
-      <p>To accept the invitation, set your password using the button below:</p>
-      <p style="margin: 24px 0;">
-        <a href="${escapeHtml(inviteLink)}" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 6px; display: inline-block;">Accept invitation</a>
+    <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #f2f6fa; padding: 32px 16px;">
+      <div style="background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(11, 44, 73, 0.12);">
+        <div style="background: #0b2c49; padding: 28px 32px;">
+          <p style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.02em; color: #ffffff;">
+            Rectifia<span style="color: #db9b3a;">.</span>
+          </p>
+          <p style="margin: 4px 0 0; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #9db4c9;">
+            Confidential reporting platform
+          </p>
+        </div>
+        <div style="padding: 32px; color: #1a1a1a;">
+          <h1 style="margin: 0 0 16px; font-size: 20px; color: #0b2c49;">You've been invited</h1>
+          <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.5;">
+            You've been invited to join <strong>${escapeHtml(company)}</strong> on Rectifia as a
+            <strong>${escapeHtml(roleLabel)}</strong>.
+          </p>
+          <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.5;">
+            Set your password to accept the invitation and open your dashboard:
+          </p>
+          <p style="margin: 24px 0;">
+            <a href="${escapeHtml(inviteLink)}" style="background: #db9b3a; color: #0b2c49; text-decoration: none; font-weight: 600; padding: 13px 24px; border-radius: 8px; display: inline-block;">Accept invitation</a>
+          </p>
+          <p style="font-size: 13px; color: #666; margin: 0 0 24px;">
+            Or copy and paste this link into your browser:<br />
+            <a href="${escapeHtml(inviteLink)}" style="color: #14456f;">${escapeHtml(inviteLink)}</a>
+          </p>
+          <div style="border-top: 1px solid #e7edf3; padding-top: 16px; margin-top: 8px;">
+            <p style="font-size: 13px; color: #666; margin: 0;">
+              Already set your password? Sign in any time at
+              <a href="${escapeHtml(loginLink)}" style="color: #14456f;">${escapeHtml(loginLink)}</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+      <p style="font-size: 12px; color: #9db4c9; text-align: center; margin: 20px 0 0;">
+        If you weren't expecting this invitation, you can safely ignore this email.
       </p>
-      <p style="font-size: 13px; color: #666;">Or copy and paste this link into your browser:<br /><a href="${escapeHtml(inviteLink)}">${escapeHtml(inviteLink)}</a></p>
-      <p style="font-size: 13px; color: #666;">If you weren't expecting this invitation, you can safely ignore this email.</p>
     </div>
   `
 
   return { subject, text, html }
+}
+
+// Firebase's admin.auth().generatePasswordResetLink() points at its own
+// generic hosted action page (…firebaseapp.com/__/auth/action), which never
+// matches this app's /invite/:token route (AcceptInvitePage) - so an invitee
+// who clicked it previously landed on Firebase's default UI, not Rectifia's
+// branded accept-invite screen, and had no way back into the app afterwards.
+// The oobCode is the one thing the app's own AcceptInvitePage actually needs
+// (verifyInviteCode / acceptInvite in src/services/authService.js both take
+// it directly), so it's pulled out of Firebase's link and rebuilt as this
+// app's own URL instead.
+function buildAppInviteLink(firebaseResetLink) {
+  const oobCode = new URL(firebaseResetLink).searchParams.get('oobCode')
+  if (!oobCode) {
+    throw new Error('Password reset link did not contain an oobCode')
+  }
+  return `${appBaseUrl.value()}/invite/${oobCode}`
 }
 
 async function requireCompanyAdmin(actorUid, companyId) {
@@ -168,13 +230,16 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
       ...(role === 'manager' ? { departments: managerDepartments } : {}),
     })
 
-  const inviteLink = await admin.auth().generatePasswordResetLink(email)
+  const firebaseResetLink = await admin.auth().generatePasswordResetLink(email)
+  const inviteLink = buildAppInviteLink(firebaseResetLink)
+  const loginLink = `${appBaseUrl.value()}/login`
 
   const companyName = companySnapshot.data()?.name
   const { subject, text, html } = buildInviteEmail({
     companyName,
     roleLabel: ROLE_LABELS[role] || role,
     inviteLink,
+    loginLink,
   })
 
   // Attempt SMTP delivery. A delivery failure shouldn't roll back the invite

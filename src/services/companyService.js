@@ -113,6 +113,12 @@ export async function createCompany({
   jurisdictions,
   departments = [],
   subscriptionTier = SUBSCRIPTION_TIERS[0],
+  // Optional: a Super Admin can pick a custom reporting slug on the
+  // registration form instead of accepting the name-derived default. Still
+  // run through allocateUniqueSlug so a manually-typed value is normalized to
+  // the same URL-safe shape and checked for a platform-wide collision the
+  // same way the auto-generated slug is.
+  slug: requestedSlug,
 }) {
   if (!name?.trim()) {
     throw new Error('Company name is required')
@@ -130,7 +136,7 @@ export async function createCompany({
   // Unique, URL-safe reporting slug allocated at creation time - this is what
   // /submit/:companySlug resolves against so anonymous reporters can file
   // against the right company without ever being handed a raw companyId.
-  const slug = await allocateUniqueSlug(name)
+  const slug = await allocateUniqueSlug(requestedSlug?.trim() ? requestedSlug : name)
 
   const docRef = await addDoc(collection(firestore, COMPANIES_COLLECTION), {
     name: name.trim(),
@@ -151,10 +157,11 @@ export async function createCompany({
 const createCompanyAdminCallable = httpsCallable(functions, 'createCompanyAdmin')
 
 // Creates the Company Admin account for a newly registered company and
-// returns { email, password } so the Super Admin can hand the credentials
-// over directly. No invite email is sent for now - see
-// functions/src/company/createCompanyAdmin.js. The password comes back once
-// and is never stored, so whatever calls this has to display it immediately.
+// returns { email, password, emailDelivered } so the Super Admin can hand the
+// credentials over directly. The same credentials and a login link are also
+// emailed to the admin directly by createCompanyAdmin.js - emailDelivered
+// reflects whether that send succeeded. The password comes back once and is
+// never stored, so whatever calls this has to display it immediately.
 export async function createCompanyAdmin({ companyId, email }) {
   if (!companyId || !email?.trim()) {
     throw new Error('companyId and an admin email are required')

@@ -541,11 +541,20 @@ service cloud.firestore {
       // fails a manager with no (or a malformed) claim closed rather than erroring
       // the whole disjunction. Company Admin's access is unchanged: still every
       // non-suppressed aggregate for its company, no department predicate.
+      // Suppression is no longer enforced by this read gate: the privacy
+      // floor now lives in the projection itself (analyzePulseResponse.js
+      // writes averageSentiment as null, never sentimentScoreSum, for any
+      // below-floor department), so a Company Admin or Manager may read the
+      // doc regardless of `suppressed` - they get responseCount and a null
+      // average, never a reconstructable score. Requiring suppressed == false
+      // here previously rejected the client's deliberately-unfiltered
+      // listPulseSummaries query outright (Firestore denies a whole query
+      // that could return a doc the rule would deny), which is what broke
+      // Manager and Company Admin's pulse summary reads.
       allow read: if isHrCoordinator(resource.data.companyId)
         || isPulseReviewer(resource.data.companyId)
-        || (isCompanyAdmin(resource.data.companyId) && resource.data.suppressed == false)
+        || isCompanyAdmin(resource.data.companyId)
         || (isManager(resource.data.companyId)
-            && resource.data.suppressed == false
             && request.auth.token.departments is list
             && resource.data.department in request.auth.token.departments);
       allow write: if false;

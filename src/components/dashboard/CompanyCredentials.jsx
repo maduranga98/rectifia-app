@@ -21,11 +21,12 @@ function CredentialRow({ label, value, copied, onCopy }) {
 }
 
 // Shows the Company Admin's login credentials once, right after the company
-// is registered. Invitation emails are not sent for now, so this screen is
-// the handover: the password is generated server-side, returned in the
+// is registered. The same credentials and a login link are emailed directly
+// to the admin by createCompanyAdmin.js, but this screen is still the backup
+// handover: the password is generated server-side, returned in the
 // createCompanyAdmin response, and never stored anywhere - once this screen
 // is dismissed it cannot be shown again, only reset.
-function CompanyCredentials({ companyName, email, password, onDone }) {
+function CompanyCredentials({ companyName, email, password, emailDelivered, onDone }) {
   const [copied, setCopied] = useState(null)
   const [copyFailed, setCopyFailed] = useState(false)
 
@@ -52,6 +53,9 @@ function CompanyCredentials({ companyName, email, password, onDone }) {
           <h2 className="text-lg font-semibold text-charcoal">Company registered</h2>
           <p className="mt-1 text-sm text-muted">
             {companyName ? `${companyName} is set up. ` : ''}
+            {emailDelivered
+              ? 'These credentials and a sign-in link were also emailed directly to the admin. '
+              : ''}
             Give these credentials to the Company Admin. They can sign in with them straight away
             and should change the password afterwards.
           </p>
@@ -90,6 +94,13 @@ function CompanyCredentials({ companyName, email, password, onDone }) {
         This password is not stored anywhere. Copy it before closing - if it is lost, the admin
         has to reset their password.
       </Alert>
+
+      {emailDelivered === false && (
+        <Alert variant="error" title="Email delivery failed">
+          The credentials email to {email} could not be sent. Hand these credentials over
+          directly instead.
+        </Alert>
+      )}
 
       <Button variant="primary" onClick={onDone} className="self-start">
         Done

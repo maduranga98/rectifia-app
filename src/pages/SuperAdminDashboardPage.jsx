@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { listCompanies } from '../services/companyService'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
@@ -39,7 +39,12 @@ function SuperAdminDashboardPage() {
   const [error, setError] = useState(null)
   const [showRegisterForm, setShowRegisterForm] = useState(false)
   const [notice, setNotice] = useState(null)
-  const [section, setSection] = useState('companies')
+  const [searchParams] = useSearchParams()
+  // Lets the Security dashboard's "Manual assignment" nav item route back
+  // here with the right section pre-selected (?section=manualAssignment),
+  // since that view is local state on this page rather than its own route.
+  const initialSection = searchParams.get('section') === 'manualAssignment' ? 'manualAssignment' : 'companies'
+  const [section, setSection] = useState(initialSection)
   const [manualAssignmentCount, setManualAssignmentCount] = useState(null)
   const navigate = useNavigate()
   const { user } = useAuth()
