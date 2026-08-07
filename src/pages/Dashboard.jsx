@@ -18,6 +18,7 @@ import PulseResponsesPage from './staff/PulseResponsesPage'
 import PulseTrendsPage from './staff/PulseTrendsPage'
 import BenchmarkPage from './staff/BenchmarkPage'
 import StaffIntake from './StaffIntake'
+import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
 
 // Which nav each staff role gets. This replaces the old VIEWS_BY_ROLE state
 // switch: every capability now has its own nav entry and its own URL, so a
@@ -40,10 +41,12 @@ const NAV_BY_ROLE = {
     { to: '/dashboard/pulse-responses', label: 'Pulse checks', icon: 'pulse' },
     { to: '/dashboard/trends', label: 'Trends', icon: 'overview' },
     { to: '/dashboard/benchmark', label: 'Benchmark', icon: 'overview' },
+    { to: '/dashboard/analytics', label: 'Analytics', icon: 'sparkle' },
     { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
   ],
   [ROLES.CASE_HANDLER]: [
     { to: '/dashboard/my-cases', label: 'My cases', icon: 'cases' },
+    { to: '/dashboard/analytics', label: 'Analytics', icon: 'sparkle' },
     { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
   ],
   [ROLES.PULSE_CHECK_REVIEWER]: [
@@ -85,6 +88,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases }) {
         <Route path="pulse-responses" element={<PulseResponsesPage companyId={companyId} />} />
         <Route path="trends" element={<PulseTrendsPage companyId={companyId} role={role} />} />
         <Route path="benchmark" element={<BenchmarkPage companyId={companyId} />} />
+        <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} canExport />} />
         <Route path="intake" element={<StaffIntake />} />
         <Route path="*" element={toIndex} />
       </Routes>
@@ -97,6 +101,13 @@ function DashboardRoutes({ role, companyId, departments, companyCases }) {
         <Route index element={toIndex} />
         <Route path="my-cases" element={<MyCasesPage />} />
         <Route path="cases/:caseId/*" element={<CaseWorkspacePage />} />
+        {/* Aggregate stats only - firestore.rules opens companies/{companyId}/
+            analytics/* to caseHandler with the same access as companyAdmin/
+            hrCoordinator, but the export button stays off (canExport
+            defaults false): there is no per-handler breakdown in this
+            collection for a Case Handler to see, and offline PDF export is
+            reserved for the two board/audit-facing roles. */}
+        <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} />} />
         <Route path="intake" element={<StaffIntake />} />
         <Route path="*" element={toIndex} />
       </Routes>

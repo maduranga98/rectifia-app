@@ -82,6 +82,20 @@ function pickMetadata(data) {
     // Deliberately nothing identity-bearing is added.
     followUpStatus: data.followUpStatus ?? null,
     nextFollowUpAt: data.nextFollowUpAt ?? null,
+    // Timestamps, not content - added for functions/src/analytics/
+    // aggregateCaseAnalytics.js (module 28), which is contractually barred
+    // from ever reading cases/{caseId} directly and needs closedAt to
+    // compute time-to-resolution and acknowledgmentSentAt/feedbackGivenAt to
+    // compute the compliance-deadline hit rate against the due dates already
+    // mirrored above. actionTaken (a fixed enum from
+    // consistency/actionVocabulary.js, the same vocabulary the reference
+    // pool already stores) lets the analytics module recompute a
+    // company-scoped consistency signal from caseMetadata + referenceCases
+    // alone. None of the four says anything about what was reported.
+    closedAt: data.closedAt ?? null,
+    acknowledgmentSentAt: data.acknowledgmentSentAt ?? null,
+    feedbackGivenAt: data.feedbackGivenAt ?? null,
+    actionTaken: data.actionTaken ?? null,
     ...subjectSignatureFields(data),
   }
 }
