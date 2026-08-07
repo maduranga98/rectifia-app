@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { listStaff, updateStaffStatus } from '../../services/routingService'
 import { getCompany } from '../../services/companyService'
 import { updateStaffDepartments } from '../../services/staffService'
+import { listCustomRoles } from '../../services/roleService'
 import { ROLES, ROLE_LABELS } from '../../constants/roles'
 import StaffInvite from '../../components/dashboard/StaffInvite'
 import Alert from '../../components/ui/Alert'
@@ -21,6 +22,7 @@ function initials(member) {
 // settings only, never case content.
 function StaffPage({ companyId }) {
   const [staff, setStaff] = useState([])
+  const [customRoleNames, setCustomRoleNames] = useState({})
   const [companyDepartments, setCompanyDepartments] = useState([])
   const [showInvite, setShowInvite] = useState(false)
   const [error, setError] = useState(null)
@@ -34,9 +36,14 @@ function StaffPage({ companyId }) {
     setLoading(true)
     setError(null)
     try {
-      const [staffRows, company] = await Promise.all([listStaff(companyId), getCompany(companyId)])
+      const [staffRows, company, customRoles] = await Promise.all([
+        listStaff(companyId),
+        getCompany(companyId),
+        listCustomRoles(companyId),
+      ])
       setStaff(staffRows)
       setCompanyDepartments(company?.departments ?? [])
+      setCustomRoleNames(Object.fromEntries(customRoles.map((r) => [r.id, r.name])))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -174,7 +181,9 @@ function StaffPage({ companyId }) {
                         {s.name && s.email && <p className="truncate text-xs text-muted">{s.email}</p>}
                       </div>
 
-                      <Badge tone="tone-info">{ROLE_LABELS[s.role] ?? s.role}</Badge>
+                      <Badge tone="tone-info">
+                        {s.role ? ROLE_LABELS[s.role] ?? s.role : customRoleNames[s.customRoleId] ?? 'Custom role'}
+                      </Badge>
                       <Badge tone={suspended ? 'tone-critical' : 'tone-low'} dot>
                         {suspended ? 'Suspended' : 'Active'}
                       </Badge>

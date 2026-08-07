@@ -24,6 +24,15 @@ const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a
 // checks in firestore.rules - a role added there needs adding here too.
 const VALID_ROLES = ['companyAdmin', 'hrCoordinator', 'caseHandler', 'manager', 'pulseCheckReviewer']
 
+// Every fixed role remains invitable exactly as before this module,
+// including companyAdmin - a Company Admin has always been able to invite a
+// peer Company Admin from this same form. What this module adds is a second,
+// mutually exclusive option (`customRoleId`) alongside `role`; Company
+// Admin's own composability restriction is that it can never be BUILT from
+// RoleBuilder.jsx's permission modules or appear as a customRoleId's target
+// role, not that the fixed role stops being assignable here.
+const INVITABLE_FIXED_ROLES = VALID_ROLES
+
 // Human-readable role names for the invitation email. Mirrors ROLE_LABELS in
 // src/constants/roles.js.
 const ROLE_LABELS = {
@@ -167,12 +176,23 @@ async function requireCompanyAdmin(actorUid, companyId) {
 // routeCase.js and checkOverdueDeadlines.js already use for notifications) -
 // this just writes the notifications doc the delivery module reads.
 exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
-  const { companyId, email, role, actorId, departments } = request.data || {}
-  if (!companyId || !email || !role) {
-    throw new HttpsError('invalid-argument', 'companyId, email, and role are required')
+  const { companyId, email, role, customRoleId, actorId, departments } = request.data || {}
+  if (!companyId || !email) {
+    throw new HttpsError('invalid-argument', 'companyId and email are required')
   }
-  if (!VALID_ROLES.includes(role)) {
-    throw new HttpsError('invalid-argument', `role must be one of ${VALID_ROLES.join(', ')}`)
+  // Exactly one of role / customRoleId - the same invariant
+  // permissionResolver.resolveEffectivePermissions enforces when reading a
+  // staff record back. A fixed role must be one of INVITABLE_FIXED_ROLES; a
+  // customRoleId must point at a real custom role doc for this company,
+  // checked below.
+  if (role && customRoleId) {
+    throw new HttpsError('invalid-argument', 'Provide either role or customRoleId, not both')
+  }
+  if (!role && !customRoleId) {
+    throw new HttpsError('invalid-argument', 'Provide either role or customRoleId')
+  }
+  if (role && !INVITABLE_FIXED_ROLES.includes(role)) {
+    throw new HttpsError('invalid-argument', `role must be one of ${INVITABLE_FIXED_ROLES.join(', ')}`)
   }
 
   // Department scoping only means anything for a Manager: the pulseSummaries
@@ -186,6 +206,19 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
   const companySnapshot = await admin.firestore().collection(COMPANIES_COLLECTION).doc(companyId).get()
   if (!companySnapshot.exists) {
     throw new HttpsError('not-found', 'No such company')
+  }
+
+  if (customRoleId) {
+    const customRoleSnapshot = await admin
+      .firestore()
+      .collection(COMPANIES_COLLECTION)
+      .doc(companyId)
+      .collection('customRoles')
+      .doc(customRoleId)
+      .get()
+    if (!customRoleSnapshot.exists) {
+      throw new HttpsError('not-found', 'No such custom role')
+    }
   }
 
   const temporaryPassword = admin.firestore().collection('_').doc().id + 'Aa1!'
@@ -202,12 +235,15 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
   }
 
   // Custom claims are the only thing firestore.rules trusts for role/scope
-  // checks - never a Firestore field. The `departments` claim is the manager's
-  // pulse-visibility scope; it is set here, alongside role + companyId, and is
-  // only present for a manager.
+  // checks - never a Firestore field. A staff account gets exactly one of
+  // `role` or `customRoleId`, never both: the `departments` claim (the
+  // manager's pulse-visibility scope) is only meaningful alongside a fixed
+  // `role`, and a customRoleId claim carries no permissions of its own -
+  // permissionResolver.js resolves those fresh from the customRoles doc on
+  // every check, so editing the role later needs no reissued token.
   await admin.auth().setCustomUserClaims(userRecord.uid, {
-    role,
     companyId,
+    ...(role ? { role } : { customRoleId }),
     ...(role === 'manager' ? { departments: managerDepartments } : {}),
   })
 
@@ -219,7 +255,7 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
     .doc(userRecord.uid)
     .set({
       email,
-      role,
+      ...(role ? { role } : { customRoleId }),
       status: 'invited',
       invitedBy: actorId ?? request.auth?.uid ?? null,
       invitedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -237,7 +273,7 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
   const companyName = companySnapshot.data()?.name
   const { subject, text, html } = buildInviteEmail({
     companyName,
-    roleLabel: ROLE_LABELS[role] || role,
+    roleLabel: role ? ROLE_LABELS[role] || role : 'team member with a custom role',
     inviteLink,
     loginLink,
   })
@@ -261,7 +297,8 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
     companyId,
     staffId: userRecord.uid,
     recipientEmail: email,
-    role,
+    role: role ?? null,
+    customRoleId: customRoleId ?? null,
     inviteLink,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     status: emailDelivered ? 'sent' : 'failed',

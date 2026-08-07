@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
+const { resolveStaffEffectivePermissions, hasPermission } = require('../utils/permissionResolver')
 const { resolveRetentionPolicy, CONFIGURABLE_KEYS } = require('./retentionPolicy')
 
 if (!admin.apps.length) {
@@ -109,7 +110,13 @@ exports.previewRetention = onCall(async (request) => {
 
   const firestore = admin.firestore()
   const role = await loadCallerRole(firestore, companyId, uid, 'preview_retention')
-  if (role !== 'companyAdmin') {
+  // A retentionSettings custom-role holder may preview a proposed window the
+  // same as a Company Admin - the floors in isValidRetentionUpdate() (see
+  // firestore.rules) apply to their eventual save exactly the same way, this
+  // just extends who may run the read-only dry run.
+  const resolved = role === 'companyAdmin' ? null : await resolveStaffEffectivePermissions(firestore, companyId, uid)
+  const authorized = role === 'companyAdmin' || hasPermission(resolved, 'retentionSettings')
+  if (!authorized) {
     await logPrivilegedAction(firestore, {
       uid,
       companyId,

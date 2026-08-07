@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
+const { resolveStaffEffectivePermissions, hasPermission } = require('../utils/permissionResolver')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -164,7 +165,14 @@ exports.calculateQuote = onCall(async (request) => {
 
   const firestore = admin.firestore()
   const role = await loadCallerRole(firestore, companyId, uid, 'calculate_quote')
-  if (role !== 'companyAdmin') {
+  // Company Admin always may; a custom-role holder needs the billingView
+  // permission module specifically (view-only, matching this callable's own
+  // "no payment processing, display only" scope) - resolved fresh from the
+  // customRoles doc, never a cached claim, same as every other composable
+  // permission check in this module.
+  const resolved = role === 'companyAdmin' ? null : await resolveStaffEffectivePermissions(firestore, companyId, uid)
+  const authorized = role === 'companyAdmin' || hasPermission(resolved, 'billingView')
+  if (!authorized) {
     await logPrivilegedAction(firestore, {
       uid,
       companyId,

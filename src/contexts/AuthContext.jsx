@@ -1,7 +1,28 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { auth } from '../services/firebase'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, firestore } from '../services/firebase'
 import { getUserClaims, checkSuperAdmin } from '../services/authService'
+import { resolveEffectivePermissions, hasPermission as hasPermissionFor } from '../utils/permissions'
+
+// A customRoleId claim names a companies/{companyId}/customRoles doc but
+// carries no permissions of its own - resolved fresh from Firestore here
+// (readable by any staff of the company, see firestore.rules' customRoles
+// match block) rather than cached on the token, so a Company Admin editing a
+// custom role's permissions on RoleBuilder.jsx takes effect for every signed-
+// in holder without them needing to sign out and back in.
+async function loadCustomRolePermissions(companyId, customRoleId) {
+  if (!companyId || !customRoleId) return []
+  try {
+    const snapshot = await getDoc(doc(firestore, 'companies', companyId, 'customRoles', customRoleId))
+    return snapshot.exists() && Array.isArray(snapshot.data().permissions) ? snapshot.data().permissions : []
+  } catch {
+    // A failed lookup (deleted role, transient error) resolves to no
+    // permissions - fail closed, the same posture every other claims read in
+    // this file already takes.
+    return []
+  }
+}
 
 const AuthContext = createContext(null)
 
@@ -18,6 +39,11 @@ export function AuthProvider({ children }) {
   // Manager pulse-visibility scope, from the `departments` custom claim. Empty
   // for every other role and for a manager who has none assigned yet.
   const [departments, setDepartments] = useState([])
+  // Composable custom-role state: customRoleId is the claim, permissions is
+  // resolved fresh from Firestore (see loadCustomRolePermissions above).
+  // Both stay null/empty for a fixed-role (`role`) account.
+  const [customRoleId, setCustomRoleId] = useState(null)
+  const [permissions, setPermissions] = useState([])
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -36,14 +62,21 @@ export function AuthProvider({ children }) {
             getUserClaims(firebaseUser),
             checkSuperAdmin(firebaseUser.uid),
           ])
+          const resolvedPermissions = claims.customRoleId
+            ? await loadCustomRolePermissions(claims.companyId, claims.customRoleId)
+            : []
           setRole(claims.role)
           setCompanyId(claims.companyId)
           setDepartments(claims.departments)
+          setCustomRoleId(claims.customRoleId)
+          setPermissions(resolvedPermissions)
           setIsSuperAdmin(superAdmin)
         } else {
           setRole(null)
           setCompanyId(null)
           setDepartments([])
+          setCustomRoleId(null)
+          setPermissions([])
           setIsSuperAdmin(false)
         }
       } catch {
@@ -52,6 +85,8 @@ export function AuthProvider({ children }) {
         setRole(null)
         setCompanyId(null)
         setDepartments([])
+        setCustomRoleId(null)
+        setPermissions([])
         setIsSuperAdmin(false)
       } finally {
         setLoading(false)
@@ -66,14 +101,41 @@ export function AuthProvider({ children }) {
       getUserClaims(auth.currentUser, true),
       checkSuperAdmin(auth.currentUser.uid),
     ])
+    const resolvedPermissions = claims.customRoleId
+      ? await loadCustomRolePermissions(claims.companyId, claims.customRoleId)
+      : []
     setRole(claims.role)
     setCompanyId(claims.companyId)
     setDepartments(claims.departments)
+    setCustomRoleId(claims.customRoleId)
+    setPermissions(resolvedPermissions)
     setIsSuperAdmin(superAdmin)
   }, [])
 
+  // Resolves through the same algorithm permissionResolver.js uses server-
+  // side (see src/utils/permissions.js) rather than a raw role-string
+  // comparison - ProtectedRoute's requiredPermission prop reads this instead
+  // of inspecting `role`/`customRoleId` itself.
+  const hasPermission = useCallback(
+    (key) => hasPermissionFor(resolveEffectivePermissions({ role, customRoleId, permissions }), key),
+    [role, customRoleId, permissions]
+  )
+
   return (
-    <AuthContext.Provider value={{ user, role, companyId, departments, isSuperAdmin, loading, refreshClaims }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        role,
+        companyId,
+        departments,
+        customRoleId,
+        permissions,
+        hasPermission,
+        isSuperAdmin,
+        loading,
+        refreshClaims,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
