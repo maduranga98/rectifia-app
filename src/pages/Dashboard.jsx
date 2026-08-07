@@ -205,7 +205,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
 // handler is working now lives at its own route, so there is no selectedCaseId
 // or activeView held here at all.
 function Dashboard() {
-  const { user, role, companyId, departments } = useAuth()
+  const { user, role, customRoleId, permissions, companyId, departments } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -225,9 +225,19 @@ function Dashboard() {
   // /dashboard routes, so a typed or bookmarked /dashboard/* path would fall
   // through to the empty shell. Send it to /admin/overview, matching the
   // reasoning in RootRedirect, rather than giving companyAdmin a NAV_BY_ROLE
-  // entry - the Company Admin surface is /admin and must stay there.
+  // entry - the Company Admin surface is /admin and must stay there. A
+  // custom-role holder with at least one permission has its surface at
+  // /admin too - /admin's own index route resolves their landing page from
+  // whatever permissions they hold. A custom-role holder with zero
+  // permissions is deliberately NOT redirected here: /admin's ProtectedRoute
+  // would deny them and bounce to /login, which bounces an already
+  // authenticated user straight back to "/" - an infinite loop. That account
+  // falls through to the "no permissions assigned" message below instead.
   if (role === ROLES.COMPANY_ADMIN) {
     return <Navigate to="/admin/overview" replace />
+  }
+  if (customRoleId && permissions.length > 0) {
+    return <Navigate to="/admin" replace />
   }
 
   const flags = {
@@ -245,6 +255,18 @@ function Dashboard() {
 
   function renderBody() {
     if (!role) {
+      // A customRoleId claim with an empty permissions array reaches here
+      // too (see the redirect above) - that's a Company Admin configuration
+      // mistake, not a broken invite, so it gets its own message rather than
+      // sending the user to ask for a re-issued invite that wouldn't help.
+      if (customRoleId) {
+        return (
+          <Alert variant="error" title="No permissions assigned">
+            This role has no permissions assigned yet. Ask your Company Admin to add permissions
+            to the role.
+          </Alert>
+        )
+      }
       return (
         <Alert variant="error" title="No role assigned">
           This account has no role assigned yet, so there is nothing to show. Ask your Company

@@ -12,15 +12,20 @@ import { resolveEffectivePermissions, hasPermission as hasPermissionFor } from '
 // custom role's permissions on RoleBuilder.jsx takes effect for every signed-
 // in holder without them needing to sign out and back in.
 async function loadCustomRolePermissions(companyId, customRoleId) {
-  if (!companyId || !customRoleId) return []
+  if (!companyId || !customRoleId) return { permissions: [], name: null }
   try {
     const snapshot = await getDoc(doc(firestore, 'companies', companyId, 'customRoles', customRoleId))
-    return snapshot.exists() && Array.isArray(snapshot.data().permissions) ? snapshot.data().permissions : []
+    if (!snapshot.exists()) return { permissions: [], name: null }
+    const data = snapshot.data()
+    return {
+      permissions: Array.isArray(data.permissions) ? data.permissions : [],
+      name: typeof data.name === 'string' ? data.name : null,
+    }
   } catch {
     // A failed lookup (deleted role, transient error) resolves to no
     // permissions - fail closed, the same posture every other claims read in
     // this file already takes.
-    return []
+    return { permissions: [], name: null }
   }
 }
 
@@ -44,6 +49,7 @@ export function AuthProvider({ children }) {
   // Both stay null/empty for a fixed-role (`role`) account.
   const [customRoleId, setCustomRoleId] = useState(null)
   const [permissions, setPermissions] = useState([])
+  const [customRoleName, setCustomRoleName] = useState(null)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -62,14 +68,15 @@ export function AuthProvider({ children }) {
             getUserClaims(firebaseUser),
             checkSuperAdmin(firebaseUser.uid),
           ])
-          const resolvedPermissions = claims.customRoleId
+          const resolved = claims.customRoleId
             ? await loadCustomRolePermissions(claims.companyId, claims.customRoleId)
-            : []
+            : { permissions: [], name: null }
           setRole(claims.role)
           setCompanyId(claims.companyId)
           setDepartments(claims.departments)
           setCustomRoleId(claims.customRoleId)
-          setPermissions(resolvedPermissions)
+          setPermissions(resolved.permissions)
+          setCustomRoleName(resolved.name)
           setIsSuperAdmin(superAdmin)
         } else {
           setRole(null)
@@ -77,6 +84,7 @@ export function AuthProvider({ children }) {
           setDepartments([])
           setCustomRoleId(null)
           setPermissions([])
+          setCustomRoleName(null)
           setIsSuperAdmin(false)
         }
       } catch {
@@ -87,6 +95,7 @@ export function AuthProvider({ children }) {
         setDepartments([])
         setCustomRoleId(null)
         setPermissions([])
+        setCustomRoleName(null)
         setIsSuperAdmin(false)
       } finally {
         setLoading(false)
@@ -101,14 +110,15 @@ export function AuthProvider({ children }) {
       getUserClaims(auth.currentUser, true),
       checkSuperAdmin(auth.currentUser.uid),
     ])
-    const resolvedPermissions = claims.customRoleId
+    const resolved = claims.customRoleId
       ? await loadCustomRolePermissions(claims.companyId, claims.customRoleId)
-      : []
+      : { permissions: [], name: null }
     setRole(claims.role)
     setCompanyId(claims.companyId)
     setDepartments(claims.departments)
     setCustomRoleId(claims.customRoleId)
-    setPermissions(resolvedPermissions)
+    setPermissions(resolved.permissions)
+    setCustomRoleName(resolved.name)
     setIsSuperAdmin(superAdmin)
   }, [])
 
@@ -130,6 +140,7 @@ export function AuthProvider({ children }) {
         departments,
         customRoleId,
         permissions,
+        customRoleName,
         hasPermission,
         isSuperAdmin,
         loading,

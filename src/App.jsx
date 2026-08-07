@@ -19,6 +19,7 @@ import SharedCaseView from './pages/SharedCaseView'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsPage from './pages/TermsPage'
 import { ROLES } from './constants/roles'
+import { PERMISSION_MODULE_KEYS } from './config/permissionModules'
 
 // Passed as the `fallback` render prop to every reporter-facing boundary
 // below - one ErrorBoundary instance per route (never one boundary wrapping
@@ -123,7 +124,7 @@ function App() {
         <Route
           path="/admin/*"
           element={
-            <ProtectedRoute allowedRoles={[ROLES.COMPANY_ADMIN]}>
+            <ProtectedRoute allowedRoles={[ROLES.COMPANY_ADMIN]} requiredPermission={PERMISSION_MODULE_KEYS}>
               <ErrorBoundary>
                 <Admin />
               </ErrorBoundary>
