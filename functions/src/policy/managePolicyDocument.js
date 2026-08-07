@@ -1,6 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
+const { resolveStaffEffectivePermissions, hasPermission } = require('../utils/permissionResolver')
 const { deletePolicyObject } = require('./policyStorage')
 
 if (!admin.apps.length) {
@@ -21,7 +22,12 @@ async function loadOwnedPolicy(firestore, request, policyId, action) {
     throw new HttpsError('permission-denied', 'Your account is not linked to a company')
   }
   const role = await loadCallerRole(firestore, companyId, uid, action)
-  if (role !== 'companyAdmin') {
+  // A policyManagement custom-role holder may manage policy documents the
+  // same as a Company Admin - resolved fresh from the customRoles doc, never
+  // a cached claim.
+  const resolved = role === 'companyAdmin' ? null : await resolveStaffEffectivePermissions(firestore, companyId, uid)
+  const authorized = role === 'companyAdmin' || hasPermission(resolved, 'policyManagement')
+  if (!authorized) {
     await logPrivilegedAction(firestore, {
       uid,
       companyId,

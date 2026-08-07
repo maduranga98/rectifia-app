@@ -60,10 +60,19 @@ export async function getUserClaims(user, forceRefresh = false) {
   // firestore.rules requires. Absent for every non-manager role; defaulted to
   // [] so a manager with no claim fails closed (sees no departments) rather than
   // reading as "unset".
+  //
+  // `customRoleId` is the composable-role counterpart of `role` - a staff
+  // account carries exactly one of the two (see
+  // functions/src/utils/permissionResolver.js). It names a
+  // companies/{companyId}/customRoles doc; its permissions are resolved
+  // separately (src/utils/permissions.js / AuthContext), never cached here,
+  // so editing a custom role's permissions takes effect without a token
+  // refresh.
   return {
     role: tokenResult.claims.role ?? null,
     companyId: tokenResult.claims.companyId ?? null,
     departments: Array.isArray(tokenResult.claims.departments) ? tokenResult.claims.departments : [],
+    customRoleId: tokenResult.claims.customRoleId ?? null,
   }
 }
 

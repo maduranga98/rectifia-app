@@ -20,6 +20,31 @@ service cloud.firestore {
     function isManager(companyId) { return hasRole(companyId, 'manager'); }
     function isCaseHandler(companyId) { return hasRole(companyId, 'caseHandler'); }
 
+    // The composable custom-role layer (companies/{companyId}/customRoles).
+    // A staff account holds `request.auth.token.role` (one of the fixed
+    // roles above) XOR `request.auth.token.customRoleId` - never both, never
+    // neither, the same invariant functions/src/utils/permissionResolver.js
+    // enforces server-side on every write. hasCustomPermission reads the
+    // custom role's `permissions` array fresh from Firestore on every check
+    // rather than trusting anything cached in the token, so editing a custom
+    // role's permissions (RoleBuilder.jsx) takes effect for every staff
+    // member holding it immediately - no reissued token needed.
+    //
+    // This is the mirror-in-rules half of permissionResolver.js's logic that
+    // module 2's design note at the top of this file already calls for: rules
+    // can't literally import that CommonJS module, so the same
+    // PERMISSION_MODULE_KEYS allowlist and the same "exactly one of role /
+    // customRoleId" shape must be kept here by hand. caseHandler and
+    // hrCoordinator are never expressed as a permission key in either copy of
+    // the allowlist - hasCustomPermission has no key it could ever be called
+    // with that would grant either.
+    function hasCustomPermission(companyId, key) {
+      return request.auth != null
+        && request.auth.token.companyId == companyId
+        && request.auth.token.customRoleId != null
+        && key in get(/databases/$(database)/documents/companies/$(companyId)/customRoles/$(request.auth.token.customRoleId)).data.permissions;
+    }
+
     // "A Company Admin of some company" - deliberately not scoped to one
     // company, and used for exactly one thing: the slug-uniqueness probe in
     // src/services/companyService.js's allocateUniqueSlug, which has to ask
@@ -60,6 +85,25 @@ service cloud.firestore {
     function companyAdminEditableFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
         .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact', 'retention']);
+    }
+
+    // A custom-role holder's write to the company doc is scoped BOTH by which
+    // permission they hold AND to only the one field that permission covers -
+    // narrower than companyAdminEditableFields() above, which is a single
+    // allowlist Company Admin's unconditional access shares across every
+    // field in it. 'departments' maps to the departments permission key,
+    // 'jurisdictions' to complianceConfig, and 'retention' to
+    // retentionSettings (still additionally checked by
+    // isValidRetentionUpdate()/retentionFieldValid() below - a
+    // retentionSettings permission does not relax those floors). No custom
+    // permission maps to pulseCheckCadence, followUpConfig, or
+    // crisisContact - those stay Company Admin only, same as before this
+    // module.
+    function isCustomRoleCompanyFieldEditor(companyId) {
+      let diff = request.resource.data.diff(resource.data).affectedKeys();
+      return (hasCustomPermission(companyId, 'departments') && diff.hasOnly(['departments']))
+        || (hasCustomPermission(companyId, 'complianceConfig') && diff.hasOnly(['jurisdictions']))
+        || (hasCustomPermission(companyId, 'retentionSettings') && diff.hasOnly(['retention']));
     }
 
     // Module 23's four configurable retention windows (companies/{companyId}.
@@ -136,7 +180,8 @@ service cloud.firestore {
         || (isAnyCompanyAdmin() && request.query.limit <= 1);
       allow create: if isSuperAdmin();
       allow update: if (isSuperAdmin()
-          || (isCompanyAdmin(companyId) && (companyAdminEditableFields() || claimsMissingSlug())))
+          || (isCompanyAdmin(companyId) && (companyAdminEditableFields() || claimsMissingSlug()))
+          || isCustomRoleCompanyFieldEditor(companyId))
         && retentionFieldValid();
       allow delete: if isSuperAdmin();
     }
@@ -248,8 +293,10 @@ service cloud.firestore {
     // access: a policy document is company structure, never a case.
     match /companyPolicies/{policyId} {
       allow read: if isCompanyStaff(resource.data.companyId);
-      allow create: if isCompanyAdmin(request.resource.data.companyId);
-      allow update, delete: if isCompanyAdmin(resource.data.companyId);
+      allow create: if isCompanyAdmin(request.resource.data.companyId)
+        || hasCustomPermission(request.resource.data.companyId, 'policyManagement');
+      allow update, delete: if isCompanyAdmin(resource.data.companyId)
+        || hasCustomPermission(resource.data.companyId, 'policyManagement');
 
       // Chunks are extracted, tagged, and read entirely server-side
       // (ingestPolicyDocument.js, tagPolicyChunks.js, retrievePolicyContext.js
@@ -269,7 +316,24 @@ service cloud.firestore {
     // who they route to); only a Company Admin edits them.
     match /companies/{companyId}/routingRules/{ruleId} {
       allow read: if isCompanyStaff(companyId);
-      allow write: if isCompanyAdmin(companyId);
+      allow write: if isCompanyAdmin(companyId) || hasCustomPermission(companyId, 'routingRules');
+    }
+
+    // The composable custom-role definitions themselves. Readable by any
+    // staff of the company (a custom-role holder needs to know their own
+    // role's name; RoleBuilder.jsx needs to list them for Company Admin to
+    // edit). All writes - create, update, delete - go exclusively through
+    // functions/src/roles/customRoles.js with the Admin SDK, never a direct
+    // client write, for two reasons no rules predicate could enforce on its
+    // own: `permissions` must be validated against the
+    // PERMISSION_MODULE_KEYS allowlist (hasCustomPermission's own allowlist
+    // duplication problem, but for the writer instead of the reader), and a
+    // delete must first check no staff member's customRoleId still points at
+    // this doc - a query rules cannot express against an arbitrary,
+    // unenumerated set of staff ids.
+    match /companies/{companyId}/customRoles/{roleId} {
+      allow read: if isCompanyStaff(companyId);
+      allow write: if false;
     }
     // Staff docs are created only by inviteStaff.js (Admin SDK), never by a
     // direct client write - that's the boundary that stops someone minting
@@ -284,7 +348,18 @@ service cloud.firestore {
     match /companies/{companyId}/staff/{staffId} {
       allow read: if isCompanyStaff(companyId) || isSuperAdmin();
       allow create: if false;
-      allow update, delete: if isCompanyAdmin(companyId);
+      // Neither a Company Admin nor a staffManagement custom-role holder may
+      // touch `role`, `customRoleId`, or `departments` through this direct
+      // write path - those are the fields that carry authorization, and they
+      // may only change alongside the matching Auth custom claim, which only
+      // functions/src/roles/assignStaffRole.js and inviteStaff.js (Admin SDK)
+      // can set. A direct client write to either field would desync this
+      // doc's mirror from the actual claim the rest of the app trusts; the
+      // hasOnly() below closes that path for every writer, not only a
+      // staffManagement holder.
+      allow update: if (isCompanyAdmin(companyId) || hasCustomPermission(companyId, 'staffManagement'))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'department', 'jobTitle']);
+      allow delete: if isCompanyAdmin(companyId);
     }
 
     // Pulse Check recipient roster (module 14) - deliberately a different
@@ -577,12 +652,24 @@ service cloud.firestore {
       // listPulseSummaries query outright (Firestore denies a whole query
       // that could return a doc the rule would deny), which is what broke
       // Manager and Company Admin's pulse summary reads.
+      // pulseAggregateView is this permission's composable-role equivalent of
+      // Manager, and reads every non-suppressed aggregate for the company
+      // the same way Company Admin does - company-wide, not department-
+      // scoped like the legacy Manager claim above. The 'manager' fixed role
+      // is left completely unchanged by this module (see the migration note
+      // in functions/src/roles/customRoles.js): existing companies keep
+      // Pulse Check aggregate access exactly as it worked before, and a
+      // Company Admin who wants department-scoped access for a new hire
+      // still invites them as a Manager, not a custom role - this permission
+      // key is for a role that should see every department's aggregate, e.g.
+      // an HR operations lead who isn't HR Coordinator.
       allow read: if isHrCoordinator(resource.data.companyId)
         || isPulseReviewer(resource.data.companyId)
         || isCompanyAdmin(resource.data.companyId)
         || (isManager(resource.data.companyId)
             && request.auth.token.departments is list
-            && resource.data.department in request.auth.token.departments);
+            && resource.data.department in request.auth.token.departments)
+        || hasCustomPermission(resource.data.companyId, 'pulseAggregateView');
       allow write: if false;
     }
     // The raw accumulator behind each pulseSummaries projection - responseCount

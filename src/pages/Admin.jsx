@@ -8,6 +8,7 @@ import CasesPage from './company-admin/CasesPage'
 import DepartmentsPage from './company-admin/DepartmentsPage'
 import PoliciesPage from './company-admin/PoliciesPage'
 import StaffPage from './company-admin/StaffPage'
+import RoleBuilder from '../components/dashboard/RoleBuilder'
 import EmployeesPage from './company-admin/EmployeesPage'
 import PulseQuestionsPage from './company-admin/PulseQuestionsPage'
 import RoutingRulesPage from './company-admin/RoutingRulesPage'
@@ -52,6 +53,7 @@ const NAV_ITEMS = [
   { to: '/admin/departments', label: 'Departments', icon: 'departments' },
   { to: '/admin/policies', label: 'Policies', icon: 'document' },
   { to: '/admin/staff', label: 'Staff', icon: 'staff' },
+  { to: '/admin/roles', label: 'Custom roles', icon: 'staff' },
   { to: '/admin/employees', label: 'Employees', icon: 'pulse' },
   { to: '/admin/routing', label: 'Routing rules', icon: 'routing' },
   { to: '/admin/billing', label: 'Billing', icon: 'billing' },
@@ -75,6 +77,7 @@ const PAGE_TITLES = {
   departments: 'Departments',
   policies: 'Policies',
   staff: 'Staff',
+  roles: 'Custom roles',
   employees: 'Employees',
   'pulse-questions': 'Pulse check questions',
   routing: 'Routing rules',
@@ -115,6 +118,7 @@ function Admin() {
           <Route path="departments" element={<DepartmentsPage companyId={companyId} />} />
           <Route path="policies" element={<PoliciesPage companyId={companyId} />} />
           <Route path="staff" element={<StaffPage companyId={companyId} />} />
+          <Route path="roles" element={<RoleBuilder companyId={companyId} />} />
           <Route path="employees" element={<EmployeesPage companyId={companyId} />} />
           <Route
             path="pulse-questions"

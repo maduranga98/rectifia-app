@@ -37,6 +37,8 @@ const { createCompanyAdmin } = require('./src/company/createCompanyAdmin')
 const { resolveCompanySlug } = require('./src/company/resolveCompanySlug')
 const { acceptInvite } = require('./src/staff/acceptInvite')
 const { updateStaffDepartments } = require('./src/staff/updateStaffDepartments')
+const { createCustomRole, updateCustomRole, deleteCustomRole, seedDefaultCustomRoles } = require('./src/roles/customRoles')
+const { assignStaffRole } = require('./src/roles/assignStaffRole')
 const { submitPulseResponse, analyzePulseResponse } = require('./src/intake/analyzePulseResponse')
 const { validatePulseInvite } = require('./src/intake/pulseInvites')
 const { schedulePulseChecks } = require('./src/intake/schedulePulseChecks')
@@ -136,6 +138,16 @@ exports.createCompanyAdmin = createCompanyAdmin
 exports.resolveCompanySlug = resolveCompanySlug
 exports.acceptInvite = acceptInvite
 exports.updateStaffDepartments = updateStaffDepartments
+// Composable custom-role layer: Company Admin builds named roles from a
+// fixed permission-module allowlist (src/config/permissionModules.js /
+// functions/src/utils/permissionResolver.js) and assigns them to staff who
+// are neither Case Handler nor HR Coordinator - both of those stay fixed,
+// non-composable roles untouched by this layer.
+exports.createCustomRole = createCustomRole
+exports.updateCustomRole = updateCustomRole
+exports.deleteCustomRole = deleteCustomRole
+exports.assignStaffRole = assignStaffRole
+exports.seedDefaultCustomRoles = seedDefaultCustomRoles
 exports.submitPulseResponse = submitPulseResponse
 exports.validatePulseInvite = validatePulseInvite
 exports.analyzePulseResponse = analyzePulseResponse
