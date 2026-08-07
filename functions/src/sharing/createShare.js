@@ -106,11 +106,13 @@ async function appendShareSystemMessage(caseRef, text) {
 
 // Grants a named external party time-limited, revocable, view-only access to
 // exactly one case. Authorization is loadCaseForHandler PLUS an explicit
-// role check for 'caseHandler' - Company Admin is in HANDLER_ROLES for other
-// purposes (proposing/closing a case's own investigation) but must never
-// reach this callable, per this module's own constraint, so the check is
-// re-asserted here rather than trusted to whatever HANDLER_ROLES happens to
-// contain elsewhere.
+// role check for 'caseHandler'. HANDLER_ROLES itself no longer contains
+// anything but 'caseHandler', so this re-check no longer guards against a
+// wider HANDLER_ROLES letting Company Admin through - but it stays, on
+// purpose, as an explicit, cheap re-assertion at the point of use for a
+// callable that grants something this sensitive (external, revocable access
+// to case content). Defense-in-depth here would have caught the original bug
+// even before HANDLER_ROLES was fixed.
 exports.createExternalShare = onCall({ secrets: [encryptionKeySecret, smtpPassword] }, async (request) => {
   const uid = requireAuthUid(request)
   const {
@@ -150,9 +152,9 @@ exports.createExternalShare = onCall({ secrets: [encryptionKeySecret, smtpPasswo
   const firestore = admin.firestore()
   const { caseRef, snapshot, role } = await loadCaseForHandler(firestore, caseId, uid, 'external_share_create')
 
-  // Re-asserted rather than trusted to HANDLER_ROLES: a Company Admin is a
-  // valid caller of loadCaseForHandler for other actions, but never this
-  // one. See the constraint this module is built against.
+  // Explicit, deliberate re-assertion rather than trusting HANDLER_ROLES
+  // alone - see the module comment above for why this stays even though
+  // HANDLER_ROLES is now caseHandler-only.
   if (role !== 'caseHandler') {
     await logPrivilegedAction(firestore, {
       uid,
@@ -256,8 +258,8 @@ exports.createExternalShare = onCall({ secrets: [encryptionKeySecret, smtpPasswo
 
 // Lists every share (active and past) for one case - the roster
 // ShareCasePanel.jsx renders. Same authorization and the same explicit
-// caseHandler-only re-check as creation: Company Admin has no path here
-// either, even read-only.
+// caseHandler-only re-check as creation, kept for the same defense-in-depth
+// reason.
 exports.listCaseShares = onCall(async (request) => {
   const uid = requireAuthUid(request)
   const { caseId } = request.data || {}

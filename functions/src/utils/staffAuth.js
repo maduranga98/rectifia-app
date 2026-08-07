@@ -45,16 +45,27 @@ async function logPrivilegedAction(firestore, { uid, companyId, role, action, ou
   }
 }
 
-// Roles allowed to act on a case's investigation. companyAdmin is included
-// because a Company Admin can stand in for / oversee the assigned handler;
-// see inviteStaff.js / roles.js for the full role vocabulary.
-const HANDLER_ROLES = ['caseHandler', 'companyAdmin']
+// Roles allowed to act on a case's investigation. Company Admin is
+// deliberately absent: this role has zero case-content access, in any
+// capacity, including oversight of an assigned handler - that is a
+// conflict-of-interest control, not an oversight, because Company Admin is
+// often the person most likely to have a conflict with the case. Oversight
+// of a stuck or unassigned case is Super Admin's job via the
+// manual-assignment queue, not Company Admin's; see inviteStaff.js /
+// roles.js for the full role vocabulary.
+const HANDLER_ROLES = ['caseHandler']
 
-// Roles that may read a *still unassigned* case in order to place it. These
-// are the two oversight roles that already hold the reassign power (see
-// REASSIGN_ROLES in functions/src/intake/routeCase.js) - triage is reading
-// enough of the case to exercise that power responsibly, not a new one.
-const TRIAGE_ROLES = ['hrCoordinator', 'companyAdmin']
+// Roles that may read a *still unassigned* case in order to place it.
+// Company Admin is deliberately absent for the same reason it is absent from
+// HANDLER_ROLES: triage means reading full questionnaire content on a case
+// this company may not even be allowed to see (conflict of interest), and
+// that is exactly the read Company Admin must never get. HR Coordinator
+// retains this because it also holds the reassign power (see REASSIGN_ROLES
+// in functions/src/intake/routeCase.js) - triage is reading enough of the
+// case to exercise that power responsibly, not a new one. A case with no
+// eligible non-conflicted assignee surfaces to Super Admin's
+// manual-assignment queue instead of falling back to Company Admin.
+const TRIAGE_ROLES = ['hrCoordinator']
 
 // Roles that may file a case on behalf of a reporter
 // (functions/src/intake/createCaseOnBehalf.js). These are the two roles that
@@ -127,9 +138,9 @@ async function loadCallerRole(firestore, companyId, uid, action = 'staff_role_ch
 
 // Loads a case and verifies the *authenticated* caller (request.auth.uid,
 // never a client-supplied investigatorId) is allowed to act on it: they must
-// be a caseHandler or companyAdmin in the case's company AND be the handler
-// this case is actually assigned to. This is the identity-verification gate
-// that used to trust a caller-supplied investigatorId.
+// be a caseHandler in the case's company AND be the handler this case is
+// actually assigned to. This is the identity-verification gate that used to
+// trust a caller-supplied investigatorId.
 async function loadCaseForHandler(firestore, caseId, uid, action = 'case_handler_action') {
   if (!caseId) {
     throw new HttpsError('invalid-argument', 'caseId is required')
@@ -176,12 +187,12 @@ async function loadCaseForHandler(firestore, caseId, uid, action = 'case_handler
     outcome: 'granted',
     caseId,
   })
-  // `role` is returned alongside the case for callers that need to
-  // distinguish caseHandler from companyAdmin beyond "assigned to this
-  // case" - module 27's external share creation is one: a Company Admin
-  // must never create, view, or extend a share even in the (currently
-  // unreachable in practice) case that one somehow became a case's
-  // assignedHandlerId.
+  // `role` is returned alongside the case for callers that want a defense-
+  // in-depth check beyond "assigned to this case" - module 27's external
+  // share creation is one: it re-asserts role === 'caseHandler' even though
+  // HANDLER_ROLES can no longer contain anything else, because that callable
+  // grants something sensitive enough to be worth an explicit re-check at
+  // the point of use.
   return { caseRef, snapshot, role }
 }
 

@@ -429,16 +429,24 @@ exports.reassignCase = onCall(async (request) => {
 
   const firestore = admin.firestore()
 
-  // Reassignment is an oversight action (Company Admin or HR Coordinator via
+  // Reassignment is an oversight action (HR Coordinator via
   // HRCoordinatorDashboard), not something the assigned handler does - verify
   // the authenticated caller's role from their staff record keyed by
   // request.auth.uid, never a client-supplied actorId.
   //
+  // Company Admin is deliberately absent: reassignment reads a case well
+  // enough to pick a non-conflicted handler, and Company Admin has zero
+  // case-content access by design (see HANDLER_ROLES / TRIAGE_ROLES in
+  // staffAuth.js). HR Coordinator can reassign using metadata alone, which is
+  // all this action needs.
+  //
   // A platform Super Admin is also allowed through, and is the only caller who
   // can be resolving a case from the manual-assignment queue on
   // SuperAdminDashboardPage: they belong to no company, so they have no staff
-  // record for loadCallerRole to find.
-  const REASSIGN_ROLES = ['companyAdmin', 'hrCoordinator']
+  // record for loadCallerRole to find. This is now the only path for a case
+  // that has no eligible non-conflicted company staff to route to
+  // automatically.
+  const REASSIGN_ROLES = ['hrCoordinator']
   const superAdmin = await isSuperAdminUid(firestore, actorUid)
   if (superAdmin) {
     await logPrivilegedAction(firestore, {
