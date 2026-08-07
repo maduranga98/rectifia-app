@@ -11,6 +11,7 @@ const {
   cellId,
 } = require('./benchmarkThresholds')
 const { recomputeAllCells } = require('./computeBenchmarks')
+const { resolveFlag, requireFeatureEnabled } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -67,6 +68,7 @@ exports.getBenchmarksForCompany = onCall(async (request) => {
   if (!companySnap.exists) {
     throw new HttpsError('not-found', 'Company not found')
   }
+  requireFeatureEnabled(resolveFlag(companySnap.data(), 'benchmarkPool'), 'benchmarkPool')
 
   const optIn = optInSnap.exists ? optInSnap.data() : null
   if (!optIn || optIn.optedIn !== true) {
@@ -162,6 +164,15 @@ exports.setBenchmarkOptIn = onCall(async (request) => {
 
   const optedIn = request.data?.optedIn === true
   const acknowledged = request.data?.acknowledged === true
+
+  // Opting IN requires the feature to be on; opting OUT never does - a
+  // company must always be able to withdraw, flag or no flag, the same way a
+  // kill switch must never trap a company inside a contribution it can no
+  // longer see the point of.
+  if (optedIn) {
+    const companySnap = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
+    requireFeatureEnabled(resolveFlag(companySnap.exists ? companySnap.data() : null, 'benchmarkPool'), 'benchmarkPool')
+  }
 
   // The acknowledgement gate is required even on opt-out: withdrawing is
   // consequential too (a cell that was above threshold with this company may

@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { firestore, functions } from './firebase'
+import { FEATURE_FLAGS } from '../config/featureFlags'
 
 export const JURISDICTIONS = ['EU', 'UK', 'US', 'LK']
 
@@ -349,5 +350,26 @@ export async function sendPulseChecksNow() {
 export async function updateCompanyDepartments(companyId, departments) {
   await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
     departments,
+  })
+}
+
+// Writes one key of companies/{companyId}.featureFlags via dot-path update,
+// leaving every other flag untouched - a toggle in FeatureFlagPanel.jsx
+// never has to read-modify-write the whole map. Super Admin only:
+// firestore.rules rejects this write from anyone else outright
+// (featureFlagsFieldValid()), so the role check in the panel that calls this
+// is UX, not the enforcement.
+export async function updateCompanyFeatureFlag(companyId, key, value) {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  if (!Object.prototype.hasOwnProperty.call(FEATURE_FLAGS, key)) {
+    throw new Error(`Unknown feature flag '${key}'`)
+  }
+  if (typeof value !== 'boolean') {
+    throw new Error('A feature flag value must be true or false')
+  }
+  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
+    [`featureFlags.${key}`]: value,
   })
 }

@@ -3,6 +3,7 @@ import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLES, ROLE_LABELS } from '../constants/roles'
 import { useCompanyCases } from '../hooks/useCompanyCases'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import AppShell from '../components/shared/AppShell'
 import Alert from '../components/ui/Alert'
 import Card from '../components/ui/Card'
@@ -31,16 +32,23 @@ import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
 //
 // companyAdmin has no entry here at all: its whole surface is /admin, and
 // RootRedirect sends it straight to /admin/overview on sign-in.
+// Some entries carry a `flag`: the per-company feature flag key
+// (src/config/featureFlags.js) that must be on for this nav item - and the
+// route behind it - to be reachable. Dashboard filters navItems by these
+// before handing them to AppShell, and DashboardRoutes applies the same
+// flags to the matching <Route>, so a direct URL hit is redirected the same
+// way an unentitled role's URL already is - hiding the nav link alone would
+// leave the route itself reachable by anyone who still had it bookmarked.
 const NAV_BY_ROLE = {
   [ROLES.HR_COORDINATOR]: [
     { to: '/dashboard/overview', label: 'Overview', icon: 'overview' },
     { to: '/dashboard/cases', label: 'All cases', icon: 'cases' },
     { to: '/dashboard/triage', label: 'Awaiting triage', icon: 'inbox' },
-    { to: '/dashboard/patterns', label: 'Patterns', icon: 'sparkle' },
+    { to: '/dashboard/patterns', label: 'Patterns', icon: 'sparkle', flag: 'patternDetection' },
     { to: '/dashboard/follow-ups', label: 'Follow-ups', icon: 'clock' },
-    { to: '/dashboard/pulse-responses', label: 'Pulse checks', icon: 'pulse' },
-    { to: '/dashboard/trends', label: 'Trends', icon: 'overview' },
-    { to: '/dashboard/benchmark', label: 'Benchmark', icon: 'overview' },
+    { to: '/dashboard/pulse-responses', label: 'Pulse checks', icon: 'pulse', flag: 'pulseCheck' },
+    { to: '/dashboard/trends', label: 'Trends', icon: 'overview', flag: 'pulseCheck' },
+    { to: '/dashboard/benchmark', label: 'Benchmark', icon: 'overview', flag: 'benchmarkPool' },
     { to: '/dashboard/analytics', label: 'Analytics', icon: 'sparkle' },
     { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
   ],
@@ -50,10 +58,14 @@ const NAV_BY_ROLE = {
     { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
   ],
   [ROLES.PULSE_CHECK_REVIEWER]: [
-    { to: '/dashboard/pulse-responses', label: 'Pulse responses', icon: 'pulse' },
-    { to: '/dashboard/trends', label: 'Trends', icon: 'overview' },
+    { to: '/dashboard/pulse-responses', label: 'Pulse responses', icon: 'pulse', flag: 'pulseCheck' },
+    { to: '/dashboard/trends', label: 'Trends', icon: 'overview', flag: 'pulseCheck' },
   ],
-  [ROLES.MANAGER]: [{ to: '/dashboard/wellness', label: 'Team wellness', icon: 'pulse' }],
+  [ROLES.MANAGER]: [{ to: '/dashboard/wellness', label: 'Team wellness', icon: 'pulse', flag: 'pulseCheck' }],
+}
+
+function filterNavByFlags(navItems, flags) {
+  return navItems.filter((item) => !item.flag || flags[item.flag] !== false)
 }
 
 // The first /dashboard page a role is entitled to - where the index route and
@@ -72,9 +84,33 @@ function titleFor(pathname, navItems) {
 // The nested route table for each role - the presentation counterpart of what
 // that role can already read. A path a role is not entitled to falls through to
 // the catch-all and redirects to that role's index.
-function DashboardRoutes({ role, companyId, departments, companyCases }) {
-  const index = indexPathFor(NAV_BY_ROLE[role] ?? [])
+//
+// `flags` gates the same set of routes NAV_BY_ROLE's `flag` field gates for
+// the nav - a flagged route renders the redirect-to-index fallback instead
+// of its page when the company has that flag off, so a bookmarked or
+// directly-typed URL can't reach what the nav already hides. This is still
+// UX, not the enforcement: the callable behind each of these pages checks
+// the same flag server-side (see functions/src/utils/featureFlags.js).
+function DashboardRoutes({ role, companyId, departments, companyCases, flags }) {
+  const navItems = filterNavByFlags(NAV_BY_ROLE[role] ?? [], flags)
+  const index = indexPathFor(navItems)
   const toIndex = <Navigate to={index} replace />
+  const gated = (flag, element) => (flags[flag] === false ? toIndex : element)
+
+  // A role whose entire nav is behind one flag (Pulse Check Reviewer,
+  // Manager) has nowhere to redirect to once that flag is off - indexPathFor
+  // would fall back to the bare /dashboard index route, which re-enters this
+  // same component and loops. Say plainly that the feature is off instead.
+  if (navItems.length === 0) {
+    return (
+      <Card padded={false} className="mx-auto max-w-2xl">
+        <EmptyState
+          title="This feature is currently disabled"
+          description="Ask a Super Admin to enable it for your company."
+        />
+      </Card>
+    )
+  }
 
   if (role === ROLES.HR_COORDINATOR) {
     return (
@@ -83,11 +119,17 @@ function DashboardRoutes({ role, companyId, departments, companyCases }) {
         <Route path="overview" element={<HROverviewPage {...companyCases} />} />
         <Route path="cases" element={<HRCasesPage companyId={companyId} {...companyCases} />} />
         <Route path="triage" element={<HRTriagePage companyId={companyId} {...companyCases} />} />
-        <Route path="patterns" element={<PatternsPage companyId={companyId} />} />
+        <Route path="patterns" element={gated('patternDetection', <PatternsPage companyId={companyId} />)} />
         <Route path="follow-ups" element={<FollowUpsPage {...companyCases} />} />
-        <Route path="pulse-responses" element={<PulseResponsesPage companyId={companyId} />} />
-        <Route path="trends" element={<PulseTrendsPage companyId={companyId} role={role} />} />
-        <Route path="benchmark" element={<BenchmarkPage companyId={companyId} />} />
+        <Route
+          path="pulse-responses"
+          element={gated('pulseCheck', <PulseResponsesPage companyId={companyId} />)}
+        />
+        <Route
+          path="trends"
+          element={gated('pulseCheck', <PulseTrendsPage companyId={companyId} role={role} />)}
+        />
+        <Route path="benchmark" element={gated('benchmarkPool', <BenchmarkPage companyId={companyId} />)} />
         <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} canExport />} />
         <Route path="intake" element={<StaffIntake />} />
         <Route path="*" element={toIndex} />
@@ -118,8 +160,14 @@ function DashboardRoutes({ role, companyId, departments, companyCases }) {
     return (
       <Routes>
         <Route index element={toIndex} />
-        <Route path="pulse-responses" element={<PulseResponsesPage companyId={companyId} />} />
-        <Route path="trends" element={<PulseTrendsPage companyId={companyId} role={role} />} />
+        <Route
+          path="pulse-responses"
+          element={gated('pulseCheck', <PulseResponsesPage companyId={companyId} />)}
+        />
+        <Route
+          path="trends"
+          element={gated('pulseCheck', <PulseTrendsPage companyId={companyId} role={role} />)}
+        />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -131,7 +179,10 @@ function DashboardRoutes({ role, companyId, departments, companyCases }) {
         <Route index element={toIndex} />
         <Route
           path="wellness"
-          element={<PulseTrendsPage companyId={companyId} role={role} departments={departments} />}
+          element={gated(
+            'pulseCheck',
+            <PulseTrendsPage companyId={companyId} role={role} departments={departments} />
+          )}
         />
         <Route path="*" element={toIndex} />
       </Routes>
@@ -158,6 +209,18 @@ function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  // Every hook this component ever calls, called unconditionally and above
+  // any early return - including the Company Admin redirect below, which
+  // renders nothing else here but must not change how many hooks this
+  // component calls on the render that sets it.
+  const { enabled: pulseCheckEnabled } = useFeatureFlag('pulseCheck')
+  const { enabled: benchmarkPoolEnabled } = useFeatureFlag('benchmarkPool')
+  const { enabled: patternDetectionEnabled } = useFeatureFlag('patternDetection')
+  // One shared load of the company case metadata for the HR Coordinator's
+  // pages, kept here so it survives navigation between them. Inert for every
+  // other role.
+  const companyCases = useCompanyCases(companyId, { enabled: role === ROLES.HR_COORDINATOR })
+
   // A Company Admin's entire surface is /admin; it has no /dashboard nav and no
   // /dashboard routes, so a typed or bookmarked /dashboard/* path would fall
   // through to the empty shell. Send it to /admin/overview, matching the
@@ -167,12 +230,13 @@ function Dashboard() {
     return <Navigate to="/admin/overview" replace />
   }
 
-  const navItems = NAV_BY_ROLE[role] ?? []
+  const flags = {
+    pulseCheck: pulseCheckEnabled,
+    benchmarkPool: benchmarkPoolEnabled,
+    patternDetection: patternDetectionEnabled,
+  }
 
-  // One shared load of the company case metadata for the HR Coordinator's
-  // pages, kept here so it survives navigation between them. Inert for every
-  // other role.
-  const companyCases = useCompanyCases(companyId, { enabled: role === ROLES.HR_COORDINATOR })
+  const navItems = filterNavByFlags(NAV_BY_ROLE[role] ?? [], flags)
 
   async function handleSignOut() {
     await signOutUser()
@@ -201,6 +265,7 @@ function Dashboard() {
         companyId={companyId}
         departments={departments}
         companyCases={companyCases}
+        flags={flags}
       />
     )
   }

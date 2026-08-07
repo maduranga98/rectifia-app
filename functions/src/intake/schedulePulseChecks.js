@@ -2,6 +2,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { createPulseInvite, PULSE_INVITES_COLLECTION } = require('./pulseInvites')
+const { resolveFlag } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -189,6 +190,10 @@ exports.schedulePulseChecks = onSchedule('every day 01:00', async () => {
 
   for (const companyDoc of companiesSnapshot.docs) {
     const company = companyDoc.data()
+    // A company with Pulse Check turned off is skipped before any of the
+    // cadence bookkeeping below - "off" must stop new invites from being
+    // queued, not merely hide the roster/questions nav in the admin panel.
+    if (!resolveFlag(company, 'pulseCheck')) continue
     const cadenceDays = CADENCE_DAYS[company.pulseCheckCadence]
     if (!cadenceDays || !isDue(company, cadenceDays)) continue
 

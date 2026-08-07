@@ -7,6 +7,7 @@ const { scoreWithClaude } = require('./scoreCase')
 const { notifyCrisisContact } = require('./routeCase')
 const { getPolicyContext } = require('../policy/retrievePolicyContext')
 const { formatPolicyContext } = require('./prompts/scoringPrompt')
+const { isFeatureEnabled } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -114,6 +115,15 @@ exports.aiFollowUp = onDocumentCreated(
     const caseData = caseSnapshot.data()
     const { category, responses } = caseData
     if (!category || !Array.isArray(responses)) return
+
+    // Before any Claude call: a company that has turned this module off gets
+    // no rescoring and no follow-up question from this trigger. The case
+    // thread itself, and the reporter's ability to post into it, are
+    // unaffected - only this AI-driven addition to it stops.
+    if (!(await isFeatureEnabled(firestore, caseData.companyId ?? null, 'aiFollowUp'))) {
+      logger.info('aiFollowUp: disabled for company, skipping', { caseId, companyId: caseData.companyId })
+      return
+    }
 
     const messagesSnapshot = await caseRef.collection('messages').orderBy('timestamp', 'asc').get()
     const transcript = buildTranscript(messagesSnapshot.docs.map((doc) => doc.data()))

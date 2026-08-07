@@ -10,6 +10,7 @@ const { MIN_RESPONSES_FOR_AGGREGATE, summaryDocId } = require('./pulseThresholds
 const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimit')
 const { resolveQuestionSet, validateAnswers, describeAnswers } = require('../pulse/questionSet')
 const { CORE_QUESTION_IDS } = require('../pulse/coreQuestions')
+const { isFeatureEnabled } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -355,6 +356,20 @@ exports.analyzePulseResponse = onDocumentCreated(
     // one by testing MIN_RESPONSES_FOR_AGGREGATE times.
     if (data.isTest === true) {
       logger.info('analyzePulseResponse: skipping test response', { responseId })
+      return
+    }
+
+    // A company that has turned Pulse Check off since this response was
+    // submitted (submitPulseResponse itself isn't flag-gated - an invite
+    // already in someone's inbox still works) stops here: no Claude call, no
+    // aggregate update, no crisis check. The response document itself is
+    // left exactly as submitted rather than deleted or backfilled - "off"
+    // means stop producing, not erase what already exists.
+    if (!(await isFeatureEnabled(firestore, data.companyId, 'pulseCheck'))) {
+      logger.info('analyzePulseResponse: pulseCheck disabled for company, skipping analysis', {
+        responseId,
+        companyId: data.companyId,
+      })
       return
     }
 

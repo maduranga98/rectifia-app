@@ -5,6 +5,7 @@ import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import CompanySetup from '../components/dashboard/CompanySetup'
 import ManualAssignmentQueue from '../components/dashboard/ManualAssignmentQueue'
+import FeatureFlagPanel from '../components/dashboard/FeatureFlagPanel'
 import AppShell from '../components/shared/AppShell'
 import Alert from '../components/ui/Alert'
 import Badge from '../components/ui/Badge'
@@ -43,7 +44,9 @@ function SuperAdminDashboardPage() {
   // Lets the Security dashboard's "Manual assignment" nav item route back
   // here with the right section pre-selected (?section=manualAssignment),
   // since that view is local state on this page rather than its own route.
-  const initialSection = searchParams.get('section') === 'manualAssignment' ? 'manualAssignment' : 'companies'
+  const sectionParam = searchParams.get('section')
+  const initialSection =
+    sectionParam === 'manualAssignment' || sectionParam === 'featureFlags' ? sectionParam : 'companies'
   const [section, setSection] = useState(initialSection)
   const [manualAssignmentCount, setManualAssignmentCount] = useState(null)
   const navigate = useNavigate()
@@ -95,6 +98,13 @@ function SuperAdminDashboardPage() {
   )
 
   const isCompanies = section === 'companies'
+  const isManualAssignment = section === 'manualAssignment'
+  const isFeatureFlags = section === 'featureFlags'
+  const TITLES = {
+    companies: 'Companies',
+    manualAssignment: 'Manual assignment',
+    featureFlags: 'Feature flags',
+  }
 
   return (
     <AppShell
@@ -102,6 +112,7 @@ function SuperAdminDashboardPage() {
       navItems={[
         { id: 'companies', label: 'Companies', icon: 'company' },
         { id: 'manualAssignment', label: 'Manual assignment', icon: 'routing' },
+        { id: 'featureFlags', label: 'Feature flags', icon: 'settings' },
         { label: 'Security', icon: 'shield', to: '/super-admin/security' },
       ]}
       activeId={section}
@@ -110,19 +121,25 @@ function SuperAdminDashboardPage() {
       roleLabel="Super Admin"
       onSignOut={handleSignOut}
       eyebrow="Platform administration"
-      title={isCompanies ? 'Companies' : 'Manual assignment'}
+      title={TITLES[section] ?? 'Companies'}
       headerActions={isCompanies ? registerButton : null}
     >
       {/* The queue stays mounted across sections so its count is available to
           the stat tile on the companies view - switching sections shouldn't
           re-run the query, and a Super Admin shouldn't have to open the
           section to find out something is waiting there. */}
-      <div className={isCompanies ? 'hidden' : 'mx-auto flex max-w-5xl flex-col gap-6'}>
+      <div className={isManualAssignment ? 'mx-auto flex max-w-5xl flex-col gap-6' : 'hidden'}>
         <ManualAssignmentQueue
           companies={companies}
           onCountChange={setManualAssignmentCount}
         />
       </div>
+
+      {isFeatureFlags && (
+        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+          <FeatureFlagPanel companies={companies} />
+        </div>
+      )}
 
       <div className={isCompanies ? 'mx-auto flex max-w-5xl flex-col gap-6' : 'hidden'}>
         {notice && <Alert variant="success">{notice}</Alert>}

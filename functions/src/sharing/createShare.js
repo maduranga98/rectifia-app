@@ -6,6 +6,7 @@ const crypto = require('crypto')
 const { requireAuthUid, loadCaseForHandler, logPrivilegedAction } = require('../utils/staffAuth')
 const { encryptionKeySecret, encryptIdentity } = require('../utils/identityVault')
 const { sendMail, smtpPassword } = require('../utils/email')
+const { isFeatureEnabled, requireFeatureEnabled } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -169,6 +170,17 @@ exports.createExternalShare = onCall({ secrets: [encryptionKeySecret, smtpPasswo
   }
 
   const caseData = snapshot.data()
+
+  // Before any token is minted, any encryption happens, or any email is
+  // sent: a company that has turned external share links off must not be
+  // able to create a new one through this callable, even though the "share"
+  // tab is hidden client-side. Existing shares already granted are untouched
+  // - revocation is its own explicit action (revokeExternalShare.js), not a
+  // side effect of this flag.
+  requireFeatureEnabled(
+    await isFeatureEnabled(firestore, caseData.companyId ?? null, 'externalShareLinks'),
+    'externalShareLinks'
+  )
 
   // Max 3 active shares per case - more than that is not a legal
   // consultation, it is distribution.
