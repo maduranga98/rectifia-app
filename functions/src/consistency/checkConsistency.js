@@ -138,3 +138,15 @@ exports.checkConsistency = onDocumentUpdated(`${CASES_COLLECTION}/{caseId}`, asy
     },
   })
 })
+
+// Exported so functions/src/analytics/aggregateCaseAnalytics.js can recompute
+// the same "what is this company's typical action for cases like this one"
+// signal at aggregate level, from referenceCases alone, without a second
+// hand-maintained copy of the tie-breaking rule drifting from this one.
+// MIN_REFERENCE_CASES/DEFAULT_SEVERITY_BAND are exported for the same reason
+// - the analytics module's own k-anonymity floor for consistency data must
+// never fall below the floor this module already enforces per-case.
+exports.mostCommonAction = mostCommonAction
+exports.severityWithinBand = severityWithinBand
+exports.MIN_REFERENCE_CASES = MIN_REFERENCE_CASES
+exports.DEFAULT_SEVERITY_BAND = DEFAULT_SEVERITY_BAND

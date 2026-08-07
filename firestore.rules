@@ -18,6 +18,7 @@ service cloud.firestore {
     function isHrCoordinator(companyId) { return hasRole(companyId, 'hrCoordinator'); }
     function isPulseReviewer(companyId) { return hasRole(companyId, 'pulseCheckReviewer'); }
     function isManager(companyId) { return hasRole(companyId, 'manager'); }
+    function isCaseHandler(companyId) { return hasRole(companyId, 'caseHandler'); }
 
     // "A Company Admin of some company" - deliberately not scoped to one
     // company, and used for exactly one thing: the slug-uniqueness probe in
@@ -343,6 +344,31 @@ service cloud.firestore {
     // still has no rules path to cases/, messages/, or caseMetadata/ itself.
     match /companies/{companyId}/stats/{statId} {
       allow read: if isCompanyAdmin(companyId);
+      allow write: if false;
+    }
+
+    // Module 28's analytics & reporting dashboard: trend documents
+    // (trend_YYYY-MM) and one consistency summary document, recomputed daily
+    // by functions/src/analytics/aggregateCaseAnalytics.js from caseMetadata
+    // and referenceCases only - it never reads cases/{caseId} or any
+    // messages subcollection, so nothing that lands here can be case
+    // narrative. Every count is already k-anonymity-floored at write time
+    // (MIN_AGGREGATE_CASES in analyticsThresholds.js): a category/department
+    // breakdown below the floor is omitted from the document entirely, not
+    // merely hidden by this rule, so this collection has no field a role
+    // below the floor's protection would need shielded from it.
+    //
+    // Three readers, matching this module's requirement that Company Admin,
+    // HR Coordinator and Case Handler all see the same aggregate stats - and
+    // deliberately identical access for all three, unlike caseMetadata below:
+    // there is no per-handler breakdown anywhere in this collection (no
+    // byHandler field, unlike companies/{companyId}/stats/overview above), so
+    // there is nothing here for a Case Handler read to expose about another
+    // handler's assigned-case detail. Manager and Pulse Check Reviewer get no
+    // path here - this is case-derived analytics, not the wellness-survey
+    // surface those two roles already have their own aggregate views into.
+    match /companies/{companyId}/analytics/{docId} {
+      allow read: if isCompanyAdmin(companyId) || isHrCoordinator(companyId) || isCaseHandler(companyId);
       allow write: if false;
     }
 

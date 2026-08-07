@@ -15,6 +15,7 @@ import BillingPage from './company-admin/BillingPage'
 import SettingsPage from './company-admin/SettingsPage'
 import RetentionPage from './company-admin/RetentionPage'
 import BenchmarkPage from './company-admin/BenchmarkPage'
+import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
 
 // Company Admin's whole surface: the shell's navigation plus the overview
 // and four settings sub-pages it routes to. CompanyAdminPanel used to hold
@@ -35,12 +36,19 @@ import BenchmarkPage from './company-admin/BenchmarkPage'
 // gives it a home of its own instead of burying it under routing setup. No
 // broader path to cases/ or caseMetadata/ is granted.
 //
+// Analytics (module 28) is the second case-derived read, and stays inside
+// the same boundary: it reads companies/{companyId}/analytics/*, a daily
+// recompute from caseMetadata and referenceCases with every breakdown
+// already k-anonymity-floored before it is written, never cases/{caseId} or
+// caseMetadata directly. Still no broader path is granted.
+//
 // companyId comes from the custom claim, not a URL param or a form field: a
 // Company Admin can only ever administer the company stamped on their own
 // token, and firestore.rules enforces that independently.
 const NAV_ITEMS = [
   { to: '/admin/overview', label: 'Overview', icon: 'overview' },
   { to: '/admin/cases', label: 'Cases', icon: 'cases' },
+  { to: '/admin/analytics', label: 'Analytics', icon: 'sparkle' },
   { to: '/admin/departments', label: 'Departments', icon: 'departments' },
   { to: '/admin/policies', label: 'Policies', icon: 'document' },
   { to: '/admin/staff', label: 'Staff', icon: 'staff' },
@@ -63,6 +71,7 @@ const NAV_ITEMS = [
 const PAGE_TITLES = {
   overview: 'Overview',
   cases: 'Cases',
+  analytics: 'Analytics & reporting',
   departments: 'Departments',
   policies: 'Policies',
   staff: 'Staff',
@@ -102,6 +111,7 @@ function Admin() {
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage companyId={companyId} />} />
           <Route path="cases" element={<CasesPage companyId={companyId} />} />
+          <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} canExport />} />
           <Route path="departments" element={<DepartmentsPage companyId={companyId} />} />
           <Route path="policies" element={<PoliciesPage companyId={companyId} />} />
           <Route path="staff" element={<StaffPage companyId={companyId} />} />

@@ -90,6 +90,8 @@ const { createExternalShare, listCaseShares } = require('./src/sharing/createSha
 const { getSharedCase } = require('./src/sharing/accessShare')
 const { revokeExternalShare } = require('./src/sharing/revokeShare')
 const { expireShares } = require('./src/sharing/expireShares')
+const { aggregateCaseAnalytics } = require('./src/analytics/aggregateCaseAnalytics')
+const { exportComplianceReport } = require('./src/analytics/exportComplianceReport')
 
 exports.submitCase = submitCase
 exports.createCaseOnBehalf = createCaseOnBehalf
@@ -225,3 +227,10 @@ exports.listCaseShares = listCaseShares
 exports.getSharedCase = getSharedCase
 exports.revokeExternalShare = revokeExternalShare
 exports.expireShares = expireShares
+// Module 28: Analytics & Reporting Dashboard. aggregateCaseAnalytics is the
+// daily scheduled recompute of companies/{companyId}/analytics/* from
+// caseMetadata and referenceCases only - never cases/{caseId}, never
+// messages/. exportComplianceReport compiles those same aggregates into a
+// board/audit-ready PDF, read/compile only like Module 24's exportReportPdf.
+exports.aggregateCaseAnalytics = aggregateCaseAnalytics
+exports.exportComplianceReport = exportComplianceReport
