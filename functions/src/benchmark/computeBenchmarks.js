@@ -13,6 +13,7 @@ const {
   cellId,
 } = require('./benchmarkThresholds')
 const { ACTION_TAKEN_OPTIONS, normalizeAction } = require('../consistency/actionVocabulary')
+const { resolveFlag } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -88,20 +89,34 @@ async function loadOptedInCompanies(firestore) {
     .where('optedIn', '==', true)
     .get()
 
-  const companies = []
+  const candidates = []
   for (const doc of snapshot.docs) {
     const data = doc.data()
     const industry = data.industry
     const sizeBand = bandForEmployeeCount(data.employeeCount)
     if (!isKnownIndustry(industry) || !sizeBand) continue
-    companies.push({
+    candidates.push({
       companyId: doc.id,
       industry,
       sizeBand,
       employeeCount: Number(data.employeeCount),
     })
   }
-  return companies
+  if (candidates.length === 0) return []
+
+  // The Super Admin's benchmarkPool killswitch overrides a company's own
+  // opt-in: a company can be genuinely opted in (BENCHMARK_OPT_INS_COLLECTION)
+  // and still be excluded from a run because the feature itself is off for
+  // them. Fetched once per run rather than folded into the opt-in doc, since
+  // the flag lives on companies/{companyId}, not on the opt-in record.
+  const companySnapshots = await firestore.getAll(
+    ...candidates.map((c) => firestore.collection(COMPANIES_COLLECTION).doc(c.companyId))
+  )
+  const flagByCompanyId = new Map(
+    companySnapshots.map((snap) => [snap.id, resolveFlag(snap.exists ? snap.data() : null, 'benchmarkPool')])
+  )
+
+  return candidates.filter((c) => flagByCompanyId.get(c.companyId) === true)
 }
 
 // Loads every referenceCases row for a single opted-in company. referenceCases

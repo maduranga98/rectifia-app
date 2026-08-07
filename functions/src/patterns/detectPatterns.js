@@ -11,6 +11,7 @@ const {
   evaluateCrossCategorySuppression,
   redactToAllowedFields,
 } = require('./suppressionRules')
+const { resolveFlag } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -265,6 +266,10 @@ exports.detectPatterns = onSchedule('every day 02:00', async () => {
   const nowMs = Date.now()
 
   for (const companyDoc of companiesSnapshot.docs) {
+    // A company with pattern detection turned off is skipped before any
+    // counting work - its existing patternSignals are left exactly as they
+    // are (they simply stop updating), not deleted.
+    if (!resolveFlag(companyDoc.data(), 'patternDetection')) continue
     try {
       const result = await recomputeCompanySignals(firestore, companyDoc, nowMs)
       logger.info('detectPatterns: recomputed', { companyId: companyDoc.id, ...result })

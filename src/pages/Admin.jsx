@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
+import { useFeatureFlag } from '../hooks/useFeatureFlag'
 import AppShell from '../components/shared/AppShell'
 import Alert from '../components/ui/Alert'
 import OverviewPage from './company-admin/OverviewPage'
@@ -46,6 +47,10 @@ import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
 // companyId comes from the custom claim, not a URL param or a form field: a
 // Company Admin can only ever administer the company stamped on their own
 // token, and firestore.rules enforces that independently.
+// Entries with a `flag` are hidden - and their route redirected - when that
+// per-company feature flag (src/config/featureFlags.js) is off. See
+// Dashboard.jsx's identical convention for the staff nav; this is the
+// Company Admin counterpart.
 const NAV_ITEMS = [
   { to: '/admin/overview', label: 'Overview', icon: 'overview' },
   { to: '/admin/cases', label: 'Cases', icon: 'cases' },
@@ -54,12 +59,12 @@ const NAV_ITEMS = [
   { to: '/admin/policies', label: 'Policies', icon: 'document' },
   { to: '/admin/staff', label: 'Staff', icon: 'staff' },
   { to: '/admin/roles', label: 'Custom roles', icon: 'staff' },
-  { to: '/admin/employees', label: 'Employees', icon: 'pulse' },
+  { to: '/admin/employees', label: 'Employees', icon: 'pulse', flag: 'pulseCheck' },
   { to: '/admin/routing', label: 'Routing rules', icon: 'routing' },
   { to: '/admin/billing', label: 'Billing', icon: 'billing' },
   // Sits next to Settings deliberately: pulseCheckCadence (how often check-ins
   // go out) lives there, and this is what those check-ins ask.
-  { to: '/admin/pulse-questions', label: 'Pulse questions', icon: 'pulse' },
+  { to: '/admin/pulse-questions', label: 'Pulse questions', icon: 'pulse', flag: 'pulseCheck' },
   { to: '/admin/settings', label: 'Settings', icon: 'settings' },
   { to: '/admin/retention', label: 'Data retention', icon: 'clock' },
   // Module 25's opt-in control. Deliberately at the end of the nav rather
@@ -67,8 +72,12 @@ const NAV_ITEMS = [
   // this company's closed cases to every other opted-in reader, which is
   // consequential enough to be its own decision rather than a checkbox on a
   // settings screen.
-  { to: '/admin/benchmark', label: 'Benchmark pool', icon: 'overview' },
+  { to: '/admin/benchmark', label: 'Benchmark pool', icon: 'overview', flag: 'benchmarkPool' },
 ]
+
+function filterNavByFlags(navItems, flags) {
+  return navItems.filter((item) => !item.flag || flags[item.flag] !== false)
+}
 
 const PAGE_TITLES = {
   overview: 'Overview',
@@ -92,6 +101,13 @@ function Admin() {
   const navigate = useNavigate()
   const location = useLocation()
 
+  const { enabled: pulseCheckEnabled } = useFeatureFlag('pulseCheck')
+  const { enabled: benchmarkPoolEnabled } = useFeatureFlag('benchmarkPool')
+  const flags = { pulseCheck: pulseCheckEnabled, benchmarkPool: benchmarkPoolEnabled }
+  const navItems = filterNavByFlags(NAV_ITEMS, flags)
+  const toOverview = <Navigate to="overview" replace />
+  const gated = (flag, element) => (flags[flag] === false ? toOverview : element)
+
   async function handleSignOut() {
     await signOutUser()
     navigate('/login', { replace: true })
@@ -102,7 +118,7 @@ function Admin() {
   return (
     <AppShell
       scopeLabel="Company administration"
-      navItems={NAV_ITEMS}
+      navItems={navItems}
       userEmail={user?.email}
       roleLabel="Company Admin"
       onSignOut={handleSignOut}
@@ -111,7 +127,7 @@ function Admin() {
     >
       {companyId ? (
         <Routes>
-          <Route index element={<Navigate to="overview" replace />} />
+          <Route index element={toOverview} />
           <Route path="overview" element={<OverviewPage companyId={companyId} />} />
           <Route path="cases" element={<CasesPage companyId={companyId} />} />
           <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} canExport />} />
@@ -119,17 +135,17 @@ function Admin() {
           <Route path="policies" element={<PoliciesPage companyId={companyId} />} />
           <Route path="staff" element={<StaffPage companyId={companyId} />} />
           <Route path="roles" element={<RoleBuilder companyId={companyId} />} />
-          <Route path="employees" element={<EmployeesPage companyId={companyId} />} />
+          <Route path="employees" element={gated('pulseCheck', <EmployeesPage companyId={companyId} />)} />
           <Route
             path="pulse-questions"
-            element={<PulseQuestionsPage companyId={companyId} />}
+            element={gated('pulseCheck', <PulseQuestionsPage companyId={companyId} />)}
           />
           <Route path="routing" element={<RoutingRulesPage companyId={companyId} />} />
           <Route path="billing" element={<BillingPage companyId={companyId} />} />
           <Route path="settings" element={<SettingsPage companyId={companyId} />} />
           <Route path="retention" element={<RetentionPage companyId={companyId} />} />
-          <Route path="benchmark" element={<BenchmarkPage companyId={companyId} />} />
-          <Route path="*" element={<Navigate to="overview" replace />} />
+          <Route path="benchmark" element={gated('benchmarkPool', <BenchmarkPage companyId={companyId} />)} />
+          <Route path="*" element={toOverview} />
         </Routes>
       ) : (
         // No companyId claim means the account was never linked to a company

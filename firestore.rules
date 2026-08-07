@@ -136,6 +136,31 @@ service cloud.firestore {
       return !('retention' in request.resource.data.diff(resource.data).affectedKeys())
         || isValidRetentionUpdate();
     }
+
+    // Per-company feature flags (companies/{companyId}.featureFlags), the
+    // registry src/config/featureFlags.js and functions/src/utils/
+    // featureFlags.js both resolve against. A flat map, only the known keys,
+    // only boolean values - keys().hasOnly()/values().hasOnly() reject
+    // anything else outright rather than letting a malformed value sit in
+    // the document for a reader to misinterpret as "on".
+    function isValidFeatureFlagsMap() {
+      let flags = request.resource.data.featureFlags;
+      return flags is map
+        && flags.keys().hasOnly(['pulseCheck', 'benchmarkPool', 'aiFollowUp',
+            'externalShareLinks', 'patternDetection', 'policyGrounding'])
+        && flags.values().hasOnly([true, false]);
+    }
+    // Super Admin only, full stop - this is the enforcement layer behind
+    // FeatureFlagPanel.jsx, not the panel's own role check. Written as its
+    // own gate (mirroring retentionFieldValid() above) rather than folded
+    // into companyAdminEditableFields()/isCustomRoleCompanyFieldEditor(), so
+    // that widening either of those allowlists in the future can never
+    // accidentally hand Company Admin or a custom role write access to this
+    // field too - featureFlags stays off both by construction.
+    function featureFlagsFieldValid() {
+      return !('featureFlags' in request.resource.data.diff(resource.data).affectedKeys())
+        || (isSuperAdmin() && isValidFeatureFlagsMap());
+    }
     function claimsMissingSlug() {
       return (!('slug' in resource.data) || resource.data.slug == null)
         && request.resource.data.slug is string
@@ -182,7 +207,8 @@ service cloud.firestore {
       allow update: if (isSuperAdmin()
           || (isCompanyAdmin(companyId) && (companyAdminEditableFields() || claimsMissingSlug()))
           || isCustomRoleCompanyFieldEditor(companyId))
-        && retentionFieldValid();
+        && retentionFieldValid()
+        && featureFlagsFieldValid();
       allow delete: if isSuperAdmin();
     }
 

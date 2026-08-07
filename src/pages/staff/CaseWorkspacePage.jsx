@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { getAssignedCase } from '../../services/handlerService'
+import { useFeatureFlag } from '../../hooks/useFeatureFlag'
 import {
   ActionForm,
   ConsistencyFlags,
@@ -47,6 +48,8 @@ function hasUnreviewedFlag(caseData) {
 // doc already polled below - so a handler sees what needs doing without opening
 // every tab, and without any extra read. The Identity tab is confidential-tier
 // only. `badge(caseData)` returns null, { dot: true }, or { count }.
+// `flag` mirrors Dashboard.jsx / Admin.jsx's convention: a tab (and its
+// route below) is hidden when the named per-company feature flag is off.
 const TABS = [
   { path: 'thread', label: 'Thread', badge: (c) => (c.unreadReporterCount ? { count: c.unreadReporterCount } : null) },
   { path: 'questionnaire', label: 'Questionnaire' },
@@ -54,9 +57,9 @@ const TABS = [
   { path: 'consistency', label: 'Consistency', badge: (c) => (hasUnreviewedFlag(c) ? { dot: true } : null) },
   { path: 'policy', label: 'Policy references' },
   { path: 'compliance', label: 'Compliance', badge: (c) => (hasPendingDeadline(c) ? { dot: true } : null) },
-  { path: 'patterns', label: 'Patterns' },
+  { path: 'patterns', label: 'Patterns', flag: 'patternDetection' },
   { path: 'identity', label: 'Identity', confidentialOnly: true },
-  { path: 'share', label: 'External share' },
+  { path: 'share', label: 'External share', flag: 'externalShareLinks' },
   { path: 'action', label: 'Action & report' },
 ]
 
@@ -120,6 +123,10 @@ function CaseWorkspacePage() {
   const [caseData, setCaseData] = useState(null)
   const [error, setError] = useState(null)
 
+  const { enabled: patternDetectionEnabled } = useFeatureFlag('patternDetection')
+  const { enabled: externalShareLinksEnabled } = useFeatureFlag('externalShareLinks')
+  const flags = { patternDetection: patternDetectionEnabled, externalShareLinks: externalShareLinksEnabled }
+
   const refresh = useCallback(async () => {
     try {
       setCaseData(await getAssignedCase(caseId))
@@ -139,7 +146,9 @@ function CaseWorkspacePage() {
 
   const closed = caseData.status === 'closed'
   const confidential = caseData.tier === 'confidential'
-  const visibleTabs = TABS.filter((t) => !t.confidentialOnly || confidential)
+  const visibleTabs = TABS.filter(
+    (t) => (!t.confidentialOnly || confidential) && (!t.flag || flags[t.flag] !== false)
+  )
   // Absolute, not relative: this workspace is three <Routes> levels deep
   // (/dashboard/* -> the role's <Routes> -> cases/:caseId/* -> this
   // component's own <Routes>), and a relative `to` resolves against
@@ -230,12 +239,16 @@ function CaseWorkspacePage() {
         <Route
           path="patterns"
           element={
-            <Card
-              title="Related patterns"
-              description="Whether this case sits inside an active company-wide pattern signal."
-            >
-              <RelatedPatternNotice caseId={caseId} />
-            </Card>
+            flags.patternDetection === false ? (
+              <Navigate to={`${basePath}/thread`} replace />
+            ) : (
+              <Card
+                title="Related patterns"
+                description="Whether this case sits inside an active company-wide pattern signal."
+              >
+                <RelatedPatternNotice caseId={caseId} />
+              </Card>
+            )
           }
         />
         <Route
@@ -248,7 +261,16 @@ function CaseWorkspacePage() {
             )
           }
         />
-        <Route path="share" element={<ShareCasePanel caseId={caseId} />} />
+        <Route
+          path="share"
+          element={
+            flags.externalShareLinks === false ? (
+              <Navigate to={`${basePath}/thread`} replace />
+            ) : (
+              <ShareCasePanel caseId={caseId} />
+            )
+          }
+        />
         <Route path="action" element={<ActionReportPanel caseData={caseData} caseId={caseId} onChanged={refresh} />} />
         <Route path="*" element={<Navigate to="thread" replace />} />
       </Routes>

@@ -3,6 +3,7 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { enforceRateLimit } = require('../utils/rateLimit')
+const { resolveFlag, requireFeatureEnabled } = require('../utils/featureFlags')
 const {
   queuePulseInvitesForCompany,
   notifyMissingQuestionSet,
@@ -69,6 +70,11 @@ exports.sendPulseChecksNow = onCall(async (request) => {
   if (!companySnap.exists) {
     throw new HttpsError('not-found', 'Company not found')
   }
+
+  // Before any queueing work: a company that has turned Pulse Check off
+  // must not have this on-demand trigger queue a send anyway. Hiding the
+  // "Send check-in now" button is UX (Dashboard.jsx) - this is enforcement.
+  requireFeatureEnabled(resolveFlag(companySnap.data(), 'pulseCheck'), 'pulseCheck')
 
   // The invite expiry window is still createdAt + cadenceDays: the manual send
   // bypasses the cadence *timer*, not the cadence *setting*. A company with no

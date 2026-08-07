@@ -1,4 +1,5 @@
 const admin = require('firebase-admin')
+const { isFeatureEnabled } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -35,6 +36,16 @@ async function getPolicyContext(companyId, category) {
   if (!companyId || !category) return empty
 
   const firestore = admin.firestore()
+
+  // Before any read: a company that has turned policy grounding off gets
+  // exactly the same degrade-to-empty result as a company that has never
+  // uploaded a policy. scoreCase, generateChecklist and aiFollowUp all
+  // already treat an empty result as "prompt unchanged" - this flag never
+  // touches whether THEY run, only whether their prompt gets this
+  // injection.
+  if (!(await isFeatureEnabled(firestore, companyId, 'policyGrounding'))) {
+    return empty
+  }
 
   let policySnapshot
   try {
