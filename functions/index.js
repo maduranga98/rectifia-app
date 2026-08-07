@@ -79,6 +79,7 @@ const {
   setBenchmarkOptIn,
   getBenchmarkCatalog,
 } = require('./src/benchmark/benchmarkAccess')
+const { calculateQuote } = require('./src/billing/calculateQuote')
 const { accessReview, attestAccessReview, getAccessReviewForAttestation } = require('./src/security/accessReview')
 const { keyRotationCheck, recordKeyRotation, rotateIdentityVaultKey } = require('./src/security/keyRotation')
 const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomalyDetection')
@@ -186,6 +187,11 @@ exports.computeBenchmarks = computeBenchmarks
 exports.getBenchmarksForCompany = getBenchmarksForCompany
 exports.setBenchmarkOptIn = setBenchmarkOptIn
 exports.getBenchmarkCatalog = getBenchmarkCatalog
+// Company Admin's billing quote: the current tier/price computed server-side
+// from the company's real active roster, and the Pulse Check add-on price.
+// See functions/src/billing/calculateQuote.js for why this is the only place
+// a quote may be treated as authoritative.
+exports.calculateQuote = calculateQuote
 // Module 26: Security Control & Evidence Layer. Five scheduled controls
 // (accessReview quarterly, keyRotationCheck weekly, anomalyDetection daily,
 // integrityCheck weekly, backupVerification monthly) plus the onCall

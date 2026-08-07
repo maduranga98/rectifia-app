@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getCompany } from '../../services/companyService'
-import { listStaff } from '../../services/routingService'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Card from '../../components/ui/Card'
-import StatTile from '../../components/ui/StatTile'
 import { SkeletonStats } from '../../components/ui/Loading'
+import BillingQuote from '../../components/dashboard/BillingQuote'
 
 // A billing status is either fine or it isn't, and that difference should be
 // visible before the word is read.
@@ -19,10 +18,12 @@ const BILLING_TONE = {
 
 // Read-only status display only - no payment form, no Stripe/payment
 // integration here. Plan changes and billing mutations happen outside this
-// module, same as the original Company Admin panel note.
+// module, same as the original Company Admin panel note. The pricing engine
+// itself (current tier, current price, bracket breakdown, what-if headcount
+// calculator) lives in BillingQuote - this page just adds the subscription
+// status chip around it.
 function BillingPage({ companyId }) {
   const [company, setCompany] = useState(null)
-  const [employeeCount, setEmployeeCount] = useState(0)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -30,9 +31,7 @@ function BillingPage({ companyId }) {
     setLoading(true)
     setError(null)
     try {
-      const [companyData, staffRows] = await Promise.all([getCompany(companyId), listStaff(companyId)])
-      setCompany(companyData)
-      setEmployeeCount(staffRows.filter((s) => (s.status ?? 'active') !== 'suspended').length)
+      setCompany(await getCompany(companyId))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -51,17 +50,14 @@ function BillingPage({ companyId }) {
       {error && <Alert variant="error">{error}</Alert>}
 
       {loading && !company ? (
-        <SkeletonStats count={3} />
+        <SkeletonStats count={2} />
       ) : (
         <>
           <Card padded={false} className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">
-                  Current plan
-                </p>
-                <p className="mt-1 text-2xl font-semibold capitalize text-charcoal">
-                  {company?.subscriptionTier ?? 'Not set'}
+                  Subscription status
                 </p>
                 {company?.name && <p className="mt-1 text-sm text-muted">{company.name}</p>}
               </div>
@@ -71,15 +67,7 @@ function BillingPage({ companyId }) {
             </div>
           </Card>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <StatTile
-              label="Cases this period"
-              value={company?.currentPeriodCaseCount ?? 0}
-              tone="tone-info"
-              icon="cases"
-            />
-            <StatTile label="Active staff" value={employeeCount} tone="tone-neutral" icon="staff" />
-          </div>
+          <BillingQuote companyId={companyId} />
 
           <Alert variant="info" title="Read-only">
             Payment details and plan changes are handled outside this panel. Contact Lumora to
