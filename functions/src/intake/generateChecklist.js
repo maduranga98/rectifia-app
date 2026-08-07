@@ -12,7 +12,7 @@ if (!admin.apps.length) {
 }
 
 const anthropicApiKey = defineSecret('ANTHROPIC_API_KEY')
-const MODEL = 'claude-opus-5'
+const MODEL = 'claude-sonnet-5'
 
 const MESSAGES_SUBCOLLECTION = 'messages'
 
