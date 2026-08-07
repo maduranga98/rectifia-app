@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Button from '../ui/Button'
 import CrisisResources from './CrisisResources'
 import Icon from '../ui/Icon'
@@ -136,11 +136,25 @@ function ReporterLayout({
         {children}
       </main>
 
-      {footerNote && (
-        <footer className="border-t border-line px-5 py-5">
-          <p className="mx-auto max-w-3xl text-xs leading-relaxed text-muted">{footerNote}</p>
-        </footer>
-      )}
+      {/* Always rendered, on every reporter-facing screen - unlike footerNote
+          (which is per-page and optional), the privacy/terms links are a
+          standing requirement: both pages must be reachable with no auth and
+          no Case ID from wherever a reporter happens to be. */}
+      <footer className="border-t border-line px-5 py-5">
+        <div className="mx-auto flex max-w-3xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {footerNote && (
+            <p className="max-w-xl text-xs leading-relaxed text-muted">{footerNote}</p>
+          )}
+          <nav className="flex items-center gap-4 text-xs text-muted">
+            <Link to="/privacy" className="underline hover:text-charcoal">
+              Privacy policy
+            </Link>
+            <Link to="/terms" className="underline hover:text-charcoal">
+              Terms of use
+            </Link>
+          </nav>
+        </div>
+      </footer>
     </div>
   )
 }

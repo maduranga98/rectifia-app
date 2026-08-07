@@ -38,6 +38,16 @@ function baseRequest(data, auth) {
   return { data, auth, rawRequest: { headers: {}, ip: '203.0.113.5' } }
 }
 
+// submitCase.js requires this on every reporter self-submission (see
+// requireDataHandlingAcknowledgment there) - it is a separate invariant from
+// identity tier, so this suite just satisfies the requirement with a valid
+// fixture rather than asserting on it.
+const VALID_ACKNOWLEDGMENT = {
+  acknowledged: true,
+  acknowledgedAt: '2026-08-07T00:00:00.000Z',
+  policyVersion: 'privacy-test-fixture',
+}
+
 describe('identityTier', () => {
   beforeEach(() => {
     admin.__reset()
@@ -54,6 +64,7 @@ describe('identityTier', () => {
           responses: [{ questionId: 'incident_description', value: 'Something happened.' }],
           companySlug: 'acme',
           tier: 'anonymous',
+          dataHandlingAcknowledgment: VALID_ACKNOWLEDGMENT,
         })
       )
 
@@ -61,6 +72,26 @@ describe('identityTier', () => {
       expect(stored.tier).toBe('anonymous')
       expect(Object.prototype.hasOwnProperty.call(stored, 'reporterIdentity')).toBe(false)
       expect(Object.prototype.hasOwnProperty.call(stored, 'contactEmail')).toBe(false)
+      // The auditable record of the pre-submission notice - a boolean, a
+      // timestamp, and the policy version, never anything identity-bearing.
+      expect(stored.dataHandlingAcknowledgment).toEqual(VALID_ACKNOWLEDGMENT)
+    })
+
+    it('is refused without a data-handling acknowledgment, even with a valid tier', async () => {
+      const firestore = admin.firestore()
+      seedCompany(firestore, 'company-1')
+
+      await expect(
+        submitCase(
+          baseRequest({
+            category: 'harassment',
+            responses: [{ questionId: 'incident_description', value: 'Something happened.' }],
+            companySlug: 'acme',
+            tier: 'anonymous',
+            // No dataHandlingAcknowledgment at all.
+          })
+        )
+      ).rejects.toThrow(/data-handling notice/)
     })
 
     it("a 'confidential' tier self-submission ALSO writes no reporterIdentity - this form never collects one", async () => {
@@ -77,6 +108,7 @@ describe('identityTier', () => {
           responses: [{ questionId: 'incident_description', value: 'Something happened.' }],
           companySlug: 'acme',
           tier: 'confidential',
+          dataHandlingAcknowledgment: VALID_ACKNOWLEDGMENT,
         })
       )
 

@@ -99,6 +99,36 @@ function requireResponses(responses) {
   return responses
 }
 
+// The reporter's acknowledgment of the pre-submission data-handling notice
+// (src/components/intake/DataHandlingNotice.jsx, shown at category selection
+// - before any case content is typed, deliberately not at final submit).
+// Required, the same "the server refuses without it, so it cannot be dropped
+// by a client that forgets to render it" reasoning requireTier already
+// applies to the tier choice: an auditor asking "was this reporter told
+// their text goes to an AI sub-processor" needs a record that exists because
+// the server would not accept a case without one, not an assurance that the
+// UI always shows the notice.
+//
+// acknowledgedAt and policyVersion are taken as the client reports them
+// (this is a consent record about what a reporter saw and did in their own
+// browser, not a security boundary) but their shape is still validated, so a
+// malformed or missing value fails the same way a missing tier does rather
+// than silently writing a useless record.
+function requireDataHandlingAcknowledgment(value) {
+  const acknowledgedAt = typeof value?.acknowledgedAt === 'string' ? value.acknowledgedAt : null
+  const policyVersion =
+    typeof value?.policyVersion === 'string' && value.policyVersion.trim()
+      ? value.policyVersion.trim()
+      : null
+  if (value?.acknowledged !== true || !acknowledgedAt || !policyVersion) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Confirm the data-handling notice before filing a report'
+    )
+  }
+  return { acknowledged: true, acknowledgedAt, policyVersion }
+}
+
 // Files a completed reporter questionnaire as a new case. This is the
 // reporter's own path into the system, and it deliberately requires no auth -
 // reporters are anonymous and unauthenticated by design. Staff filing on
@@ -121,7 +151,7 @@ function requireResponses(responses) {
 // without it is effectively invisible to the company; that's why an
 // unresolvable slug is rejected here rather than written as an orphan case.
 exports.submitCase = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
-  const { category, responses, companySlug, tier } = request.data || {}
+  const { category, responses, companySlug, tier, dataHandlingAcknowledgment } = request.data || {}
 
   // Filing a case is the most expensive unauthenticated action in the system:
   // it writes a case, which fires scoreCase.js and then aiFollowUp.js, each a
@@ -137,6 +167,7 @@ exports.submitCase = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   // defaulted so a client that never asked the question cannot quietly file
   // someone as anonymous when they meant otherwise, or the reverse.
   const resolvedTier = requireTier(tier)
+  const acknowledgment = requireDataHandlingAcknowledgment(dataHandlingAcknowledgment)
 
   if (typeof companySlug !== 'string' || !companySlug.trim()) {
     throw new HttpsError('invalid-argument', 'A company slug is required')
@@ -173,6 +204,13 @@ exports.submitCase = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
       tier: resolvedTier,
       source: 'reporter',
       intakeMethod: 'web',
+      // Proof the reporter was told, before they wrote a word of their
+      // report, that it would be processed by an AI sub-processor and what
+      // their chosen identity tier does and does not conceal - see
+      // DataHandlingNotice.jsx and requireDataHandlingAcknowledgment above.
+      // An auditor asking "was this reporter told" gets this record, not an
+      // assurance that the UI always shows the notice.
+      dataHandlingAcknowledgment: acknowledgment,
       // The report reached the company the moment it was filed, so the two
       // timestamps are the same thing here by definition. They diverge only
       // for a staff-entered case catching up with a report received earlier -
@@ -199,3 +237,4 @@ exports.normalizeTier = normalizeTier
 exports.requireTier = requireTier
 exports.requireCategory = requireCategory
 exports.requireResponses = requireResponses
+exports.requireDataHandlingAcknowledgment = requireDataHandlingAcknowledgment

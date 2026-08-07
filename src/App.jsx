@@ -16,6 +16,8 @@ import SuperAdminLoginPage from './pages/SuperAdminLoginPage'
 import SuperAdminDashboardPage from './pages/SuperAdminDashboardPage'
 import SecurityDashboard from './pages/superadmin/SecurityDashboard'
 import SharedCaseView from './pages/SharedCaseView'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import TermsPage from './pages/TermsPage'
 import { ROLES } from './constants/roles'
 
 // Passed as the `fallback` render prop to every reporter-facing boundary
@@ -84,6 +86,15 @@ function App() {
             </ErrorBoundary>
           }
         />
+
+        {/* Public legal pages. No auth, no Case ID - reachable from the
+            reporter layout footer, the staff login page, and the
+            pre-submission data-handling notice (which links to /privacy).
+            Deliberately flat, standalone routes like the reporter routes
+            above rather than nested under either flow, since a visitor can
+            land here from either one, or from neither. */}
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
 
         {/* Auth entry points. */}
         <Route path="/login" element={<LoginPage />} />

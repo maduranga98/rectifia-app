@@ -52,10 +52,20 @@ function LoginPage() {
       title="Staff sign in"
       description="Use the account your Company Admin issued you."
       footer={
-        <p>
-          Reporting something? You do not need an account - use the case link or Case ID you
-          were given.
-        </p>
+        <div className="flex flex-col gap-3">
+          <p>
+            Reporting something? You do not need an account - use the case link or Case ID you
+            were given.
+          </p>
+          <p className="flex gap-4 text-xs">
+            <Link to="/privacy" className="underline hover:text-charcoal">
+              Privacy policy
+            </Link>
+            <Link to="/terms" className="underline hover:text-charcoal">
+              Terms of use
+            </Link>
+          </p>
+        </div>
       }
     >
       <form onSubmit={handleSubmit} className="card flex flex-col gap-4 p-6">
