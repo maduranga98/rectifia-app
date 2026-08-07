@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ReporterLayout from '../components/shared/ReporterLayout'
 import CategorySelect from '../components/intake/CategorySelect'
+import DataHandlingNotice from '../components/intake/DataHandlingNotice'
 import QuestionnaireForm from '../components/intake/QuestionnaireForm'
 import CrisisResources from '../components/shared/CrisisResources'
 import CaseNotificationOptIn from '../components/intake/CaseNotificationOptIn'
@@ -53,6 +54,13 @@ const REPORTER_TIERS = [
 function Submit() {
   const { companySlug } = useParams()
   const [category, setCategory] = useState(null)
+  // Null until the reporter ticks the data-handling notice at category
+  // selection; once set, { acknowledged: true, acknowledgedAt, policyVersion }
+  // - see DataHandlingNotice.jsx. This exact shape is what gates advancing
+  // past step 0 (via CategorySelect's canContinue) and is sent to
+  // submitCase verbatim, so the record on the case document is the same
+  // object the reporter actually acknowledged, not a re-derived one.
+  const [acknowledgment, setAcknowledgment] = useState(null)
   // The completed questionnaire, held in this tab only, between the answers
   // being finished and the tier being chosen. Nothing is filed until both.
   const [pending, setPending] = useState(null)
@@ -110,6 +118,10 @@ function Submit() {
         ...pending,
         companySlug,
         tier: chosenTier,
+        // Guaranteed non-null here: step 0's Continue button is gated on it
+        // (see CategorySelect's canContinue), so there is no path from
+        // category selection to this step without it.
+        dataHandlingAcknowledgment: acknowledgment,
       })
       setCompleted({ caseId, passcode, responseCount: pending.responses.length })
     } catch (err) {
@@ -226,7 +238,11 @@ function Submit() {
       }
       footerNote="Rectifia does not record your name, email, or IP address with this report unless you choose to include it in an answer."
     >
-      {step === 0 && <CategorySelect onSelect={setCategory} />}
+      {step === 0 && (
+        <CategorySelect onSelect={setCategory} canContinue={Boolean(acknowledgment)}>
+          <DataHandlingNotice acknowledgment={acknowledgment} onChange={setAcknowledgment} />
+        </CategorySelect>
+      )}
 
       {step === 1 && (
         <div className="flex flex-col gap-5">
@@ -413,6 +429,7 @@ function Submit() {
                   setTier('')
                   setFileError(null)
                   setCategory(null)
+                  setAcknowledgment(null)
                   setCopied(false)
                   setCopyFailed(false)
                   setCrisisTriggered(false)

@@ -7,11 +7,18 @@ import Icon from '../ui/Icon'
 // so the options are rendered as full selectable cards - a radio list this
 // consequential should be readable at arm's length, not squeezed into a
 // dropdown.
-function CategorySelect({ onSelect }) {
+//
+// `children`, rendered between the category list and the Continue button, is
+// where Submit.jsx mounts DataHandlingNotice - this is the reporter's last
+// stop before they start typing case content, which is why the notice lives
+// here rather than at final submit. `canContinue` (default true) lets that
+// notice gate advancing past this step without CategorySelect needing to
+// know anything about what it's gating on.
+function CategorySelect({ onSelect, canContinue = true, children }) {
   const [selected, setSelected] = useState(null)
 
   function handleContinue() {
-    if (!selected) return
+    if (!selected || !canContinue) return
     onSelect?.(selected)
   }
 
@@ -54,15 +61,22 @@ function CategorySelect({ onSelect }) {
         })}
       </div>
 
-      <Button
-        variant="primary"
-        size="lg"
-        onClick={handleContinue}
-        disabled={!selected}
-        className="self-start"
-      >
-        Continue
-      </Button>
+      {children}
+
+      <div className="flex flex-col gap-1.5">
+        <Button
+          variant="primary"
+          size="lg"
+          onClick={handleContinue}
+          disabled={!selected || !canContinue}
+          className="self-start"
+        >
+          Continue
+        </Button>
+        {selected && !canContinue && (
+          <p className="text-xs text-muted">Acknowledge the notice above to continue.</p>
+        )}
+      </div>
     </div>
   )
 }
