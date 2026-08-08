@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Button from '../ui/Button'
 import CrisisResources from './CrisisResources'
@@ -45,9 +45,43 @@ function ReporterLayout({
   const navigate = useNavigate()
   // A persistent, low-key way to reach support resources from every
   // reporter-facing screen - no trigger has to fire, and nothing has to be
-  // answered first. It expands a panel in place; it is never a modal that has
-  // to be dismissed, and opening it is not recorded anywhere.
+  // answered first. It floats over the page as a dismissible panel; it is
+  // never a modal that has to be dismissed, and opening it is not recorded
+  // anywhere.
   const [showSupport, setShowSupport] = useState(false)
+  const supportPanelRef = useRef(null)
+  const supportToggleRef = useRef(null)
+
+  // Dismiss on outside click or Escape, same as any other lightweight
+  // disclosure panel - it stays reachable from the toggle by keyboard either
+  // way since the toggle itself is a plain <button>.
+  useEffect(() => {
+    if (!showSupport) return undefined
+
+    function handlePointerDown(event) {
+      if (
+        supportPanelRef.current?.contains(event.target) ||
+        supportToggleRef.current?.contains(event.target)
+      ) {
+        return
+      }
+      setShowSupport(false)
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setShowSupport(false)
+        supportToggleRef.current?.focus()
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showSupport])
 
   // A plain <Link> can't ask first, and the answers live in React state that
   // unmounting would drop silently - so this navigates by hand, behind a
@@ -59,11 +93,12 @@ function ReporterLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="border-b border-line bg-surface">
+      <header className="relative border-b border-line bg-surface">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4">
           <Logo size="md" />
           <div className="flex items-center gap-3">
             <button
+              ref={supportToggleRef}
               type="button"
               onClick={() => setShowSupport((open) => !open)}
               className="text-xs text-muted underline hover:text-charcoal"
@@ -82,13 +117,22 @@ function ReporterLayout({
             </span>
           </div>
         </div>
-        {/* Expands in place, below the chrome and above the page. It pushes the
-            page down rather than covering it - the reporter is never blocked
-            from what they were doing. The layout never knows a jurisdiction, so
+        {/* Floats over the page, anchored below the chrome, instead of
+            expanding in the document flow - it used to push <main> down,
+            which meant a reporter scrolled up mid-form to open it and watched
+            their place in the form jump beneath them. As an absolutely
+            positioned overlay it covers nothing the reporter needs and never
+            blocks them from what they were doing; it stays dismissible via
+            outside click or Escape. The layout never knows a jurisdiction, so
             every regional route plus the international fallback is offered. */}
         {showSupport && (
-          <div className="mx-auto w-full max-w-3xl px-5 pb-4">
-            <CrisisResources />
+          <div
+            ref={supportPanelRef}
+            className="absolute inset-x-0 top-full z-20 border-b border-line bg-surface shadow-lg"
+          >
+            <div className="mx-auto w-full max-w-3xl px-5 py-4">
+              <CrisisResources />
+            </div>
           </div>
         )}
       </header>
@@ -146,11 +190,26 @@ function ReporterLayout({
             <p className="max-w-xl text-xs leading-relaxed text-muted">{footerNote}</p>
           )}
           <nav className="flex items-center gap-4 text-xs text-muted">
-            <Link to="/privacy" className="underline hover:text-charcoal">
-              Privacy policy
+            {/* target="_blank" - a same-tab Link would unmount this page and
+                drop whatever the reporter has already entered into the form,
+                held only in React state. Opening in a new tab keeps that
+                state intact with nothing to warn about, unlike the
+                unsavedWarning confirm used for trackExistingCase(). */}
+            <Link
+              to="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-charcoal"
+            >
+              Privacy policy <span className="text-muted">(opens in a new tab)</span>
             </Link>
-            <Link to="/terms" className="underline hover:text-charcoal">
-              Terms of use
+            <Link
+              to="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-charcoal"
+            >
+              Terms of use <span className="text-muted">(opens in a new tab)</span>
             </Link>
           </nav>
         </div>

@@ -41,12 +41,10 @@ function DataHandlingNotice({ acknowledgment, onChange }) {
 
       <ul className="flex flex-col gap-1.5 text-sm leading-relaxed text-muted">
         <li>
-          Your answers are sent to an AI system (Anthropic) that scores your report and helps
-          route it to the right handler.
-        </li>
-        <li>
-          The AI never decides your case&apos;s outcome — every action it proposes is reviewed
-          and decided by a person.
+          Your answers are processed by an AI system (Anthropic) that structures your report,
+          scores its urgency and detail completeness, and suggests where it should be routed — it
+          never determines whether policy was broken and never decides your case&apos;s outcome;
+          that is always a person&apos;s call.
         </li>
         <li>
           Choosing to stay anonymous later means no name, email, or phone number is ever
