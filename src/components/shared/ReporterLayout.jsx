@@ -101,13 +101,13 @@ function ReporterLayout({
               ref={supportToggleRef}
               type="button"
               onClick={() => setShowSupport((open) => !open)}
-              className="text-xs text-muted underline hover:text-charcoal"
+              className="min-h-11 px-1 text-xs text-muted underline hover:text-charcoal"
               aria-expanded={showSupport}
             >
               Need support now?
             </button>
             {!isTrackingRoute(pathname) && (
-              <Button size="sm" icon="search" onClick={trackExistingCase}>
+              <Button size="sm" icon="search" className="min-h-11" onClick={trackExistingCase}>
                 Track an existing case
               </Button>
             )}
@@ -139,37 +139,57 @@ function ReporterLayout({
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-8 sm:py-12">
         {steps && (
-          <ol className="mb-8 flex items-center gap-2">
-            {steps.map((step, index) => {
-              const done = index < currentStep
-              const active = index === currentStep
-              return (
-                <li key={step} className="flex flex-1 items-center gap-2">
-                  <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
-                      done
-                        ? 'bg-low text-white'
-                        : active
-                          ? 'bg-navy text-white'
-                          : 'bg-line-soft text-muted'
-                    }`}
-                  >
-                    {done ? <Icon name="check" className="h-3.5 w-3.5" strokeWidth={3} /> : index + 1}
-                  </span>
-                  <span
-                    className={`hidden text-xs font-medium sm:block ${
-                      active ? 'text-charcoal' : 'text-muted'
-                    }`}
-                  >
-                    {step}
-                  </span>
-                  {index < steps.length - 1 && (
-                    <span className="h-px flex-1 bg-line" aria-hidden="true" />
-                  )}
-                </li>
-              )
-            })}
-          </ol>
+          <div className="mb-8 flex flex-col gap-2.5">
+            {/* Named explicitly rather than left to the trail below - "Step 2
+                of 4: Details, 2 to go" answers "how much is left" in one
+                glance, which the numbered circles alone don't for someone
+                skimming under stress. */}
+            <div className="flex items-baseline justify-between gap-2 text-xs">
+              <span className="font-medium text-charcoal">
+                Step {currentStep + 1} of {steps.length}: {steps[currentStep]}
+              </span>
+              <span className="shrink-0 text-muted">
+                {currentStep >= steps.length - 1
+                  ? 'Last step'
+                  : `${steps.length - currentStep - 1} to go`}
+              </span>
+            </div>
+            <ol className="flex items-center gap-2">
+              {steps.map((step, index) => {
+                const done = index < currentStep
+                const active = index === currentStep
+                return (
+                  <li key={step} className="flex flex-1 items-center gap-2">
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
+                        done
+                          ? 'bg-low text-white'
+                          : active
+                            ? 'bg-navy text-white ring-2 ring-navy-200'
+                            : 'bg-line-soft text-muted'
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {done ? <Icon name="check" className="h-3.5 w-3.5" strokeWidth={3} /> : index + 1}
+                    </span>
+                    <span
+                      className={`hidden text-xs font-medium sm:block ${
+                        active ? 'text-charcoal' : 'text-muted'
+                      }`}
+                    >
+                      {step}
+                    </span>
+                    {index < steps.length - 1 && (
+                      <span
+                        className={`h-px flex-1 ${done ? 'bg-low' : 'bg-line'}`}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
+          </div>
         )}
 
         <div className="mb-6">

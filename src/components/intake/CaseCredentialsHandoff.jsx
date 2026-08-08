@@ -52,6 +52,25 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
     }
   }
 
+  // Deliberately just the three values, one per line - nothing here should
+  // name Rectifia, the employer, or the report category, since this file is
+  // as likely to land in a company-managed Downloads folder as anywhere
+  // private. The filename carries the same restriction: no "case", "report",
+  // "rectifia", or company name, since a filename is readable by anything
+  // that indexes a Downloads folder without ever opening the file.
+  function downloadDetails() {
+    const text = [caseId, passcode, trackingUrl].filter(Boolean).join('\n')
+    const blob = new Blob([text], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'personal-notes.txt'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <Alert variant="success" title="Case filed">
@@ -115,8 +134,11 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
         </dl>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button icon="document" variant="primary" onClick={copyAll}>
+          <Button icon="document" variant="primary" className="min-h-11" onClick={copyAll}>
             {copied ? 'Copied' : 'Copy all details'}
+          </Button>
+          <Button icon="document" className="min-h-11" onClick={downloadDetails}>
+            Download to this device
           </Button>
           {copyFailed && (
             <span className="text-xs text-muted">
@@ -124,6 +146,14 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
             </span>
           )}
         </div>
+        {/* The tradeoff has to be legible before the click, not discovered
+            after - so it sits directly under the button that causes it, not
+            buried in the warning card below. */}
+        <p className="mt-2 text-xs leading-relaxed text-muted">
+          Saves a plain-text file to this device&apos;s usual downloads location. On a
+          company-managed device, that file can be visible to IT, endpoint monitoring, or backup
+          tools — including your employer&apos;s, if that&apos;s who this report is about.
+        </p>
       </Card>
 
       <Card title="Before you close this">
@@ -135,7 +165,8 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
           <li>
             Don&apos;t keep a copy in your own notes, inbox, or a shared drive — a passcode
             sitting in a mailbox is a way into someone&apos;s case that outlives this
-            conversation.
+            conversation. If you use the download option above to hand these off, delete that
+            file the same way once the reporter has the details, not just from your notes.
           </li>
           {tier === 'confidential' && (
             <li>
