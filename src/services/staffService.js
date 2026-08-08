@@ -3,6 +3,7 @@ import { auth, functions } from './firebase'
 
 const inviteStaffCallable = httpsCallable(functions, 'inviteStaff')
 const updateStaffDepartmentsCallable = httpsCallable(functions, 'updateStaffDepartments')
+const removeStaffMemberCallable = httpsCallable(functions, 'removeStaffMember')
 
 // Invites a new staff member: creates their auth account, stamps either a
 // fixed role or a customRoleId (never both) plus companyId as custom claims,
@@ -38,5 +39,19 @@ export async function updateStaffDepartments({ companyId, staffId, departments }
   if (auth.currentUser) {
     await auth.currentUser.getIdToken(true)
   }
+  return result.data
+}
+
+// Removes a staff member's account entirely - Auth user, custom claims, and
+// the Firestore record - never a bare `deleteDoc` on the staff doc (that
+// would leave the Auth account and its claims intact; see
+// functions/src/staff/removeStaffMember.js). The callable itself refuses if
+// the target is the last active Company Admin or is still the assigned
+// handler on an open case, surfacing either as an ordinary thrown Error.
+export async function removeStaffMember({ companyId, staffId }) {
+  if (!companyId || !staffId) {
+    throw new Error('companyId and staffId are required')
+  }
+  const result = await removeStaffMemberCallable({ companyId, staffId })
   return result.data
 }

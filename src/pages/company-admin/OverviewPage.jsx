@@ -68,13 +68,10 @@ function BreakdownList({ entries, labelFor = (key) => key, toneFor = () => 'tone
   )
 }
 
-// One postable address: a QR code beside the literal URL, both generated
-// client-side from the current origin so they point at wherever the app is
-// actually served (localhost in dev, the real domain in production) rather
-// than a hard-coded host.
-function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
+// The QR half of a ShareableLink - split out so the tracking address below
+// can skip it entirely rather than rendering and then hiding it.
+function ShareableLinkQr({ url, qrAlt, downloadName }) {
   const [qrDataUrl, setQrDataUrl] = useState(null)
-  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!url) return undefined
@@ -91,6 +88,46 @@ function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
     }
   }, [url])
 
+  return (
+    <div className="shrink-0">
+      {qrDataUrl ? (
+        <>
+          <img
+            src={qrDataUrl}
+            alt={qrAlt}
+            className="h-40 w-40 rounded-lg border border-line bg-white p-2"
+          />
+          <a
+            href={qrDataUrl}
+            download={downloadName}
+            className="btn btn-secondary mt-2 flex w-40 justify-center"
+          >
+            Download QR
+          </a>
+        </>
+      ) : (
+        <div className="flex h-40 w-40 items-center justify-center rounded-lg border border-line bg-line-soft text-xs text-muted">
+          Generating…
+        </div>
+      )}
+    </div>
+  )
+}
+
+// One shareable address: the literal URL plus a copy button, and - only for
+// the genuinely postable one - a QR code beside it, generated client-side
+// from the current origin so it points at wherever the app is actually
+// served (localhost in dev, the real domain in production) rather than a
+// hard-coded host.
+//
+// showQr defaults on: only the tracking link (below) turns it off. A
+// reporter coming back to check a case they already filed has the Case ID
+// and passcode written down already - they're at a desk reading a message,
+// not photographing a poster - so that QR was never anything but a second
+// copy of the same code the "File a report" card already prints.
+function ShareableLink({ heading, description, url, qrAlt, downloadName, showQr = true }) {
+  const [copied, setCopied] = useState(false)
+
   async function copyLink() {
     if (!url) return
     try {
@@ -105,19 +142,7 @@ function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-      <div className="shrink-0">
-        {qrDataUrl ? (
-          <img
-            src={qrDataUrl}
-            alt={qrAlt}
-            className="h-40 w-40 rounded-lg border border-line bg-white p-2"
-          />
-        ) : (
-          <div className="flex h-40 w-40 items-center justify-center rounded-lg border border-line bg-line-soft text-xs text-muted">
-            Generating…
-          </div>
-        )}
-      </div>
+      {showQr && <ShareableLinkQr url={url} qrAlt={qrAlt} downloadName={downloadName} />}
       <div className="flex min-w-0 flex-col gap-2">
         <h4 className="text-sm font-semibold text-charcoal">{heading}</h4>
         <p className="text-sm text-muted">{description}</p>
@@ -126,11 +151,6 @@ function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
         </code>
         <div className="flex flex-wrap gap-2">
           <Button onClick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
-          {qrDataUrl && (
-            <a href={qrDataUrl} download={downloadName} className="btn btn-secondary">
-              Download QR
-            </a>
-          )}
         </div>
       </div>
     </div>
@@ -205,9 +225,10 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
       ) : (
         <div className="flex flex-col gap-6">
           <p className="text-sm text-muted">
-            Print or post both of these together - one for filing, one for coming back. Neither
-            requires a login. Reporters have no account and no password reset, so the tracking
-            address is the only route back to a case they have already filed.
+            Print or post the QR below to invite reports - it&apos;s the only one meant for a
+            poster. Neither link requires a login; the tracking address is the only route back to
+            a case a reporter has already filed, once they have the Case ID and passcode issued at
+            submission.
           </p>
 
           <ShareableLink
@@ -224,8 +245,7 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
             heading="Check a report you already filed"
             description="Opens the case tracking form, where a reporter enters the Case ID and passcode issued at submission to read replies and respond."
             url={trackingUrl}
-            qrAlt="QR code linking to the case tracking form"
-            downloadName="case-tracking-qr.png"
+            showQr={false}
           />
         </div>
       )}

@@ -12,7 +12,6 @@ import CasesPage from './company-admin/CasesPage'
 import DepartmentsPage from './company-admin/DepartmentsPage'
 import PoliciesPage from './company-admin/PoliciesPage'
 import StaffPage from './company-admin/StaffPage'
-import RoleBuilder from '../components/dashboard/RoleBuilder'
 import EmployeesPage from './company-admin/EmployeesPage'
 import PulseQuestionsPage from './company-admin/PulseQuestionsPage'
 import RoutingRulesPage from './company-admin/RoutingRulesPage'
@@ -61,37 +60,89 @@ import PulseTrendsPage from './staff/PulseTrendsPage'
 // carries composable keys, so there is no key that could ever open it to a
 // custom role, by design (RoleBuilder.jsx's allowlist and this list must
 // agree on that).
+// `section` groups the rendered nav (AppShell's NavItems) without changing
+// what filterNavByFlags/filterNavByAccess operate over - both still run on
+// the flat array below, so a route being gated in or out never has to know
+// about grouping.
 const NAV_ITEMS = [
-  { to: '/admin/overview', label: 'Overview', icon: 'overview' },
-  { to: '/admin/cases', label: 'Cases', icon: 'cases' },
-  { to: '/admin/analytics', label: 'Analytics', icon: 'sparkle' },
-  { to: '/admin/departments', label: 'Departments', icon: 'departments', permission: 'departments' },
-  { to: '/admin/policies', label: 'Policies', icon: 'document', permission: 'policyManagement' },
-  { to: '/admin/staff', label: 'Staff', icon: 'staff', permission: 'staffManagement' },
-  { to: '/admin/roles', label: 'Custom roles', icon: 'staff' },
-  { to: '/admin/employees', label: 'Employees', icon: 'pulse', flag: 'pulseCheck' },
-  { to: '/admin/routing', label: 'Routing rules', icon: 'routing', permission: 'routingRules' },
-  { to: '/admin/billing', label: 'Billing', icon: 'billing', permission: 'billingView' },
+  { to: '/admin/overview', label: 'Overview', icon: 'overview', section: 'Cases' },
+  { to: '/admin/cases', label: 'Cases', icon: 'cases', section: 'Cases' },
+  { to: '/admin/analytics', label: 'Analytics', icon: 'sparkle', section: 'Cases' },
+  {
+    to: '/admin/departments',
+    label: 'Departments',
+    icon: 'departments',
+    permission: 'departments',
+    section: 'Organization',
+  },
+  {
+    to: '/admin/staff',
+    label: 'Staff',
+    icon: 'staff',
+    permission: 'staffManagement',
+    section: 'Organization',
+  },
+  { to: '/admin/employees', label: 'Employees', icon: 'pulse', flag: 'pulseCheck', section: 'Organization' },
+  {
+    to: '/admin/routing',
+    label: 'Routing rules',
+    icon: 'routing',
+    permission: 'routingRules',
+    section: 'Organization',
+  },
+  {
+    to: '/admin/policies',
+    label: 'Policies',
+    icon: 'document',
+    permission: 'policyManagement',
+    section: 'Policy & compliance',
+  },
   // Sits next to Settings deliberately: pulseCheckCadence (how often check-ins
   // go out) lives there, and this is what those check-ins ask.
-  { to: '/admin/pulse-questions', label: 'Pulse questions', icon: 'pulse', flag: 'pulseCheck' },
-  { to: '/admin/settings', label: 'Settings', icon: 'settings', permission: 'complianceConfig' },
-  { to: '/admin/retention', label: 'Data retention', icon: 'clock', permission: 'retentionSettings' },
-  // Module 25's opt-in control. Deliberately at the end of the nav rather
-  // than under Settings: opting in publishes an aggregate representation of
-  // this company's closed cases to every other opted-in reader, which is
-  // consequential enough to be its own decision rather than a checkbox on a
-  // settings screen.
-  { to: '/admin/benchmark', label: 'Benchmark pool', icon: 'overview', flag: 'benchmarkPool' },
+  {
+    to: '/admin/pulse-questions',
+    label: 'Pulse questions',
+    icon: 'pulse',
+    flag: 'pulseCheck',
+    section: 'Policy & compliance',
+  },
+  {
+    to: '/admin/retention',
+    label: 'Data retention',
+    icon: 'clock',
+    permission: 'retentionSettings',
+    section: 'Policy & compliance',
+  },
+  // Module 25's opt-in control. Deliberately not under Settings: opting in
+  // publishes an aggregate representation of this company's closed cases to
+  // every other opted-in reader, which is consequential enough to be its own
+  // decision rather than a checkbox on a settings screen.
+  {
+    to: '/admin/benchmark',
+    label: 'Benchmark pool',
+    icon: 'overview',
+    flag: 'benchmarkPool',
+    section: 'Policy & compliance',
+  },
+  { to: '/admin/billing', label: 'Billing', icon: 'billing', permission: 'billingView', section: 'Account' },
+  {
+    to: '/admin/settings',
+    label: 'Settings',
+    icon: 'settings',
+    permission: 'complianceConfig',
+    section: 'Account',
+  },
   // The one permission whose page otherwise lives under /dashboard (the
   // Manager's "Team wellness"); pulseAggregateView opens this /admin
-  // counterpart, which renders the same component.
+  // counterpart, which renders the same component. No section of its own -
+  // it rides along wherever it's granted, same as before grouping existed.
   {
     to: '/admin/wellness',
     label: 'Team wellness',
     icon: 'pulse',
     flag: 'pulseCheck',
     permission: 'pulseAggregateView',
+    section: 'Account',
   },
 ]
 
@@ -116,7 +167,7 @@ const PAGE_TITLES = {
   departments: 'Departments',
   policies: 'Policies',
   staff: 'Staff',
-  roles: 'Custom roles',
+  roles: 'Staff',
   employees: 'Employees',
   'pulse-questions': 'Pulse check questions',
   routing: 'Routing rules',
@@ -212,7 +263,16 @@ function Admin() {
             path="staff"
             element={gated(<StaffPage companyId={companyId} />, { permission: 'staffManagement' })}
           />
-          <Route path="roles" element={gated(<RoleBuilder companyId={companyId} />)} />
+          {/* Custom roles moved into StaffPage as a tab. No `permission`
+              option here, same as this route carried before the move - it
+              was Company Admin-only then (RoleBuilder had no permission gate
+              of its own) and stays Company Admin-only now, matching the tab
+              itself being hidden from every staffManagement custom-role
+              holder (see StaffPage's own comment on why). The route stays
+              live and lands on that tab so existing bookmarks and deep links
+              to /admin/roles keep working for the accounts that could always
+              reach it. */}
+          <Route path="roles" element={gated(<StaffPage companyId={companyId} initialTab="roles" />)} />
           <Route
             path="employees"
             element={gated(<EmployeesPage companyId={companyId} />, { flag: 'pulseCheck' })}
