@@ -19,6 +19,7 @@ import Logo from '../components/ui/Logo'
 function SuperAdminLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordVisible, setPasswordVisible] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
@@ -94,15 +95,26 @@ function SuperAdminLoginPage() {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-navy-200">Password</span>
-            <input
-              type="password"
-              required
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={darkField}
-            />
+            <div className="relative">
+              <input
+                type={passwordVisible ? 'text' : 'password'}
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={`${darkField} pr-10`}
+              />
+              <button
+                type="button"
+                onClick={() => setPasswordVisible((v) => !v)}
+                aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                aria-pressed={passwordVisible}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-navy-300 transition-colors hover:text-white"
+              >
+                <Icon name={passwordVisible ? 'eyeOff' : 'eye'} className="h-4 w-4" />
+              </button>
+            </div>
           </label>
 
           {error && (

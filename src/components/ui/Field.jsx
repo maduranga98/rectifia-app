@@ -1,4 +1,5 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
+import Icon from './Icon'
 
 // Label + control + hint/error, wired together. The `id`/`htmlFor` pairing
 // and the aria-describedby link are generated here so that no form in the
@@ -30,10 +31,34 @@ function FieldShell({ label, hint, error, required, htmlFor, describedBy, childr
   )
 }
 
-export function Input({ label, hint, error, className = '', id, ...props }) {
+// A password field gets a trailing show/hide button inside itself rather
+// than a second control next to it - `type` is swapped between 'password'
+// and 'text' on the same input, so autoComplete (already correct per-form:
+// 'current-password', 'new-password', etc.) travels with it undisturbed.
+// Hidden is the default on every render, including after a value changes,
+// since this is local UI state, not something a caller has a reason to
+// control.
+function PasswordToggle({ visible, onToggle }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={visible ? 'Hide password' : 'Show password'}
+      aria-pressed={visible}
+      className="absolute inset-y-0 right-0 flex items-center px-3 text-subtle transition-colors hover:text-charcoal"
+    >
+      <Icon name={visible ? 'eyeOff' : 'eye'} className="h-4 w-4" />
+    </button>
+  )
+}
+
+export function Input({ label, hint, error, className = '', id, type, ...props }) {
   const generatedId = useId()
   const fieldId = id ?? generatedId
   const describedBy = `${fieldId}-desc`
+  const [visible, setVisible] = useState(false)
+  const isPassword = type === 'password'
+  const resolvedType = isPassword ? (visible ? 'text' : 'password') : type
 
   return (
     <FieldShell
@@ -44,13 +69,17 @@ export function Input({ label, hint, error, className = '', id, ...props }) {
       htmlFor={fieldId}
       describedBy={describedBy}
     >
-      <input
-        id={fieldId}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={hint || error ? describedBy : undefined}
-        className={`field ${error ? 'border-critical' : ''} ${className}`}
-        {...props}
-      />
+      <div className="relative">
+        <input
+          id={fieldId}
+          type={resolvedType}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={hint || error ? describedBy : undefined}
+          className={`field ${error ? 'border-critical' : ''} ${isPassword ? 'pr-10' : ''} ${className}`}
+          {...props}
+        />
+        {isPassword && <PasswordToggle visible={visible} onToggle={() => setVisible((v) => !v)} />}
+      </div>
     </FieldShell>
   )
 }

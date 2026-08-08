@@ -16,40 +16,80 @@ import Logo from '../ui/Logo'
 // Company Admin's sub-pages are real routes, the Dashboard's role views are
 // local state, and both need the same rail.
 
-function NavItems({ items, activeId, onSelect, onNavigate }) {
+function NavLinkOrButton({ item, activeId, onSelect, onNavigate }) {
   const base =
     'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors'
   const idle = 'text-navy-200 hover:bg-white/8 hover:text-white'
   const active = 'bg-white/12 text-white shadow-[inset_2px_0_0_0_var(--color-gold)]'
 
+  return item.to ? (
+    <NavLink
+      to={item.to}
+      onClick={onNavigate}
+      className={({ isActive }) => `${base} ${isActive ? active : idle}`}
+    >
+      {item.icon && <Icon name={item.icon} />}
+      <span className="truncate">{item.label}</span>
+    </NavLink>
+  ) : (
+    <button
+      type="button"
+      onClick={() => {
+        onSelect?.(item.id)
+        onNavigate?.()
+      }}
+      className={`${base} w-full text-left ${item.id === activeId ? active : idle}`}
+    >
+      {item.icon && <Icon name={item.icon} />}
+      <span className="truncate">{item.label}</span>
+    </button>
+  )
+}
+
+// Items carrying a `section` are rendered under a small uppercase label,
+// grouped in the order sections first appear - Admin.jsx's NAV_ITEMS is the
+// only caller that sets it. Dashboard.jsx's flat list has no `section` on
+// any item, so every item falls into a single unlabelled group and renders
+// exactly as before.
+function groupBySection(items) {
+  const groups = []
+  const bySection = new Map()
+  for (const item of items) {
+    const key = item.section ?? null
+    let group = bySection.get(key)
+    if (!group) {
+      group = { section: key, items: [] }
+      bySection.set(key, group)
+      groups.push(group)
+    }
+    group.items.push(item)
+  }
+  return groups
+}
+
+function NavItems({ items, activeId, onSelect, onNavigate }) {
+  const groups = groupBySection(items)
+
   return (
-    <nav className="flex flex-col gap-0.5" aria-label="Main">
-      {items.map((item) =>
-        item.to ? (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            onClick={onNavigate}
-            className={({ isActive }) => `${base} ${isActive ? active : idle}`}
-          >
-            {item.icon && <Icon name={item.icon} />}
-            <span className="truncate">{item.label}</span>
-          </NavLink>
-        ) : (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => {
-              onSelect?.(item.id)
-              onNavigate?.()
-            }}
-            className={`${base} w-full text-left ${item.id === activeId ? active : idle}`}
-          >
-            {item.icon && <Icon name={item.icon} />}
-            <span className="truncate">{item.label}</span>
-          </button>
-        )
-      )}
+    <nav className="flex flex-col gap-4" aria-label="Main">
+      {groups.map((group, index) => (
+        <div key={group.section ?? `ungrouped-${index}`} className="flex flex-col gap-0.5">
+          {group.section && (
+            <p className="px-3 pb-1 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-navy-300">
+              {group.section}
+            </p>
+          )}
+          {group.items.map((item) => (
+            <NavLinkOrButton
+              key={item.to ?? item.id}
+              item={item}
+              activeId={activeId}
+              onSelect={onSelect}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      ))}
     </nav>
   )
 }

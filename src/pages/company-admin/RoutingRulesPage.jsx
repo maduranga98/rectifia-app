@@ -317,11 +317,6 @@ function RoutingRulesPage({ companyId }) {
 
             <Select
               label="Department"
-              hint={
-                ruleForm.department === 'unspecified'
-                  ? 'Reports where the reporter did not say which department the involved person works in.'
-                  : undefined
-              }
               value={ruleForm.department}
               onChange={(e) => setRuleForm({ ...ruleForm, department: e.target.value })}
             >
@@ -361,6 +356,18 @@ function RoutingRulesPage({ companyId }) {
               Save rule
             </Button>
           </form>
+
+          {/* Fixed below the form row, never inside it - the row uses
+              lg:items-end to align every control's bottom edge with the
+              Save button, and a hint that only sometimes renders inside the
+              Department field used to grow that field and shift the whole
+              row when it appeared. A constant min-height here means the
+              text appearing or disappearing never moves anything above it. */}
+          <p className="mt-3 min-h-[1rem] text-xs text-muted">
+            {ruleForm.department === 'unspecified'
+              ? 'Unspecified: reports where the reporter did not say which department the involved person works in.'
+              : ''}
+          </p>
         </Card>
       </div>
 
