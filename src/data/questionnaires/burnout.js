@@ -66,6 +66,7 @@ const burnoutQuestions = [
     options: null,
     severityWeight: null,
     triggersCrisisCheck: true,
+    optional: true,
   },
 ]
 

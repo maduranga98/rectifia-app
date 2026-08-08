@@ -86,6 +86,7 @@ const retaliationQuestions = [
     options: null,
     dynamicOptions: 'companyDepartments',
     severityWeight: null,
+    optional: true,
   },
   {
     id: 'subject_role',
@@ -102,6 +103,7 @@ const retaliationQuestions = [
       { value: 'unspecified', label: "I'd rather not say", severityWeight: null },
     ],
     severityWeight: null,
+    optional: true,
   },
   {
     id: 'retaliation_details',
@@ -109,6 +111,7 @@ const retaliationQuestions = [
     type: 'text',
     options: null,
     severityWeight: null,
+    optional: true,
   },
 ]
 

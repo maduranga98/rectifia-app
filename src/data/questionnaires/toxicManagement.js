@@ -94,6 +94,7 @@ const toxicManagementQuestions = [
     type: 'text',
     options: null,
     severityWeight: null,
+    optional: true,
   },
 ]
 

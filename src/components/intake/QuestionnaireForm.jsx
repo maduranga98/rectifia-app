@@ -24,6 +24,12 @@ function isAnswered(value) {
   return Array.isArray(value) ? value.length > 0 : value !== undefined && value !== ''
 }
 
+// A quiet, non-badge marker so a reporter can tell a question is optional
+// before they try to answer it, not by hitting a validation error at submit.
+function OptionalMarker() {
+  return <span className="ml-1.5 text-xs font-normal text-muted">Optional</span>
+}
+
 // The sentinel option value for a companyDepartments select's "I'd rather not
 // say" choice. Never persisted - the select's onChange below stores `null` as
 // the answer instead, the same value an unanswered department question would
@@ -137,7 +143,9 @@ function QuestionnaireForm({
     event.preventDefault()
     setError(null)
 
-    const requiredMissing = questions.some((question) => !isAnswered(answers[question.id]))
+    const requiredMissing = questions
+      .filter((question) => !question.optional)
+      .some((question) => !isAnswered(answers[question.id]))
     if (requiredMissing) {
       setError('Please answer every question before submitting.')
       return
@@ -194,7 +202,12 @@ function QuestionnaireForm({
             <Select
               key={question.id}
               id={question.id}
-              label={question.text}
+              label={
+                <>
+                  {question.text}
+                  {question.optional && <OptionalMarker />}
+                </>
+              }
               value={selectValue}
               onChange={(e) => {
                 const raw = e.target.value
@@ -220,7 +233,10 @@ function QuestionnaireForm({
         if (question.type === 'multiselect') {
           return (
             <fieldset key={question.id} className="flex flex-col gap-2">
-              <legend className="text-sm font-medium text-charcoal">{question.text}</legend>
+              <legend className="text-sm font-medium text-charcoal">
+                {question.text}
+                {question.optional && <OptionalMarker />}
+              </legend>
               <p className="text-xs text-muted">Select all that apply.</p>
               <div className="mt-1 flex flex-col gap-2">
                 {question.options.map((option) => {
@@ -255,6 +271,7 @@ function QuestionnaireForm({
             <div key={question.id} className="flex flex-col gap-2">
               <label htmlFor={question.id} className="text-sm font-medium text-charcoal">
                 {question.text}
+                {question.optional && <OptionalMarker />}
               </label>
               <div className="flex items-center gap-3">
                 <input
@@ -282,7 +299,12 @@ function QuestionnaireForm({
           <Textarea
             key={question.id}
             id={question.id}
-            label={question.text}
+            label={
+              <>
+                {question.text}
+                {question.optional && <OptionalMarker />}
+              </>
+            }
             rows={4}
             value={answers[question.id] ?? ''}
             onChange={(e) => setAnswer(question, e.target.value)}

@@ -72,6 +72,7 @@ const harassmentQuestions = [
     // answer, same as leaving the question unanswered.
     dynamicOptions: 'companyDepartments',
     severityWeight: null,
+    optional: true,
   },
   {
     id: 'subject_role',
@@ -88,6 +89,7 @@ const harassmentQuestions = [
       { value: 'unspecified', label: "I'd rather not say", severityWeight: null },
     ],
     severityWeight: null,
+    optional: true,
   },
   {
     id: 'harassment_witnesses',
@@ -99,6 +101,7 @@ const harassmentQuestions = [
       { value: 'unsure', label: 'Not sure', severityWeight: 0 },
     ],
     severityWeight: null,
+    optional: true,
   },
   {
     id: 'harassment_impact',
@@ -113,6 +116,7 @@ const harassmentQuestions = [
     type: 'text',
     options: null,
     severityWeight: null,
+    optional: true,
   },
 ]
 
