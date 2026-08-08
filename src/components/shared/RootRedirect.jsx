@@ -14,7 +14,7 @@ import { FullPageLoader } from '../ui/Loading'
 // to their case - PublicEntryPage does, without pretending they have an
 // account. Signed-in routing is unchanged.
 function RootRedirect() {
-  const { user, role, isSuperAdmin, loading } = useAuth()
+  const { user, role, customRoleId, permissions, isSuperAdmin, loading } = useAuth()
 
   if (loading) {
     return <FullPageLoader />
@@ -27,6 +27,16 @@ function RootRedirect() {
   // send them straight to their first page rather than through it. /admin
   // itself redirects to overview anyway; naming it here skips that extra hop.
   if (role === ROLES.COMPANY_ADMIN) return <Navigate to="/admin/overview" replace />
+  // A custom-role holder with at least one permission has its surface at
+  // /admin too (whichever permission-gated pages their role unlocks) -
+  // /admin's own index route resolves the correct landing page for them,
+  // same as it does for a Company Admin. A custom-role holder with zero
+  // permissions is deliberately excluded here: /admin's ProtectedRoute would
+  // deny them and bounce to /login, which bounces an already authenticated
+  // user straight back to "/" - an infinite loop. That account falls
+  // through to /dashboard instead, which renders an explanatory message for
+  // exactly this case.
+  if (customRoleId && permissions.length > 0) return <Navigate to="/admin" replace />
 
   return <Navigate to="/dashboard" replace />
 }

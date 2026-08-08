@@ -38,7 +38,12 @@ function ProtectedRoute({
   }
 
   const roleGrant = allowedRoles ? allowedRoles.includes(role) : false
-  const permissionGrant = requiredPermission ? hasPermission(requiredPermission) : false
+  const requiredPermissionKeys = Array.isArray(requiredPermission)
+    ? requiredPermission
+    : requiredPermission
+      ? [requiredPermission]
+      : []
+  const permissionGrant = requiredPermissionKeys.some((key) => hasPermission(key))
   // When neither prop is given, the route only requires sign-in (and super
   // admin membership, if requireSuperAdmin) - preserved exactly as before
   // this module.

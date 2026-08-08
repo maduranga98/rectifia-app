@@ -3,6 +3,7 @@ import { listStaff, updateStaffStatus } from '../../services/routingService'
 import { getCompany } from '../../services/companyService'
 import { updateStaffDepartments } from '../../services/staffService'
 import { listCustomRoles } from '../../services/roleService'
+import { useAuth } from '../../contexts/AuthContext'
 import { ROLES, ROLE_LABELS } from '../../constants/roles'
 import StaffInvite from '../../components/dashboard/StaffInvite'
 import Alert from '../../components/ui/Alert'
@@ -20,7 +21,15 @@ function initials(member) {
 // Roster + status management for companies/{companyId}/staff. Never reads
 // cases/caseMetadata - per Module 2, Company Admin gets structure/people
 // settings only, never case content.
+// inviteStaff and assignStaffRole are both hard-gated on claims.role ===
+// 'companyAdmin' server-side (see functions/src/staff/inviteStaff.js) - a
+// staffManagement permission holder can update status/department/jobTitle
+// only (firestore.rules), never issue an invite or change a role. This is
+// presentation only: hiding the entry point so the page never offers a
+// control that would always be refused server-side.
 function StaffPage({ companyId }) {
+  const { role } = useAuth()
+  const isCompanyAdmin = role === ROLES.COMPANY_ADMIN
   const [staff, setStaff] = useState([])
   const [customRoleNames, setCustomRoleNames] = useState({})
   const [companyDepartments, setCompanyDepartments] = useState([])
@@ -104,7 +113,7 @@ function StaffPage({ companyId }) {
     }
   }
 
-  const inviteButton = (
+  const inviteButton = isCompanyAdmin ? (
     <Button
       variant={showInvite ? 'secondary' : 'primary'}
       icon={showInvite ? 'close' : 'plus'}
@@ -112,7 +121,7 @@ function StaffPage({ companyId }) {
     >
       {showInvite ? 'Cancel' : 'Invite staff'}
     </Button>
-  )
+  ) : null
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
@@ -126,7 +135,7 @@ function StaffPage({ companyId }) {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      {showInvite && (
+      {isCompanyAdmin && showInvite && (
         <StaffInvite
           companyId={companyId}
           onInvited={() => {
