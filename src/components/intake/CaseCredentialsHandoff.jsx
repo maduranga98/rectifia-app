@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
+import { downloadSimplePdf } from '../../utils/simplePdf'
 
 // The one and only time a staff-filed case's credentials are visible.
 //
@@ -69,6 +70,26 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
+  }
+
+  // Same values, same privacy constraints as downloadDetails() above, but as
+  // a PDF the reporter can hand off or keep in a way that reads as a saved
+  // document rather than a stray text file - it's what makes it easy to come
+  // back and check progress later.
+  function downloadPdf() {
+    downloadSimplePdf(
+      [
+        { text: 'Case tracking details', bold: true },
+        '',
+        `Case ID: ${caseId}`,
+        `Passcode: ${passcode}`,
+        trackingUrl ? `Track it here: ${trackingUrl}` : null,
+        '',
+        'Keep these somewhere private. They cannot be reissued - without them',
+        'there is no way back into the case.',
+      ].filter((line) => line !== null),
+      'personal-notes.pdf'
+    )
   }
 
   return (
@@ -139,6 +160,9 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
           </Button>
           <Button icon="document" className="min-h-11" onClick={downloadDetails}>
             Download to this device
+          </Button>
+          <Button icon="document" className="min-h-11" onClick={downloadPdf}>
+            Download as PDF
           </Button>
           {copyFailed && (
             <span className="text-xs text-muted">
