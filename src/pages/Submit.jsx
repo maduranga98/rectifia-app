@@ -8,6 +8,7 @@ import CrisisResources from '../components/shared/CrisisResources'
 import CaseNotificationOptIn from '../components/intake/CaseNotificationOptIn'
 import { CATEGORIES } from '../data/categories'
 import { resolveCompanySlug, submitCase } from '../services/caseAccessService'
+import { downloadSimplePdf } from '../utils/simplePdf'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
@@ -196,6 +197,28 @@ function Submit() {
     }
   }
 
+  // Same three values as the screen itself, saved somewhere a reporter can
+  // find again after closing the tab. Same privacy constraint as
+  // CaseCredentialsHandoff's downloadDetails(): no company name, no report
+  // category, and a filename that doesn't announce what the file is to
+  // anything indexing a Downloads folder.
+  function downloadCredentialsPdf() {
+    if (!completed) return
+    downloadSimplePdf(
+      [
+        { text: 'Case tracking details', bold: true },
+        '',
+        `Case ID: ${completed.caseId}`,
+        `Passcode: ${completed.passcode}`,
+        trackingUrl ? `Track it here: ${trackingUrl}` : null,
+        '',
+        'Keep this somewhere private. These details cannot be reissued - without',
+        'them there is no way back into this case.',
+      ].filter((line) => line !== null),
+      'personal-notes.pdf'
+    )
+  }
+
   const COPY = [
     {
       title: "What's this report about?",
@@ -380,6 +403,9 @@ function Submit() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Button icon="document" onClick={copyTrackingUrl}>
                       {copied ? 'Copied' : 'Copy link'}
+                    </Button>
+                    <Button icon="document" onClick={downloadCredentialsPdf}>
+                      Download as PDF
                     </Button>
                     {copyFailed && (
                       <span className="text-xs text-muted">

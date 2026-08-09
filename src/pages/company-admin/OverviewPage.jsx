@@ -114,18 +114,11 @@ function ShareableLinkQr({ url, qrAlt, downloadName }) {
   )
 }
 
-// One shareable address: the literal URL plus a copy button, and - only for
-// the genuinely postable one - a QR code beside it, generated client-side
-// from the current origin so it points at wherever the app is actually
-// served (localhost in dev, the real domain in production) rather than a
-// hard-coded host.
-//
-// showQr defaults on: only the tracking link (below) turns it off. A
-// reporter coming back to check a case they already filed has the Case ID
-// and passcode written down already - they're at a desk reading a message,
-// not photographing a poster - so that QR was never anything but a second
-// copy of the same code the "File a report" card already prints.
-function ShareableLink({ heading, description, url, qrAlt, downloadName, showQr = true }) {
+// One shareable address: the literal URL plus a copy button, and a QR code
+// beside it, generated client-side from the current origin so it points at
+// wherever the app is actually served (localhost in dev, the real domain in
+// production) rather than a hard-coded host.
+function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
   const [copied, setCopied] = useState(false)
 
   async function copyLink() {
@@ -142,7 +135,7 @@ function ShareableLink({ heading, description, url, qrAlt, downloadName, showQr 
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-      {showQr && <ShareableLinkQr url={url} qrAlt={qrAlt} downloadName={downloadName} />}
+      <ShareableLinkQr url={url} qrAlt={qrAlt} downloadName={downloadName} />
       <div className="flex min-w-0 flex-col gap-2">
         <h4 className="text-sm font-semibold text-charcoal">{heading}</h4>
         <p className="text-sm text-muted">{description}</p>
@@ -157,15 +150,18 @@ function ShareableLink({ heading, description, url, qrAlt, downloadName, showQr 
   )
 }
 
-// The printable/postable reporting addresses for this company. Two of them,
-// because a poster with only the intake link answers half the question: the
-// first QR encodes the public /submit/:companySlug URL an anonymous reporter
-// follows - the same slug the Submit page resolves server-side - and the
-// second encodes /case, where someone who already filed goes back to read
-// replies. A reporter has no account and no email, so the tracking address is
-// the only way back in; posting both together is what makes it findable
-// months later. Nothing here is case content; it's the company's own public
-// addresses rendered as QRs.
+// The printable/postable reporting address for this company: the public
+// /submit/:companySlug URL an anonymous reporter follows - the same slug the
+// Submit page resolves server-side. Nothing here is case content; it's the
+// company's own public address rendered as a QR.
+//
+// The case-tracking address (/case) deliberately isn't posted here - it's
+// not company-scoped (every company shares the same URL, keyed by the Case
+// ID and passcode the reporter holds), so a poster meant to be scanned by
+// this company's employees is the wrong place for it. A reporter reaches it
+// instead from the "Track an existing case" control on every reporter-facing
+// screen (ReporterLayout.jsx) and from the Case ID/passcode screen shown once
+// at submission.
 //
 // A company with no slug isn't stuck waiting on a backfill: this role can
 // allocate one here. The allocation itself is the same platform-wide-unique
@@ -181,10 +177,6 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
   const origin = typeof window !== 'undefined' ? window.location.origin : null
 
   const submitUrl = slug && origin ? `${origin}/submit/${slug}` : null
-  // Not company-scoped: tracking is keyed by the Case ID and passcode the
-  // reporter holds, so there is no slug in this one and every company posts
-  // the same address.
-  const trackingUrl = origin ? `${origin}/case` : null
 
   async function generateLink() {
     if (!company?.id || generating) return
@@ -226,9 +218,7 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
         <div className="flex flex-col gap-6">
           <p className="text-sm text-muted">
             Print or post the QR below to invite reports - it&apos;s the only one meant for a
-            poster. Neither link requires a login; the tracking address is the only route back to
-            a case a reporter has already filed, once they have the Case ID and passcode issued at
-            submission.
+            poster. It requires no login and no name.
           </p>
 
           <ShareableLink
@@ -237,15 +227,6 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
             url={submitUrl}
             qrAlt="QR code linking to the confidential reporting form for this company"
             downloadName="reporting-qr.png"
-          />
-
-          <div className="border-t border-line-soft" />
-
-          <ShareableLink
-            heading="Check a report you already filed"
-            description="Opens the case tracking form, where a reporter enters the Case ID and passcode issued at submission to read replies and respond."
-            url={trackingUrl}
-            showQr={false}
           />
         </div>
       )}

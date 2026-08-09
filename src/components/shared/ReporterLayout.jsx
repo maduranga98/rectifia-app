@@ -124,7 +124,12 @@ function ReporterLayout({
             positioned overlay it covers nothing the reporter needs and never
             blocks them from what they were doing; it stays dismissible via
             outside click or Escape. The layout never knows a jurisdiction, so
-            every regional route plus the international fallback is offered. */}
+            every regional route plus the international fallback is offered.
+            The explicit button below exists alongside outside-click/Escape,
+            not instead of them - a reporter who opened this from a form they
+            were filling in needs a visible, unambiguous way back to it,
+            not just an implicit one that depends on knowing to click outside
+            the panel or press a key. */}
         {showSupport && (
           <div
             ref={supportPanelRef}
@@ -132,6 +137,16 @@ function ReporterLayout({
           >
             <div className="mx-auto w-full max-w-3xl px-5 py-4">
               <CrisisResources />
+              <Button
+                className="mt-4"
+                icon="back"
+                onClick={() => {
+                  setShowSupport(false)
+                  supportToggleRef.current?.focus()
+                }}
+              >
+                Back to the form
+              </Button>
             </div>
           </div>
         )}

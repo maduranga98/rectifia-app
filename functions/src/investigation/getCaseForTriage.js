@@ -12,7 +12,20 @@ const TRIAGE_ACCESS_LOG_COLLECTION = 'triageAccessLog'
 // should go to. Once the case has a handler, the handler owns it, so the two
 // statuses below are the entire window in which this callable will answer at
 // all. 'assigned' and 'closed' are not oversight questions any more.
+//
+// This is HR Coordinator's scope. Company Admin gets a narrower one still -
+// see COMPANY_ADMIN_TRIAGE_ROUTING_REASON below - enforced separately because
+// TRIAGE_ROLES in staffAuth.js only checks role membership, not which case a
+// role-holder is allowed to open.
 const TRIAGE_STATUSES = ['open', 'needs_manual_assignment']
+
+// The one routing reason Company Admin may triage: a gap in their own
+// routing configuration (RoutingRulesPage/CasesPage), never a case still
+// awaiting routing ('open') and never conflict_of_interest, which is exactly
+// the case type Company Admin must never read - see BLOCKED_ROUTING_REASON
+// below, which still applies to Company Admin same as everyone else.
+const COMPANY_ADMIN_TRIAGE_STATUS = 'needs_manual_assignment'
+const COMPANY_ADMIN_TRIAGE_ROUTING_REASON = 'no_routing_rule'
 
 // Mirrors the guard in reassignCase (functions/src/intake/routeCase.js): a
 // conflict-of-interest case is one where the company's own routing target or
@@ -144,6 +157,17 @@ exports.getCaseForTriage = onCall(async (request) => {
       throw new HttpsError(
         'permission-denied',
         'This case is flagged for conflict of interest and can only be read and assigned by a Super Admin'
+      )
+    }
+
+    if (
+      viewerRole === 'companyAdmin' &&
+      (caseData.status !== COMPANY_ADMIN_TRIAGE_STATUS ||
+        caseData.routingReason !== COMPANY_ADMIN_TRIAGE_ROUTING_REASON)
+    ) {
+      throw new HttpsError(
+        'permission-denied',
+        'A Company Admin can only triage cases waiting on a missing routing rule'
       )
     }
 

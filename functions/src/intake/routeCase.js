@@ -434,11 +434,17 @@ exports.reassignCase = onCall(async (request) => {
   // the authenticated caller's role from their staff record keyed by
   // request.auth.uid, never a client-supplied actorId.
   //
-  // Company Admin is deliberately absent: reassignment reads a case well
-  // enough to pick a non-conflicted handler, and Company Admin has zero
-  // case-content access by design (see HANDLER_ROLES / TRIAGE_ROLES in
-  // staffAuth.js). HR Coordinator can reassign using metadata alone, which is
-  // all this action needs.
+  // Company Admin is included too, but narrower - the same carved-out
+  // exception as TRIAGE_ROLES in staffAuth.js (see the comment there): the
+  // one case-derived action this role gets is placing a case stuck on its own
+  // routing-configuration gap, matching what CasesPage.jsx's UI already
+  // exposes and what firestore.rules' caseMetadata read already lets it see.
+  // The scope check on caseData a few lines below - status ==
+  // 'needs_manual_assignment' AND routingReason == 'no_routing_rule' - is
+  // what keeps this from becoming general reassignment power; role
+  // membership here only says "no need to ask a human", not "this specific
+  // case is fair game". HR Coordinator can reassign using metadata alone,
+  // which is all this action needs.
   //
   // A platform Super Admin is also allowed through, and is the only caller who
   // can be resolving a case from the manual-assignment queue on
@@ -446,8 +452,9 @@ exports.reassignCase = onCall(async (request) => {
   // record for loadCallerRole to find. This is now the only path for a case
   // that has no eligible non-conflicted company staff to route to
   // automatically.
-  const REASSIGN_ROLES = ['hrCoordinator']
+  const REASSIGN_ROLES = ['hrCoordinator', 'companyAdmin']
   const superAdmin = await isSuperAdminUid(firestore, actorUid)
+  let actorRole = null
   if (superAdmin) {
     await logPrivilegedAction(firestore, {
       uid: actorUid,
@@ -458,7 +465,7 @@ exports.reassignCase = onCall(async (request) => {
       caseId,
     })
   } else {
-    const actorRole = await loadCallerRole(firestore, companyId, actorUid, 'case_reassign')
+    actorRole = await loadCallerRole(firestore, companyId, actorUid, 'case_reassign')
     if (!REASSIGN_ROLES.includes(actorRole)) {
       await logPrivilegedAction(firestore, {
         uid: actorUid,
@@ -513,6 +520,23 @@ exports.reassignCase = onCall(async (request) => {
     throw new HttpsError(
       'permission-denied',
       'This case is flagged for conflict of interest and can only be assigned by a Super Admin'
+    )
+  }
+
+  // Company Admin's slice of REASSIGN_ROLES above is deliberately narrower
+  // than HR Coordinator's: it may only place a case stuck on its own
+  // routing-configuration gap, never reassign a case that already has a
+  // handler or is waiting on anything else. This is what keeps role
+  // membership in REASSIGN_ROLES from being general reassignment power for
+  // this role - the conflict_of_interest guard above already rules out that
+  // one reason, this rules out every other case shape.
+  if (
+    actorRole === 'companyAdmin' &&
+    (caseData.status !== 'needs_manual_assignment' || caseData.routingReason !== 'no_routing_rule')
+  ) {
+    throw new HttpsError(
+      'permission-denied',
+      'A Company Admin can only assign cases waiting on a missing routing rule'
     )
   }
 

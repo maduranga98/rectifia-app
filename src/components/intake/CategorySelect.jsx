@@ -33,7 +33,7 @@ function CategorySelect({ onSelect, canContinue = true, children }) {
               // min-h-11 keeps this a comfortable tap target even for the
               // shortest label, since a reporter filing on a phone is the
               // baseline case here, not the exception.
-              className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3.5 transition-all ${
+              className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border px-4 py-3.5 transition-all ${
                 checked
                   ? 'border-navy bg-navy-50 shadow-[var(--shadow-card)]'
                   : 'border-line bg-surface hover:border-navy-200 hover:bg-navy-50/40'
@@ -48,20 +48,21 @@ function CategorySelect({ onSelect, canContinue = true, children }) {
                 className="sr-only"
               />
               <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
                   checked ? 'border-navy bg-navy text-white' : 'border-line-soft bg-surface'
                 }`}
                 aria-hidden="true"
               >
                 {checked && <Icon name="check" className="h-3 w-3" strokeWidth={3} />}
               </span>
-              {/* One line, truncated rather than wrapped - the four options
-                  should be scannable as a list of names, not four short
-                  paragraphs. The full description is still available as a
-                  native tooltip for anyone who wants it. */}
-              <span className="min-w-0 flex-1 truncate" title={category.description}>
-                <span className="font-medium text-charcoal">{category.label}</span>
-                <span className="ml-2 text-sm text-muted">{category.description}</span>
+              {/* Description wraps onto its own line rather than truncating -
+                  it used to sit inline with the label on one line and get cut
+                  off with an ellipsis, readable only via the title tooltip
+                  (useless on a phone, where filing a report is the baseline
+                  case here). */}
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium text-charcoal">{category.label}</span>
+                <span className="mt-0.5 block text-sm text-muted">{category.description}</span>
               </span>
             </label>
           )
