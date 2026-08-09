@@ -2,14 +2,16 @@
 # https://github.com/firebase/firebase-tools
 
 name: Deploy to Firebase Hosting on PR
-on: pull_request
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
 permissions:
   checks: write
   contents: read
   pull-requests: write
 jobs:
   build_and_preview:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,3 +28,46 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RECTIFIA_59A1E }}
           projectId: rectifia-59a1e
+
+  # action-hosting-deploy only ever creates preview channels, never removes
+  # them - left alone, every PR leaves one behind until its 7-day TTL expires,
+  # and enough open at once trips Firebase Hosting's per-site channel quota
+  # (the 429 that blocked this workflow on PR #75). This job runs the other
+  # half: on close (merged or not), find the channel this PR's build_and_preview
+  # job created and delete it immediately rather than waiting on the TTL.
+  #
+  # The channel id isn't reconstructed from the branch name - action-hosting-
+  # deploy sanitizes and truncates it in ways not worth duplicating here - so
+  # this looks it up the same way a human troubleshooting this would: list
+  # existing channels and match the "pr<number>-" prefix the action always
+  # uses.
+  cleanup_preview:
+    if: ${{ github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete this PR's Firebase preview channel
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_RECTIFIA_59A1E }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+
+          CHANNEL_ID=$(npx --yes firebase-tools@latest hosting:channel:list \
+            --project rectifia-59a1e --json | node -e "
+              const data = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+              const channels = data.result?.channels ?? data.result ?? [];
+              const prefix = 'pr' + process.env.PR_NUMBER + '-';
+              const match = channels.find((c) => (c.name.split('/').pop() || '').startsWith(prefix));
+              process.stdout.write(match ? match.name.split('/').pop() : '');
+            ")
+
+          if [ -n "$CHANNEL_ID" ]; then
+            echo "Deleting preview channel: $CHANNEL_ID"
+            npx --yes firebase-tools@latest hosting:channel:delete "$CHANNEL_ID" \
+              --project rectifia-59a1e --force
+          else
+            echo "No preview channel found for PR #$PR_NUMBER - nothing to clean up"
+          fi
+
+          rm -f "$RUNNER_TEMP/firebase-sa.json"
