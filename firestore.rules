@@ -361,6 +361,23 @@ service cloud.firestore {
       allow read: if isCompanyStaff(companyId);
       allow write: if false;
     }
+    // The JP designated-handler (従事者) register. Metadata only - who is
+    // designated, by whom, when, and whether they've acknowledged the
+    // confidentiality obligation; never case content, case IDs, or case
+    // counts. Readable by any staff of the company: a designated handler
+    // needs to see their own status to acknowledge it, and
+    // DesignatedHandlersPage.jsx needs to list the register for Company
+    // Admin / a designatedHandlers-permitted role to manage. All writes -
+    // designate, revoke, acknowledge - go exclusively through
+    // functions/src/compliance/designatedHandlers.js with the Admin SDK,
+    // same pattern as customRoles above: a designation must be tied to a
+    // logged actor (designatedByUid/revokedByUid) and an acknowledgment must
+    // be provably the handler's own act, neither of which a rules predicate
+    // alone can guarantee against a direct client write.
+    match /companies/{companyId}/designatedHandlers/{staffUid} {
+      allow read: if isCompanyStaff(companyId);
+      allow write: if false;
+    }
     // Staff docs are created only by inviteStaff.js (Admin SDK), never by a
     // direct client write - that's the boundary that stops someone minting
     // their own companyAdmin/hrCoordinator staff record. A Company Admin can
@@ -516,10 +533,12 @@ service cloud.firestore {
     // a path to the platform's or the company's whole case table, and both are
     // still metadata only.
     //
-    // - Company Admin: their own company's cases stuck on 'no_routing_rule',
-    //   the one reason they can actually fix (RoutingRulesPage's "Needs
-    //   attention" section). This is their second case-derived read after the
-    //   aggregate stats rollup, and it stops at ids and routing metadata.
+    // - Company Admin: their own company's cases stuck on 'no_routing_rule'
+    //   or 'handler_not_designated' - the two reasons they can actually fix
+    //   (RoutingRulesPage's "Needs attention" section; the JP-only
+    //   designation gap is fixed on DesignatedHandlersPage instead). This is
+    //   their second case-derived read after the aggregate stats rollup, and
+    //   it stops at ids and routing metadata.
     // - Super Admin: 'conflict_of_interest' and 'missing_company_id' only.
     //   Conflict-of-interest cases are excluded from the Company Admin clause
     //   above on purpose - the company's own admins are exactly who the
@@ -529,7 +548,8 @@ service cloud.firestore {
       allow read: if isHrCoordinator(resource.data.companyId)
         || (isCompanyAdmin(resource.data.companyId)
           && resource.data.status == 'needs_manual_assignment'
-          && resource.data.routingReason == 'no_routing_rule')
+          && (resource.data.routingReason == 'no_routing_rule'
+            || resource.data.routingReason == 'handler_not_designated'))
         || (isSuperAdmin()
           && resource.data.status == 'needs_manual_assignment'
           && (resource.data.routingReason == 'conflict_of_interest'

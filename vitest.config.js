@@ -26,7 +26,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['functions/src/__tests__/**/*.test.js'],
+    include: ['functions/src/**/__tests__/**/*.test.js'],
     setupFiles: ['./functions/src/__tests__/support/setup.js'],
     globals: false,
     testTimeout: 5000,

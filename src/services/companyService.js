@@ -14,7 +14,19 @@ import { httpsCallable } from 'firebase/functions'
 import { firestore, functions } from './firebase'
 import { FEATURE_FLAGS } from '../config/featureFlags'
 
-export const JURISDICTIONS = ['EU', 'UK', 'US', 'LK']
+// Full set accepted by validation, including deprecated codes that an
+// existing company may still be configured with. A company already saved
+// as LK must be able to save its other settings without a validation
+// error, even though LK is no longer offered for new selection.
+export const VALID_JURISDICTIONS = ['EU', 'UK', 'US', 'AU', 'JP', 'LK']
+
+// What the UI offers for new selection. LK is deprecated and excluded here
+// while remaining in VALID_JURISDICTIONS so existing LK companies keep working.
+export const SELECTABLE_JURISDICTIONS = ['EU', 'UK', 'US', 'AU', 'JP']
+
+// Kept as an alias so existing imports of JURISDICTIONS keep resolving to
+// the selectable set.
+export const JURISDICTIONS = SELECTABLE_JURISDICTIONS
 
 // Pulse-check cadences the Company Admin can pick. The three sending cadences
 // must match the keys of CADENCE_DAYS in
@@ -40,7 +52,14 @@ export const FOLLOW_UP_CATEGORIES = ['harassment', 'toxicManagement', 'retaliati
 // multiple jurisdictions, the default timeline is driven by whichever
 // jurisdiction ranks highest here (EU's 7-day/3-month rule), until a later
 // module lets a user override the timeline per-jurisdiction.
-const JURISDICTION_STRICTNESS_ORDER = ['EU', 'UK', 'US', 'LK']
+//
+// This list is display-only: it drives the "strictest selected" hint shown
+// on the setup/settings forms. The authoritative computation is
+// getStrictestRule() in functions/src/compliance/jurisdictionRules.js,
+// which is what actually schedules deadlines. The two lists must be kept in
+// sync manually - there is no shared source between the client and
+// functions bundles.
+const JURISDICTION_STRICTNESS_ORDER = ['EU', 'JP', 'UK', 'US', 'AU', 'LK']
 
 const COMPANIES_COLLECTION = 'companies'
 
@@ -127,8 +146,13 @@ export async function createCompany({
   // Length check first: filtering an undefined jurisdictions list threw a
   // TypeError before this, which surfaced as a raw crash instead of the
   // message below.
-  if (!jurisdictions?.length || jurisdictions.some((j) => !JURISDICTIONS.includes(j))) {
+  if (!jurisdictions?.length || jurisdictions.some((j) => !VALID_JURISDICTIONS.includes(j))) {
     throw new Error('At least one valid jurisdiction is required')
+  }
+  // LK persists for companies already configured with it, but must never be
+  // chosen for a new company.
+  if (jurisdictions.includes('LK')) {
+    throw new Error('LK is deprecated and cannot be selected for a new company')
   }
   if (!SUBSCRIPTION_TIERS.includes(subscriptionTier)) {
     throw new Error('A valid subscription tier is required')
@@ -275,7 +299,7 @@ export async function updateCompanyCrisisContact(companyId, crisisContact) {
 
 export async function updateCompanyJurisdictions(companyId, jurisdictions) {
   const invalidJurisdictions = jurisdictions.filter(
-    (j) => !JURISDICTIONS.includes(j)
+    (j) => !VALID_JURISDICTIONS.includes(j)
   )
   if (!jurisdictions?.length || invalidJurisdictions.length) {
     throw new Error('At least one valid jurisdiction is required')

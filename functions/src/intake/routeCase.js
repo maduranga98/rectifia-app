@@ -13,6 +13,7 @@ const CASES_COLLECTION = 'cases'
 const COMPANIES_COLLECTION = 'companies'
 const ROUTING_RULES_SUBCOLLECTION = 'routingRules'
 const STAFF_SUBCOLLECTION = 'staff'
+const DESIGNATED_HANDLERS_SUBCOLLECTION = 'designatedHandlers'
 const NOTIFICATIONS_COLLECTION = 'notifications'
 const SUPER_ADMINS_COLLECTION = 'superAdmins'
 
@@ -211,18 +212,26 @@ async function notifyCompanyAdmin({ firestore, companyId, caseId, category, depa
 // Which desk a stuck case lands on, keyed by the reason routing gave up.
 // The reason values themselves are unchanged - 'no_routing_rule' just stops
 // going to the platform operator:
-//   no_routing_rule      -> the company's own configuration gap, fixed on
-//                           RoutingRulesPage by writing the missing rule (or
-//                           assigning this one case by hand).
-//   conflict_of_interest -> deliberately never the company's own call; the
-//                           people who would resolve it are the ones the
-//                           conflict check just implicated.
-//   missing_company_id   -> no company to route to at all, so nobody but the
-//                           platform operator can place it.
+//   no_routing_rule        -> the company's own configuration gap, fixed on
+//                             RoutingRulesPage by writing the missing rule (or
+//                             assigning this one case by hand).
+//   conflict_of_interest   -> deliberately never the company's own call; the
+//                             people who would resolve it are the ones the
+//                             conflict check just implicated.
+//   missing_company_id     -> no company to route to at all, so nobody but the
+//                             platform operator can place it.
+//   handler_not_designated -> the company's own configuration gap, same as
+//                             no_routing_rule: the routing rule points at a
+//                             real Case Handler, but that handler is not (or
+//                             not yet fully) a designated 従事者, which is
+//                             this company's own register to fix on
+//                             DesignatedHandlersPage - never the platform
+//                             operator's.
 const MANUAL_ASSIGNMENT_AUDIENCE = {
   no_routing_rule: 'companyAdmin',
   conflict_of_interest: 'superAdmin',
   missing_company_id: 'superAdmin',
+  handler_not_designated: 'companyAdmin',
 }
 
 async function sendToManualAssignment(firestore, caseRef, { companyId, caseId, category, department, reason, priority }) {
@@ -273,6 +282,35 @@ async function notifyCrisisContact({ companyId, caseId, category, severityScore,
   })
 }
 exports.notifyCrisisContact = notifyCrisisContact
+
+// Whether this company's own configured jurisdictions include 'JP' - the one
+// signal that turns the designated-handler check on at all. A fresh read
+// every time rather than caching: routing only happens once per case, so
+// there is no hot path here to optimize, and a company's jurisdictions can
+// change between two cases being scored.
+async function companyRequiresJpDesignation(firestore, companyId) {
+  if (!companyId) return false
+  const snapshot = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
+  const jurisdictions = snapshot.exists ? snapshot.data().jurisdictions : null
+  return Array.isArray(jurisdictions) && jurisdictions.includes('JP')
+}
+
+// A handler counts as designated only once BOTH halves are in place: an
+// active designation (never revoked, never merely proposed) AND the
+// handler's own confidentiality acknowledgment. Half of a designation is not
+// a designation - see designatedHandlers.js's acknowledgeConfidentiality for
+// why the two are deliberately separate, self-served steps.
+async function handlerIsDesignated(firestore, companyId, handlerId) {
+  const snapshot = await firestore
+    .collection(COMPANIES_COLLECTION)
+    .doc(companyId)
+    .collection(DESIGNATED_HANDLERS_SUBCOLLECTION)
+    .doc(handlerId)
+    .get()
+  if (!snapshot.exists) return false
+  const data = snapshot.data()
+  return data.status === 'active' && data.confidentialityAcknowledgedAt != null
+}
 
 // Runs after scoreCase.js completes - triggered by the same case document
 // transitioning from unscored to scored (the update scoreCase.js itself
@@ -365,6 +403,28 @@ exports.routeCase = onDocumentUpdated(CASES_COLLECTION + '/{caseId}', async (eve
       priority,
     })
     return
+  }
+
+  // JP's Whistleblower Protection Act expects reports to be handled by a
+  // formally designated 従事者. This check runs ONLY for a company with 'JP'
+  // among its configured jurisdictions - for every other company, routing
+  // behaviour is completely unchanged, including the extra Firestore reads
+  // below never happening at all. See DesignatedHandlersPage.jsx /
+  // functions/src/compliance/designatedHandlers.js for how a handler becomes
+  // (and acknowledges) a designation.
+  if (await companyRequiresJpDesignation(firestore, companyId)) {
+    const designated = await handlerIsDesignated(firestore, companyId, handlerId)
+    if (!designated) {
+      await sendToManualAssignment(firestore, caseRef, {
+        companyId,
+        caseId,
+        category: after.category,
+        department,
+        reason: 'handler_not_designated',
+        priority,
+      })
+      return
+    }
   }
 
   await caseRef.update({

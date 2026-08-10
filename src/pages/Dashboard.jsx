@@ -20,6 +20,7 @@ import PulseTrendsPage from './staff/PulseTrendsPage'
 import BenchmarkPage from './staff/BenchmarkPage'
 import StaffIntake from './StaffIntake'
 import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
+import DesignatedHandlersPage from './company-admin/DesignatedHandlersPage'
 
 // Which nav each staff role gets. This replaces the old VIEWS_BY_ROLE state
 // switch: every capability now has its own nav entry and its own URL, so a
@@ -56,6 +57,11 @@ const NAV_BY_ROLE = {
     { to: '/dashboard/my-cases', label: 'My cases', icon: 'cases' },
     { to: '/dashboard/analytics', label: 'Analytics', icon: 'sparkle' },
     { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
+    // Self-service view of JP's designated-handler register - see
+    // DesignatedHandlersPage.jsx. Always shown: a Case Handler may hold a
+    // designation (or need to acknowledge one) regardless of whether their
+    // company currently has JP configured.
+    { to: '/dashboard/designation', label: 'My designation', icon: 'shield' },
   ],
   [ROLES.PULSE_CHECK_REVIEWER]: [
     { to: '/dashboard/pulse-responses', label: 'Pulse responses', icon: 'pulse', flag: 'pulseCheck' },
@@ -151,6 +157,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
             reserved for the two board/audit-facing roles. */}
         <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} />} />
         <Route path="intake" element={<StaffIntake />} />
+        <Route path="designation" element={<DesignatedHandlersPage companyId={companyId} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )

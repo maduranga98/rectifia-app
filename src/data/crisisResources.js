@@ -13,7 +13,10 @@
 // services on a reporter's behalf.
 //
 // Each entry: { name, contact, hours, jurisdiction, notes }
-//   jurisdiction: one of 'EU' | 'UK' | 'US' | 'LK', or 'INTL' for the fallback.
+//   jurisdiction: one of 'EU' | 'UK' | 'US' | 'AU' | 'JP' | 'LK', or 'INTL'
+//   for the fallback. LK is deprecated for new company selection
+//   (companyService.js SELECTABLE_JURISDICTIONS) but its entries stay here
+//   for companies still configured with it.
 //
 // If you are updating a number, verify it against the service's own website
 // first. When in doubt, prefer removing an entry over shipping one you cannot
@@ -43,7 +46,7 @@ export const INTERNATIONAL_RESOURCES = [
 ]
 
 // Jurisdiction-matched resources. Keyed by the codes used in
-// companies.jurisdictions ('EU' | 'UK' | 'US' | 'LK').
+// companies.jurisdictions ('EU' | 'UK' | 'US' | 'AU' | 'JP' | 'LK').
 export const CRISIS_RESOURCES = {
   UK: [
     {
@@ -100,6 +103,45 @@ export const CRISIS_RESOURCES = {
       jurisdiction: 'EU',
       notes:
         'The single emergency number across the EU, for when someone is in danger right now.',
+    },
+  ],
+  AU: [
+    {
+      name: 'Lifeline Australia',
+      contact: 'Call 13 11 14',
+      hours: 'Every day, 24 hours',
+      jurisdiction: 'AU',
+      notes: 'Free and confidential crisis support. You can also text 0477 13 11 14 or chat online at lifeline.org.au.',
+    },
+    {
+      name: 'Beyond Blue',
+      contact: 'Call 1300 22 4636',
+      hours: 'Every day, 24 hours',
+      jurisdiction: 'AU',
+      notes: 'Free and confidential support for anxiety, depression, and general mental health. Webchat also available at beyondblue.org.au.',
+    },
+    {
+      name: '13YARN',
+      contact: 'Call 13 92 76',
+      hours: 'Every day, 24 hours',
+      jurisdiction: 'AU',
+      notes: 'A crisis support line run by Aboriginal and Torres Strait Islander Crisis Supporters, for Aboriginal and Torres Strait Islander people.',
+    },
+  ],
+  JP: [
+    {
+      name: 'Yorisoi Hotline (よりそいホットライン)',
+      contact: 'Call 0120-279-338',
+      hours: 'Every day, 24 hours (free to call)',
+      jurisdiction: 'JP',
+      notes: 'A free, toll-free consultation line covering a wide range of concerns including suicidal thoughts. Press 2 after the Japanese guidance for foreign-language support.',
+    },
+    {
+      name: 'TELL Lifeline',
+      contact: 'Call 03-5774-0992 (or toll-free 0800-300-8355)',
+      hours: 'Hours vary — check telljp.com/tell-hours for current hours',
+      jurisdiction: 'JP',
+      notes: 'English-language confidential support for the international community in Japan. Online chat also available on some days — check telljp.com.',
     },
   ],
   LK: [
