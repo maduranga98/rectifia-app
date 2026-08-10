@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   DEFAULT_FOLLOW_UP_INTERVALS,
   FOLLOW_UP_CATEGORIES,
-  JURISDICTIONS,
+  SELECTABLE_JURISDICTIONS,
   PULSE_CADENCES,
   getCompany,
   getStrictestJurisdiction,
@@ -25,6 +25,8 @@ const JURISDICTION_LABELS = {
   EU: 'European Union',
   UK: 'United Kingdom',
   US: 'United States',
+  AU: 'Australia',
+  JP: 'Japan',
   LK: 'Sri Lanka',
 }
 
@@ -278,6 +280,9 @@ function SettingsPage({ companyId }) {
   const cadence = cadenceOf(company)
   const parsedIntervals = parseIntervals(intervalsText)
   const strictestJurisdiction = getStrictestJurisdiction(jurisdictions)
+  const deprecatedJurisdictions = jurisdictions.filter(
+    (code) => !SELECTABLE_JURISDICTIONS.includes(code)
+  )
   const savedJurisdictions = company?.jurisdictions ?? []
   const jurisdictionsChanged = !sameSet(jurisdictions, savedJurisdictions)
 
@@ -529,7 +534,7 @@ function SettingsPage({ companyId }) {
         <fieldset className="flex flex-col gap-2">
           <legend className="sr-only">Jurisdictions</legend>
           <div className="grid gap-2 sm:grid-cols-2">
-            {JURISDICTIONS.map((code) => {
+            {SELECTABLE_JURISDICTIONS.map((code) => {
               const checked = jurisdictions.includes(code)
               return (
                 <label
@@ -552,6 +557,34 @@ function SettingsPage({ companyId }) {
               )
             })}
           </div>
+
+          {/* A code stored on the company but no longer offered for new
+              selection (currently just LK). It stays visible so an admin can
+              see and uncheck it - unchecking removes it here and the removal
+              persists on save - but it is never shown among the selectable
+              options above, so it cannot be re-added. */}
+          {deprecatedJurisdictions.length > 0 && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {deprecatedJurisdictions.map((code) => (
+                <label
+                  key={code}
+                  className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-gold-200 bg-gold-50 px-3 py-2.5 text-sm transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    onChange={() => toggleJurisdiction(code)}
+                    className="h-4 w-4"
+                  />
+                  <span className="font-medium text-charcoal">{code}</span>
+                  <span className="truncate text-xs">
+                    {JURISDICTION_LABELS[code] ?? code} — deprecated, can be removed, cannot be
+                    re-added
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
 
           {jurisdictions.length === 0 && (
             <p className="text-xs text-critical">At least one jurisdiction is required.</p>

@@ -24,10 +24,39 @@ const JURISDICTION_RULES = {
     acknowledgmentDueDays: 30,
     feedbackDueDays: 90,
   },
+  // AU has no statutory response clock: Corporations Act Pt 9.4AAA and ASIC
+  // RG 270 require a whistleblower policy that states its own timeframes,
+  // but they don't impose the timeframes themselves. 30/90 is a
+  // conservative company-policy default mirroring UK/US, not a statutory
+  // figure. Pending employment-law review - this is an engineering default,
+  // not legal advice.
+  AU: {
+    label:
+      'AU company policy default (Corporations Act Pt 9.4AAA sets no statutory response deadline)',
+    acknowledgmentDueDays: 30,
+    feedbackDueDays: 90,
+  },
+  // JP's 20-day figure derives from the Whistleblower Protection Act's
+  // external-disclosure protection trigger: a reporter who receives no
+  // notice within 20 days of whether an investigation will be conducted
+  // gains protected grounds for external disclosure. Tracking internally to
+  // 20 days is therefore the defensible target, not a deadline the Act
+  // directly imposes on the company. Pending employment-law review - this
+  // is an engineering default, not legal advice.
+  JP: {
+    label: 'JP Whistleblower Protection Act (Act No. 122 of 2004, as amended 2022)',
+    acknowledgmentDueDays: 20,
+    feedbackDueDays: 90,
+  },
+  // Deprecated: LK is no longer offered for new company selection
+  // (companyService.js SELECTABLE_JURISDICTIONS), but a company already
+  // configured as LK must keep computing correct deadlines, so the rule
+  // stays here indefinitely.
   LK: {
     label: 'LK company policy default',
     acknowledgmentDueDays: 30,
     feedbackDueDays: 90,
+    deprecated: true,
   },
 }
 

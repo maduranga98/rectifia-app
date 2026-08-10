@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  JURISDICTIONS,
+  SELECTABLE_JURISDICTIONS,
   SUBSCRIPTION_TIERS,
   createCompany,
   createCompanyAdmin,
@@ -18,6 +18,8 @@ const JURISDICTION_LABELS = {
   EU: 'European Union',
   UK: 'United Kingdom',
   US: 'United States',
+  AU: 'Australia',
+  JP: 'Japan',
   LK: 'Sri Lanka',
 }
 
@@ -165,7 +167,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
           strictest one selected.
         </p>
         <div className="mt-1 grid gap-2 sm:grid-cols-2">
-          {JURISDICTIONS.map((code) => {
+          {SELECTABLE_JURISDICTIONS.map((code) => {
             const checked = jurisdictions.includes(code)
             return (
               <label
