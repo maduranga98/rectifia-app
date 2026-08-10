@@ -6,6 +6,7 @@ import DataHandlingNotice from '../components/intake/DataHandlingNotice'
 import QuestionnaireForm from '../components/intake/QuestionnaireForm'
 import CrisisResources from '../components/shared/CrisisResources'
 import CaseNotificationOptIn from '../components/intake/CaseNotificationOptIn'
+import { uploadStagedEvidence, StagedEvidenceStatus } from '../components/intake/CaseCredentialsHandoff'
 import { CATEGORIES } from '../data/categories'
 import { resolveCompanySlug, submitCase } from '../services/caseAccessService'
 import { downloadSimplePdf } from '../utils/simplePdf'
@@ -69,6 +70,11 @@ function Submit() {
   const [filing, setFiling] = useState(false)
   const [fileError, setFileError] = useState(null)
   const [completed, setCompleted] = useState(null)
+  // The staged evidence's upload outcome, kicked off only after `completed`
+  // is already set - see handleFile below. Both start empty/false and never
+  // gate anything on this screen; they exist purely to report what happened.
+  const [evidenceUploading, setEvidenceUploading] = useState(false)
+  const [evidenceResults, setEvidenceResults] = useState([])
   // Sticky: once the in-browser crisis check has tripped, support resources
   // stay offered for the rest of this session, including on the confirmation
   // screen if the report was filed under that condition. This lives only in
@@ -115,8 +121,13 @@ function Submit() {
     setFiling(true)
     setFileError(null)
     try {
+      // `files` never goes near submitCase - it's browser File objects, not
+      // serialisable case data, and the case document must not carry
+      // filenames or attachment metadata (that belongs on a message). It is
+      // pulled off pending here and used only after the case exists.
+      const { files, ...caseSubmission } = pending
       const { caseId, passcode } = await submitCase({
-        ...pending,
+        ...caseSubmission,
         companySlug,
         tier: chosenTier,
         // Guaranteed non-null here: step 0's Continue button is gated on it
@@ -124,7 +135,18 @@ function Submit() {
         // category selection to this step without it.
         dataHandlingAcknowledgment: acknowledgment,
       })
+      // The credentials are committed to state before anything about
+      // evidence runs - see the module-level constraint this screen exists
+      // to honour: an upload failure must never cost the reporter their
+      // Case ID and passcode, which this screen shows exactly once.
       setCompleted({ caseId, passcode, responseCount: pending.responses.length })
+      if (files?.length > 0) {
+        setEvidenceUploading(true)
+        uploadStagedEvidence(caseId, passcode, files).then((results) => {
+          setEvidenceResults(results)
+          setEvidenceUploading(false)
+        })
+      }
     } catch (err) {
       // Stay on the tier step with the answers intact - they exist only in
       // this tab, and nothing has been filed yet.
@@ -278,6 +300,7 @@ function Submit() {
               departments={company.departments ?? []}
               onSubmit={handleQuestionnaireSubmit}
               onCrisisResourcesTrigger={() => setCrisisTriggered(true)}
+              allowEvidenceStaging
             />
           </div>
 
@@ -432,6 +455,8 @@ function Submit() {
             and its messages, and filing a new report is the only way to be heard again.
           </Alert>
 
+          <StagedEvidenceStatus uploading={evidenceUploading} results={evidenceResults} />
+
           {/* Optional and non-blocking: the reporter has already completed
               submission by the time they reach this screen, so ignoring this
               changes nothing about their case. Keyed to the Case ID only. */}
@@ -459,6 +484,8 @@ function Submit() {
                   setCopied(false)
                   setCopyFailed(false)
                   setCrisisTriggered(false)
+                  setEvidenceUploading(false)
+                  setEvidenceResults([])
                 }}
               >
                 File another report

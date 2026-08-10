@@ -8,6 +8,7 @@ import Button from '../ui/Button'
 import Icon from '../ui/Icon'
 import { Select, Textarea } from '../ui/Field'
 import { textIndicatesCrisis } from '../shared/crisisTextCheck'
+import { validateEvidenceFile } from '../../services/caseThreadService'
 
 const QUESTIONNAIRES = {
   harassment: harassmentQuestions,
@@ -61,6 +62,86 @@ function AnsweredMark({ answered }) {
     >
       {answered && <Icon name="check" className="h-3 w-3" strokeWidth={3} />}
     </span>
+  )
+}
+
+function formatFileSize(bytes) {
+  if (!bytes && bytes !== 0) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+// The optional file-staging step at the end of the questionnaire. Nothing
+// here uploads anything - there is no caseId and no passcode yet, since the
+// case does not exist until the tier step after this one files it (see
+// Submit.jsx / StaffIntakeForm.jsx). Files are held in browser memory only
+// and validated against the same rules the server enforces
+// (evidenceStorage.js's content-type allowlist and 25MB ceiling), so a file
+// that would be rejected later is rejected here instead, with a reason
+// attached to it rather than a generic failure after the case already
+// exists.
+function EvidenceStagingStep({ stagedFiles, onFilesChosen, onRemoveFile, rejections }) {
+  return (
+    <section className="card flex flex-col gap-4 p-5 sm:p-6">
+      <div>
+        <p className="text-sm font-medium text-charcoal">
+          Attach evidence
+          <OptionalMarker />
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          A screenshot, a document, or a photo can identify you even when your written answers
+          don't - a filename, the content itself, or details hidden in a photo's file
+          information can all carry your name. Attaching anything here is entirely your choice;
+          you can also skip this and add files later from your case thread once you have your
+          Case ID and passcode.
+        </p>
+      </div>
+
+      <label className="flex w-fit cursor-pointer items-center gap-2">
+        <span className="btn btn-secondary px-3 py-2 text-xs">
+          <Icon name="plus" className="h-3.5 w-3.5" />
+          Attach a file
+        </span>
+        <input type="file" multiple onChange={onFilesChosen} className="sr-only" />
+      </label>
+      <p className="text-xs text-muted">
+        PDF, images, plain text, CSV, or Office documents, up to 25MB each.
+      </p>
+
+      {rejections.length > 0 && (
+        <Alert variant="error">
+          <ul className="flex flex-col gap-1">
+            {rejections.map((rejection, index) => (
+              <li key={index}>{rejection}</li>
+            ))}
+          </ul>
+        </Alert>
+      )}
+
+      {stagedFiles.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {stagedFiles.map((staged) => (
+            <li
+              key={staged.key}
+              className="flex items-center justify-between gap-3 rounded-lg border border-line px-3.5 py-2.5 text-sm"
+            >
+              <span className="min-w-0 truncate text-charcoal">
+                {staged.file.name}
+                <span className="ml-1.5 text-xs text-muted">{formatFileSize(staged.file.size)}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => onRemoveFile(staged.key)}
+                className="shrink-0 text-xs text-muted underline hover:text-charcoal"
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 
@@ -123,8 +204,15 @@ function buildResponses(questions, answers) {
 }
 
 // category: one of the keys in QUESTIONNAIRES (see CategorySelect.jsx).
-// onSubmit(payload): called with { category, responses } once every
-// question has an answer.
+// onSubmit(payload): called with { category, responses, files } once every
+// question has an answer. `files` is always an array (empty when
+// allowEvidenceStaging is off or nothing was staged) - plain browser File
+// objects, never uploaded by this component.
+// allowEvidenceStaging: shows the optional file-staging step at the end of
+// the form. Off by default so a caller that has nowhere to carry staged
+// files forward (they'd otherwise be silently dropped) simply never offers
+// the option - see Submit.jsx, which turns this on, versus
+// StaffIntakeForm.jsx, which doesn't.
 // onCrisisCheckField(questionId, value): optional, fired on every change to
 // a `triggersCrisisCheck` field. This is only a wiring point for module 6's
 // server-side detector - no server detection happens here.
@@ -141,14 +229,44 @@ function QuestionnaireForm({
   onSubmit,
   onCrisisCheckField,
   onCrisisResourcesTrigger,
+  allowEvidenceStaging = false,
 }) {
   const questions = QUESTIONNAIRES[category]
   const [answers, setAnswers] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const [stagedFiles, setStagedFiles] = useState([])
+  const [rejections, setRejections] = useState([])
 
   if (!questions) {
     return <Alert variant="error">Unknown case category.</Alert>
+  }
+
+  // Every accepted file is validated the moment it is chosen, not at
+  // submission - a rejection has to be legible right next to the file that
+  // caused it, before the reporter has moved on to anything else.
+  function handleFilesChosen(event) {
+    const chosen = Array.from(event.target.files ?? [])
+    // Lets the same file be re-selected later (e.g. after removing it) -
+    // a file input does not fire onChange again for an unchanged selection.
+    event.target.value = ''
+
+    const accepted = []
+    const rejected = []
+    for (const file of chosen) {
+      const reason = validateEvidenceFile(file)
+      if (reason) {
+        rejected.push(`${file.name}: ${reason}`)
+      } else {
+        accepted.push({ key: `${file.name}-${file.size}-${Math.random().toString(36).slice(2)}`, file })
+      }
+    }
+    setStagedFiles((current) => [...current, ...accepted])
+    setRejections(rejected)
+  }
+
+  function removeStagedFile(key) {
+    setStagedFiles((current) => current.filter((staged) => staged.key !== key))
   }
 
   function setAnswer(question, value) {
@@ -190,6 +308,7 @@ function QuestionnaireForm({
       await onSubmit?.({
         category,
         responses: buildResponses(questions, answers),
+        files: stagedFiles.map((staged) => staged.file),
       })
     } catch (err) {
       setError(err.message)
@@ -406,6 +525,19 @@ function QuestionnaireForm({
           ))}
         </section>
       ))}
+
+      {/* Optional, and at the end of the questionnaire rather than
+          alongside any one question - staging evidence isn't part of
+          answering, it's a separate thing the reporter may or may not want
+          to do before moving on to how they want to be recorded. */}
+      {allowEvidenceStaging && (
+        <EvidenceStagingStep
+          stagedFiles={stagedFiles}
+          onFilesChosen={handleFilesChosen}
+          onRemoveFile={removeStagedFile}
+          rejections={rejections}
+        />
+      )}
 
       {error && <Alert variant="error">{error}</Alert>}
 

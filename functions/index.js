@@ -91,6 +91,7 @@ const { backupVerification, attestRestoreTest } = require('./src/security/backup
 const { getSecurityDashboard } = require('./src/security/securityDashboard')
 const { createExternalShare, listCaseShares } = require('./src/sharing/createShare')
 const { getSharedCase } = require('./src/sharing/accessShare')
+const { accessSharedEvidence } = require('./src/sharing/accessSharedEvidence')
 const { revokeExternalShare } = require('./src/sharing/revokeShare')
 const { expireShares } = require('./src/sharing/expireShares')
 const { aggregateCaseAnalytics } = require('./src/analytics/aggregateCaseAnalytics')
@@ -239,6 +240,10 @@ exports.getSecurityDashboard = getSecurityDashboard
 exports.createExternalShare = createExternalShare
 exports.listCaseShares = listCaseShares
 exports.getSharedCase = getSharedCase
+// Evidence-opening counterpart of getSharedCase - see the module comment in
+// accessSharedEvidence.js for why it is its own callable rather than a
+// parameter on getSharedCase.
+exports.accessSharedEvidence = accessSharedEvidence
 exports.revokeExternalShare = revokeExternalShare
 exports.expireShares = expireShares
 // Module 28: Analytics & Reporting Dashboard. aggregateCaseAnalytics is the

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { getSharedCase, SCOPE_LABELS } from '../services/shareService'
+import { getSharedCase, getSharedEvidenceDownloadUrl, SCOPE_LABELS } from '../services/shareService'
 import Alert from '../components/ui/Alert'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -74,6 +74,41 @@ function DetailList({ items }) {
         </div>
       ))}
     </dl>
+  )
+}
+
+// Opens one evidence file already in this share's frozen allowlist. Mints a
+// fresh, short-lived signed URL on click and never stores it - the same
+// discipline CaseThread.jsx's AttachmentLink and CaseEvidencePanel.jsx's
+// OpenAction use internally, extended out to this unauthenticated view.
+function EvidenceOpenAction({ shareId, token, fileName }) {
+  const [opening, setOpening] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  async function open() {
+    setOpening(true)
+    setFailed(false)
+    try {
+      const url = await getSharedEvidenceDownloadUrl(shareId, token, fileName)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.target = '_blank'
+      anchor.rel = 'noreferrer'
+      anchor.click()
+    } catch {
+      setFailed(true)
+    } finally {
+      setOpening(false)
+    }
+  }
+
+  return (
+    <div className="mt-1.5 flex flex-col items-start gap-1">
+      <Button variant="secondary" size="sm" icon="document" onClick={open} loading={opening} loadingLabel="Opening">
+        Open
+      </Button>
+      {failed && <span className="text-xs text-critical">Could not open this file.</span>}
+    </div>
   )
 }
 
@@ -277,8 +312,9 @@ function SharedCaseView() {
                 {SCOPE_LABELS[data.scope] ?? data.scope} · access expires {expiresLabel}
               </p>
               <p className="mt-0.5 text-xs text-muted">
-                Viewing as {data.recipientName} ({data.recipientOrganisation}). This view is watermarked,
-                logged, cannot be downloaded or printed, and can be revoked at any time.
+                Viewing as {data.recipientName} ({data.recipientOrganisation}). This record is watermarked,
+                logged, cannot be downloaded or printed, and can be revoked at any time. Evidence files marked
+                "Open" below may be opened individually; each open is logged separately.
               </p>
             </div>
 
@@ -360,7 +396,7 @@ function SharedCaseView() {
 
             <Section
               title="Evidence"
-              description="Metadata only - file name, type, size, and date. No download or preview is available in this view."
+              description="Every attachment on this case is listed for reference. Only the files the Case Handler selected for this share can be opened; the rest are metadata only."
             >
               {!data.evidence || data.evidence.length === 0 ? (
                 <p className="text-sm text-muted">No attachments.</p>
@@ -368,11 +404,17 @@ function SharedCaseView() {
                 <ul className="flex flex-col gap-2 text-sm">
                   {data.evidence.map((item, index) => (
                     <li key={index} className="rounded-lg border border-line px-3 py-2">
-                      <p className="font-medium text-charcoal">{item.fileName}</p>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <p className="font-medium text-charcoal">{item.label}</p>
+                        {!item.shared && <Badge tone="tone-neutral">Not shared</Badge>}
+                      </div>
                       <p className="text-xs text-muted">
                         {item.contentType ?? 'unknown type'} · {item.sizeBytes ? `${Math.round(item.sizeBytes / 1024)} KB` : '—'}{' '}
                         · {formatTimestamp(item.uploadedAt)}
                       </p>
+                      {item.shared && (
+                        <EvidenceOpenAction shareId={shareId} token={token} fileName={item.fileName} />
+                      )}
                     </li>
                   ))}
                 </ul>

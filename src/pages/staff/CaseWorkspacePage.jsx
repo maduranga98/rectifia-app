@@ -11,6 +11,7 @@ import {
 } from '../../components/investigation/CaseDetailView'
 import ComplianceCountdown from '../../components/dashboard/ComplianceCountdown'
 import CaseThread from '../../components/intake/CaseThread'
+import CaseEvidencePanel from '../../components/investigation/CaseEvidencePanel'
 import CaseReport from '../../components/investigation/CaseReport'
 import InvestigationChecklist from '../../components/investigation/InvestigationChecklist'
 import RelatedPatternNotice from '../../components/investigation/RelatedPatternNotice'
@@ -53,6 +54,7 @@ function hasUnreviewedFlag(caseData) {
 const TABS = [
   { path: 'thread', label: 'Thread', badge: (c) => (c.unreadReporterCount ? { count: c.unreadReporterCount } : null) },
   { path: 'questionnaire', label: 'Questionnaire' },
+  { path: 'evidence', label: 'Evidence' },
   { path: 'checklist', label: 'Checklist' },
   { path: 'consistency', label: 'Consistency', badge: (c) => (hasUnreviewedFlag(c) ? { dot: true } : null) },
   { path: 'policy', label: 'Policy references' },
@@ -218,6 +220,7 @@ function CaseWorkspacePage() {
             </Card>
           }
         />
+        <Route path="evidence" element={<CaseEvidencePanel caseId={caseId} />} />
         <Route path="checklist" element={<InvestigationChecklist caseId={caseId} />} />
         <Route
           path="consistency"

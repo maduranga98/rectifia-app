@@ -50,9 +50,26 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
 }
 
-function buildShareEmail({ companyName, recipientName, purpose, scope, expiresAtMs, link }) {
+// The evidence-access sentence used to say the record "cannot be downloaded
+// or printed." That stopped being true the moment sharedEvidence could carry
+// openable files, and this text appears inside a legal disclosure - it has to
+// track what the link can actually do, not what it used to do. The case
+// record view itself (SharedCaseView) is still non-downloadable and
+// non-printable; only the individually selected evidence files, if any, can
+// be opened, and each open is its own logged event.
+function evidenceAccessSentence(sharedEvidenceCount) {
+  if (!sharedEvidenceCount) {
+    return 'The case record itself cannot be downloaded or printed, and no evidence files were included with this link.'
+  }
+  return `The case record itself cannot be downloaded or printed. ${sharedEvidenceCount} evidence file${
+    sharedEvidenceCount === 1 ? '' : 's'
+  } selected for this share may be opened individually from within the link; each file opened is logged.`
+}
+
+function buildShareEmail({ companyName, recipientName, purpose, scope, expiresAtMs, link, sharedEvidenceCount }) {
   const company = companyName || 'the organisation'
   const expiryText = new Date(expiresAtMs).toISOString().slice(0, 10)
+  const evidenceSentence = evidenceAccessSentence(sharedEvidenceCount)
   const subject = `You've been granted time-limited access to a case record (${company})`
   const text = [
     `Hello ${recipientName},`,
@@ -66,7 +83,7 @@ function buildShareEmail({ companyName, recipientName, purpose, scope, expiresAt
     'Open the link below to view it. You will be asked to confirm your name and accept a confidentiality undertaking on first access.',
     link,
     '',
-    'This link is personal to you, is watermarked with your name and organisation, cannot be downloaded, printed, or forwarded to gain further access, and can be revoked at any time.',
+    `This link is personal to you, is watermarked with your name and organisation, and cannot be forwarded to gain further access. ${evidenceSentence} It expires on ${expiryText} and can be revoked at any time.`,
   ].join('\n')
 
   const html = `
@@ -83,7 +100,7 @@ function buildShareEmail({ companyName, recipientName, purpose, scope, expiresAt
         <a href="${escapeHtml(link)}" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 20px; border-radius: 6px; display: inline-block;">Open case record</a>
       </p>
       <p style="font-size: 13px; color: #666;">You will be asked to confirm your name and accept a confidentiality undertaking on first access.</p>
-      <p style="font-size: 13px; color: #666;">This link is personal to you, is watermarked with your name and organisation, cannot be downloaded, printed, or forwarded to gain further access, and can be revoked at any time.</p>
+      <p style="font-size: 13px; color: #666;">This link is personal to you, is watermarked with your name and organisation, and cannot be forwarded to gain further access. ${escapeHtml(evidenceSentence)} It expires on ${escapeHtml(expiryText)} and can be revoked at any time.</p>
     </div>
   `
 
@@ -124,12 +141,24 @@ exports.createExternalShare = onCall({ secrets: [encryptionKeySecret, smtpPasswo
     purpose,
     expiresInDays,
     scope,
+    sharedEvidence,
   } = request.data || {}
 
   const cleanName = typeof recipientName === 'string' ? recipientName.trim().slice(0, 200) : ''
   const cleanEmail = typeof recipientEmail === 'string' ? recipientEmail.trim().slice(0, 320) : ''
   const cleanOrg = typeof recipientOrganisation === 'string' ? recipientOrganisation.trim().slice(0, 200) : ''
   const cleanPurpose = typeof purpose === 'string' ? purpose.trim() : ''
+
+  // Default is an empty array - a share created without an explicit
+  // selection carries no openable evidence, exactly as before this field
+  // existed. Anything other than an array of strings is a client bug, not a
+  // partial selection, so it is rejected outright rather than coerced.
+  if (sharedEvidence !== undefined && !Array.isArray(sharedEvidence)) {
+    throw new HttpsError('invalid-argument', 'sharedEvidence must be an array of file names')
+  }
+  const requestedFileNames = Array.isArray(sharedEvidence)
+    ? [...new Set(sharedEvidence.filter((f) => typeof f === 'string' && f.trim()).map((f) => f.trim()))]
+    : []
 
   if (!cleanName) {
     throw new HttpsError('invalid-argument', "The recipient's name is required")
@@ -196,6 +225,31 @@ exports.createExternalShare = onCall({ secrets: [encryptionKeySecret, smtpPasswo
     )
   }
 
+  // The allowlist is frozen at creation, which means it has to be checked
+  // against what is actually attached RIGHT NOW - not resolved dynamically
+  // later, and not trusted from the client's own claims about what exists.
+  // A fileName that is not a real attachment on one of this case's messages
+  // at this moment is rejected outright; there is no partial acceptance.
+  if (requestedFileNames.length > 0) {
+    const messagesSnap = await caseRef.collection(MESSAGES_SUBCOLLECTION).get()
+    const availableFileNames = new Set()
+    messagesSnap.docs.forEach((doc) => {
+      const attachments = doc.data().attachments
+      if (Array.isArray(attachments)) {
+        attachments.forEach((attachment) => {
+          if (typeof attachment?.fileName === 'string') availableFileNames.add(attachment.fileName)
+        })
+      }
+    })
+    const unrecognised = requestedFileNames.filter((fileName) => !availableFileNames.has(fileName))
+    if (unrecognised.length > 0) {
+      throw new HttpsError(
+        'invalid-argument',
+        `These files are not attachments on this case: ${unrecognised.join(', ')}`
+      )
+    }
+  }
+
   const expiresDays = clampExpiresInDays(expiresInDays)
   const expiresAtMs = Date.now() + expiresDays * DAY_MS
 
@@ -220,6 +274,11 @@ exports.createExternalShare = onCall({ secrets: [encryptionKeySecret, smtpPasswo
     recipientOrganisation: cleanOrg,
     purpose: cleanPurpose,
     scope,
+    // A frozen allowlist, not a live query - accessSharedEvidence.js checks a
+    // fileName against exactly this array and never re-derives "what's
+    // attached now" at view time, so a file attached to the case after this
+    // share was minted can never become visible through it.
+    sharedEvidence: requestedFileNames,
     tokenHash,
     tokenSalt,
     expiresAt: admin.firestore.Timestamp.fromMillis(expiresAtMs),
@@ -246,6 +305,7 @@ exports.createExternalShare = onCall({ secrets: [encryptionKeySecret, smtpPasswo
     scope,
     expiresAtMs,
     link,
+    sharedEvidenceCount: requestedFileNames.length,
   })
 
   let emailDelivered = true

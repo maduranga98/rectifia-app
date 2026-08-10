@@ -4,6 +4,51 @@ import { functions } from './firebase'
 export const MESSAGE_TYPES = { MESSAGE: 'message', MANUAL_LOG: 'manual_log' }
 export const SENDERS = { AI: 'ai', INVESTIGATOR: 'investigator', REPORTER: 'reporter' }
 
+// Client-side type/size allowlist, mirroring the server allowlist in
+// functions/src/utils/evidenceStorage.js. The server is the real gate - this
+// exists so a file staged before any caseId or passcode exists (see
+// QuestionnaireForm.jsx's staging step) can be rejected immediately, rather
+// than staged, carried through submission, and only then found unacceptable
+// once there is finally something to upload it against.
+export const ALLOWED_EVIDENCE_TYPES = new Map([
+  ['application/pdf', '.pdf'],
+  ['image/jpeg', '.jpg'],
+  ['image/png', '.png'],
+  ['image/gif', '.gif'],
+  ['image/webp', '.webp'],
+  ['image/heic', '.heic'],
+  ['text/plain', '.txt'],
+  ['text/csv', '.csv'],
+  ['application/rtf', '.rtf'],
+  ['application/msword', '.doc'],
+  ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', '.docx'],
+  ['application/vnd.ms-excel', '.xls'],
+  ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx'],
+  ['application/vnd.ms-powerpoint', '.ppt'],
+  ['application/vnd.openxmlformats-officedocument.presentationml.presentation', '.pptx'],
+])
+export const MAX_EVIDENCE_BYTES = 25 * 1024 * 1024
+
+// Returns a rejection message, or null if the file is acceptable. Mirrors
+// requireAllowedContentType/requireAllowedSize in evidenceStorage.js closely
+// enough that a file rejected here would also be rejected there, and vice
+// versa - the two are meant to agree, not just both exist.
+export function validateEvidenceFile(file) {
+  const contentType = String(file?.type ?? '').toLowerCase()
+  if (!ALLOWED_EVIDENCE_TYPES.has(contentType)) {
+    return 'That file type cannot be attached. Allowed: PDF, images, plain text, CSV and Office documents.'
+  }
+  if (!file.size || file.size <= 0) {
+    return 'That file appears to be empty.'
+  }
+  if (file.size > MAX_EVIDENCE_BYTES) {
+    return `That file is too large. The maximum attachment size is ${Math.floor(
+      MAX_EVIDENCE_BYTES / (1024 * 1024)
+    )}MB.`
+  }
+  return null
+}
+
 const getCaseThreadCallable = httpsCallable(functions, 'getCaseThread')
 const getCaseThreadForHandlerCallable = httpsCallable(functions, 'getCaseThreadForHandler')
 const postReporterMessageCallable = httpsCallable(functions, 'postReporterMessage')

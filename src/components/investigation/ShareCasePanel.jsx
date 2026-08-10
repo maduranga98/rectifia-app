@@ -9,6 +9,9 @@ import {
   MAX_ACTIVE_SHARES_PER_CASE,
   SCOPE_LABELS,
 } from '../../services/shareService'
+import { getCaseThreadForHandler } from '../../services/caseThreadService'
+import { getAssignedCase } from '../../services/handlerService'
+import { buildEvidenceInventory } from '../../utils/evidenceInventory'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
 import Button from '../ui/Button'
@@ -20,6 +23,13 @@ import { SkeletonList } from '../ui/Loading'
 function formatDate(ms) {
   if (!ms) return '—'
   return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+function formatSize(bytes) {
+  if (!bytes && bytes !== 0) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 const STATUS_TONE = {
@@ -37,19 +47,77 @@ const EMPTY_FORM = {
   scope: 'summary',
 }
 
-function CreateShareForm({ caseId, disabled, onCreated }) {
+// The acknowledgement text a handler accepts before a share carrying any
+// evidence files can be created. An 'anonymous'-tier case gets the sharper,
+// risk-naming version - a scanned document or photo can carry the reporter's
+// name, handwriting, or embedded file metadata even though the case record
+// itself never learned who they are, which is exactly the disclosure this
+// tier exists to prevent.
+const ANONYMOUS_EVIDENCE_ACK_TEXT =
+  "This is an anonymous-tier case - the reporter's identity is not on record anywhere in it. I have reviewed each file selected below and confirm none of them can identify the reporter: no name, signature, handwriting, email address, embedded file metadata, or photo that could do what the case record itself was built not to. A screenshot or document can carry a name the case record never did."
+const DEFAULT_EVIDENCE_ACK_TEXT =
+  "I have reviewed each file selected below and confirm it does not disclose the reporter's identity or anything beyond what this share's stated purpose requires."
+
+// The checkbox list a handler picks openable evidence from. Nothing is
+// selected by default (EMPTY_FORM has no evidence field to default from) -
+// every inclusion is an explicit, individual choice.
+function EvidencePicker({ inventory, selected, onToggle }) {
+  if (inventory.length === 0) {
+    return <p className="text-xs text-muted">No evidence has been attached to this case yet.</p>
+  }
+  return (
+    <div className="flex max-h-64 flex-col gap-2 overflow-y-auto rounded-lg border border-line p-3">
+      {inventory.map((file) => {
+        const checked = selected.includes(file.fileName)
+        return (
+          <label key={`${file.messageId}-${file.fileName}`} className="flex items-start gap-2 text-sm text-charcoal">
+            <input type="checkbox" className="mt-0.5" checked={checked} onChange={() => onToggle(file.fileName)} />
+            <span className="min-w-0">
+              <span className="block font-medium">{file.label}</span>
+              <span className="block text-xs text-muted">
+                {file.contentType ?? 'unknown type'} · {formatSize(file.sizeBytes)} · from {file.supplier} ·{' '}
+                {formatDate(file.uploadedAt)}
+              </span>
+            </span>
+          </label>
+        )
+      })}
+    </div>
+  )
+}
+
+function CreateShareForm({ caseId, disabled, evidenceInventory, isAnonymousTier, onCreated }) {
   const [form, setForm] = useState(EMPTY_FORM)
+  const [selectedFileNames, setSelectedFileNames] = useState([])
+  const [evidenceAcknowledged, setEvidenceAcknowledged] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [result, setResult] = useState(null)
 
   const purposeValid = form.purpose.trim().length >= MIN_PURPOSE_LENGTH
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.recipientEmail.trim())
+  // Selecting at least one file makes the acknowledgement mandatory,
+  // regardless of tier - see the module comment on the acknowledgement text
+  // above for why an anonymous-tier case gets sharper wording rather than a
+  // different gate.
+  const evidenceAckOk = selectedFileNames.length === 0 || evidenceAcknowledged
   const canSubmit =
-    form.recipientName.trim() && emailValid && form.recipientOrganisation.trim() && purposeValid && !submitting
+    form.recipientName.trim() &&
+    emailValid &&
+    form.recipientOrganisation.trim() &&
+    purposeValid &&
+    evidenceAckOk &&
+    !submitting
 
   function updateField(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function toggleFile(fileName) {
+    setSelectedFileNames((prev) =>
+      prev.includes(fileName) ? prev.filter((f) => f !== fileName) : [...prev, fileName]
+    )
+    setEvidenceAcknowledged(false)
   }
 
   async function handleSubmit(event) {
@@ -66,9 +134,12 @@ function CreateShareForm({ caseId, disabled, onCreated }) {
         recipientOrganisation: form.recipientOrganisation.trim(),
         purpose: form.purpose.trim(),
         expiresInDays: Number(form.expiresInDays),
+        sharedEvidence: selectedFileNames,
       })
       setResult(created)
       setForm(EMPTY_FORM)
+      setSelectedFileNames([])
+      setEvidenceAcknowledged(false)
       await onCreated()
     } catch (err) {
       setError(err.message)
@@ -151,6 +222,28 @@ function CreateShareForm({ caseId, disabled, onCreated }) {
           hint={`Maximum ${MAX_EXPIRES_DAYS} days. No renewal or extension - an expired share is recreated deliberately or not at all.`}
         />
       </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-charcoal">Evidence files to include</p>
+        <p className="text-xs text-muted">
+          Nothing is selected by default. This list is frozen the moment the share is created - a file attached
+          to the case afterwards, even one that looks like it should belong here, never becomes visible through
+          this link.
+        </p>
+        <EvidencePicker inventory={evidenceInventory} selected={selectedFileNames} onToggle={toggleFile} />
+      </div>
+
+      {selectedFileNames.length > 0 && (
+        <label className="flex items-start gap-2 rounded-lg border border-gold-200 bg-gold-50 p-3 text-sm text-charcoal">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={evidenceAcknowledged}
+            onChange={(e) => setEvidenceAcknowledged(e.target.checked)}
+          />
+          <span>{isAnonymousTier ? ANONYMOUS_EVIDENCE_ACK_TEXT : DEFAULT_EVIDENCE_ACK_TEXT}</span>
+        </label>
+      )}
 
       <Button type="submit" variant="primary" className="self-start" loading={submitting} loadingLabel="Creating" disabled={!canSubmit}>
         Create share and email link
@@ -256,6 +349,10 @@ function ShareRow({ share, onChanged }) {
 function ShareCasePanel({ caseId }) {
   const [shares, setShares] = useState(null)
   const [error, setError] = useState(null)
+  const [evidenceInventory, setEvidenceInventory] = useState([])
+  // Defaults to the stricter, anonymous-tier acknowledgement until the case
+  // doc actually loads - an unknown tier should never relax the gate.
+  const [isAnonymousTier, setIsAnonymousTier] = useState(true)
 
   const refresh = useCallback(async () => {
     try {
@@ -269,6 +366,33 @@ function ShareCasePanel({ caseId }) {
     refresh()
   }, [refresh])
 
+  // The file picker's own data, loaded independently of the shares list: the
+  // same thread flatten CaseEvidencePanel.jsx (Module 36) uses via
+  // buildEvidenceInventory, plus the case's tier for the acknowledgement
+  // copy. A failure here degrades to "no files available" rather than
+  // blocking the rest of the panel - a handler can still create a
+  // no-evidence share even if this fetch fails.
+  useEffect(() => {
+    let cancelled = false
+    async function loadEvidencePickerData() {
+      try {
+        const [caseData, messages] = await Promise.all([
+          getAssignedCase(caseId),
+          getCaseThreadForHandler(caseId),
+        ])
+        if (cancelled) return
+        setIsAnonymousTier((caseData?.tier ?? 'anonymous') === 'anonymous')
+        setEvidenceInventory(buildEvidenceInventory(messages))
+      } catch {
+        // Deliberately silent - see the comment above.
+      }
+    }
+    loadEvidencePickerData()
+    return () => {
+      cancelled = true
+    }
+  }, [caseId])
+
   const activeCount = shares?.filter((s) => s.status === 'active').length ?? 0
 
   return (
@@ -278,7 +402,13 @@ function ShareCasePanel({ caseId }) {
         {shares === null ? (
           <SkeletonList rows={2} />
         ) : (
-          <CreateShareForm caseId={caseId} disabled={activeCount >= MAX_ACTIVE_SHARES_PER_CASE} onCreated={refresh} />
+          <CreateShareForm
+            caseId={caseId}
+            disabled={activeCount >= MAX_ACTIVE_SHARES_PER_CASE}
+            evidenceInventory={evidenceInventory}
+            isAnonymousTier={isAnonymousTier}
+            onCreated={refresh}
+          />
         )}
       </Card>
 

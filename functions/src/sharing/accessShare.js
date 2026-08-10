@@ -52,11 +52,14 @@ function callerUserAgent(request) {
 // revoked, or mid-acceptance - "who looked at this link, when, from where"
 // is exactly the accountability an external share exists to preserve, and
 // it has to be true of every attempt, not only the ones that succeeded.
-async function logExternalAccess(firestore, { shareId, caseId, request, outcome }) {
+async function logExternalAccess(firestore, { shareId, caseId, request, outcome, fileName }) {
   await firestore.collection(EXTERNAL_ACCESS_LOG_COLLECTION).add({
     shareId: shareId ?? null,
     caseId: caseId ?? null,
     outcome,
+    // Only ever set by accessSharedEvidence.js - a getSharedCase entry has no
+    // single file to attribute an outcome to, so this stays null there.
+    fileName: fileName ?? null,
     accessedAt: admin.firestore.FieldValue.serverTimestamp(),
     ipAddress: callerIp(request),
     userAgent: callerUserAgent(request),
@@ -76,23 +79,35 @@ function verifyToken(token, tokenHash, tokenSalt) {
   return expected.length === candidate.length && crypto.timingSafeEqual(expected, candidate)
 }
 
-// Evidence as a metadata manifest only - no fileName-to-signed-URL path
-// exists anywhere in this file, and none should ever be added. Built fresh
-// from the messages subcollection rather than reusing generateReport.js's
-// evidence array, for the same reason the rest of this payload is built
-// fresh: a shared field of the same NAME as an internal one must never be
-// assumed to carry the same meaning or the same trust level.
-function buildEvidenceManifest(messageDocs) {
+// Evidence as a metadata manifest, always, for every attachment on the case
+// - no fileName-to-signed-URL path exists anywhere in this file, and none
+// should ever be added; opening a file goes through accessSharedEvidence.js,
+// a wholly separate callable, and only for a fileName in the share's own
+// frozen `sharedEvidence` allowlist. Built fresh from the messages
+// subcollection rather than reusing generateReport.js's evidence array, for
+// the same reason the rest of this payload is built fresh: a shared field of
+// the same NAME as an internal one must never be assumed to carry the same
+// meaning or the same trust level.
+//
+// Each row carries `shared` (whether this share's allowlist includes it) and,
+// only when shared, the real storage fileName the frontend needs to call
+// accessSharedEvidence with - a non-shared row has nothing to open, so there
+// is no reason to hand back the internal storage name for it.
+function buildEvidenceManifest(messageDocs, sharedEvidenceSet) {
   const evidence = []
   for (const doc of messageDocs) {
     const data = doc.data()
     const attachments = Array.isArray(data.attachments) ? data.attachments : []
     for (const attachment of attachments) {
+      const storedFileName = typeof attachment?.fileName === 'string' ? attachment.fileName : null
+      const shared = Boolean(storedFileName && sharedEvidenceSet.has(storedFileName))
       evidence.push({
-        fileName: attachment?.label ?? attachment?.fileName ?? 'Attachment',
+        label: attachment?.label ?? storedFileName ?? 'Attachment',
         contentType: attachment?.contentType ?? null,
         sizeBytes: attachment?.sizeBytes ?? null,
         uploadedAt: toMillis(attachment?.uploadedAt),
+        shared,
+        fileName: shared ? storedFileName : null,
       })
     }
   }
@@ -158,7 +173,7 @@ function buildSharedPayload({ share, caseData, messageDocs, companyName, sharedB
       actionEffectiveDate: toMillis(caseData.actionEffectiveDate),
       actionNotes: caseData.actionNotes ?? null,
     },
-    evidence: buildEvidenceManifest(messageDocs),
+    evidence: buildEvidenceManifest(messageDocs, new Set(Array.isArray(share.sharedEvidence) ? share.sharedEvidence : [])),
   }
 
   if (share.scope === 'full') {
@@ -270,3 +285,9 @@ exports.getSharedCase = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
 
   return { requiresAcceptance: false, ...payload }
 })
+
+// Reused by accessSharedEvidence.js so both callables verify a share token
+// with the exact same logic rather than two copies that could drift.
+exports.verifyToken = verifyToken
+exports.logExternalAccess = logExternalAccess
+exports.EXTERNAL_ACCESS_LOG_COLLECTION = EXTERNAL_ACCESS_LOG_COLLECTION
