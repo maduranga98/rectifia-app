@@ -11,6 +11,7 @@ const createExternalShareCallable = httpsCallable(functions, 'createExternalShar
 const listCaseSharesCallable = httpsCallable(functions, 'listCaseShares')
 const revokeExternalShareCallable = httpsCallable(functions, 'revokeExternalShare')
 const getSharedCaseCallable = httpsCallable(functions, 'getSharedCase')
+const accessSharedEvidenceCallable = httpsCallable(functions, 'accessSharedEvidence')
 
 // Mirrors MIN_PURPOSE_LENGTH in functions/src/sharing/createShare.js -
 // duplicated to gate the form and message the requirement; the server
@@ -40,6 +41,7 @@ export async function createExternalShare(caseId, {
   purpose,
   expiresInDays,
   scope,
+  sharedEvidence,
 }) {
   requireHandlerUid()
   const result = await createExternalShareCallable({
@@ -50,6 +52,11 @@ export async function createExternalShare(caseId, {
     purpose,
     expiresInDays,
     scope,
+    // Omitted entirely (rather than sent as []) when nothing was selected -
+    // the server default is already an empty array, and this keeps the
+    // common case's request payload identical to what it was before this
+    // field existed.
+    ...(Array.isArray(sharedEvidence) && sharedEvidence.length > 0 ? { sharedEvidence } : {}),
   })
   return result.data
 }
@@ -72,4 +79,15 @@ export async function revokeExternalShare(shareId, reason) {
 export async function getSharedCase({ shareId, token, acceptedName }) {
   const result = await getSharedCaseCallable({ shareId, token, acceptedName })
   return result.data
+}
+
+// The evidence-opening counterpart of getSharedCase - also unauthenticated,
+// also deliberately: the token in the URL is the entire credential, exactly
+// as it is for the rest of this shared view. Mints a fresh, short-lived
+// signed URL for one file already in this share's allowlist; nothing here
+// stores the result, matching how getEvidenceDownloadUrl in
+// caseThreadService.js is used from CaseThread.jsx and CaseEvidencePanel.jsx.
+export async function getSharedEvidenceDownloadUrl(shareId, token, fileName) {
+  const result = await accessSharedEvidenceCallable({ shareId, token, fileName })
+  return result.data.downloadUrl
 }

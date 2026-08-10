@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getCaseThreadForHandler, getEvidenceDownloadUrl } from '../../services/caseThreadService'
+import { buildEvidenceInventory } from '../../utils/evidenceInventory'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
@@ -18,15 +19,6 @@ function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-// Mirrors CaseThread.jsx's messageAuthorLabel, narrowed to the senders that
-// can actually carry an attachment.
-function supplierLabel(message) {
-  if (message.type === 'manual_log') return 'Manual log entry'
-  if (message.sender === 'ai') return 'AI assistant'
-  if (message.sender === 'investigator') return 'Case Handler'
-  return 'Reporter'
 }
 
 // Opens a fresh, short-lived signed URL for one file, exactly as
@@ -94,16 +86,7 @@ function CaseEvidencePanel({ caseId }) {
   if (loading) return <SkeletonList rows={4} />
   if (error) return <Alert variant="error">{error}</Alert>
 
-  const files = messages
-    .flatMap((message) =>
-      (message.attachments ?? []).map((attachment) => ({
-        ...attachment,
-        uploadedAt: message.timestamp,
-        supplier: supplierLabel(message),
-        messageId: message.id,
-      }))
-    )
-    .sort((a, b) => (b.uploadedAt ?? 0) - (a.uploadedAt ?? 0))
+  const files = buildEvidenceInventory(messages)
 
   return (
     <Card
