@@ -3,6 +3,7 @@ import {
   RETENTION_FIELDS,
   RETENTION_FLOORS,
   RETENTION_CEILINGS,
+  JURISDICTION_RETENTION,
   getCompanyRetention,
   listLegalHolds,
   previewRetention,
@@ -35,6 +36,15 @@ function formatDate(ms) {
 function sameValues(a, b) {
   if (!a || !b) return false
   return RETENTION_FIELDS.every((f) => a[f.key] === b[f.key])
+}
+
+// Which of the company's jurisdictions actually produced this field's
+// resolved ceiling - so "Maximum 2,555 days" can say *why*, e.g.
+// "constrained by your EU jurisdiction", instead of just showing a number.
+function jurisdictionsConstraining(key, ceiling, basis) {
+  if (typeof ceiling !== 'number' || !basis?.length) return []
+  const ceilingKey = key.replace(/Days$/, 'Ceiling')
+  return basis.filter((code) => JURISDICTION_RETENTION[code]?.[ceilingKey] === ceiling)
 }
 
 function TierPreview({ title, result }) {
@@ -134,13 +144,30 @@ function RetentionPage({ companyId }) {
     if (!values) return {}
     const errors = {}
     for (const field of RETENTION_FIELDS) {
-      const err = retentionFieldError(field.key, Number(values[field.key]))
+      const ceiling = savedPolicy?.resolvedCeilings?.[field.key]
+      const err = retentionFieldError(field.key, Number(values[field.key]), ceiling)
       if (err) errors[field.key] = err
     }
     return errors
-  }, [values])
+  }, [values, savedPolicy])
 
   const hasErrors = Object.keys(fieldErrors).length > 0
+
+  // A company's stored value can end up above a jurisdiction-resolved
+  // ceiling it didn't originally have to answer to - most commonly an
+  // existing company that later adds a jurisdiction with a tighter ceiling
+  // (e.g. EU). savedPolicy is already clamped, so savedPolicy[key] here is
+  // exactly what the next sweep will use; this only flags when that differs
+  // from what's actually stored, never rewrites the stored config itself.
+  const clampedOnNextRun = useMemo(() => {
+    if (!company || !savedPolicy) return []
+    const stored = company.retention ?? {}
+    return RETENTION_FIELDS.filter((field) => {
+      const raw = stored[field.key]
+      const ceiling = savedPolicy.resolvedCeilings?.[field.key]
+      return Number.isInteger(raw) && raw > 0 && typeof ceiling === 'number' && raw > ceiling
+    }).map((field) => ({ field, stored: stored[field.key], clampedTo: savedPolicy[field.key] }))
+  }, [company, savedPolicy])
 
   // Any field set lower than what is currently saved is a shortening -
   // permanently deleting more, sooner. Lengthening a window, or leaving it
@@ -250,30 +277,59 @@ function RetentionPage({ companyId }) {
 
       <Card title="Retention windows" description={summarySentence}>
         <div className="flex flex-col gap-5">
-          {RETENTION_FIELDS.map((field) => (
-            <div key={field.key} className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
-              <div>
-                <Input
-                  label={field.label}
-                  type="number"
-                  min={RETENTION_FLOORS[field.key]}
-                  max={RETENTION_CEILINGS[field.key] ?? undefined}
-                  value={values?.[field.key] ?? ''}
-                  onChange={(e) => updateField(field.key, e.target.value)}
-                  error={fieldErrors[field.key]}
-                  hint={
-                    !fieldErrors[field.key]
-                      ? `Floor: ${RETENTION_FLOORS[field.key]} days${
-                          RETENTION_CEILINGS[field.key]
-                            ? `, ceiling: ${RETENTION_CEILINGS[field.key]} days`
-                            : ' (no ceiling)'
-                        }. ${field.description}`
-                      : field.description
-                  }
-                />
+          {RETENTION_FIELDS.map((field) => {
+            const ceiling = savedPolicy?.resolvedCeilings?.[field.key] ?? RETENTION_CEILINGS[field.key]
+            const constrainingJurisdictions = jurisdictionsConstraining(
+              field.key,
+              ceiling,
+              savedPolicy?.jurisdictionBasis,
+            )
+            return (
+              <div key={field.key} className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-start">
+                <div>
+                  <Input
+                    label={field.label}
+                    type="number"
+                    min={RETENTION_FLOORS[field.key]}
+                    max={ceiling ?? undefined}
+                    value={values?.[field.key] ?? ''}
+                    onChange={(e) => updateField(field.key, e.target.value)}
+                    error={fieldErrors[field.key]}
+                    hint={
+                      !fieldErrors[field.key]
+                        ? `Floor: ${RETENTION_FLOORS[field.key]} days${
+                            ceiling
+                              ? `, maximum ${ceiling.toLocaleString()} days${
+                                  constrainingJurisdictions.length
+                                    ? ` (constrained by your ${constrainingJurisdictions.join('/')} jurisdiction${
+                                        constrainingJurisdictions.length === 1 ? '' : 's'
+                                      })`
+                                    : ''
+                                }`
+                              : ' (no ceiling)'
+                          }. ${field.description}`
+                        : field.description
+                    }
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
+
+          {clampedOnNextRun.length > 0 && (
+            <Alert variant="warning" title="A stored value now exceeds your jurisdiction's ceiling">
+              <ul className="list-disc pl-4">
+                {clampedOnNextRun.map(({ field, stored, clampedTo }) => (
+                  <li key={field.key}>
+                    {field.label}: currently stored as {stored.toLocaleString()} days, but will be
+                    clamped to {clampedTo.toLocaleString()} days on the next retention run. This happens
+                    automatically - saving new values below will not retroactively change what happened
+                    to any data already purged.
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
 
           {isShortening && !hasErrors && (
             <Alert variant="warning" title="This shortens at least one window">

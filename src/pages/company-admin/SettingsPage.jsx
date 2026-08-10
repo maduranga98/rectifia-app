@@ -7,11 +7,13 @@ import {
   PULSE_CADENCES,
   getCompany,
   getStrictestJurisdiction,
+  isValidTimeZone,
   sendPulseChecksNow,
   updateCompanyCrisisContact,
   updateCompanyFollowUpConfig,
   updateCompanyJurisdictions,
   updateCompanyPulseCadence,
+  updateCompanyTimeZone,
 } from '../../services/companyService'
 import { listEmployees } from '../../services/employeeService'
 import Alert from '../../components/ui/Alert'
@@ -82,6 +84,25 @@ function sameSet(a, b) {
   return a.length === b.length && a.every((v) => b.includes(v))
 }
 
+// Live confirmation string so an admin typing a zone can tell at a glance
+// whether they picked the right one, e.g. "Currently 4:32 PM in
+// Asia/Tokyo" - resolved the same way
+// functions/src/utils/companySchedule.js resolves the local hour that
+// actually gates the two per-company sweeps, just formatted for a human
+// instead of reduced to an hour number.
+function currentLocalTimeLabel(timeZone) {
+  if (!isValidTimeZone(timeZone)) return null
+  try {
+    return `Currently ${new Date().toLocaleTimeString(undefined, {
+      timeZone,
+      hour: 'numeric',
+      minute: '2-digit',
+    })} in ${timeZone}`
+  } catch {
+    return null
+  }
+}
+
 // Company Settings: the two company-doc fields this panel owns that don't have
 // a page of their own - the pulse-check cadence the scheduler reads, and the
 // jurisdictions that drive deadline computation. Departments have their own
@@ -113,6 +134,13 @@ function SettingsPage({ companyId }) {
   const [jurisdictions, setJurisdictions] = useState([])
   const [savingJurisdictions, setSavingJurisdictions] = useState(false)
 
+  // Time zone is staged and saved independently of jurisdictions - changing
+  // jurisdictions must never silently overwrite an admin's explicit time
+  // zone choice, so this has its own save button rather than riding along
+  // with handleSaveJurisdictions.
+  const [timeZoneInput, setTimeZoneInput] = useState('')
+  const [savingTimeZone, setSavingTimeZone] = useState(false)
+
   // Follow-up cadence is staged locally and saved explicitly, same as
   // jurisdictions - the intervals live as a text field the admin edits freely,
   // and disabled categories as a set. Defaults are all four categories on at
@@ -139,6 +167,7 @@ function SettingsPage({ companyId }) {
       ])
       setCompany(companyData)
       setJurisdictions(companyData?.jurisdictions ?? [])
+      setTimeZoneInput(companyData?.timeZone ?? '')
       const followUp = companyData?.followUpConfig
       setIntervalsText(
         (Array.isArray(followUp?.intervalsDays)
@@ -229,6 +258,21 @@ function SettingsPage({ companyId }) {
     }
   }
 
+  async function handleSaveTimeZone() {
+    setSavingTimeZone(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await updateCompanyTimeZone(companyId, timeZoneInput.trim())
+      await refresh()
+      setNotice(`Time zone set to ${timeZoneInput.trim()}.`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingTimeZone(false)
+    }
+  }
+
   function toggleCategory(code) {
     setDisabledCategories((current) =>
       current.includes(code) ? current.filter((c) => c !== code) : [...current, code]
@@ -285,6 +329,11 @@ function SettingsPage({ companyId }) {
   )
   const savedJurisdictions = company?.jurisdictions ?? []
   const jurisdictionsChanged = !sameSet(jurisdictions, savedJurisdictions)
+
+  const timeZoneTrimmed = timeZoneInput.trim()
+  const timeZoneValid = timeZoneTrimmed.length === 0 || isValidTimeZone(timeZoneTrimmed)
+  const timeZoneChanged = timeZoneTrimmed !== (company?.timeZone ?? '')
+  const timeZoneLocalLabel = currentLocalTimeLabel(timeZoneTrimmed)
 
   const savedCrisisContact = company?.crisisContact ?? {}
   const crisisContactChanged =
@@ -604,6 +653,43 @@ function SettingsPage({ companyId }) {
               cases that already exist.
             </Alert>
           )}
+        </fieldset>
+
+        <fieldset className="mt-5 flex flex-col gap-2 border-t border-line pt-5">
+          <legend className="sr-only">Time zone</legend>
+          <label className="flex flex-col gap-1.5 text-sm sm:max-w-sm">
+            <span className="font-medium text-charcoal">Time zone</span>
+            <input
+              type="text"
+              value={timeZoneInput}
+              onChange={(e) => setTimeZoneInput(e.target.value)}
+              placeholder="e.g. Asia/Tokyo"
+              className="field"
+              autoComplete="off"
+            />
+          </label>
+          <p className="text-xs text-muted">
+            {timeZoneLocalLabel ?? 'Enter an IANA time zone identifier, e.g. "Europe/London".'} This
+            decides the local hour deadline escalations and pulse-check invitations go out at, not
+            when compliance deadlines themselves fall due.
+          </p>
+          {!timeZoneValid && (
+            <p className="text-xs text-critical">
+              Not a recognised time zone. Use an IANA identifier such as "America/New_York".
+            </p>
+          )}
+          <div className="flex items-center gap-3 pt-1">
+            <Button
+              variant="secondary"
+              onClick={handleSaveTimeZone}
+              loading={savingTimeZone}
+              loadingLabel="Saving"
+              disabled={!timeZoneChanged || !timeZoneValid || timeZoneTrimmed.length === 0}
+            >
+              Save time zone
+            </Button>
+            {timeZoneChanged && <span className="text-xs text-muted">Unsaved changes</span>}
+          </div>
         </fieldset>
       </Card>
 
