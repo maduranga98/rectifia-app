@@ -82,9 +82,16 @@ service cloud.firestore {
     // external EAP provider or counsellor with no login - so writing it grants
     // no case-content access and stays inside this same field allowlist rather
     // than widening the company doc to a blanket admin-writable document.
+    // timeZone is an IANA identifier string (Settings page) that
+    // functions/src/utils/companySchedule.js reads to pick the local hour
+    // for the checkOverdueDeadlines and schedulePulseChecks sweeps - company
+    // config, not case content, validated client-side by
+    // src/services/companyService.js's isValidTimeZone() before this write
+    // is even attempted, same "client validates, this allowlist is the real
+    // gate" pattern as every other field here.
     function companyAdminEditableFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact', 'retention']);
+        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact', 'retention', 'timeZone']);
     }
 
     // A custom-role holder's write to the company doc is scoped BOTH by which

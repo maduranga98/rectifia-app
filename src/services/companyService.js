@@ -61,6 +61,22 @@ export const FOLLOW_UP_CATEGORIES = ['harassment', 'toxicManagement', 'retaliati
 // functions bundles.
 const JURISDICTION_STRICTNESS_ORDER = ['EU', 'JP', 'UK', 'US', 'AU', 'LK']
 
+// Prefills companies/{companyId}.timeZone from the first jurisdiction
+// selected at creation - functions/src/utils/companySchedule.js is what
+// actually reads timeZone (to decide the local hour for the two per-company
+// hourly sweeps), this mapping only chooses a sensible starting value. A
+// prefill only: the admin can change it on SettingsPage.jsx afterwards, and
+// changing jurisdictions later must never silently overwrite an explicitly
+// chosen timeZone - see createCompany and updateCompanyTimeZone below.
+export const DEFAULT_TIMEZONE_BY_JURISDICTION = {
+  EU: 'Europe/Brussels',
+  UK: 'Europe/London',
+  US: 'America/New_York',
+  AU: 'Australia/Sydney',
+  JP: 'Asia/Tokyo',
+  LK: 'Asia/Colombo',
+}
+
 const COMPANIES_COLLECTION = 'companies'
 
 // Turns a company name into a URL-safe slug: lowercase, non-alphanumeric runs
@@ -169,6 +185,11 @@ export async function createCompany({
     jurisdictions,
     departments,
     subscriptionTier,
+    // Prefill only, from the first selected jurisdiction - the admin can
+    // change it immediately on SettingsPage.jsx. null when the jurisdiction
+    // has no mapped zone, which never happens today but keeps this from
+    // ever writing `undefined`.
+    timeZone: DEFAULT_TIMEZONE_BY_JURISDICTION[jurisdictions[0]] ?? null,
     // The Super Admin overview reads these three; seeding them at creation
     // is what stops a brand new company rendering as "Unknown"/"—" there.
     billingStatus: 'active',
@@ -294,6 +315,50 @@ export async function updateCompanyCrisisContact(companyId, crisisContact) {
       email: email || null,
       phone: phone || null,
     },
+  })
+}
+
+// True if `timeZone` is a value Intl (and by extension
+// functions/src/utils/companySchedule.js) can actually resolve. Prefers
+// Intl.supportedValuesOf('timeZone') where available (a real allowlist,
+// no round-trip needed); falls back to constructing a DateTimeFormat with
+// it and catching the throw on environments where supportedValuesOf isn't
+// implemented. Either way, an invalid zone is rejected here rather than
+// reaching the scheduler - which would silently treat it as UTC rather than
+// erroring, since shouldRunForCompany's own fallback exists for a value that
+// predates this validation, not as an excuse to skip validating new ones.
+export function isValidTimeZone(timeZone) {
+  if (typeof timeZone !== 'string' || !timeZone.trim()) return false
+  if (typeof Intl.supportedValuesOf === 'function') {
+    try {
+      return Intl.supportedValuesOf('timeZone').includes(timeZone)
+    } catch {
+      // Fall through to the DateTimeFormat check below.
+    }
+  }
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone })
+    return true
+  } catch {
+    return false
+  }
+}
+
+// Writes companies/{companyId}.timeZone, read by
+// functions/src/utils/companySchedule.js to decide the local hour for the
+// checkOverdueDeadlines and schedulePulseChecks sweeps. Rejects anything
+// that doesn't validate as a real IANA zone outright - an invalid value must
+// never reach the scheduler, even though shouldRunForCompany() would fall
+// back to UTC rather than throw if one somehow did.
+export async function updateCompanyTimeZone(companyId, timeZone) {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  if (!isValidTimeZone(timeZone)) {
+    throw new Error('Enter a valid IANA time zone, e.g. "Asia/Tokyo"')
+  }
+  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
+    timeZone,
   })
 }
 
