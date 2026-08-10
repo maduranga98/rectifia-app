@@ -15,6 +15,7 @@ import StaffPage from './company-admin/StaffPage'
 import EmployeesPage from './company-admin/EmployeesPage'
 import PulseQuestionsPage from './company-admin/PulseQuestionsPage'
 import RoutingRulesPage from './company-admin/RoutingRulesPage'
+import DesignatedHandlersPage from './company-admin/DesignatedHandlersPage'
 import BillingPage from './company-admin/BillingPage'
 import SettingsPage from './company-admin/SettingsPage'
 import RetentionPage from './company-admin/RetentionPage'
@@ -97,6 +98,17 @@ const NAV_ITEMS = [
     permission: 'policyManagement',
     section: 'Policy & compliance',
   },
+  // JP's designated-handler (従事者) register - see DesignatedHandlersPage.jsx.
+  // No `flag` gate: the register stays reachable even for a company without
+  // JP configured (the page itself explains it's optional in that case), so
+  // a company can designate handlers ahead of adding the jurisdiction.
+  {
+    to: '/admin/designated-handlers',
+    label: 'Designated handlers',
+    icon: 'shield',
+    permission: 'designatedHandlers',
+    section: 'Policy & compliance',
+  },
   // Sits next to Settings deliberately: pulseCheckCadence (how often check-ins
   // go out) lives there, and this is what those check-ins ask.
   {
@@ -166,6 +178,7 @@ const PAGE_TITLES = {
   analytics: 'Analytics & reporting',
   departments: 'Departments',
   policies: 'Policies',
+  'designated-handlers': 'Designated handlers',
   staff: 'Staff',
   roles: 'Staff',
   employees: 'Employees',
@@ -258,6 +271,12 @@ function Admin() {
           <Route
             path="policies"
             element={gated(<PoliciesPage companyId={companyId} />, { permission: 'policyManagement' })}
+          />
+          <Route
+            path="designated-handlers"
+            element={gated(<DesignatedHandlersPage companyId={companyId} />, {
+              permission: 'designatedHandlers',
+            })}
           />
           <Route
             path="staff"

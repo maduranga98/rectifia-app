@@ -27,6 +27,11 @@ const { generateReport } = require('./src/intake/generateReport')
 const { exportReportPdf } = require('./src/reports/exportReportPdf')
 const { scheduleDeadlines } = require('./src/compliance/scheduleDeadlines')
 const { checkOverdueDeadlines } = require('./src/compliance/checkOverdueDeadlines')
+const {
+  designateHandler,
+  revokeHandlerDesignation,
+  acknowledgeConfidentiality,
+} = require('./src/compliance/designatedHandlers')
 const { proposeAction, closeCase, reviewConsistencyFlag } = require('./src/investigation/caseActions')
 const { getCaseForTriage } = require('./src/investigation/getCaseForTriage')
 const { revealIdentity } = require('./src/investigation/revealIdentity')
@@ -128,6 +133,12 @@ exports.generateReport = generateReport
 exports.exportReportPdf = exportReportPdf
 exports.scheduleDeadlines = scheduleDeadlines
 exports.checkOverdueDeadlines = checkOverdueDeadlines
+// JP's designated-handler (従事者) register. Metadata only - see
+// functions/src/compliance/designatedHandlers.js for the field shape and the
+// self-acknowledgment rule.
+exports.designateHandler = designateHandler
+exports.revokeHandlerDesignation = revokeHandlerDesignation
+exports.acknowledgeConfidentiality = acknowledgeConfidentiality
 exports.proposeAction = proposeAction
 exports.closeCase = closeCase
 exports.reviewConsistencyFlag = reviewConsistencyFlag

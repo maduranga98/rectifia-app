@@ -43,6 +43,11 @@ export const PERMISSION_MODULES = {
     label: 'Pulse Check aggregate view',
     description: 'View department-level Pulse Check aggregate results. Never individual responses.',
   },
+  designatedHandlers: {
+    label: 'Designated handlers (JP)',
+    description:
+      "Designate or revoke a Case Handler's 従事者 status under Japan's Whistleblower Protection Act, and view the register.",
+  },
 }
 
 // The ONLY permission keys that may ever appear in a custom role's

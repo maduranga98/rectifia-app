@@ -21,6 +21,7 @@ const PERMISSION_MODULE_KEYS = Object.freeze([
   'billingView',
   'complianceConfig',
   'pulseAggregateView',
+  'designatedHandlers',
 ])
 
 // The staff-facing fixed roles this module's composable layer sits beside.
