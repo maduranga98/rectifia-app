@@ -1,8 +1,95 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
 import { downloadSimplePdf } from '../../utils/simplePdf'
+import { sendReporterMessage, uploadCaseEvidence } from '../../services/caseThreadService'
+
+// Uploads each file staged during the questionnaire (see
+// QuestionnaireForm.jsx's file-staging step) now that a caseId and passcode
+// finally exist, and - for whichever files succeed - posts them as one
+// reporter message so they land in the case thread exactly the way an
+// attachment sent later from CaseThread.jsx would. Shared by this component
+// (staff-on-behalf intake) and Submit.jsx (the reporter's own intake): both
+// screens exist to hand over a caseId + passcode safely, and this is what
+// happens the instant that pair exists, so the upload belongs in one place
+// rather than two copies that could drift on error handling.
+//
+// Never throws. A failed upload here must never cost the reporter their Case
+// ID and passcode - the one thing either screen exists to show safely - so
+// every outcome, success or failure, is returned per file instead, for the
+// caller to display once the credentials are already on screen.
+export async function uploadStagedEvidence(caseId, passcode, files) {
+  if (!files || files.length === 0) return []
+
+  const results = []
+  const attachments = []
+  for (const file of files) {
+    try {
+      const attachment = await uploadCaseEvidence(caseId, file, passcode)
+      attachments.push(attachment)
+      results.push({ label: file.name, status: 'success' })
+    } catch (err) {
+      results.push({ label: file.name, status: 'failed', error: err.message })
+    }
+  }
+
+  if (attachments.length > 0) {
+    try {
+      await sendReporterMessage(caseId, passcode, 'Files attached when this report was filed.', attachments)
+    } catch {
+      // Uploaded to storage but never reached the thread, so nothing shows
+      // them yet - "uploaded but not attached to anything" is not success
+      // from the reporter's side, and the failure messaging below tells them
+      // to retry from the thread either way.
+      for (const result of results) {
+        if (result.status === 'success') {
+          result.status = 'failed'
+          result.error = 'Could not attach to your case thread'
+        }
+      }
+    }
+  }
+
+  return results
+}
+
+// The staged-evidence upload outcome, once uploading has settled. Renders
+// nothing while nothing has been staged - most cases file with no evidence
+// at all, and this must not add a permanent empty card to that path.
+export function StagedEvidenceStatus({ uploading, results }) {
+  if (!uploading && results.length === 0) return null
+
+  const failed = results.filter((result) => result.status === 'failed')
+
+  return (
+    <Card title="Files you attached">
+      {uploading ? (
+        <p className="text-sm text-muted">Attaching your files…</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {results.map((result) => (
+              <li key={result.label} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 truncate text-charcoal">{result.label}</span>
+                <span className={result.status === 'success' ? 'text-low' : 'text-critical'}>
+                  {result.status === 'success' ? 'Attached' : 'Failed'}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {failed.length > 0 && (
+            <Alert variant="warning">
+              {failed.length} file{failed.length === 1 ? '' : 's'} could not be attached. Your
+              report was filed successfully regardless - once you have your Case ID and
+              passcode, you can attach these files from your case thread instead.
+            </Alert>
+          )}
+        </div>
+      )}
+    </Card>
+  )
+}
 
 // The one and only time a staff-filed case's credentials are visible.
 //
@@ -17,10 +104,42 @@ import { downloadSimplePdf } from '../../utils/simplePdf'
 // Losing this matters more here than on the reporter's own screen. There the
 // person who loses access is the one who was looking at it; here the staff
 // member closing the tab is not the person who suffers for it.
-function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDone, onFileAnother }) {
+//
+// stagedFiles is optional and empty by default - StaffIntakeForm.jsx does
+// not currently offer the questionnaire's staging step, so this is a no-op
+// for it today. When it is empty, nothing below behaves any differently
+// than before this prop existed.
+function CaseCredentialsHandoff({
+  caseId,
+  passcode,
+  tier,
+  backdateWarning,
+  stagedFiles = [],
+  onDone,
+  onFileAnother,
+}) {
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
   const [acknowledged, setAcknowledged] = useState(false)
+  const [evidenceUploading, setEvidenceUploading] = useState(stagedFiles.length > 0)
+  const [evidenceResults, setEvidenceResults] = useState([])
+
+  useEffect(() => {
+    if (stagedFiles.length === 0) return
+    let cancelled = false
+    uploadStagedEvidence(caseId, passcode, stagedFiles).then((results) => {
+      if (!cancelled) {
+        setEvidenceResults(results)
+        setEvidenceUploading(false)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+    // Intentionally run once, on mount - this screen exists for exactly one
+    // caseId/passcode/stagedFiles combination for its whole lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const trackingUrl =
     typeof window !== 'undefined' ? `${window.location.origin}/case/${caseId}` : null
@@ -179,6 +298,8 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
           tools — including your employer&apos;s, if that&apos;s who this report is about.
         </p>
       </Card>
+
+      <StagedEvidenceStatus uploading={evidenceUploading} results={evidenceResults} />
 
       <Card title="Before you close this">
         <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed text-muted">
