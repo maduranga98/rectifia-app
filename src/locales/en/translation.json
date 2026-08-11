@@ -1082,6 +1082,13 @@
       "footnote": "Averages stay comparable across these boundaries: they are calculated from the four standard questions only, which no company can change. A company's own added questions never feed an average or a trend."
     }
   },
+  "billingPage": {
+    "subscriptionStatus": "Subscription status",
+    "readOnly": {
+      "title": "Read-only",
+      "body": "Payment details and plan changes are handled outside this panel. Contact Lumora to change your subscription."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
