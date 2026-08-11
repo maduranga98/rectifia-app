@@ -2461,6 +2461,27 @@
     "crisisFlagged": "Crisis flagged",
     "highPriority": "High priority"
   },
+  "reportExportButton": {
+    "generatingPdf": "Generating PDF…",
+    "exportAsPdf": "Export as PDF",
+    "identityPanel": {
+      "title": "Include reporter identity?",
+      "description": "Confidential tier only. Decrypts and prints the reporter's identity in the PDF's appendix, and is logged the same as any other identity access.",
+      "checkboxLabel": "Include reporter identity in this export",
+      "reasonLabel": "Reason",
+      "reasonHint": "Documented legal reason, at least {{min}} characters. Recorded in the identity access audit log."
+    },
+    "generatePdf": "Generate PDF",
+    "history": {
+      "title": "Export history",
+      "description": "Every time this case's report has been rendered to PDF.",
+      "loading": "Loading…",
+      "empty": "This report has not been exported yet.",
+      "you": "You",
+      "identityIncluded": "Identity included",
+      "pagesAndSize": "{{pages}} pages · {{size}}"
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
