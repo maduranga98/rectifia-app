@@ -1,21 +1,22 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { uploadPolicy, validatePolicyFile } from '../../services/policyService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Icon from '../ui/Icon'
 import { Input } from '../ui/Field'
 
-const PROGRESS_LABEL = {
-  requesting: 'Preparing upload…',
-  uploading: 'Uploading…',
-  processing: 'Extracting and tagging the document…',
-}
-
 // Drag-and-drop + file-picker upload card for a company policy document.
 // Client-side type/size validation mirrors the server allowlist so an obviously
 // wrong file is rejected before an upload URL is spent; the server remains the
 // real gate. On success the parent refreshes its table via onUploaded.
 function PolicyUpload({ companyId, onUploaded }) {
+  const { t } = useTranslation()
+  const PROGRESS_LABEL = {
+    requesting: t('policyUpload.progress.requesting'),
+    uploading: t('policyUpload.progress.uploading'),
+    processing: t('policyUpload.progress.processing'),
+  }
   const inputRef = useRef(null)
   const [title, setTitle] = useState('')
   const [file, setFile] = useState(null)
@@ -59,7 +60,7 @@ function PolicyUpload({ companyId, onUploaded }) {
     try {
       const result = await uploadPolicy({ companyId, title: title.trim(), file }, setProgress)
       if (result.status === 'failed') {
-        setFailure(result.errorMessage || 'The document could not be processed.')
+        setFailure(result.errorMessage || t('policyUpload.couldNotProcess'))
       } else {
         setTitle('')
         setFile(null)
@@ -76,9 +77,9 @@ function PolicyUpload({ companyId, onUploaded }) {
   return (
     <form onSubmit={handleUpload} className="flex flex-col gap-4">
       <Input
-        label="Document title"
-        placeholder="e.g. Harassment & Bullying Policy"
-        hint="Re-uploading a document with the same title creates a new version and archives the previous one."
+        label={t('policyUpload.titleLabel')}
+        placeholder={t('policyUpload.titlePlaceholder')}
+        hint={t('policyUpload.titleHint')}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         disabled={busy}
@@ -96,7 +97,7 @@ function PolicyUpload({ companyId, onUploaded }) {
         className={`flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-6 py-10 text-center transition-colors ${
           dragging ? 'border-navy bg-navy-50/60' : 'border-line hover:border-navy-300'
         } ${busy ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-        aria-label="Choose or drop a policy document"
+        aria-label={t('policyUpload.dropZoneAriaLabel')}
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-navy-50 text-navy">
           <Icon name="document" className="h-5 w-5" />
@@ -105,10 +106,8 @@ function PolicyUpload({ companyId, onUploaded }) {
           <span className="text-sm font-medium text-charcoal">{file.name}</span>
         ) : (
           <>
-            <span className="text-sm font-medium text-charcoal">
-              Drop a document here, or click to choose
-            </span>
-            <span className="text-xs text-muted">PDF, DOCX, TXT or Markdown, up to 10MB</span>
+            <span className="text-sm font-medium text-charcoal">{t('policyUpload.dropHint')}</span>
+            <span className="text-xs text-muted">{t('policyUpload.fileTypesHint')}</span>
           </>
         )}
       </button>
@@ -122,13 +121,12 @@ function PolicyUpload({ companyId, onUploaded }) {
 
       {error && <Alert variant="error">{error}</Alert>}
       {failure && (
-        <Alert variant="error" title="This document could not be processed">
-          {failure} The document was saved but has no usable text, so it will not ground any cases.
-          You can delete it and try a different file.
+        <Alert variant="error" title={t('policyUpload.processingFailed.title')}>
+          {failure} {t('policyUpload.processingFailed.body')}
         </Alert>
       )}
       {busy && (
-        <p className="text-sm text-muted">{PROGRESS_LABEL[progress] ?? 'Working…'}</p>
+        <p className="text-sm text-muted">{PROGRESS_LABEL[progress] ?? t('policyUpload.progress.working')}</p>
       )}
 
       <Button
@@ -137,10 +135,10 @@ function PolicyUpload({ companyId, onUploaded }) {
         icon="plus"
         className="self-start"
         loading={busy}
-        loadingLabel={PROGRESS_LABEL[progress] ?? 'Uploading'}
+        loadingLabel={PROGRESS_LABEL[progress] ?? t('policyUpload.progress.uploading')}
         disabled={!file || !title.trim()}
       >
-        Upload policy
+        {t('policyUpload.uploadButton')}
       </Button>
     </form>
   )

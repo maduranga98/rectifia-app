@@ -1747,6 +1747,26 @@
     "concernNotice_other": "<strong>{{count}}</strong> reporters indicated something happened after their case closed. If they chose to file, it is a new, separate case in the queue with its own handler.",
     "noResponseFootnote": "“Unknown — no response” means the reporter did not return, which is the expected case for an anonymous reporter. It is not a sign that nothing happened."
   },
+  "policyUpload": {
+    "progress": {
+      "requesting": "Preparing upload…",
+      "uploading": "Uploading…",
+      "processing": "Extracting and tagging the document…",
+      "working": "Working…"
+    },
+    "couldNotProcess": "The document could not be processed.",
+    "titleLabel": "Document title",
+    "titlePlaceholder": "e.g. Harassment & Bullying Policy",
+    "titleHint": "Re-uploading a document with the same title creates a new version and archives the previous one.",
+    "dropZoneAriaLabel": "Choose or drop a policy document",
+    "dropHint": "Drop a document here, or click to choose",
+    "fileTypesHint": "PDF, DOCX, TXT or Markdown, up to 10MB",
+    "processingFailed": {
+      "title": "This document could not be processed",
+      "body": "The document was saved but has no usable text, so it will not ground any cases. You can delete it and try a different file."
+    },
+    "uploadButton": "Upload policy"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
