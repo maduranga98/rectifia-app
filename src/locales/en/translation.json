@@ -1912,6 +1912,32 @@
       "footnote": "This projection is calculated instantly in your browser for planning purposes. Your actual bill is always recalculated from your real roster at invoicing time."
     }
   },
+  "staffInvite": {
+    "roleHints": {
+      "companyAdmin": "Settings, staff, and routing. Never sees case content.",
+      "hrCoordinator": "Company-wide case oversight and reassignment.",
+      "caseHandler": "Investigates the cases assigned to them.",
+      "manager": "Aggregate team wellbeing only.",
+      "pulseCheckReviewer": "Individual pulse check responses."
+    },
+    "chooseCustomRole": "Choose a custom role, or create one on the Custom roles page first.",
+    "inviteSent": "Invite sent to {{email}}",
+    "title": "Invite a team member",
+    "description": "They receive a link to set their own password - no password is handled here.",
+    "workEmail": "Work email",
+    "roleType": "Role type",
+    "roleTypeHint": "A fixed role, or a custom role built on the Custom roles page.",
+    "fixedRole": "Fixed role",
+    "customRole": "Custom role",
+    "role": "Role",
+    "noCustomRoles": "No custom roles exist yet. Create one on the Custom roles page before inviting someone into it.",
+    "customRoleHint": "Case Handler and HR Coordinator can never appear here - they aren't composable.",
+    "departmentsLegend": "Departments",
+    "departmentsHint": "A manager only sees aggregate pulse results for the departments assigned here. Names must match the department as it appears on employee records.",
+    "noDepartments": "No departments are configured yet. Add departments on the Departments page before inviting a manager, or invite them now and assign departments from the staff list later.",
+    "sending": "Sending invite",
+    "sendInvite": "Send invite"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
