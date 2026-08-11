@@ -628,6 +628,41 @@
       }
     }
   },
+  "pulseSurveyForm": {
+    "defaultScaleLabels": ["Not at all", "Rarely", "Somewhat", "Mostly", "Very much"],
+    "defaultOrganization": "your organization",
+    "whoSeesThis": {
+      "title": "Who sees your response",
+      "individual": "Your <strong>HR Coordinator</strong> and <strong>Pulse Check Reviewer</strong> can see your individual response.",
+      "aggregate": "Your <strong>manager</strong> sees department-level aggregates only - never your individual answers."
+    },
+    "thanks": {
+      "title": "Thanks - your response has been recorded",
+      "description": "Your check-in for {{company}} has been saved."
+    },
+    "loadFailed": {
+      "title": "This check-in couldn't be loaded",
+      "description": "The questions didn't load. Please try opening your link again in a few minutes - nothing is wrong with your link."
+    },
+    "title": "Pulse check",
+    "description": "A few quick questions about how work is going at {{company}}. Takes under a minute.",
+    "previewAlert": {
+      "title": "Preview - nothing is recorded",
+      "body": "This is exactly what employees see. You can click through the scale and type in the boxes; nothing you enter here is saved, sent, or counted anywhere."
+    },
+    "submitDisabledInPreview": "Submit (disabled in preview)"
+  },
+  "questionSetPreview": {
+    "publishedVersion": "Published version {{version}}",
+    "standardOnly": "Standard questions only",
+    "noAddedQuestions": "No added questions",
+    "addedQuestions_one": "{{count}} added question",
+    "addedQuestions_other": "{{count}} added questions",
+    "liveVersion": {
+      "title": "This is the live version, not your draft",
+      "body": "You have unpublished changes. This preview shows what employees are receiving right now. Publish to make your changes part of what is sent."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
