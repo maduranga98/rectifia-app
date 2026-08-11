@@ -2238,6 +2238,31 @@
     "unlabelledSection": "ලේබල් නොකළ කොටස",
     "footnote": "ප්‍රතිපත්ති සන්දර්භය අසන ප්‍රශ්න සහ සොයන සාක්ෂි දැනුම් දෙයි. එය ප්‍රතිඵලය තීරණය නොකරයි — මෙම නඩුවේ සෑම තීරණයක්ම ඔබටම අයිතිය."
   },
+  "evidenceInventory": {
+    "manualLogEntry": "අතින් ලඝු-සටහන් ඇතුළත් කිරීම",
+    "aiAssistant": "AI සහායක",
+    "caseHandler": "නඩු හසුරුවන්නා",
+    "reporter": "වාර්තාකරු"
+  },
+  "caseEvidencePanel": {
+    "opening": "විවෘත කරමින්",
+    "open": "විවෘත කරන්න",
+    "couldNotOpen": "මෙම ගොනුව විවෘත කළ නොහැකි විය.",
+    "title": "සාක්ෂි",
+    "fileCount_one": "මෙම නඩුවේ තුනිය පුරා ගොනුවක් අමුණා ඇත.",
+    "fileCount_other": "මෙම නඩුවේ තුනිය පුරා ගොනු {{count}}ක් අමුණා ඇත.",
+    "empty": "තවම මෙම නඩුවට සාක්ෂි කිසිවක් අමුණා නැත.",
+    "headers": {
+      "file": "ගොනුව",
+      "type": "වර්ගය",
+      "size": "ප්‍රමාණය",
+      "uploaded": "උඩුගත කළේ",
+      "suppliedBy": "සැපයුවේ",
+      "thread": "තුනිය",
+      "open": "විවෘත කරන්න"
+    },
+    "viewInThread": "තුනියේ බලන්න"
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",

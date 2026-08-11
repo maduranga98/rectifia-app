@@ -2238,6 +2238,31 @@
     "unlabelledSection": "Unlabelled section",
     "footnote": "Policy context informs the questions asked and the evidence sought. It does not determine the outcome — every determination on this case is yours."
   },
+  "evidenceInventory": {
+    "manualLogEntry": "Manual log entry",
+    "aiAssistant": "AI assistant",
+    "caseHandler": "Case Handler",
+    "reporter": "Reporter"
+  },
+  "caseEvidencePanel": {
+    "opening": "Opening",
+    "open": "Open",
+    "couldNotOpen": "Could not open this file.",
+    "title": "Evidence",
+    "fileCount_one": "{{count}} file attached across this case's thread.",
+    "fileCount_other": "{{count}} files attached across this case's thread.",
+    "empty": "No evidence has been attached to this case yet.",
+    "headers": {
+      "file": "File",
+      "type": "Type",
+      "size": "Size",
+      "uploaded": "Uploaded",
+      "suppliedBy": "Supplied by",
+      "thread": "Thread",
+      "open": "Open"
+    },
+    "viewInThread": "View in thread"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
