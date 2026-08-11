@@ -829,6 +829,31 @@
     "submitAndOpenCase": "Submit and open a new case",
     "submitAnswer": "Submit answer"
   },
+  "caseNotificationOptIn": {
+    "noDetailsNote": "A notification never contains any detail about your case — no message text, no category, nothing that could identify the report. It only tells you there is an update to come back and read here.",
+    "getNotified": "Get notified when there's a reply",
+    "iosInstall": "On iPhone and iPad, notifications only work once this site is added to your Home Screen. Tap the Share button in Safari, choose <strong>Add to Home Screen</strong>, then open Rectifia from your home screen and come back to this page to turn them on.",
+    "unsupported": {
+      "title": "Notifications aren't available in this browser",
+      "body": "This browser can't send you case updates. You can still come back any time with your Case ID and passcode to read replies."
+    },
+    "blocked": {
+      "title": "Notifications are blocked for this site",
+      "body": "Your browser is set to block notifications here, so we can't turn them on from this page. To allow them, open this site's permissions — usually the icon at the left of the address bar, or Settings → Site settings → Notifications — set notifications to Allow, then reload this page."
+    },
+    "subscribed": {
+      "title": "You'll be notified of replies",
+      "body": "This device will get a notification when there's a reply on your case. It won't say anything about the case itself — just that there's an update to check.",
+      "turnedOff": "Notifications are off for this device. Reopen this page any time to turn them back on.",
+      "sharedDeviceNote": "On a shared or work device, turn notifications off before you leave — otherwise the next person using this browser will see the update prompts."
+    },
+    "turningOff": "Turning off",
+    "turnOffThisDevice": "Turn off on this device",
+    "turnOnBody": "Turn on notifications on this device so you know when your handler responds, without having to keep checking back.",
+    "turningOn": "Turning on",
+    "turnOnReplyNotifications": "Turn on reply notifications",
+    "notifyMe": "Notify me of replies"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
