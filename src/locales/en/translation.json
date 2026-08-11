@@ -2347,6 +2347,28 @@
       "notAuthorized": "You are not authorized to view reporter identity for this case."
     }
   },
+  "investigationChecklist": {
+    "types": {
+      "interviewQuestion": "Interview question",
+      "documentRequest": "Document to request",
+      "contradictionFlag": "Contradiction / gap"
+    },
+    "generating": "Generating",
+    "regenerate": "Regenerate",
+    "generate": "Generate",
+    "title": "Investigation checklist",
+    "description": "AI-suggested next steps from the category, answers, and thread so far. A planning aid, not a required workflow.",
+    "empty": {
+      "title": "No checklist yet",
+      "description": "Generate one to get suggested interview questions, documents to request, and gaps to chase."
+    },
+    "markAsDone": "Mark \"{{item}}\" as done",
+    "editItem": "Edit item",
+    "save": "Save",
+    "edit": "Edit",
+    "unignore": "Unignore",
+    "ignore": "Ignore"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
