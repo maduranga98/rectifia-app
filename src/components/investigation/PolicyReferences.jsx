@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getPolicyDownloadUrl } from '../../services/policyService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
@@ -15,6 +16,7 @@ import EmptyState from '../ui/EmptyState'
 // This never asserts that the reported conduct violates a clause, and never
 // states a conclusion: it is a record of what the AI read, not a finding.
 function PolicyReferences({ caseData }) {
+  const { t } = useTranslation()
   const [error, setError] = useState(null)
   const [openingId, setOpeningId] = useState(null)
 
@@ -28,7 +30,7 @@ function PolicyReferences({ caseData }) {
     if (!acc[key]) {
       acc[key] = {
         policyId: citation.policyId,
-        title: citation.title ?? 'Policy document',
+        title: citation.title ?? t('policyReferences.policyDocument'),
         version: citation.version ?? null,
         clauses: [],
       }
@@ -53,16 +55,16 @@ function PolicyReferences({ caseData }) {
 
   return (
     <Card
-      title="Policy references"
-      description="The clauses from your company's own policy that were used as reference context for this case."
+      title={t('policyReferences.title')}
+      description={t('policyReferences.description')}
       padded={documents.length === 0}
     >
       {documents.length === 0 ? (
         <EmptyState
           compact
           icon="document"
-          title="No policy grounding on this case"
-          description="No company policy was available for this category when the case was scored, so it was handled without policy context."
+          title={t('policyReferences.empty.title')}
+          description={t('policyReferences.empty.description')}
         />
       ) : (
         <div className="flex flex-col">
@@ -78,7 +80,7 @@ function PolicyReferences({ caseData }) {
                   <div className="min-w-0">
                     <p className="font-medium text-charcoal">{document.title}</p>
                     {document.version != null && (
-                      <p className="text-xs text-muted">Version {document.version}</p>
+                      <p className="text-xs text-muted">{t('policyReferences.version', { version: document.version })}</p>
                     )}
                   </div>
                   <Button
@@ -86,10 +88,10 @@ function PolicyReferences({ caseData }) {
                     size="sm"
                     icon="document"
                     loading={openingId === document.policyId}
-                    loadingLabel="Opening"
+                    loadingLabel={t('policyReferences.opening')}
                     onClick={() => handleOpen(document.policyId)}
                   >
-                    Open source
+                    {t('policyReferences.openSource')}
                   </Button>
                 </div>
                 <ul className="flex flex-col gap-1">
@@ -97,17 +99,14 @@ function PolicyReferences({ caseData }) {
                     <li key={clause.chunkId} className="text-xs text-muted">
                       {Array.isArray(clause.headingPath) && clause.headingPath.length > 0
                         ? clause.headingPath.join(' › ')
-                        : 'Unlabelled section'}
+                        : t('policyReferences.unlabelledSection')}
                     </li>
                   ))}
                 </ul>
               </li>
             ))}
           </ul>
-          <p className="px-5 py-3 text-xs text-muted">
-            Policy context informs the questions asked and the evidence sought. It does not
-            determine the outcome — every determination on this case is yours.
-          </p>
+          <p className="px-5 py-3 text-xs text-muted">{t('policyReferences.footnote')}</p>
         </div>
       )}
     </Card>

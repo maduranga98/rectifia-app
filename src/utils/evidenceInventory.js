@@ -1,3 +1,5 @@
+import i18n from '../services/i18n'
+
 // Flattens a case thread's messages into one evidence inventory - every
 // attachment across every message, newest first, alongside who supplied it
 // and which message it came from. Shared by CaseEvidencePanel.jsx (the
@@ -5,10 +7,10 @@
 // for an external share), so the two never drift on what "the case's
 // evidence" means.
 function supplierLabel(message) {
-  if (message.type === 'manual_log') return 'Manual log entry'
-  if (message.sender === 'ai') return 'AI assistant'
-  if (message.sender === 'investigator') return 'Case Handler'
-  return 'Reporter'
+  if (message.type === 'manual_log') return i18n.t('evidenceInventory.manualLogEntry')
+  if (message.sender === 'ai') return i18n.t('evidenceInventory.aiAssistant')
+  if (message.sender === 'investigator') return i18n.t('evidenceInventory.caseHandler')
+  return i18n.t('evidenceInventory.reporter')
 }
 
 export function buildEvidenceInventory(messages) {

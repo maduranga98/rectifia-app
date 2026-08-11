@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import {
   MAX_QUESTION_TEXT_LENGTH,
   MAX_SUPPLEMENTARY_QUESTIONS,
@@ -15,11 +16,6 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { Select } from '../../components/ui/Field'
 import { SkeletonList } from '../../components/ui/Loading'
-
-const TYPE_LABELS = {
-  scale: '1-5 scale',
-  freeText: 'Free text',
-}
 
 // Supplementary ids are generated once, when the question is added, and never
 // derived from its text. An id derived from the wording would change the moment
@@ -64,10 +60,15 @@ function sameQuestions(a, b) {
 // something deserves to know why, or they will assume it is an oversight and
 // ask for it to be unlocked.
 function CoreQuestionsCard({ questions }) {
+  const { t } = useTranslation()
+  const typeLabels = {
+    scale: t('pulseQuestionsPage.typeLabels.scale'),
+    freeText: t('pulseQuestionsPage.typeLabels.freeText'),
+  }
   return (
     <Card
-      title="Standard questions"
-      description="Every company asks these four, in this order, unchanged. They cannot be edited, reordered, or removed."
+      title={t('pulseQuestionsPage.coreQuestions.title')}
+      description={t('pulseQuestionsPage.coreQuestions.description')}
     >
       <div className="flex flex-col gap-4">
         <ol className="flex flex-col gap-2">
@@ -81,23 +82,18 @@ function CoreQuestionsCard({ questions }) {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-charcoal">{q.text}</p>
-                <p className="mt-0.5 text-xs text-muted">{TYPE_LABELS[q.type] ?? q.type}</p>
+                <p className="mt-0.5 text-xs text-muted">{typeLabels[q.type] ?? q.type}</p>
               </div>
             </li>
           ))}
         </ol>
 
         <div className="rounded-lg border border-line px-4 py-3">
-          <p className="text-sm font-medium text-charcoal">Why these are fixed</p>
+          <p className="text-sm font-medium text-charcoal">
+            {t('pulseQuestionsPage.coreQuestions.whyFixedTitle')}
+          </p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            The wellbeing trend on an individual response, and the department averages your
-            managers see, are calculated from these four answers and nothing else. Comparing this
-            month against last month only means something if the question was identical both times.
-            If the wording could change, a &ldquo;declining&rdquo; trend might just be a reworded
-            question, and a department average might be averaging answers to two different
-            questions &mdash; with no way to tell afterwards which had happened. Questions you add
-            below appear in the survey and in what your HR Coordinator reads, but they never feed
-            those numbers, which is exactly what makes them safe to change whenever you like.
+            {t('pulseQuestionsPage.coreQuestions.whyFixedBody')}
           </p>
         </div>
       </div>
@@ -110,6 +106,11 @@ function CoreQuestionsCard({ questions }) {
 // questions below are freely editable, capped, and only reach anyone on an
 // explicit Publish.
 function PulseQuestionsPage({ companyId }) {
+  const { t } = useTranslation()
+  const typeLabels = {
+    scale: t('pulseQuestionsPage.typeLabels.scale'),
+    freeText: t('pulseQuestionsPage.typeLabels.freeText'),
+  }
   const [data, setData] = useState(null)
   const [draft, setDraft] = useState([])
   const [loading, setLoading] = useState(true)
@@ -164,7 +165,7 @@ function PulseQuestionsPage({ companyId }) {
         draft.map((q) => ({ id: q.id, text: q.text.trim(), type: q.type }))
       )
       await refresh()
-      setNotice('Draft saved. Nothing has changed for employees yet — press Publish to send it.')
+      setNotice(t('pulseQuestionsPage.draftSaved'))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -180,9 +181,7 @@ function PulseQuestionsPage({ companyId }) {
       const { version } = await publishQuestionSet(companyId)
       setConfirmPublish(false)
       await refresh()
-      setNotice(
-        `Published version ${version}. Check-ins sent from now on use it; links already in someone's inbox keep the questions they were sent with.`
-      )
+      setNotice(t('pulseQuestionsPage.publishedNotice', { version }))
     } catch (err) {
       setConfirmPublish(false)
       setError(err.message)
@@ -197,9 +196,7 @@ function PulseQuestionsPage({ companyId }) {
     setNotice(null)
     try {
       const { recipientEmail } = await sendTestPulseInvite(companyId)
-      setNotice(
-        `A test check-in is on its way to ${recipientEmail}. It behaves exactly like a real one, and the response it records is excluded from every average and every trend.`
-      )
+      setNotice(t('pulseQuestionsPage.testSentNotice', { email: recipientEmail }))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -237,54 +234,49 @@ function PulseQuestionsPage({ companyId }) {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <p className="max-w-2xl text-sm text-muted">
-        What everyone on your roster is asked at each check-in. Four standard questions are fixed
-        for every company; you can add up to {MAX_SUPPLEMENTARY_QUESTIONS} of your own.
+        {t('pulseQuestionsPage.intro', { max: MAX_SUPPLEMENTARY_QUESTIONS })}
       </p>
 
       {error && <Alert variant="error">{error}</Alert>}
       {notice && <Alert variant="success">{notice}</Alert>}
 
       {neverPublished && (
-        <Alert variant="warning" title="Nothing published yet">
-          Check-ins are not sent until a questionnaire is published, so nobody is being asked
-          anything right now. Press Publish below to send the standard questions — with or without
-          any of your own.
+        <Alert variant="warning" title={t('pulseQuestionsPage.neverPublished.title')}>
+          {t('pulseQuestionsPage.neverPublished.body')}
         </Alert>
       )}
 
       <CoreQuestionsCard questions={coreQuestions} />
 
       <Card
-        title="Your added questions"
-        description={`Optional, and yours to change. These appear in the survey and in what your HR Coordinator reads, but never affect the wellbeing trend or any department average.`}
+        title={t('pulseQuestionsPage.addedQuestions.title')}
+        description={t('pulseQuestionsPage.addedQuestions.description')}
         footer={
           <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="secondary"
               onClick={handleSaveDraft}
               loading={saving}
-              loadingLabel="Saving"
+              loadingLabel={t('pulseQuestionsPage.saving')}
               disabled={!unsavedEdits || !draftValid}
             >
-              Save draft
+              {t('pulseQuestionsPage.saveDraft')}
             </Button>
             <Button
               variant="primary"
               onClick={() => setConfirmPublish(true)}
               disabled={saving || publishing || unsavedEdits || (!unpublishedChanges && !neverPublished)}
             >
-              Publish
+              {t('pulseQuestionsPage.publish')}
             </Button>
             {unsavedEdits ? (
-              <span className="text-xs text-muted">Unsaved changes — save before publishing.</span>
+              <span className="text-xs text-muted">{t('pulseQuestionsPage.unsavedChanges')}</span>
             ) : unpublishedChanges ? (
-              <span className="text-xs text-medium">
-                Saved, but not yet sent to anyone. Publish to make it live.
-              </span>
+              <span className="text-xs text-medium">{t('pulseQuestionsPage.savedNotPublished')}</span>
             ) : neverPublished ? (
-              <span className="text-xs text-muted">Publish to start sending check-ins.</span>
+              <span className="text-xs text-muted">{t('pulseQuestionsPage.publishToStart')}</span>
             ) : (
-              <span className="text-xs text-muted">Live and up to date.</span>
+              <span className="text-xs text-muted">{t('pulseQuestionsPage.liveUpToDate')}</span>
             )}
           </div>
         }
@@ -295,18 +287,13 @@ function PulseQuestionsPage({ companyId }) {
               about is not a rule that can be enforced by validation: a question
               can ask an employee to name someone without containing any word a
               filter could catch. */}
-          <Alert variant="warning" title="Do not ask people to name other individuals">
-            A question that asks who someone&apos;s problem is with turns a wellness check into an
-            informal reporting channel — without any of the protections the case system provides:
-            no anonymity, no confidential handling, no investigation process, no retaliation
-            follow-up. Answers here are shown to your HR Coordinator attributed to the employee who
-            wrote them, by name. Keep these questions about how work feels, and let the reporting
-            system handle reports.
+          <Alert variant="warning" title={t('pulseQuestionsPage.doNotAskWarning.title')}>
+            {t('pulseQuestionsPage.doNotAskWarning.body')}
           </Alert>
 
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-muted">
-              {draft.length} of {MAX_SUPPLEMENTARY_QUESTIONS} used
+              {t('pulseQuestionsPage.usedCount', { count: draft.length, max: MAX_SUPPLEMENTARY_QUESTIONS })}
             </span>
             <Button
               variant="secondary"
@@ -314,13 +301,13 @@ function PulseQuestionsPage({ companyId }) {
               onClick={addQuestion}
               disabled={draft.length >= MAX_SUPPLEMENTARY_QUESTIONS}
             >
-              Add a question
+              {t('pulseQuestionsPage.addQuestion')}
             </Button>
           </div>
 
           {draft.length === 0 ? (
             <p className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-              No added questions. The four standard questions are asked on their own.
+              {t('pulseQuestionsPage.noAddedQuestions')}
             </p>
           ) : (
             <ul className="flex flex-col gap-3">
@@ -332,35 +319,35 @@ function PulseQuestionsPage({ companyId }) {
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-xs font-medium uppercase tracking-wide text-subtle">
-                          Added question {index + 1}
+                          {t('pulseQuestionsPage.addedQuestionLabel', { index: index + 1 })}
                         </span>
                         <Button variant="ghost" onClick={() => removeQuestion(q.id)}>
-                          Remove
+                          {t('pulseQuestionsPage.remove')}
                         </Button>
                       </div>
 
                       <label className="flex flex-col gap-1.5 text-sm">
-                        <span className="font-medium text-charcoal">Question</span>
+                        <span className="font-medium text-charcoal">{t('pulseQuestionsPage.questionLabel')}</span>
                         <textarea
                           rows={2}
                           value={q.text}
                           onChange={(e) => updateQuestion(q.id, { text: e.target.value })}
-                          placeholder="e.g. How clear were your priorities this week?"
+                          placeholder={t('pulseQuestionsPage.questionPlaceholder')}
                           className={`field ${over ? 'border-critical' : ''}`}
                         />
                         <span className={`text-xs ${over ? 'text-critical' : 'text-muted'}`}>
-                          {length} / {MAX_QUESTION_TEXT_LENGTH} characters
+                          {t('pulseQuestionsPage.charactersCount', { length, max: MAX_QUESTION_TEXT_LENGTH })}
                         </span>
                       </label>
 
                       <div className="sm:max-w-xs">
                         <Select
-                          label="Answer type"
+                          label={t('pulseQuestionsPage.answerType')}
                           value={q.type}
                           onChange={(e) => updateQuestion(q.id, { type: e.target.value })}
                         >
-                          <option value="scale">{TYPE_LABELS.scale}</option>
-                          <option value="freeText">{TYPE_LABELS.freeText}</option>
+                          <option value="scale">{typeLabels.scale}</option>
+                          <option value="freeText">{typeLabels.freeText}</option>
                         </Select>
                       </div>
                     </div>
@@ -371,25 +358,21 @@ function PulseQuestionsPage({ companyId }) {
           )}
 
           {anyEmpty && (
-            <p className="text-xs text-critical">Every added question needs some text.</p>
+            <p className="text-xs text-critical">{t('pulseQuestionsPage.everyQuestionNeedsText')}</p>
           )}
 
           {/* Removing a question is forward-only, and saying so here is the
               difference between an admin thinking they have erased something and
               knowing they have not. */}
           {draft.length < publishedSupplementary.length && (
-            <Alert variant="info">
-              Removing a question stops it being asked from the next publish onwards. Answers
-              already given to it are kept, and your HR Coordinator can still read them with the
-              question they were answering — old responses are never rewritten.
-            </Alert>
+            <Alert variant="info">{t('pulseQuestionsPage.removalNotice')}</Alert>
           )}
         </div>
       </Card>
 
       <Card
-        title="Preview"
-        description="The check-in exactly as employees receive it. This shows what is published and live, not your draft."
+        title={t('pulseQuestionsPage.preview.title')}
+        description={t('pulseQuestionsPage.preview.description')}
       >
         <div className="flex flex-col gap-5">
           {published && (
@@ -405,20 +388,17 @@ function PulseQuestionsPage({ companyId }) {
               icon="mail"
               onClick={handleSendTest}
               loading={sendingTest}
-              loadingLabel="Sending"
+              loadingLabel={t('pulseQuestionsPage.sending')}
             >
-              Email me a test check-in
+              {t('pulseQuestionsPage.sendTestButton')}
             </Button>
-            <span className="text-xs text-muted">
-              Sends a real check-in link to your own staff email address, and nowhere else. The
-              response it records is marked as a test and never reaches an average or a trend.
-            </span>
+            <span className="text-xs text-muted">{t('pulseQuestionsPage.sendTestHint')}</span>
           </div>
 
           {publishedAtLabel && (
             <p className="text-xs text-muted">
-              <Badge tone="tone-neutral">Version {published.version}</Badge>{' '}
-              published {publishedAtLabel}.
+              <Badge tone="tone-neutral">{t('pulseQuestionsPage.versionBadge', { version: published.version })}</Badge>{' '}
+              {t('pulseQuestionsPage.publishedOn', { date: publishedAtLabel })}
             </p>
           )}
         </div>
@@ -433,40 +413,33 @@ function PulseQuestionsPage({ companyId }) {
         >
           <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
             <h2 id="publish-title" className="text-lg font-semibold text-charcoal">
-              Publish this questionnaire?
+              {t('pulseQuestionsPage.publishModal.title')}
             </h2>
             <div className="mt-3 flex flex-col gap-2 text-sm text-muted">
-              <p>Publishing does four things, and they are worth reading before you press it:</p>
+              <p>{t('pulseQuestionsPage.publishModal.intro')}</p>
               <ul className="flex list-disc flex-col gap-1.5 pl-5">
                 <li>
-                  It becomes what <strong className="text-charcoal">everyone on your roster</strong>{' '}
-                  is asked at every check-in from now on.
+                  <Trans
+                    i18nKey="pulseQuestionsPage.publishModal.bullet1"
+                    components={{ strong: <strong className="text-charcoal" /> }}
+                  />
                 </li>
-                <li>
-                  It is saved as a permanent version. Old responses keep pointing at the version
-                  they answered, so nothing already collected changes meaning.
-                </li>
-                <li>
-                  Check-in links already sitting in someone&apos;s inbox keep the questions they
-                  were sent with — they are not switched over mid-flight.
-                </li>
-                <li>
-                  Your name and the time are recorded against it. This is a change to what your
-                  whole workforce is asked, so it has an author.
-                </li>
+                <li>{t('pulseQuestionsPage.publishModal.bullet2')}</li>
+                <li>{t('pulseQuestionsPage.publishModal.bullet3')}</li>
+                <li>{t('pulseQuestionsPage.publishModal.bullet4')}</li>
               </ul>
             </div>
             <div className="mt-5 flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setConfirmPublish(false)} disabled={publishing}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="primary"
                 onClick={handlePublish}
                 loading={publishing}
-                loadingLabel="Publishing"
+                loadingLabel={t('pulseQuestionsPage.publishing')}
               >
-                Publish
+                {t('pulseQuestionsPage.publish')}
               </Button>
             </div>
           </div>

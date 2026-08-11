@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
-  CASE_COUNT_CAVEAT,
-  CROSS_CATEGORY_CAVEAT,
-  SIGNAL_TYPE_LABEL,
+  caseCountCaveat,
+  crossCategoryCaveat,
   describeSignal,
   formatSignalDate,
   listHandlerPatternSignals,
+  signalTypeLabel,
   signalsContainingCase,
 } from '../../services/patternService'
 import Alert from '../ui/Alert'
@@ -22,6 +23,7 @@ import Alert from '../ui/Alert'
 // by this handler if they were: cases/{caseId} is still gated on
 // assignedHandlerId.
 function RelatedPatternNotice({ caseId }) {
+  const { t } = useTranslation()
   const [signals, setSignals] = useState([])
 
   useEffect(() => {
@@ -51,23 +53,28 @@ function RelatedPatternNotice({ caseId }) {
         <Alert
           key={signal.id}
           variant="info"
-          title={`Part of a pattern signal - ${SIGNAL_TYPE_LABEL[signal.signalType] ?? signal.signalType}`}
+          title={t('relatedPatternNotice.title', {
+            signalType: signalTypeLabel(signal.signalType) ?? signal.signalType,
+          })}
         >
           <p>
-            {signal.department} / {String(signal.roleTier).replace(/_/g, ' ')}: {describeSignal(signal)}
+            {t('relatedPatternNotice.line', {
+              department: signal.department,
+              roleTier: String(signal.roleTier).replace(/_/g, ' '),
+              description: describeSignal(signal),
+            })}
           </p>
           <p className="mt-1.5 text-xs">
-            First {formatSignalDate(signal.firstReportedAt)}, most recent{' '}
-            {formatSignalDate(signal.lastReportedAt)}. This case is one of them.
+            {t('relatedPatternNotice.dateRange', {
+              first: formatSignalDate(signal.firstReportedAt),
+              last: formatSignalDate(signal.lastReportedAt),
+            })}
           </p>
           {signal.signalType === 'cross_category' && (
-            <p className="mt-1.5 text-xs">{CROSS_CATEGORY_CAVEAT}</p>
+            <p className="mt-1.5 text-xs">{crossCategoryCaveat()}</p>
           )}
-          <p className="mt-1.5 text-xs">{CASE_COUNT_CAVEAT}</p>
-          <p className="mt-1.5 text-xs">
-            Informational only. It does not suggest a finding or an action on this case, and the
-            other cases behind this count are not yours to read.
-          </p>
+          <p className="mt-1.5 text-xs">{caseCountCaveat()}</p>
+          <p className="mt-1.5 text-xs">{t('relatedPatternNotice.informationalOnly')}</p>
         </Alert>
       ))}
     </div>

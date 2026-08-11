@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CHECKLIST_ITEM_STATUSES,
   CHECKLIST_ITEM_TYPES,
@@ -12,12 +13,6 @@ import Card from '../ui/Card'
 import EmptyState from '../ui/EmptyState'
 import { Textarea } from '../ui/Field'
 
-const TYPE_LABELS = {
-  [CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION]: 'Interview question',
-  [CHECKLIST_ITEM_TYPES.DOCUMENT_REQUEST]: 'Document to request',
-  [CHECKLIST_ITEM_TYPES.CONTRADICTION_FLAG]: 'Contradiction / gap',
-}
-
 const TYPE_TONE = {
   [CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION]: 'tone-info',
   [CHECKLIST_ITEM_TYPES.DOCUMENT_REQUEST]: 'tone-neutral',
@@ -30,6 +25,12 @@ const TYPE_TONE = {
 // thread it's built from, and the handler decides when there's enough
 // there to be worth regenerating from.
 function InvestigationChecklist({ caseId }) {
+  const { t } = useTranslation()
+  const TYPE_LABELS = {
+    [CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION]: t('investigationChecklist.types.interviewQuestion'),
+    [CHECKLIST_ITEM_TYPES.DOCUMENT_REQUEST]: t('investigationChecklist.types.documentRequest'),
+    [CHECKLIST_ITEM_TYPES.CONTRADICTION_FLAG]: t('investigationChecklist.types.contradictionFlag'),
+  }
   const [checklist, setChecklist] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -78,16 +79,16 @@ function InvestigationChecklist({ caseId }) {
       icon="sparkle"
       onClick={handleGenerate}
       loading={loading}
-      loadingLabel="Generating"
+      loadingLabel={t('investigationChecklist.generating')}
     >
-      {checklist.length > 0 ? 'Regenerate' : 'Generate'}
+      {checklist.length > 0 ? t('investigationChecklist.regenerate') : t('investigationChecklist.generate')}
     </Button>
   )
 
   return (
     <Card
-      title="Investigation checklist"
-      description="AI-suggested next steps from the category, answers, and thread so far. A planning aid, not a required workflow."
+      title={t('investigationChecklist.title')}
+      description={t('investigationChecklist.description')}
       actions={generateButton}
       padded={checklist.length > 0 || Boolean(error)}
     >
@@ -98,8 +99,8 @@ function InvestigationChecklist({ caseId }) {
           <EmptyState
             compact
             icon="sparkle"
-            title="No checklist yet"
-            description="Generate one to get suggested interview questions, documents to request, and gaps to chase."
+            title={t('investigationChecklist.empty.title')}
+            description={t('investigationChecklist.empty.description')}
             action={generateButton}
           />
         )
@@ -114,7 +115,7 @@ function InvestigationChecklist({ caseId }) {
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
-                    aria-label={`Mark "${item.item}" as done`}
+                    aria-label={t('investigationChecklist.markAsDone', { item: item.item })}
                     checked={checked}
                     onChange={(e) =>
                       updateItem(
@@ -133,17 +134,17 @@ function InvestigationChecklist({ caseId }) {
                     {editingId === item.id ? (
                       <div className="mt-2 flex flex-col gap-2">
                         <Textarea
-                          label="Edit item"
+                          label={t('investigationChecklist.editItem')}
                           rows={2}
                           value={editDraft}
                           onChange={(e) => setEditDraft(e.target.value)}
                         />
                         <div className="flex gap-2">
                           <Button variant="primary" size="sm" onClick={() => saveEdit(item.id)}>
-                            Save
+                            {t('investigationChecklist.save')}
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => setEditingId(null)}>
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                         </div>
                       </div>
@@ -158,7 +159,7 @@ function InvestigationChecklist({ caseId }) {
                     {editingId !== item.id && (
                       <div className="mt-1.5 flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => startEdit(item)}>
-                          Edit
+                          {t('investigationChecklist.edit')}
                         </Button>
                         <Button
                           variant="ghost"
@@ -170,7 +171,7 @@ function InvestigationChecklist({ caseId }) {
                             )
                           }
                         >
-                          {ignored ? 'Unignore' : 'Ignore'}
+                          {ignored ? t('investigationChecklist.unignore') : t('investigationChecklist.ignore')}
                         </Button>
                       </div>
                     )}

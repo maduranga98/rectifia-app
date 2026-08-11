@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { validateCaseAccess } from '../../services/caseAccessService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
@@ -8,6 +9,7 @@ import { Input } from '../ui/Field'
 // and passcode issued at submission. Deliberately its own form rather than
 // anything on the staff sign-in page - they are different systems.
 function CaseAccess({ onAccessGranted, initialCaseId = '' }) {
+  const { t } = useTranslation()
   const [caseId, setCaseId] = useState(initialCaseId.toUpperCase())
   const [passcode, setPasscode] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -20,7 +22,7 @@ function CaseAccess({ onAccessGranted, initialCaseId = '' }) {
     try {
       const result = await validateCaseAccess(caseId, passcode)
       if (!result.valid) {
-        setError('Case ID or passcode is incorrect.')
+        setError(t('caseAccess.errors.invalid'))
         return
       }
       // The passcode goes back to the caller too: the case thread
@@ -37,7 +39,7 @@ function CaseAccess({ onAccessGranted, initialCaseId = '' }) {
   return (
     <form onSubmit={handleSubmit} className="card flex flex-col gap-4 p-6">
       <Input
-        label="Case ID"
+        label={t('caseAccess.caseId')}
         type="text"
         value={caseId}
         onChange={(e) => setCaseId(e.target.value.toUpperCase())}
@@ -48,14 +50,14 @@ function CaseAccess({ onAccessGranted, initialCaseId = '' }) {
       />
 
       <Input
-        label="Passcode"
+        label={t('caseAccess.passcode')}
         type="password"
         value={passcode}
         onChange={(e) => setPasscode(e.target.value)}
         autoComplete="off"
         required
         className="font-mono"
-        hint="Both were shown to you once, when you submitted your report."
+        hint={t('caseAccess.hint')}
       />
 
       {error && <Alert variant="error">{error}</Alert>}
@@ -66,10 +68,10 @@ function CaseAccess({ onAccessGranted, initialCaseId = '' }) {
         size="lg"
         className="w-full"
         loading={submitting}
-        loadingLabel="Checking"
+        loadingLabel={t('caseAccess.checking')}
         disabled={!caseId || !passcode}
       >
-        Access case
+        {t('caseAccess.accessCase')}
       </Button>
     </form>
   )

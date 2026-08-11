@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import {
   INDUSTRY_LABELS,
   getBenchmarkCatalog,
@@ -17,55 +18,50 @@ import { SkeletonList } from '../../components/ui/Loading'
 // is a change to the consent the acknowledgement flag records - it is not
 // marketing copy.
 function SharedDataDisclosure() {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-4 text-sm text-charcoal">
       <div>
-        <p className="font-semibold">What leaves your company when you opt in:</p>
+        <p className="font-semibold">{t('adminBenchmarkPage.disclosure.leaves.title')}</p>
         <ul className="mt-1.5 list-disc space-y-1 pl-5">
-          <li>The category of each closed case (harassment, toxic management, retaliation, burnout).</li>
-          <li>The two numeric scores on each closed case (severity, evidence).</li>
-          <li>The coarse tier of the department the report was about (junior / senior / manager / unspecified) — never the department name.</li>
-          <li>The action category taken at closure (a fixed list, from "no action" to "termination").</li>
-          <li>The date the case was closed.</li>
-          <li>Your industry and your employee-count band.</li>
+          <li>{t('adminBenchmarkPage.disclosure.leaves.category')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.leaves.scores')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.leaves.tier')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.leaves.action')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.leaves.closedDate')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.leaves.industryBand')}</li>
         </ul>
       </div>
       <div>
-        <p className="font-semibold">What never leaves your company:</p>
+        <p className="font-semibold">{t('adminBenchmarkPage.disclosure.never.title')}</p>
         <ul className="mt-1.5 list-disc space-y-1 pl-5">
-          <li>Any narrative, any questionnaire answer, any evidence file.</li>
-          <li>Any name — of a reporter, a witness, or anyone a report was about.</li>
-          <li>Any identity, at any tier, in any form.</li>
-          <li>Any Case ID.</li>
-          <li>Any department name, any manager name, any job title.</li>
-          <li>
-            Your company's own identity in any published figure. Cells publish medians and rounded
-            distributions over at least 5 companies and 25 cases; below either threshold nothing is
-            published at all.
-          </li>
+          <li>{t('adminBenchmarkPage.disclosure.never.narrative')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.never.names')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.never.identity')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.never.caseId')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.never.deptNames')}</li>
+          <li>{t('adminBenchmarkPage.disclosure.never.companyIdentity')}</li>
         </ul>
       </div>
       <div>
-        <p className="font-semibold">What withdrawing does:</p>
-        <p className="mt-1.5">
-          Your data is removed from all published figures at the next monthly recomputation. The
-          pool is computed from scratch each run, not accumulated — your contribution does not
-          linger in a running total.
-        </p>
+        <p className="font-semibold">{t('adminBenchmarkPage.disclosure.withdraw.title')}</p>
+        <p className="mt-1.5">{t('adminBenchmarkPage.disclosure.withdraw.body')}</p>
       </div>
     </div>
   )
 }
 
 function OptInStatusBadge({ optedIn }) {
-  if (optedIn) return <Badge tone="tone-low" dot>Opted in</Badge>
-  return <Badge tone="tone-neutral" dot>Not opted in</Badge>
+  const { t } = useTranslation()
+  if (optedIn) return <Badge tone="tone-low" dot>{t('adminBenchmarkPage.optedIn')}</Badge>
+  return <Badge tone="tone-neutral" dot>{t('adminBenchmarkPage.notOptedIn')}</Badge>
 }
 
 // The Company Admin's opt-in control for Module 25. This page never renders
 // the pool's numbers - that is the HR Coordinator's dashboard. Here it is
 // consent, industry+headcount declaration, and withdrawal.
 function BenchmarkPage({ companyId }) {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
@@ -119,9 +115,7 @@ function BenchmarkPage({ companyId }) {
       })
       setAcknowledged(false)
       await refresh()
-      setNotice(
-        'Opted in. Your published cells will populate at the next monthly recompute — the first one may run within a few minutes.'
-      )
+      setNotice(t('adminBenchmarkPage.optInSuccess'))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -141,9 +135,7 @@ function BenchmarkPage({ companyId }) {
       setConfirmWithdraw(false)
       setAcknowledged(false)
       await refresh()
-      setNotice(
-        'Withdrawn. Your data will be removed from published figures at the next monthly recomputation.'
-      )
+      setNotice(t('adminBenchmarkPage.withdrawSuccess'))
     } catch (err) {
       setConfirmWithdraw(false)
       setError(err.message)
@@ -171,53 +163,46 @@ function BenchmarkPage({ companyId }) {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        The cross-company benchmark pool lets you see whether the shape of your closed cases is
-        typical for your industry and headcount band, or an outlier. It is aggregate statistics
-        only — never raw case data, never your company's identity, and cells below the anonymity
-        thresholds are not published at all.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('adminBenchmarkPage.intro')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
       {notice && <Alert variant="success">{notice}</Alert>}
 
       <Card
-        title="Your participation"
-        description="Reading the pool requires contributing to it. A pool that can be read without contributing collapses into a one-way intelligence product, so both directions of participation are tied together."
+        title={t('adminBenchmarkPage.participation.title')}
+        description={t('adminBenchmarkPage.participation.description')}
       >
         <div className="flex flex-wrap items-center gap-3">
           <OptInStatusBadge optedIn={optedIn} />
           {optedIn && status?.industry && (
             <span className="text-sm text-muted">
-              Contributing as{' '}
-              <strong className="text-charcoal">
-                {INDUSTRY_LABELS[status.industry] ?? status.industry}
-              </strong>{' '}
-              in size band{' '}
-              <strong className="text-charcoal">{status.sizeBand ?? '—'}</strong>.
+              <Trans
+                i18nKey="adminBenchmarkPage.contributingAs"
+                values={{
+                  industry: INDUSTRY_LABELS[status.industry] ?? status.industry,
+                  band: status.sizeBand ?? '—',
+                }}
+                components={{ strong: <strong className="text-charcoal" /> }}
+              />
             </span>
           )}
           {optedIn && status?.incomplete && (
-            <Alert variant="warning">
-              Your industry or employee count no longer places your company inside a valid cell.
-              Opt out and back in with an updated employee count to resume contributing and
-              reading.
-            </Alert>
+            <Alert variant="warning">{t('adminBenchmarkPage.incompleteCellWarning')}</Alert>
           )}
         </div>
       </Card>
 
       <Card
-        title="What is and is not shared"
-        description="Read this before opting in or out. The acknowledgement below records that you have."
+        title={t('adminBenchmarkPage.sharedData.title')}
+        description={t('adminBenchmarkPage.sharedData.description')}
       >
         <SharedDataDisclosure />
       </Card>
 
       {optedIn ? (
         <Card
-          title="Withdraw"
-          description="Withdrawing takes effect at the next monthly recompute. Your contribution is removed completely — the pool is computed from scratch, not accumulated, so withdrawal is honest."
+          title={t('adminBenchmarkPage.withdrawCard.title')}
+          description={t('adminBenchmarkPage.withdrawCard.description')}
           footer={
             <div className="flex items-center gap-3">
               <Button
@@ -225,46 +210,41 @@ function BenchmarkPage({ companyId }) {
                 onClick={() => setConfirmWithdraw(true)}
                 disabled={submitting}
               >
-                Withdraw from the benchmark pool
+                {t('adminBenchmarkPage.withdrawCard.button')}
               </Button>
             </div>
           }
         >
-          <p className="text-sm text-muted">
-            After withdrawal your dashboard will no longer show benchmark comparisons, because
-            reading requires contributing. You can opt back in at any time.
-          </p>
+          <p className="text-sm text-muted">{t('adminBenchmarkPage.withdrawCard.body')}</p>
         </Card>
       ) : (
         <Card
-          title="Opt in"
-          description="Declare your industry and current employee count, acknowledge what is shared, and opt in."
+          title={t('adminBenchmarkPage.optInCard.title')}
+          description={t('adminBenchmarkPage.optInCard.description')}
           footer={
             <div className="flex items-center gap-3">
               <Button
                 variant="primary"
                 onClick={handleOptIn}
                 loading={submitting}
-                loadingLabel="Opting in"
+                loadingLabel={t('adminBenchmarkPage.optInCard.loading')}
                 disabled={!canOptIn}
               >
-                Opt in
+                {t('adminBenchmarkPage.optInCard.button')}
               </Button>
               {!canOptIn && (
-                <span className="text-xs text-muted">
-                  Pick an industry, enter your headcount, and tick the acknowledgement.
-                </span>
+                <span className="text-xs text-muted">{t('adminBenchmarkPage.optInCard.hint')}</span>
               )}
             </div>
           }
         >
           <div className="flex flex-col gap-4">
             <Select
-              label="Industry"
+              label={t('adminBenchmarkPage.optInCard.industryLabel')}
               value={industry}
               onChange={(e) => setIndustry(e.target.value)}
             >
-              <option value="">Choose an industry…</option>
+              <option value="">{t('adminBenchmarkPage.optInCard.industryPlaceholder')}</option>
               {(catalog?.industries ?? []).map((code) => (
                 <option key={code} value={code}>
                   {INDUSTRY_LABELS[code] ?? code}
@@ -273,14 +253,16 @@ function BenchmarkPage({ companyId }) {
             </Select>
 
             <Input
-              label="Employee count"
+              label={t('adminBenchmarkPage.optInCard.employeeCountLabel')}
               type="number"
               min={1}
               value={employeeCount}
               onChange={(e) => setEmployeeCount(e.target.value)}
               hint={
                 catalog?.sizeBands
-                  ? `Bands: ${catalog.sizeBands.map((b) => b.label).join(', ')} employees.`
+                  ? t('adminBenchmarkPage.optInCard.employeeCountHint', {
+                      bands: catalog.sizeBands.map((b) => b.label).join(', '),
+                    })
                   : null
               }
             />
@@ -292,11 +274,7 @@ function BenchmarkPage({ companyId }) {
                 onChange={(e) => setAcknowledged(e.target.checked)}
                 className="mt-1 h-4 w-4"
               />
-              <span>
-                I have read the description above of what is and is not shared, and I understand
-                that withdrawing removes our data from published figures at the next monthly
-                recomputation.
-              </span>
+              <span>{t('adminBenchmarkPage.optInCard.acknowledgement')}</span>
             </label>
           </div>
         </Card>
@@ -311,28 +289,24 @@ function BenchmarkPage({ companyId }) {
         >
           <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
             <h2 id="withdraw-title" className="text-lg font-semibold text-charcoal">
-              Withdraw from the benchmark pool?
+              {t('adminBenchmarkPage.withdrawModal.title')}
             </h2>
-            <p className="mt-2 text-sm text-muted">
-              Your data is removed from all published figures at the next monthly recomputation.
-              After withdrawal your dashboard will no longer show benchmark comparisons, because
-              reading requires contributing.
-            </p>
+            <p className="mt-2 text-sm text-muted">{t('adminBenchmarkPage.withdrawModal.body')}</p>
             <div className="mt-5 flex justify-end gap-3">
               <Button
                 variant="ghost"
                 onClick={() => setConfirmWithdraw(false)}
                 disabled={submitting}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="danger"
                 onClick={handleWithdraw}
                 loading={submitting}
-                loadingLabel="Withdrawing"
+                loadingLabel={t('adminBenchmarkPage.withdrawModal.loading')}
               >
-                Withdraw
+                {t('adminBenchmarkPage.withdrawModal.confirm')}
               </Button>
             </div>
           </div>

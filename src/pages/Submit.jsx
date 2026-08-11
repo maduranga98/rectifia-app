@@ -171,7 +171,9 @@ function Submit() {
   }
 
   const step = completed ? 3 : pending ? 2 : category ? 1 : 0
-  const categoryLabel = CATEGORIES.find((c) => c.id === category)?.label
+  const categoryLabel = CATEGORIES.some((c) => c.id === category)
+    ? t(`categories.${category}.label`)
+    : undefined
 
   // The tracking address for this specific case, shown as text the reporter
   // can write down or bookmark. The Case ID in the path pre-fills the access

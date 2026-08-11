@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { submitPulseResponse } from '../../services/pulseCheckService'
 import { sortQuestions } from '../../services/pulseQuestionService'
 import Alert from '../ui/Alert'
@@ -26,17 +27,17 @@ import { Textarea } from '../ui/Field'
 // invite was minted against - so an employee holding a link sent before a
 // publish answers the questionnaire they were actually sent.
 
-// Rendered when the scale labels are missing for some reason; the server always
-// sends them for a scale question, so this is belt-and-braces rather than a
-// real fallback path.
-const DEFAULT_SCALE_LABELS = ['Not at all', 'Rarely', 'Somewhat', 'Mostly', 'Very much']
-
 // A five-point scale is a scale, not a dropdown: showing all five options at
 // once is one glance instead of a click, and it makes the midpoint visible.
 // The labels come from the question itself now, so a scale rendered here always
 // matches the one the server will validate the answer against.
 function ScaleInput({ question, value, onChange, disabled }) {
-  const labels = question.scaleLabels?.length ? question.scaleLabels : DEFAULT_SCALE_LABELS
+  const { t } = useTranslation()
+  // Rendered when the scale labels are missing for some reason; the server
+  // always sends them for a scale question, so this is belt-and-braces
+  // rather than a real fallback path.
+  const defaultLabels = t('pulseSurveyForm.defaultScaleLabels', { returnObjects: true })
+  const labels = question.scaleLabels?.length ? question.scaleLabels : defaultLabels
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="text-sm font-medium text-charcoal">{question.text}</legend>
@@ -80,13 +81,16 @@ function WhoSeesThis() {
   return (
     <ul className="flex flex-col gap-1.5 text-xs leading-relaxed text-muted">
       <li>
-        Your <strong className="font-medium text-charcoal">HR Coordinator</strong> and{' '}
-        <strong className="font-medium text-charcoal">Pulse Check Reviewer</strong> can see your
-        individual response.
+        <Trans
+          i18nKey="pulseSurveyForm.whoSeesThis.individual"
+          components={{ strong: <strong className="font-medium text-charcoal" /> }}
+        />
       </li>
       <li>
-        Your <strong className="font-medium text-charcoal">manager</strong> sees department-level
-        aggregates only - never your individual answers.
+        <Trans
+          i18nKey="pulseSurveyForm.whoSeesThis.aggregate"
+          components={{ strong: <strong className="font-medium text-charcoal" /> }}
+        />
       </li>
     </ul>
   )
@@ -97,6 +101,7 @@ function WhoSeesThis() {
 // the HR-side read-only view show; see QuestionSetPreview.jsx, which is the only
 // thing that should pass it.
 function PulseSurveyForm({ inviteId, token, companyName, questionSet, onSubmitted, preview = false }) {
+  const { t } = useTranslation()
   const [values, setValues] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -108,7 +113,7 @@ function PulseSurveyForm({ inviteId, token, companyName, questionSet, onSubmitte
   // is the reporter-facing half that offers help in the moment.)
   const [showResources, setShowResources] = useState(false)
 
-  const company = companyName || 'your organization'
+  const company = companyName || t('pulseSurveyForm.defaultOrganization')
   const questions = sortQuestions(questionSet?.questions)
 
   function handleChange(question, value) {
@@ -149,11 +154,11 @@ function PulseSurveyForm({ inviteId, token, companyName, questionSet, onSubmitte
         <div className="flex flex-col gap-4">
           <EmptyState
             icon="check"
-            title="Thanks - your response has been recorded"
-            description={`Your check-in for ${company} has been saved.`}
+            title={t('pulseSurveyForm.thanks.title')}
+            description={t('pulseSurveyForm.thanks.description', { company })}
           />
           <div className="rounded-lg border border-line bg-navy-50 p-4">
-            <p className="mb-2 text-sm font-medium text-charcoal">Who sees your response</p>
+            <p className="mb-2 text-sm font-medium text-charcoal">{t('pulseSurveyForm.whoSeesThis.title')}</p>
             <WhoSeesThis />
           </div>
 
@@ -171,8 +176,8 @@ function PulseSurveyForm({ inviteId, token, companyName, questionSet, onSubmitte
       <Card padded={false} className="mx-auto max-w-lg">
         <EmptyState
           icon="alert"
-          title="This check-in couldn't be loaded"
-          description="The questions didn't load. Please try opening your link again in a few minutes - nothing is wrong with your link."
+          title={t('pulseSurveyForm.loadFailed.title')}
+          description={t('pulseSurveyForm.loadFailed.description')}
         />
       </Card>
     )
@@ -180,15 +185,14 @@ function PulseSurveyForm({ inviteId, token, companyName, questionSet, onSubmitte
 
   return (
     <Card
-      title="Pulse check"
-      description={`A few quick questions about how work is going at ${company}. Takes under a minute.`}
+      title={t('pulseSurveyForm.title')}
+      description={t('pulseSurveyForm.description', { company })}
       className="mx-auto max-w-lg"
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {preview && (
-          <Alert variant="info" title="Preview - nothing is recorded">
-            This is exactly what employees see. You can click through the scale and type in the
-            boxes; nothing you enter here is saved, sent, or counted anywhere.
+          <Alert variant="info" title={t('pulseSurveyForm.previewAlert.title')}>
+            {t('pulseSurveyForm.previewAlert.body')}
           </Alert>
         )}
 
@@ -217,7 +221,7 @@ function PulseSurveyForm({ inviteId, token, companyName, questionSet, onSubmitte
         {showResources && <CrisisResources />}
 
         <div className="rounded-lg border border-line bg-navy-50 p-4">
-          <p className="mb-2 text-sm font-medium text-charcoal">Who sees your response</p>
+          <p className="mb-2 text-sm font-medium text-charcoal">{t('pulseSurveyForm.whoSeesThis.title')}</p>
           <WhoSeesThis />
         </div>
 
@@ -229,10 +233,10 @@ function PulseSurveyForm({ inviteId, token, companyName, questionSet, onSubmitte
           size="lg"
           className="w-full"
           loading={submitting}
-          loadingLabel="Submitting"
+          loadingLabel={t('questionnaireForm.submitting')}
           disabled={preview}
         >
-          {preview ? 'Submit (disabled in preview)' : 'Submit'}
+          {preview ? t('pulseSurveyForm.submitDisabledInPreview') : t('common.submit')}
         </Button>
       </form>
     </Card>

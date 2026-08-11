@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
 import { downloadSimplePdf } from '../../utils/simplePdf'
 import { sendReporterMessage, uploadCaseEvidence } from '../../services/caseThreadService'
+import i18n from '../../services/i18n'
 
 // Uploads each file staged during the questionnaire (see
 // QuestionnaireForm.jsx's file-staging step) now that a caseId and passcode
@@ -19,6 +21,11 @@ import { sendReporterMessage, uploadCaseEvidence } from '../../services/caseThre
 // ID and passcode - the one thing either screen exists to show safely - so
 // every outcome, success or failure, is returned per file instead, for the
 // caller to display once the credentials are already on screen.
+//
+// This module-level function (not a component) reaches the current language
+// via the shared i18n instance directly rather than a `t` prop, since the
+// resulting message is stored case content, not rendered UI - it is written
+// once in whichever language was active when the report was filed.
 export async function uploadStagedEvidence(caseId, passcode, files) {
   if (!files || files.length === 0) return []
 
@@ -36,7 +43,12 @@ export async function uploadStagedEvidence(caseId, passcode, files) {
 
   if (attachments.length > 0) {
     try {
-      await sendReporterMessage(caseId, passcode, 'Files attached when this report was filed.', attachments)
+      await sendReporterMessage(
+        caseId,
+        passcode,
+        i18n.t('caseCredentialsHandoff.filesAttachedMessage'),
+        attachments
+      )
     } catch {
       // Uploaded to storage but never reached the thread, so nothing shows
       // them yet - "uploaded but not attached to anything" is not success
@@ -45,7 +57,7 @@ export async function uploadStagedEvidence(caseId, passcode, files) {
       for (const result of results) {
         if (result.status === 'success') {
           result.status = 'failed'
-          result.error = 'Could not attach to your case thread'
+          result.error = i18n.t('caseCredentialsHandoff.couldNotAttach')
         }
       }
     }
@@ -58,14 +70,15 @@ export async function uploadStagedEvidence(caseId, passcode, files) {
 // nothing while nothing has been staged - most cases file with no evidence
 // at all, and this must not add a permanent empty card to that path.
 export function StagedEvidenceStatus({ uploading, results }) {
+  const { t } = useTranslation()
   if (!uploading && results.length === 0) return null
 
   const failed = results.filter((result) => result.status === 'failed')
 
   return (
-    <Card title="Files you attached">
+    <Card title={t('caseCredentialsHandoff.filesYouAttached')}>
       {uploading ? (
-        <p className="text-sm text-muted">Attaching your files…</p>
+        <p className="text-sm text-muted">{t('caseCredentialsHandoff.attaching')}</p>
       ) : (
         <div className="flex flex-col gap-3">
           <ul className="flex flex-col gap-1.5 text-sm">
@@ -73,16 +86,16 @@ export function StagedEvidenceStatus({ uploading, results }) {
               <li key={result.label} className="flex items-center justify-between gap-3">
                 <span className="min-w-0 truncate text-charcoal">{result.label}</span>
                 <span className={result.status === 'success' ? 'text-low' : 'text-critical'}>
-                  {result.status === 'success' ? 'Attached' : 'Failed'}
+                  {result.status === 'success'
+                    ? t('caseCredentialsHandoff.attached')
+                    : t('caseCredentialsHandoff.failed')}
                 </span>
               </li>
             ))}
           </ul>
           {failed.length > 0 && (
             <Alert variant="warning">
-              {failed.length} file{failed.length === 1 ? '' : 's'} could not be attached. Your
-              report was filed successfully regardless - once you have your Case ID and
-              passcode, you can attach these files from your case thread instead.
+              {t('caseCredentialsHandoff.someFilesFailed', { count: failed.length })}
             </Alert>
           )}
         </div>
@@ -118,6 +131,7 @@ function CaseCredentialsHandoff({
   onDone,
   onFileAnother,
 }) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
   const [acknowledged, setAcknowledged] = useState(false)
@@ -148,11 +162,11 @@ function CaseCredentialsHandoff({
   // or paste it into a message, and a copy button per field invites handing
   // over two of the three.
   const handoverText = [
-    `Case ID: ${caseId}`,
-    `Passcode: ${passcode}`,
-    trackingUrl ? `Track it here: ${trackingUrl}` : null,
+    `${t('submit.filed.caseId')}: ${caseId}`,
+    `${t('submit.filed.passcode')}: ${passcode}`,
+    trackingUrl ? t('submit.pdf.trackLine', { url: trackingUrl }) : null,
     '',
-    'Keep these somewhere private. They cannot be reissued - without them there is no way back into the case.',
+    t('caseCredentialsHandoff.keepPrivateOneLine'),
   ]
     .filter(Boolean)
     .join('\n')
@@ -198,14 +212,14 @@ function CaseCredentialsHandoff({
   function downloadPdf() {
     downloadSimplePdf(
       [
-        { text: 'Case tracking details', bold: true },
+        { text: t('submit.pdf.heading'), bold: true },
         '',
-        `Case ID: ${caseId}`,
-        `Passcode: ${passcode}`,
-        trackingUrl ? `Track it here: ${trackingUrl}` : null,
+        `${t('submit.filed.caseId')}: ${caseId}`,
+        `${t('submit.filed.passcode')}: ${passcode}`,
+        trackingUrl ? t('submit.pdf.trackLine', { url: trackingUrl }) : null,
         '',
-        'Keep these somewhere private. They cannot be reissued - without them',
-        'there is no way back into the case.',
+        t('submit.pdf.keepPrivate1'),
+        t('submit.pdf.keepPrivate2'),
       ].filter((line) => line !== null),
       'personal-notes.pdf'
     )
@@ -213,50 +227,43 @@ function CaseCredentialsHandoff({
 
   return (
     <div className="flex flex-col gap-4">
-      <Alert variant="success" title="Case filed">
-        The report is now in the system and has been routed like any other case. The reporter
-        has the same access to it as if they had filed it themselves — but only if you pass on
-        the details below.
+      <Alert variant="success" title={t('caseCredentialsHandoff.caseFiled.title')}>
+        {t('caseCredentialsHandoff.caseFiled.body')}
       </Alert>
 
       {backdateWarning && (
-        <Alert variant="warning" title="This report was received some time ago">
-          Its compliance deadlines were calculated from the date you entered, not from today, so
-          one or both may already have passed. That is the correct reading of the case — check
-          the handler dashboard for what is now outstanding.
+        <Alert variant="warning" title={t('caseCredentialsHandoff.backdateWarning.title')}>
+          {t('caseCredentialsHandoff.backdateWarning.body')}
         </Alert>
       )}
 
       {/* Above the credentials, not below: by the time someone scrolls past a
           passcode they have already decided what to do with it. */}
-      <Alert variant="warning" title="Shown once — these cannot be recovered">
-        The passcode is stored only as a hash. Nobody can look it up, reset it, or send it on:
-        not you, not a Company Admin, not Rectifia.{' '}
-        <strong className="font-semibold">
-          If you leave this screen without giving the reporter these details, they permanently
-          lose access to their own case
-        </strong>{' '}
-        — they will not be able to read replies, answer the investigator&apos;s questions, or
-        add anything they remember later.
+      <Alert variant="warning" title={t('caseCredentialsHandoff.shownOnce.title')}>
+        {t('caseCredentialsHandoff.shownOnce.body1')}{' '}
+        <strong className="font-semibold">{t('caseCredentialsHandoff.shownOnce.strong')}</strong>{' '}
+        {t('caseCredentialsHandoff.shownOnce.body2')}
       </Alert>
 
-      <Card title="Give these to the reporter">
+      <Card title={t('caseCredentialsHandoff.giveToReporter')}>
         <dl className="flex flex-col gap-4">
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted">Case ID</dt>
+            <dt className="text-xs uppercase tracking-wide text-muted">{t('submit.filed.caseId')}</dt>
             <dd className="mt-1 select-all font-mono text-lg font-semibold text-charcoal">
               {caseId}
             </dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-muted">Passcode</dt>
+            <dt className="text-xs uppercase tracking-wide text-muted">{t('submit.filed.passcode')}</dt>
             <dd className="mt-1 select-all font-mono text-lg font-semibold text-charcoal">
               {passcode}
             </dd>
           </div>
           {trackingUrl && (
             <div>
-              <dt className="text-xs uppercase tracking-wide text-muted">Where they check on it</dt>
+              <dt className="text-xs uppercase tracking-wide text-muted">
+                {t('caseCredentialsHandoff.whereTheyCheck')}
+              </dt>
               <dd className="mt-1">
                 {/* Spelled out rather than hidden behind a link label - this
                     gets read down a phone line or written on paper as often
@@ -264,10 +271,7 @@ function CaseCredentialsHandoff({
                 <code className="block select-all break-all rounded-md border border-line bg-line-soft px-3 py-2 text-xs text-charcoal">
                   {trackingUrl}
                 </code>
-                <p className="mt-1.5 text-xs text-muted">
-                  The link fills in the Case ID. It does not contain the passcode, so on its own
-                  it opens nothing.
-                </p>
+                <p className="mt-1.5 text-xs text-muted">{t('caseCredentialsHandoff.linkFillsIn')}</p>
               </dd>
             </div>
           )}
@@ -275,54 +279,36 @@ function CaseCredentialsHandoff({
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Button icon="document" variant="primary" className="min-h-11" onClick={copyAll}>
-            {copied ? 'Copied' : 'Copy all details'}
+            {copied ? t('submit.filed.copied') : t('caseCredentialsHandoff.copyAllDetails')}
           </Button>
           <Button icon="document" className="min-h-11" onClick={downloadDetails}>
-            Download to this device
+            {t('caseCredentialsHandoff.downloadToDevice')}
           </Button>
           <Button icon="document" className="min-h-11" onClick={downloadPdf}>
-            Download as PDF
+            {t('submit.filed.downloadPdf')}
           </Button>
           {copyFailed && (
-            <span className="text-xs text-muted">
-              Couldn&apos;t copy automatically — select the details above and copy them.
-            </span>
+            <span className="text-xs text-muted">{t('caseCredentialsHandoff.copyFailedNote')}</span>
           )}
         </div>
         {/* The tradeoff has to be legible before the click, not discovered
             after - so it sits directly under the button that causes it, not
             buried in the warning card below. */}
         <p className="mt-2 text-xs leading-relaxed text-muted">
-          Saves a plain-text file to this device&apos;s usual downloads location. On a
-          company-managed device, that file can be visible to IT, endpoint monitoring, or backup
-          tools — including your employer&apos;s, if that&apos;s who this report is about.
+          {t('caseCredentialsHandoff.downloadTradeoff')}
         </p>
       </Card>
 
       <StagedEvidenceStatus uploading={evidenceUploading} results={evidenceResults} />
 
-      <Card title="Before you close this">
+      <Card title={t('caseCredentialsHandoff.beforeYouClose.title')}>
         <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed text-muted">
-          <li>
-            Hand the Case ID and passcode to the reporter now, by whatever route they asked you
-            to use.
-          </li>
-          <li>
-            Don&apos;t keep a copy in your own notes, inbox, or a shared drive — a passcode
-            sitting in a mailbox is a way into someone&apos;s case that outlives this
-            conversation. If you use the download option above to hand these off, delete that
-            file the same way once the reporter has the details, not just from your notes.
-          </li>
+          <li>{t('caseCredentialsHandoff.beforeYouClose.handOver')}</li>
+          <li>{t('caseCredentialsHandoff.beforeYouClose.dontKeepCopy')}</li>
           {tier === 'confidential' && (
-            <li>
-              Their identity is encrypted and stored. It is not visible on any dashboard or in
-              any case report, and reading it requires a Super Admin and a documented reason.
-            </li>
+            <li>{t('caseCredentialsHandoff.beforeYouClose.identityEncrypted')}</li>
           )}
-          <li>
-            The reporter can reply to the investigator and add information at any time using
-            these details.
-          </li>
+          <li>{t('caseCredentialsHandoff.beforeYouClose.canReplyAnytime')}</li>
         </ul>
 
         <label className="mt-4 flex cursor-pointer items-start gap-2.5 rounded-lg border border-line bg-surface p-3 text-sm">
@@ -332,9 +318,7 @@ function CaseCredentialsHandoff({
             onChange={(e) => setAcknowledged(e.target.checked)}
             className="mt-0.5 h-4 w-4"
           />
-          <span className="text-charcoal">
-            I have given the Case ID and passcode to the reporter.
-          </span>
+          <span className="text-charcoal">{t('caseCredentialsHandoff.acknowledgment')}</span>
         </label>
 
         {/* Gated on the checkbox rather than just warned about. It is one
@@ -342,11 +326,11 @@ function CaseCredentialsHandoff({
             warning" and "I did the thing". */}
         <div className="mt-3 flex flex-wrap gap-2">
           <Button variant="primary" disabled={!acknowledged} onClick={onDone}>
-            Done
+            {t('caseCredentialsHandoff.done')}
           </Button>
           {onFileAnother && (
             <Button icon="plus" disabled={!acknowledged} onClick={onFileAnother}>
-              File another report
+              {t('submit.filed.fileAnother')}
             </Button>
           )}
         </div>

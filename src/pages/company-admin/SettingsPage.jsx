@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import i18n from '../../services/i18n'
 import {
   DEFAULT_FOLLOW_UP_INTERVALS,
   FOLLOW_UP_CATEGORIES,
@@ -53,16 +55,6 @@ function parseIntervals(text) {
   ].sort((a, b) => a - b)
 }
 
-// How each cadence reads to a human. The values themselves are the exact
-// CADENCE_DAYS keys schedulePulseChecks.js expects (plus the UI-only 'off'),
-// so what's stored always round-trips through the scheduler.
-const CADENCE_LABELS = {
-  off: 'Off - do not send',
-  weekly: 'Weekly',
-  biweekly: 'Every two weeks',
-  monthly: 'Monthly',
-}
-
 // pulseCheckCadence is stored as one of the CADENCE_DAYS keys or null; null
 // (the 'off' state) reads back here as the 'off' option rather than a blank
 // select.
@@ -73,7 +65,7 @@ function cadenceOf(company) {
 
 function formatDateTime(value) {
   const ms = value?.toMillis?.() ?? (typeof value === 'number' ? value : null)
-  if (!ms) return 'Never sent'
+  if (!ms) return i18n.t('settingsPage.neverSent')
   return new Date(ms).toLocaleString(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -93,11 +85,12 @@ function sameSet(a, b) {
 function currentLocalTimeLabel(timeZone) {
   if (!isValidTimeZone(timeZone)) return null
   try {
-    return `Currently ${new Date().toLocaleTimeString(undefined, {
+    const time = new Date().toLocaleTimeString(undefined, {
       timeZone,
       hour: 'numeric',
       minute: '2-digit',
-    })} in ${timeZone}`
+    })
+    return i18n.t('settingsPage.currentlyInTimeZone', { time, timeZone })
   } catch {
     return null
   }
@@ -109,6 +102,7 @@ function currentLocalTimeLabel(timeZone) {
 // page; case content is never read here (the roster count comes from the
 // employees subcollection, not from cases).
 function SettingsPage({ companyId }) {
+  const { t } = useTranslation()
   const [company, setCompany] = useState(null)
   // Active roster count only (schedulePulseChecks.js skips inactive employees),
   // so the number shown is who a send would actually reach.
@@ -206,8 +200,8 @@ function SettingsPage({ companyId }) {
       await refresh()
       setNotice(
         next === 'off'
-          ? 'Pulse checks turned off.'
-          : `Pulse-check cadence set to ${CADENCE_LABELS[next].toLowerCase()}.`
+          ? t('settingsPage.notices.pulseOff')
+          : t('settingsPage.notices.cadenceSet', { cadence: t(`settingsPage.cadenceLabels.${next}`) })
       )
     } catch (err) {
       setError(err.message)
@@ -226,8 +220,8 @@ function SettingsPage({ companyId }) {
       await refresh()
       setNotice(
         queued === 0
-          ? 'No invites were queued — there is no one active on the roster.'
-          : `Queued a pulse check for ${queued} employee${queued === 1 ? '' : 's'}. Delivery goes out shortly.`
+          ? t('settingsPage.notices.noInvitesQueued')
+          : t('settingsPage.notices.queuedFor', { count: queued })
       )
     } catch (err) {
       setConfirmSend(false)
@@ -250,7 +244,7 @@ function SettingsPage({ companyId }) {
     try {
       await updateCompanyJurisdictions(companyId, jurisdictions)
       await refresh()
-      setNotice('Jurisdictions updated. This applies to cases created from now on.')
+      setNotice(t('settingsPage.notices.jurisdictionsUpdated'))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -265,7 +259,7 @@ function SettingsPage({ companyId }) {
     try {
       await updateCompanyTimeZone(companyId, timeZoneInput.trim())
       await refresh()
-      setNotice(`Time zone set to ${timeZoneInput.trim()}.`)
+      setNotice(t('settingsPage.notices.timeZoneSet', { timeZone: timeZoneInput.trim() }))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -292,8 +286,8 @@ function SettingsPage({ companyId }) {
       await refresh()
       setNotice(
         intervals.length === 0
-          ? 'Follow-ups turned off for future closed cases.'
-          : 'Follow-up cadence saved. This applies to cases closed from now on.'
+          ? t('settingsPage.notices.followUpOff')
+          : t('settingsPage.notices.followUpSaved')
       )
     } catch (err) {
       setError(err.message)
@@ -313,7 +307,7 @@ function SettingsPage({ companyId }) {
         phone: crisisPhone,
       })
       await refresh()
-      setNotice('Crisis contact saved. Crisis-flagged reports will now notify this person directly.')
+      setNotice(t('settingsPage.notices.crisisContactSaved'))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -355,47 +349,43 @@ function SettingsPage({ companyId }) {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        Company-wide settings: who is notified when a report is flagged as a crisis, how often
-        Pulse Checks go out, and which jurisdictions drive compliance deadlines.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('settingsPage.intro')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
       {notice && <Alert variant="success">{notice}</Alert>}
 
       <Card
-        title="Crisis contact"
-        description="The one person notified directly when a report is flagged with crisis language. These reports bypass normal case routing entirely and reach this person out of band, so it should be a named individual who can act immediately — not a shared inbox or a distribution list."
+        title={t('settingsPage.crisisContact.title')}
+        description={t('settingsPage.crisisContact.description')}
         footer={
           <div className="flex items-center gap-3">
             <Button
               variant="primary"
               onClick={handleSaveCrisisContact}
               loading={savingCrisisContact}
-              loadingLabel="Saving"
+              loadingLabel={t('settingsPage.saving')}
               disabled={!crisisContactChanged || !crisisContactValid}
             >
-              Save crisis contact
+              {t('settingsPage.crisisContact.saveButton')}
             </Button>
-            {crisisContactChanged && <span className="text-xs text-muted">Unsaved changes</span>}
+            {crisisContactChanged && <span className="text-xs text-muted">{t('settingsPage.unsavedChanges')}</span>}
           </div>
         }
       >
         <div className="flex flex-col gap-4">
           {!company?.crisisContact && (
-            <Alert variant="warning" title="No crisis contact set">
-              Until this is set, reports flagged with crisis language have no one to notify. Add a
-              named contact below.
+            <Alert variant="warning" title={t('settingsPage.crisisContact.noneSet.title')}>
+              {t('settingsPage.crisisContact.noneSet.body')}
             </Alert>
           )}
 
           <label className="flex flex-col gap-1.5 text-sm sm:max-w-md">
-            <span className="font-medium text-charcoal">Contact name</span>
+            <span className="font-medium text-charcoal">{t('settingsPage.crisisContact.nameLabel')}</span>
             <input
               type="text"
               value={crisisName}
               onChange={(e) => setCrisisName(e.target.value)}
-              placeholder="e.g. Dr. Jordan Lee, EAP counsellor"
+              placeholder={t('settingsPage.crisisContact.namePlaceholder')}
               className="field"
               autoComplete="off"
             />
@@ -403,7 +393,7 @@ function SettingsPage({ companyId }) {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-charcoal">Email</span>
+              <span className="font-medium text-charcoal">{t('settingsPage.crisisContact.emailLabel')}</span>
               <input
                 type="email"
                 value={crisisEmail}
@@ -414,7 +404,7 @@ function SettingsPage({ companyId }) {
               />
             </label>
             <label className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium text-charcoal">Phone</span>
+              <span className="font-medium text-charcoal">{t('settingsPage.crisisContact.phoneLabel')}</span>
               <input
                 type="tel"
                 value={crisisPhone}
@@ -426,29 +416,25 @@ function SettingsPage({ companyId }) {
             </label>
           </div>
 
-          <p className="text-xs text-muted">
-            A name is required, plus at least one way to reach them — an email, a phone number, or
-            both. This can be an external provider such as an Employee Assistance Programme; they do
-            not need a login on this platform.
-          </p>
+          <p className="text-xs text-muted">{t('settingsPage.crisisContact.hint')}</p>
         </div>
       </Card>
 
       <Card
-        title="Pulse Check cadence"
-        description="How often a pulse-check invite is queued for everyone on the roster."
+        title={t('settingsPage.pulseCadence.title')}
+        description={t('settingsPage.pulseCadence.description')}
       >
         <div className="flex flex-col gap-4">
           <div className="sm:max-w-xs">
             <Select
-              label="Send Pulse Checks"
+              label={t('settingsPage.pulseCadence.selectLabel')}
               value={cadence}
               onChange={handleCadenceChange}
               disabled={savingCadence}
             >
               {PULSE_CADENCES.map((value) => (
                 <option key={value} value={value}>
-                  {CADENCE_LABELS[value]}
+                  {t(`settingsPage.cadenceLabels.${value}`)}
                 </option>
               ))}
             </Select>
@@ -456,21 +442,21 @@ function SettingsPage({ companyId }) {
 
           <div className="grid gap-3 sm:grid-cols-3">
             <StatTile
-              label="Active roster"
+              label={t('settingsPage.pulseCadence.activeRoster')}
               value={rosterSize}
               icon="staff"
               tone={rosterSize > 0 ? 'tone-info' : 'tone-neutral'}
-              hint="People a send would reach"
+              hint={t('settingsPage.pulseCadence.activeRosterHint')}
             />
             <StatTile
-              label="Awaiting contact info"
+              label={t('settingsPage.pulseCadence.awaitingContact')}
               value={awaitingContactCount}
               icon="mail"
               tone={awaitingContactCount > 0 ? 'tone-medium' : 'tone-neutral'}
-              hint="On the roster but with no email"
+              hint={t('settingsPage.pulseCadence.awaitingContactHint')}
             />
             <StatTile
-              label="Last sent"
+              label={t('settingsPage.pulseCadence.lastSent')}
               value={formatDateTime(company?.lastPulseCheckSentAt)}
               icon="clock"
               tone="tone-neutral"
@@ -479,22 +465,24 @@ function SettingsPage({ companyId }) {
 
           {awaitingContactCount > 0 && (
             <p className="text-xs text-muted">
-              {awaitingContactCount} roster member{awaitingContactCount === 1 ? ' has' : 's have'} no
-              email on file, so their invite waits until an address is added. Add one on the{' '}
-              <Link to="/admin/employees" className="font-medium underline">
-                Employees
-              </Link>{' '}
-              page.
+              <Trans
+                i18nKey="settingsPage.pulseCadence.awaitingContactNotice"
+                count={awaitingContactCount}
+                components={{
+                  link: <Link to="/admin/employees" className="font-medium underline" />,
+                }}
+              />
             </p>
           )}
 
           {rosterSize === 0 && cadence !== 'off' && (
-            <Alert variant="warning" title="No one on the roster">
-              This cadence will send to nobody until you add employees. Add them on the{' '}
-              <Link to="/admin/employees" className="font-medium underline">
-                Employees
-              </Link>{' '}
-              page.
+            <Alert variant="warning" title={t('settingsPage.pulseCadence.noRoster.title')}>
+              <Trans
+                i18nKey="settingsPage.pulseCadence.noRoster.body"
+                components={{
+                  link: <Link to="/admin/employees" className="font-medium underline" />,
+                }}
+              />
             </Alert>
           )}
 
@@ -505,14 +493,14 @@ function SettingsPage({ companyId }) {
               onClick={() => setConfirmSend(true)}
               disabled={savingCadence || sending || rosterSize === 0 || cadence === 'off'}
             >
-              Send check-in now
+              {t('settingsPage.pulseCadence.sendNowButton')}
             </Button>
             <span className="text-xs text-muted">
               {cadence === 'off'
-                ? 'Set a cadence above before sending a check-in on demand.'
+                ? t('settingsPage.pulseCadence.setCadenceHint')
                 : rosterSize === 0
-                  ? 'Add employees before sending a check-in.'
-                  : 'Queues a check-in for everyone active right now, outside the schedule.'}
+                  ? t('settingsPage.pulseCadence.addEmployeesHint')
+                  : t('settingsPage.pulseCadence.sendNowHint')}
             </span>
           </div>
         </div>
@@ -527,33 +515,32 @@ function SettingsPage({ companyId }) {
         >
           <div className="w-full max-w-md rounded-xl bg-surface p-6 shadow-xl">
             <h2 id="send-now-title" className="text-lg font-semibold text-charcoal">
-              Send a pulse check now?
+              {t('settingsPage.sendNowModal.title')}
             </h2>
             <p className="mt-2 text-sm text-muted">
-              This queues a check-in for{' '}
-              <strong className="text-charcoal">
-                {rosterSize} active employee{rosterSize === 1 ? '' : 's'}
-              </strong>{' '}
-              right away, regardless of the cadence schedule. Any outstanding pulse-check links are
-              superseded — an employee still holding an older link will be sent a fresh one instead.
+              <Trans
+                i18nKey="settingsPage.sendNowModal.body"
+                count={rosterSize}
+                values={{ count: rosterSize }}
+                components={{ strong: <strong className="text-charcoal" /> }}
+              />
             </p>
             {awaitingContactCount > 0 && (
               <p className="mt-2 text-xs text-muted">
-                {awaitingContactCount} of them ha{awaitingContactCount === 1 ? 's' : 've'} no email on
-                file and will wait for an address before delivery.
+                {t('settingsPage.sendNowModal.awaitingContactNotice', { count: awaitingContactCount })}
               </p>
             )}
             <div className="mt-5 flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setConfirmSend(false)} disabled={sending}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="primary"
                 onClick={handleSendNow}
                 loading={sending}
-                loadingLabel="Sending"
+                loadingLabel={t('settingsPage.sending')}
               >
-                Send now
+                {t('settingsPage.sendNowModal.confirm')}
               </Button>
             </div>
           </div>
@@ -561,27 +548,27 @@ function SettingsPage({ companyId }) {
       )}
 
       <Card
-        title="Jurisdictions"
-        description="The jurisdictions this company operates in. Compliance deadlines follow the strictest one selected."
+        title={t('settingsPage.jurisdictions.title')}
+        description={t('settingsPage.jurisdictions.description')}
         footer={
           <div className="flex items-center gap-3">
             <Button
               variant="primary"
               onClick={handleSaveJurisdictions}
               loading={savingJurisdictions}
-              loadingLabel="Saving"
+              loadingLabel={t('settingsPage.saving')}
               disabled={!jurisdictionsChanged || jurisdictions.length === 0}
             >
-              Save jurisdictions
+              {t('settingsPage.jurisdictions.saveButton')}
             </Button>
             {jurisdictionsChanged && (
-              <span className="text-xs text-muted">Unsaved changes</span>
+              <span className="text-xs text-muted">{t('settingsPage.unsavedChanges')}</span>
             )}
           </div>
         }
       >
         <fieldset className="flex flex-col gap-2">
-          <legend className="sr-only">Jurisdictions</legend>
+          <legend className="sr-only">{t('settingsPage.jurisdictions.title')}</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {SELECTABLE_JURISDICTIONS.map((code) => {
               const checked = jurisdictions.includes(code)
@@ -601,7 +588,9 @@ function SettingsPage({ companyId }) {
                     className="h-4 w-4"
                   />
                   <span className="font-medium text-charcoal">{code}</span>
-                  <span className="truncate text-xs">{JURISDICTION_LABELS[code]}</span>
+                  <span className="truncate text-xs">
+                    {t(`settingsPage.jurisdictionLabels.${code}`, { defaultValue: JURISDICTION_LABELS[code] })}
+                  </span>
                 </label>
               )
             })}
@@ -627,8 +616,11 @@ function SettingsPage({ companyId }) {
                   />
                   <span className="font-medium text-charcoal">{code}</span>
                   <span className="truncate text-xs">
-                    {JURISDICTION_LABELS[code] ?? code} — deprecated, can be removed, cannot be
-                    re-added
+                    {t('settingsPage.jurisdictions.deprecated', {
+                      label: t(`settingsPage.jurisdictionLabels.${code}`, {
+                        defaultValue: JURISDICTION_LABELS[code] ?? code,
+                      }),
+                    })}
                   </span>
                 </label>
               ))}
@@ -636,29 +628,33 @@ function SettingsPage({ companyId }) {
           )}
 
           {jurisdictions.length === 0 && (
-            <p className="text-xs text-critical">At least one jurisdiction is required.</p>
+            <p className="text-xs text-critical">{t('settingsPage.jurisdictions.atLeastOneRequired')}</p>
           )}
 
           {jurisdictions.length > 1 && strictestJurisdiction && (
             <Alert variant="info" className="mt-1">
-              Default compliance timeline follows <strong>{strictestJurisdiction}</strong>, the
-              strictest of the selected jurisdictions.
+              <Trans
+                i18nKey="settingsPage.jurisdictions.strictestNotice"
+                values={{ jurisdiction: strictestJurisdiction }}
+                components={{ strong: <strong /> }}
+              />
             </Alert>
           )}
 
           {jurisdictionsChanged && (
             <Alert variant="warning" className="mt-1">
-              Changing jurisdictions affects deadline computation for <strong>future cases
-              only</strong>. Deadlines are set when a case is created and are not recomputed for
-              cases that already exist.
+              <Trans
+                i18nKey="settingsPage.jurisdictions.changeNotice"
+                components={{ strong: <strong /> }}
+              />
             </Alert>
           )}
         </fieldset>
 
         <fieldset className="mt-5 flex flex-col gap-2 border-t border-line pt-5">
-          <legend className="sr-only">Time zone</legend>
+          <legend className="sr-only">{t('settingsPage.timeZone.title')}</legend>
           <label className="flex flex-col gap-1.5 text-sm sm:max-w-sm">
-            <span className="font-medium text-charcoal">Time zone</span>
+            <span className="font-medium text-charcoal">{t('settingsPage.timeZone.title')}</span>
             <input
               type="text"
               value={timeZoneInput}
@@ -669,47 +665,43 @@ function SettingsPage({ companyId }) {
             />
           </label>
           <p className="text-xs text-muted">
-            {timeZoneLocalLabel ?? 'Enter an IANA time zone identifier, e.g. "Europe/London".'} This
-            decides the local hour deadline escalations and pulse-check invitations go out at, not
-            when compliance deadlines themselves fall due.
+            {timeZoneLocalLabel ?? t('settingsPage.timeZone.enterHint')} {t('settingsPage.timeZone.decidesHint')}
           </p>
           {!timeZoneValid && (
-            <p className="text-xs text-critical">
-              Not a recognised time zone. Use an IANA identifier such as "America/New_York".
-            </p>
+            <p className="text-xs text-critical">{t('settingsPage.timeZone.invalid')}</p>
           )}
           <div className="flex items-center gap-3 pt-1">
             <Button
               variant="secondary"
               onClick={handleSaveTimeZone}
               loading={savingTimeZone}
-              loadingLabel="Saving"
+              loadingLabel={t('settingsPage.saving')}
               disabled={!timeZoneChanged || !timeZoneValid || timeZoneTrimmed.length === 0}
             >
-              Save time zone
+              {t('settingsPage.timeZone.saveButton')}
             </Button>
-            {timeZoneChanged && <span className="text-xs text-muted">Unsaved changes</span>}
+            {timeZoneChanged && <span className="text-xs text-muted">{t('settingsPage.unsavedChanges')}</span>}
           </div>
         </fieldset>
       </Card>
 
       <Card
-        title="Retaliation follow-up check-ins"
-        description="After a case closes, reporters get neutral check-ins asking whether anything has changed. This applies to all categories by default — retaliation can follow any report."
+        title={t('settingsPage.followUp.title')}
+        description={t('settingsPage.followUp.description')}
         footer={
           <Button
             variant="primary"
             onClick={handleSaveFollowUp}
             loading={savingFollowUp}
-            loadingLabel="Saving"
+            loadingLabel={t('settingsPage.saving')}
           >
-            Save follow-up settings
+            {t('settingsPage.followUp.saveButton')}
           </Button>
         }
       >
         <div className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm sm:max-w-md">
-            <span className="font-medium text-charcoal">Days after closure to check in</span>
+            <span className="font-medium text-charcoal">{t('settingsPage.followUp.daysLabel')}</span>
             <input
               type="text"
               value={intervalsText}
@@ -720,19 +712,17 @@ function SettingsPage({ companyId }) {
             />
             <span className="text-xs text-muted">
               {parsedIntervals.length === 0
-                ? 'No check-ins will be sent.'
-                : `${parsedIntervals.length} check-in${
-                    parsedIntervals.length === 1 ? '' : 's'
-                  } at day ${parsedIntervals.join(', ')} after a case closes.`}
+                ? t('settingsPage.followUp.noneWillSend')
+                : t('settingsPage.followUp.checkInsSummary', {
+                    count: parsedIntervals.length,
+                    days: parsedIntervals.join(', '),
+                  })}
             </span>
           </label>
 
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-medium text-charcoal">Categories to follow up</legend>
-            <p className="text-xs text-muted">
-              All on by default. Untick a category to stop scheduling check-ins for cases closed in
-              it.
-            </p>
+            <legend className="text-sm font-medium text-charcoal">{t('settingsPage.followUp.categoriesLegend')}</legend>
+            <p className="text-xs text-muted">{t('settingsPage.followUp.categoriesHint')}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {FOLLOW_UP_CATEGORIES.map((code) => {
                 const enabled = !disabledCategories.includes(code)
@@ -751,18 +741,16 @@ function SettingsPage({ companyId }) {
                       onChange={() => toggleCategory(code)}
                       className="h-4 w-4"
                     />
-                    <span className="font-medium text-charcoal">{CATEGORY_LABELS[code]}</span>
+                    <span className="font-medium text-charcoal">
+                      {t(`categories.${code}.label`, { defaultValue: CATEGORY_LABELS[code] })}
+                    </span>
                   </label>
                 )
               })}
             </div>
           </fieldset>
 
-          <Alert variant="info">
-            Check-ins are neutral and optional for the reporter. A reporter can always answer that
-            nothing has changed, or ignore them entirely — there is no chasing. Changes here apply
-            to cases closed from now on.
-          </Alert>
+          <Alert variant="info">{t('settingsPage.followUp.neutralNotice')}</Alert>
         </div>
       </Card>
     </div>

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { FOLLOW_UP_STATUS } from '../../services/followUpService'
 import Badge from '../ui/Badge'
 import Card from '../ui/Card'
@@ -12,29 +13,39 @@ import EmptyState from '../ui/EmptyState'
 // An anonymous reporter who never returns is the expected case, not a negative
 // signal - it must never be read, aggregated, or described as evidence that no
 // retaliation occurred, so it is never coloured as a "good" outcome here.
-const STATUS_META = {
-  [FOLLOW_UP_STATUS.SCHEDULED]: { label: 'Scheduled', tone: 'tone-neutral', hint: 'Awaiting the first check-in' },
-  [FOLLOW_UP_STATUS.SENT]: { label: 'Awaiting reply', tone: 'tone-info', hint: 'A check-in was posted' },
-  [FOLLOW_UP_STATUS.ANSWERED_NO_CHANGE]: {
-    label: 'Nothing changed',
-    tone: 'tone-low',
-    hint: 'Reporter answered: nothing has changed',
-  },
-  [FOLLOW_UP_STATUS.ANSWERED_CONCERN]: {
-    label: 'Concern reported',
-    tone: 'tone-critical',
-    hint: 'Reporter indicated something happened',
-  },
-  [FOLLOW_UP_STATUS.DECLINED]: {
-    label: 'Declined / opted out',
-    tone: 'tone-neutral',
-    hint: 'Reporter chose not to answer',
-  },
-  [FOLLOW_UP_STATUS.NO_RESPONSE]: {
-    label: 'Unknown — no response',
-    tone: 'tone-neutral',
-    hint: 'Reporter did not return. This is not evidence that nothing happened.',
-  },
+function statusMeta(t) {
+  return {
+    [FOLLOW_UP_STATUS.SCHEDULED]: {
+      label: t('followUpStatus.meta.scheduled.label'),
+      tone: 'tone-neutral',
+      hint: t('followUpStatus.meta.scheduled.hint'),
+    },
+    [FOLLOW_UP_STATUS.SENT]: {
+      label: t('followUpStatus.meta.sent.label'),
+      tone: 'tone-info',
+      hint: t('followUpStatus.meta.sent.hint'),
+    },
+    [FOLLOW_UP_STATUS.ANSWERED_NO_CHANGE]: {
+      label: t('followUpStatus.meta.answeredNoChange.label'),
+      tone: 'tone-low',
+      hint: t('followUpStatus.meta.answeredNoChange.hint'),
+    },
+    [FOLLOW_UP_STATUS.ANSWERED_CONCERN]: {
+      label: t('followUpStatus.meta.answeredConcern.label'),
+      tone: 'tone-critical',
+      hint: t('followUpStatus.meta.answeredConcern.hint'),
+    },
+    [FOLLOW_UP_STATUS.DECLINED]: {
+      label: t('followUpStatus.meta.declined.label'),
+      tone: 'tone-neutral',
+      hint: t('followUpStatus.meta.declined.hint'),
+    },
+    [FOLLOW_UP_STATUS.NO_RESPONSE]: {
+      label: t('followUpStatus.meta.noResponse.label'),
+      tone: 'tone-neutral',
+      hint: t('followUpStatus.meta.noResponse.hint'),
+    },
+  }
 }
 
 const DISPLAY_ORDER = [
@@ -51,6 +62,8 @@ const DISPLAY_ORDER = [
 // (followUpStatus per case) - it has no path to case content, the reporter's
 // answer, or any identity, and none of that is needed to show these counts.
 function FollowUpStatus({ cases = [] }) {
+  const { t } = useTranslation()
+  const STATUS_META = useMemo(() => statusMeta(t), [t])
   const counts = useMemo(() => {
     const tally = {}
     for (const c of cases) {
@@ -65,23 +78,25 @@ function FollowUpStatus({ cases = [] }) {
 
   return (
     <Card
-      title="Retaliation follow-ups"
-      description="Post-closure check-ins with reporters. Metadata only — the reporter's answer stays with the handler of any case they choose to file."
+      title={t('followUpStatus.title')}
+      description={t('followUpStatus.description')}
     >
       {total === 0 ? (
         <EmptyState
           compact
           icon="clock"
-          title="No follow-ups yet"
-          description="Follow-ups are scheduled automatically when a case closes."
+          title={t('followUpStatus.empty.title')}
+          description={t('followUpStatus.empty.description')}
         />
       ) : (
         <div className="flex flex-col gap-4">
           {concernCount > 0 && (
             <div className="rounded-lg border border-critical-200 bg-surface p-3 text-sm text-charcoal">
-              <strong>{concernCount}</strong> reporter{concernCount === 1 ? '' : 's'} indicated
-              something happened after their case closed. If they chose to file, it is a new,
-              separate case in the queue with its own handler.
+              <Trans
+                i18nKey="followUpStatus.concernNotice"
+                count={concernCount}
+                components={{ strong: <strong /> }}
+              />
             </div>
           )}
 
@@ -105,10 +120,7 @@ function FollowUpStatus({ cases = [] }) {
             })}
           </ul>
 
-          <p className="text-xs text-subtle">
-            “Unknown — no response” means the reporter did not return, which is the expected case
-            for an anonymous reporter. It is not a sign that nothing happened.
-          </p>
+          <p className="text-xs text-subtle">{t('followUpStatus.noResponseFootnote')}</p>
         </div>
       )}
     </Card>

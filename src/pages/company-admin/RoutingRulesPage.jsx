@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getCompany } from '../../services/companyService'
 import {
   listCaseHandlers,
@@ -48,6 +49,7 @@ function formatDate(value) {
 // those stay with the Super Admin, since a Company Admin is exactly who the
 // conflict check may have flagged.
 function RoutingRulesPage({ companyId }) {
+  const { t } = useTranslation()
   const [departments, setDepartments] = useState([])
   const [handlers, setHandlers] = useState([])
   const [rules, setRules] = useState([])
@@ -141,7 +143,7 @@ function RoutingRulesPage({ companyId }) {
         handlerId,
         actorId: auth.currentUser?.uid,
       })
-      setNotice(`Case ${caseRow.caseId} assigned.`)
+      setNotice(t('adminCasesPage.caseAssigned', { caseId: caseRow.caseId }))
       await refresh()
     } catch (err) {
       setError(err.message)
@@ -160,7 +162,7 @@ function RoutingRulesPage({ companyId }) {
         department: ruleForm.department,
         caseHandlerId: ruleForm.caseHandlerId,
       })
-      setNotice('Rule saved. Cases submitted from now on route to that handler automatically.')
+      setNotice(t('routingRulesPage.ruleSaved'))
       await refresh()
     } catch (err) {
       setError(err.message)
@@ -187,31 +189,24 @@ function RoutingRulesPage({ companyId }) {
   // a select with nothing in it - a rule needs both a department and a Case
   // Handler to exist before it can be written at all.
   const missing = []
-  if (departments.length === 0) missing.push('a department')
-  if (handlers.length === 0) missing.push('a Case Handler')
+  if (departments.length === 0) missing.push(t('routingRulesPage.aDepartment'))
+  if (handlers.length === 0) missing.push(t('routingRulesPage.aCaseHandler'))
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        Each rule maps a case category and department to the Case Handler it should be assigned
-        to. New cases are routed automatically the moment they are submitted.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('routingRulesPage.description')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
       {notice && <Alert variant="success">{notice}</Alert>}
 
       {unroutedCases.length > 0 && (
         <Card
-          title="Needs attention"
-          description={`${unroutedCases.length} case${
-            unroutedCases.length === 1 ? '' : 's'
-          } waiting because no rule covered it`}
+          title={t('routingRulesPage.needsAttention.title')}
+          description={t('routingRulesPage.needsAttention.casesWaiting', { count: unroutedCases.length })}
           padded={false}
         >
           <p className="border-b border-line-soft px-5 py-3 text-xs text-muted">
-            Configure the missing rule so future cases in that bucket route on their own, or assign
-            this case to a handler now. Saving a rule does not place cases already waiting here.
-            Nothing on this page shows what a report says - only where it should go.
+            {t('routingRulesPage.needsAttention.body')}
           </p>
           <ul className="divide-y divide-line-soft">
             {unroutedCases.map((caseRow) => (
@@ -220,14 +215,14 @@ function RoutingRulesPage({ companyId }) {
                   <p className="font-mono text-sm font-semibold text-charcoal">{caseRow.caseId}</p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                     <span>
-                      {CATEGORIES.find((c) => c.id === caseRow.category)?.label ??
-                        caseRow.category ??
-                        'Uncategorized'}
+                      {CATEGORIES.some((c) => c.id === caseRow.category)
+                        ? t(`categories.${caseRow.category}.label`)
+                        : (caseRow.category ?? t('adminCasesPage.uncategorized'))}
                     </span>
                     <span aria-hidden="true">·</span>
-                    <span>{caseRow.department ?? 'unspecified'}</span>
+                    <span>{caseRow.department ?? t('adminCasesPage.unspecified')}</span>
                     <span aria-hidden="true">·</span>
-                    <span>Submitted {formatDate(caseRow.createdAt)}</span>
+                    <span>{t('adminCasesPage.submitted', { date: formatDate(caseRow.createdAt) })}</span>
                   </p>
                 </div>
 
@@ -250,7 +245,7 @@ function RoutingRulesPage({ companyId }) {
                   icon="document"
                   onClick={() => setTriageCaseId(caseRow.caseId)}
                 >
-                  View
+                  {t('adminCasesPage.view')}
                 </Button>
 
                 <Button
@@ -259,11 +254,11 @@ function RoutingRulesPage({ companyId }) {
                   icon="routing"
                   onClick={() => handleConfigureRule(caseRow)}
                 >
-                  Configure rule
+                  {t('routingRulesPage.configureRule')}
                 </Button>
 
                 <select
-                  aria-label={`Assign case ${caseRow.caseId}`}
+                  aria-label={t('adminCasesPage.assignCaseLabel', { caseId: caseRow.caseId })}
                   className="field w-44 py-1 text-xs"
                   value=""
                   disabled={assigningCaseId === caseRow.caseId || handlers.length === 0}
@@ -271,10 +266,10 @@ function RoutingRulesPage({ companyId }) {
                 >
                   <option value="" disabled>
                     {assigningCaseId === caseRow.caseId
-                      ? 'Assigning...'
+                      ? t('adminCasesPage.assigning')
                       : handlers.length === 0
-                        ? 'No Case Handlers yet'
-                        : 'Assign to...'}
+                        ? t('adminCasesPage.noHandlersYet')
+                        : t('adminCasesPage.assignTo')}
                   </option>
                   {handlers.map((h) => (
                     <option key={h.id} value={h.id}>
@@ -289,9 +284,8 @@ function RoutingRulesPage({ companyId }) {
       )}
 
       {missing.length > 0 && !loading && (
-        <Alert variant="warning" title="Routing is not set up yet">
-          You need {missing.join(' and ')} before a rule can be saved. Unrouted cases fall back to
-          manual assignment.
+        <Alert variant="warning" title={t('routingRulesPage.notSetUp.title')}>
+          {t('routingRulesPage.notSetUp.body', { missing: missing.join(` ${t('common.and')} `) })}
         </Alert>
       )}
 
@@ -299,30 +293,30 @@ function RoutingRulesPage({ companyId }) {
           can scroll the form into view without Card having to forward it. */}
       <div ref={ruleFormRef}>
         <Card
-          title="Add a rule"
-          description="An existing category and department pair is overwritten rather than duplicated."
+          title={t('routingRulesPage.addRule.title')}
+          description={t('routingRulesPage.addRule.description')}
         >
           <form onSubmit={handleSetRule} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
             <Select
-              label="Category"
+              label={t('routingRulesPage.category')}
               value={ruleForm.category}
               onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}
             >
               {CATEGORIES.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.label}
+                  {t(`categories.${c.id}.label`)}
                 </option>
               ))}
             </Select>
 
             <Select
-              label="Department"
+              label={t('adminNav.departments')}
               value={ruleForm.department}
               onChange={(e) => setRuleForm({ ...ruleForm, department: e.target.value })}
             >
               {departmentOptions.length === 0 && (
                 <option value="" disabled>
-                  No departments yet
+                  {t('routingRulesPage.noDepartmentsYet')}
                 </option>
               )}
               {departmentOptions
@@ -333,17 +327,17 @@ function RoutingRulesPage({ companyId }) {
                   </option>
                 ))}
               {departmentOptions.includes('unspecified') && (
-                <option value="unspecified">Unspecified</option>
+                <option value="unspecified">{t('routingRulesPage.unspecifiedOption')}</option>
               )}
             </Select>
 
             <Select
-              label="Assign to"
+              label={t('routingRulesPage.assignTo')}
               value={ruleForm.caseHandlerId}
               onChange={(e) => setRuleForm({ ...ruleForm, caseHandlerId: e.target.value })}
             >
               <option value="" disabled>
-                {handlers.length === 0 ? 'No Case Handlers yet' : 'Select a Case Handler'}
+                {handlers.length === 0 ? t('adminCasesPage.noHandlersYet') : t('routingRulesPage.selectCaseHandler')}
               </option>
               {handlers.map((h) => (
                 <option key={h.id} value={h.id}>
@@ -353,7 +347,7 @@ function RoutingRulesPage({ companyId }) {
             </Select>
 
             <Button type="submit" variant="primary" icon="plus" disabled={!canSubmit || saving}>
-              Save rule
+              {t('routingRulesPage.saveRule')}
             </Button>
           </form>
 
@@ -364,9 +358,7 @@ function RoutingRulesPage({ companyId }) {
               row when it appeared. A constant min-height here means the
               text appearing or disappearing never moves anything above it. */}
           <p className="mt-3 min-h-[1rem] text-xs text-muted">
-            {ruleForm.department === 'unspecified'
-              ? 'Unspecified: reports where the reporter did not say which department the involved person works in.'
-              : ''}
+            {ruleForm.department === 'unspecified' ? t('routingRulesPage.unspecifiedHint') : ''}
           </p>
         </Card>
       </div>
@@ -374,19 +366,25 @@ function RoutingRulesPage({ companyId }) {
       {loading && rules.length === 0 ? (
         <SkeletonList rows={3} />
       ) : (
-        <Card title="Active rules" description={`${rules.length} configured`} padded={false}>
+        <Card
+          title={t('routingRulesPage.activeRules.title')}
+          description={t('routingRulesPage.activeRules.configuredCount', { count: rules.length })}
+          padded={false}
+        >
           {rules.length === 0 ? (
             <EmptyState
               icon="routing"
-              title="No routing rules yet"
-              description="Without a matching rule, an incoming case is flagged for manual assignment instead of going straight to a handler."
+              title={t('routingRulesPage.activeRules.empty.title')}
+              description={t('routingRulesPage.activeRules.empty.description')}
             />
           ) : (
             <ul className="divide-y divide-line-soft">
               {rules.map((rule) => (
                 <li key={rule.id} className="flex flex-wrap items-center gap-3 px-5 py-3.5 hover:bg-navy-50/40">
                   <Badge tone="tone-info">
-                    {CATEGORIES.find((c) => c.id === rule.category)?.label ?? rule.category}
+                    {CATEGORIES.some((c) => c.id === rule.category)
+                      ? t(`categories.${rule.category}.label`)
+                      : rule.category}
                   </Badge>
                   <span className="text-sm text-muted">{rule.department}</span>
 
@@ -402,7 +400,7 @@ function RoutingRulesPage({ companyId }) {
                     onClick={() => handleRemoveRule(rule)}
                     disabled={saving}
                   >
-                    Remove
+                    {t('routingRulesPage.remove')}
                   </Button>
                 </li>
               ))}
@@ -417,7 +415,7 @@ function RoutingRulesPage({ companyId }) {
           companyId={companyId}
           onClose={() => setTriageCaseId(null)}
           onAssigned={(caseId) => {
-            setNotice(`Case ${caseId} assigned.`)
+            setNotice(t('adminCasesPage.caseAssigned', { caseId }))
             refresh()
           }}
         />

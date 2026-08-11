@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { CATEGORIES } from '../../data/categories'
 import { deadlineDisplay, nextDeadlineMs } from '../../utils/caseDeadlines'
@@ -75,6 +76,7 @@ function downloadCsv(filename, csv) {
 // as sortable without shouting. It's a real button for keyboard and screen
 // reader users, with aria-sort announced on the cell wrapping it via the arrow.
 function SortHeader({ label, columnKey, activeKey, dir, onSort }) {
+  const { t } = useTranslation()
   const active = columnKey === activeKey
   const arrow = !active ? '↕' : dir === 'asc' ? '▲' : '▼'
   return (
@@ -82,7 +84,11 @@ function SortHeader({ label, columnKey, activeKey, dir, onSort }) {
       type="button"
       onClick={() => onSort(columnKey)}
       className="flex items-center gap-1 font-[inherit] text-inherit"
-      aria-label={`Sort by ${label}${active ? (dir === 'asc' ? ', ascending' : ', descending') : ''}`}
+      aria-label={
+        active
+          ? t('casesTable.sortByDirection', { label, direction: dir === 'asc' ? t('casesTable.ascending') : t('casesTable.descending') })
+          : t('casesTable.sortBy', { label })
+      }
     >
       <span>{label}</span>
       <span className={active ? 'text-charcoal' : 'text-subtle'} aria-hidden="true">
@@ -114,6 +120,10 @@ function CasesTable({
   onReassign,
   reassigningId,
 }) {
+  const { t } = useTranslation()
+  const statusLabel = (status) => t(`caseStatus.${status}`, { defaultValue: humanize(status) })
+  const priorityLabel = (priority) => t(`priorityLabels.${priority}`, { defaultValue: humanize(priority) })
+  const assignmentLabel = (value) => t(`assignmentLabels.${value}`, { defaultValue: humanize(value) })
   const [searchParams, setSearchParams] = useSearchParams()
 
   const handlerNameById = useMemo(() => {
@@ -203,21 +213,25 @@ function CasesTable({
 
   function handleExportCsv() {
     const header = [
-      'Category',
-      'Priority',
-      'Status',
-      'Severity',
-      'Evidence',
-      'Assigned handler',
-      'Next deadline',
+      t('casesTable.headers.category'),
+      t('casesTable.headers.priority'),
+      t('casesTable.headers.status'),
+      t('casesTable.headers.severity'),
+      t('casesTable.headers.evidence'),
+      t('casesTable.headers.assignedHandler'),
+      t('casesTable.headers.nextDeadline'),
     ]
     const rows = sortedCases.map((c) => [
-      humanize(c.category) ?? 'Uncategorized',
-      c.priority ?? '',
-      humanize(c.status) ?? 'open',
+      c.category
+        ? t(`categories.${c.category}.label`, { defaultValue: humanize(c.category) })
+        : t('casesTable.uncategorized'),
+      c.priority ? priorityLabel(c.priority) : '',
+      statusLabel(c.status) ?? t('casesTable.open'),
       c.severityScore ?? '',
       c.evidenceScore ?? '',
-      c.assignedHandlerId ? handlerNameById.get(c.assignedHandlerId) ?? c.assignedHandlerId : 'Unassigned',
+      c.assignedHandlerId
+        ? handlerNameById.get(c.assignedHandlerId) ?? c.assignedHandlerId
+        : t('casesTable.unassigned'),
       deadlineDisplay(nextDeadlineMs(c), now).label,
     ])
     const stamp = new Date().toISOString().slice(0, 10)
@@ -226,11 +240,11 @@ function CasesTable({
 
   return (
     <Card
-      title="Cases"
+      title={t('casesTable.title')}
       description={
         anyFilterActive
-          ? `${sortedCases.length} of ${baseCases.length} case${baseCases.length === 1 ? '' : 's'} match`
-          : `${baseCases.length} case${baseCases.length === 1 ? '' : 's'}`
+          ? t('casesTable.matchCount', { matched: sortedCases.length, total: baseCases.length })
+          : t('casesTable.caseCount', { count: baseCases.length })
       }
       padded={false}
       actions={
@@ -241,68 +255,68 @@ function CasesTable({
           onClick={handleExportCsv}
           disabled={sortedCases.length === 0}
         >
-          Export CSV
+          {t('casesTable.exportCsv')}
         </Button>
       }
     >
       {baseCases.length === 0 ? (
         <EmptyState
           icon="cases"
-          title="No cases here yet"
-          description="Submitted reports appear here the moment they are routed."
+          title={t('casesTable.empty.title')}
+          description={t('casesTable.empty.description')}
         />
       ) : (
         <>
           <div className="flex flex-wrap items-end gap-3 border-b border-line-soft px-5 py-4">
             <Select
-              label="Category"
+              label={t('casesTable.filters.category')}
               value={filters.category}
               onChange={(e) => setFilter('category', e.target.value)}
               className="min-w-[150px]"
             >
-              <option value="">All categories</option>
+              <option value="">{t('casesTable.filters.allCategories')}</option>
               {CATEGORIES.map((cat) => (
                 <option key={cat.id} value={cat.id}>
-                  {cat.label}
+                  {t(`categories.${cat.id}.label`, { defaultValue: cat.label })}
                 </option>
               ))}
             </Select>
             <Select
-              label="Status"
+              label={t('casesTable.filters.status')}
               value={filters.status}
               onChange={(e) => setFilter('status', e.target.value)}
               className="min-w-[150px]"
             >
-              <option value="">All statuses</option>
+              <option value="">{t('casesTable.filters.allStatuses')}</option>
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>
-                  {humanize(s)}
+                  {statusLabel(s)}
                 </option>
               ))}
             </Select>
             <Select
-              label="Priority"
+              label={t('casesTable.filters.priority')}
               value={filters.priority}
               onChange={(e) => setFilter('priority', e.target.value)}
               className="min-w-[130px]"
             >
-              <option value="">All priorities</option>
+              <option value="">{t('casesTable.filters.allPriorities')}</option>
               {PRIORITY_OPTIONS.map((p) => (
                 <option key={p} value={p}>
-                  {humanize(p)}
+                  {priorityLabel(p)}
                 </option>
               ))}
             </Select>
             <Select
-              label="Assignment"
+              label={t('casesTable.filters.assignment')}
               value={filters.assignment}
               onChange={(e) => setFilter('assignment', e.target.value)}
               className="min-w-[140px]"
             >
-              <option value="">All</option>
+              <option value="">{t('casesTable.filters.all')}</option>
               {ASSIGNMENT_OPTIONS.map((a) => (
                 <option key={a} value={a}>
-                  {humanize(a)}
+                  {assignmentLabel(a)}
                 </option>
               ))}
             </Select>
@@ -314,7 +328,7 @@ function CasesTable({
                   updateParams({ category: '', status: '', priority: '', assignment: '' })
                 }
               >
-                Clear filters
+                {t('casesTable.clearFilters')}
               </Button>
             )}
           </div>
@@ -322,31 +336,31 @@ function CasesTable({
           {sortedCases.length === 0 ? (
             <EmptyState
               icon="cases"
-              title="No cases match these filters"
-              description="Adjust or clear the filters above to see more."
+              title={t('casesTable.noMatch.title')}
+              description={t('casesTable.noMatch.description')}
             />
           ) : (
             <div className="overflow-x-auto">
               <table className="data-table min-w-[980px]">
                 <thead>
                   <tr>
-                    <th>Category</th>
-                    <th>Priority</th>
+                    <th>{t('casesTable.headers.category')}</th>
+                    <th>{t('casesTable.headers.priority')}</th>
                     <th>
-                      <SortHeader label="Status" columnKey="status" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <SortHeader label={t('casesTable.headers.status')} columnKey="status" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
                     </th>
                     <th>
-                      <SortHeader label="Severity" columnKey="severity" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <SortHeader label={t('casesTable.headers.severity')} columnKey="severity" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
                     </th>
                     <th>
-                      <SortHeader label="Evidence" columnKey="evidence" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <SortHeader label={t('casesTable.headers.evidence')} columnKey="evidence" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
                     </th>
-                    <th>Assigned handler</th>
+                    <th>{t('casesTable.headers.assignedHandler')}</th>
                     <th>
-                      <SortHeader label="Next deadline" columnKey="deadline" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
+                      <SortHeader label={t('casesTable.headers.nextDeadline')} columnKey="deadline" activeKey={sortKey} dir={sortDir} onSort={toggleSort} />
                     </th>
-                    {showTriageColumn && <th>Triage</th>}
-                    <th>Reassign</th>
+                    {showTriageColumn && <th>{t('casesTable.headers.triage')}</th>}
+                    <th>{t('casesTable.headers.reassign')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -355,25 +369,27 @@ function CasesTable({
                     return (
                       <tr key={c.id}>
                         <td className="font-medium text-charcoal">
-                          {humanize(c.category) ?? 'Uncategorized'}
+                          {c.category
+                            ? t(`categories.${c.category}.label`, { defaultValue: humanize(c.category) })
+                            : t('casesTable.uncategorized')}
                         </td>
                         <td>
                           {c.priority && (
                             <Badge tone={PRIORITY_TONE[c.priority] ?? 'tone-neutral'} dot>
-                              {c.priority}
+                              {priorityLabel(c.priority)}
                             </Badge>
                           )}
                         </td>
                         <td>
                           <Badge tone={STATUS_TONE[c.status] ?? 'tone-neutral'}>
-                            {humanize(c.status) ?? 'open'}
+                            {statusLabel(c.status) ?? t('casesTable.open')}
                           </Badge>
                         </td>
                         <td className="tabular-nums text-muted">{c.severityScore ?? '—'}</td>
                         <td className="tabular-nums text-muted">{c.evidenceScore ?? '—'}</td>
                         <td className="text-muted">
                           {handlerNameById.get(c.assignedHandlerId) ?? (
-                            <span className="text-critical">Unassigned</span>
+                            <span className="text-critical">{t('casesTable.unassigned')}</span>
                           )}
                         </td>
                         <td>
@@ -387,20 +403,20 @@ function CasesTable({
                               icon="document"
                               onClick={() => onTriage?.(c.id)}
                             >
-                              View
+                              {t('casesTable.view')}
                             </Button>
                           </td>
                         )}
                         <td>
                           <select
-                            aria-label={`Reassign case ${c.caseId ?? c.id}`}
+                            aria-label={t('casesTable.reassignAriaLabel', { caseId: c.caseId ?? c.id })}
                             className="field w-44 py-1 text-xs"
                             disabled={reassigningId === c.id}
                             defaultValue=""
                             onChange={(e) => onReassign?.(c.id, e.target.value)}
                           >
                             <option value="" disabled>
-                              {reassigningId === c.id ? 'Reassigning...' : 'Reassign to...'}
+                              {reassigningId === c.id ? t('casesTable.reassigning') : t('casesTable.reassignTo')}
                             </option>
                             {handlers.map((h) => (
                               <option key={h.id} value={h.id}>
@@ -420,8 +436,11 @@ function CasesTable({
           {pageCount > 1 && (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line-soft px-5 py-3">
               <span className="text-xs text-muted">
-                Showing {clampedPage * PAGE_SIZE + 1}–
-                {Math.min((clampedPage + 1) * PAGE_SIZE, sortedCases.length)} of {sortedCases.length}
+                {t('casesTable.showingRange', {
+                  from: clampedPage * PAGE_SIZE + 1,
+                  to: Math.min((clampedPage + 1) * PAGE_SIZE, sortedCases.length),
+                  total: sortedCases.length,
+                })}
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -431,10 +450,10 @@ function CasesTable({
                   disabled={clampedPage === 0}
                   onClick={() => updateParams({ page: String(clampedPage - 1) }, { resetPage: false })}
                 >
-                  Previous
+                  {t('casesTable.previous')}
                 </Button>
                 <span className="text-xs text-muted">
-                  Page {clampedPage + 1} of {pageCount}
+                  {t('casesTable.pageOf', { page: clampedPage + 1, total: pageCount })}
                 </span>
                 <Button
                   variant="secondary"
@@ -443,7 +462,7 @@ function CasesTable({
                   disabled={clampedPage >= pageCount - 1}
                   onClick={() => updateParams({ page: String(clampedPage + 1) }, { resetPage: false })}
                 >
-                  Next
+                  {t('casesTable.next')}
                 </Button>
               </div>
             </div>

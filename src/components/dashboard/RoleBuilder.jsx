@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   listCustomRoles,
   createCustomRole,
@@ -28,6 +29,13 @@ const EMPTY_FORM = { name: '', permissions: [] }
 // permissions array) - this form only decides what a Company Admin is
 // offered to click.
 function RoleBuilder({ companyId }) {
+  const { t } = useTranslation()
+  function moduleLabel(key) {
+    return t(`permissionModules.${key}.label`, { defaultValue: PERMISSION_MODULES[key]?.label ?? key })
+  }
+  function moduleDescription(key) {
+    return t(`permissionModules.${key}.description`, { defaultValue: PERMISSION_MODULES[key]?.description })
+  }
   const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -130,37 +138,33 @@ function RoleBuilder({ companyId }) {
       icon={showForm ? 'close' : 'plus'}
       onClick={() => (showForm ? setShowForm(false) : startCreate())}
     >
-      {showForm ? 'Cancel' : 'New custom role'}
+      {showForm ? t('common.cancel') : t('roleBuilder.newCustomRole')}
     </Button>
   )
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="max-w-xl text-sm text-muted">
-          Build named roles from a fixed set of permission modules. Case Handler and HR Coordinator are
-          not composable - they are not offered here and cannot be built from these modules.
-        </p>
+        <p className="max-w-xl text-sm text-muted">{t('roleBuilder.description')}</p>
         {createButton}
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
 
       {showForm && (
-        <Card title={editingId ? 'Edit custom role' : 'New custom role'}>
+        <Card title={editingId ? t('roleBuilder.editCustomRole') : t('roleBuilder.newCustomRole')}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <Input
-              label="Role name"
+              label={t('roleBuilder.roleNameLabel')}
               required
-              placeholder="e.g. Billing Coordinator"
+              placeholder={t('roleBuilder.roleNamePlaceholder')}
               value={form.name}
               onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
             />
             <fieldset className="flex flex-col gap-2">
-              <legend className="text-sm font-medium text-charcoal">Permission modules</legend>
+              <legend className="text-sm font-medium text-charcoal">{t('roleBuilder.permissionModulesLegend')}</legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {PERMISSION_MODULE_KEYS.map((key) => {
-                  const mod = PERMISSION_MODULES[key]
                   const checked = form.permissions.includes(key)
                   return (
                     <label
@@ -176,8 +180,8 @@ function RoleBuilder({ companyId }) {
                         className="mt-0.5 h-4 w-4"
                       />
                       <span>
-                        <span className="block font-medium">{mod.label}</span>
-                        <span className="block text-xs text-muted">{mod.description}</span>
+                        <span className="block font-medium">{moduleLabel(key)}</span>
+                        <span className="block text-xs text-muted">{moduleDescription(key)}</span>
                       </span>
                     </label>
                   )
@@ -189,10 +193,10 @@ function RoleBuilder({ companyId }) {
               variant="primary"
               className="self-start"
               loading={saving}
-              loadingLabel="Saving"
+              loadingLabel={t('roleBuilder.saving')}
               disabled={!form.name.trim() || form.permissions.length === 0}
             >
-              {editingId ? 'Save changes' : 'Create role'}
+              {editingId ? t('roleBuilder.saveChanges') : t('roleBuilder.createRole')}
             </Button>
           </form>
         </Card>
@@ -203,34 +207,38 @@ function RoleBuilder({ companyId }) {
       ) : roles.length === 0 ? (
         <EmptyState
           icon="staff"
-          title="No custom roles yet"
-          description="Create a named role from the permission modules above to assign to staff who aren't Case Handlers or HR Coordinators."
+          title={t('roleBuilder.empty.title')}
+          description={t('roleBuilder.empty.description')}
           action={createButton}
         />
       ) : (
-        <Card title="Custom roles" description={`${roles.length} role${roles.length === 1 ? '' : 's'}`} padded={false}>
+        <Card
+          title={t('roleBuilder.customRolesTitle')}
+          description={t('roleBuilder.roleCount', { count: roles.length })}
+          padded={false}
+        >
           <ul className="divide-y divide-line-soft">
             {roles.map((role) => (
               <li key={role.id} className="flex flex-col gap-2 px-5 py-3.5">
                 <div className="flex flex-wrap items-center gap-3">
                   <p className="text-sm font-medium text-charcoal">{role.name}</p>
                   <Button variant="secondary" size="sm" onClick={() => startEdit(role)}>
-                    Edit
+                    {t('roleBuilder.edit')}
                   </Button>
                   <Button
                     variant="dangerGhost"
                     size="sm"
                     onClick={() => handleDelete(role)}
                     loading={pendingDeleteId === role.id}
-                    loadingLabel="Deleting"
+                    loadingLabel={t('roleBuilder.deleting')}
                   >
-                    Delete
+                    {t('roleBuilder.delete')}
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {(role.permissions ?? []).map((key) => (
                     <Badge key={key} tone="tone-info">
-                      {PERMISSION_MODULES[key]?.label ?? key}
+                      {moduleLabel(key)}
                     </Badge>
                   ))}
                 </div>
