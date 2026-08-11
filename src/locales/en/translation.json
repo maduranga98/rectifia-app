@@ -1841,6 +1841,34 @@
       "description": "Nothing has been computed for this company yet. Check back after the next daily analytics run."
     }
   },
+  "benchmarkComparison": {
+    "insufficientData": "Insufficient data in your segment",
+    "insufficientDataBody": "This cell has not reached the minimum of 5 contributing companies and 25 cases required before any figure is published. This is common and normal, not an error — the pool grows as more companies opt in.",
+    "companiesAndCases": "{{companies}} companies · {{cases}} cases",
+    "severityMedian": "Severity (median)",
+    "percentiles": "(p25 {{p25}} · p75 {{p75}})",
+    "evidenceMedian": "Evidence (median)",
+    "daysToCloseMedian": "Days to close (median)",
+    "daysUnit": "days",
+    "casesPer1000": "Cases / 1,000 / year",
+    "typicalAction": "Typical action taken",
+    "title": "Industry benchmark",
+    "description": "How this company's closed cases compare to the wider pool for your industry and size band. Aggregate statistics only — no other company is named, no case is exposed, and cells below the anonymity thresholds are not published at all.",
+    "notOptedIn": {
+      "title": "Not opted in",
+      "body": "The cross-company benchmark pool is opt-in. Your Company Admin can enable it on the company Benchmark page. Reading the pool requires contributing to it — a pool that can be read without contributing collapses into a one-way intelligence product."
+    },
+    "incomplete": {
+      "title": "Cell coordinates missing",
+      "body": "Your opt-in record's industry or employee count no longer places this company inside a valid cell. Ask your Company Admin to re-opt-in with the current headcount."
+    },
+    "showingSegment": "Showing <strong>{{industry}}</strong> in size band <strong>{{sizeBand}}</strong>.",
+    "noCells": {
+      "title": "No cells for your segment yet",
+      "description": "No category cell has reached the reporting thresholds for your industry and size band. This is common and normal — the pool grows as more companies opt in."
+    },
+    "roundingFootnote": "Cells publish only when at least 5 companies and 25 cases contribute; below either threshold nothing is published at all, so an \"insufficient data\" row is not an error. Every published figure is rounded — medians, percentages to the nearest 5 — because unrounded values over small populations leak more than they inform."
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
