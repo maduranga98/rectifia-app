@@ -663,6 +663,55 @@
       "body": "You have unpublished changes. This preview shows what employees are receiving right now. Publish to make your changes part of what is sent."
     }
   },
+  "caseAccess": {
+    "caseId": "Case ID",
+    "passcode": "Passcode",
+    "hint": "Both were shown to you once, when you submitted your report.",
+    "checking": "Checking",
+    "accessCase": "Access case",
+    "errors": {
+      "invalid": "Case ID or passcode is incorrect."
+    }
+  },
+  "contactChannelPanel": {
+    "saved": {
+      "title": "An email address is saved for updates",
+      "body": "When there is an update on your case we send a short, deliberately vague message to that address — it never mentions your case, this company, or what you reported. You still open your case here with your Case ID and passcode.",
+      "removeNote": "Removing it deletes the address completely. Notifications stop; nothing else about your case changes."
+    },
+    "removing": "Removing",
+    "removeAddress": "Remove this address",
+    "offer": {
+      "title": "Want to be emailed when there is an update?",
+      "body": "Optional. Without it, you check back here whenever you like — nothing is lost by leaving this alone.",
+      "readMore": "Read what that would mean"
+    },
+    "form": {
+      "title": "Adding an email address for updates",
+      "whatThisCreates": {
+        "title": "What this creates",
+        "body": "Saving an address creates a stored link between that address and this case. That link is exactly what “anonymous” otherwise guarantees does not exist. It is encrypted and nobody working on your case can read it — not your handler, not the HR Coordinator, not your Company Admin — but it exists, and you should decide knowing that rather than find out later."
+      },
+      "throwaway": {
+        "title": "A throwaway address is a fine choice",
+        "body": "A free burner address you make for this and nothing else works perfectly well here, and for many people it is the sensible option. We would rather say that plainly than have you use a work address because we stayed quiet about it."
+      },
+      "whatEmailsSay": {
+        "title": "What the emails say",
+        "body": "As little as possible, on purpose. Something like “You have an update” and a link to our front page — never your Case ID, the category, the status, or anything about this company. Anyone glancing at your inbox learns nothing."
+      },
+      "takeItBack": {
+        "title": "You can take it back",
+        "body1": "Remove it at any time from this page and the address is deleted, not just switched off.",
+        "body2": "This does not change who can see your report or affect how your case is handled, and your case stays anonymous either way."
+      },
+      "emailAddress": "Email address",
+      "emailHint": "Keep hold of your Case ID and passcode either way — this address cannot be used to recover them.",
+      "saving": "Saving",
+      "saveAddress": "Save this address",
+      "noThanks": "No thanks"
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
