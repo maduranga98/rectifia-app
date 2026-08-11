@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Logo from '../components/ui/Logo'
 import Alert from '../components/ui/Alert'
 import {
@@ -41,7 +42,15 @@ function SectionBody({ body }) {
 // flow in particular (a reporter mid-report, a visitor who followed a staff
 // login link, a Manager reading it cold all land here the same way), so it
 // gets its own minimal chrome instead of borrowing one flow's.
+//
+// The legal body text itself (sections, draftNotice - src/content/legal/
+// privacyPolicy.js) is left in English rather than machine-translated: an
+// inaccurate translation of a compliance document is worse than none, and
+// getting it right needs legal review, not a rendering pass. Only the
+// surrounding chrome is localized here.
 function PrivacyPolicyPage() {
+  const { t } = useTranslation()
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-surface">
@@ -50,7 +59,7 @@ function PrivacyPolicyPage() {
             <Logo size="md" />
           </Link>
           <Link to="/" className="text-xs text-muted underline hover:text-charcoal">
-            Back to Rectifia
+            {t('legal.backToHome')}
           </Link>
         </div>
       </header>
@@ -70,9 +79,9 @@ function PrivacyPolicyPage() {
         )}
 
         <div>
-          <h1 className="text-2xl font-semibold text-charcoal sm:text-3xl">Privacy Policy</h1>
+          <h1 className="text-2xl font-semibold text-charcoal sm:text-3xl">{t('legal.privacyTitle')}</h1>
           <p className="mt-2 text-xs text-muted">
-            Version {policyVersion} · Last updated {lastUpdated}
+            {t('legal.version', { version: policyVersion })} · {t('legal.lastUpdated', { date: lastUpdated })}
           </p>
         </div>
 
@@ -88,9 +97,9 @@ function PrivacyPolicyPage() {
 
       <footer className="border-t border-line px-5 py-5">
         <div className="mx-auto flex max-w-3xl items-center justify-between text-xs text-muted">
-          <span>Rectifia</span>
+          <span>{t('app.name')}</span>
           <Link to="/terms" className="underline hover:text-charcoal">
-            Terms of use
+            {t('reporterLayout.termsOfUse')}
           </Link>
         </div>
       </footer>

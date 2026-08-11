@@ -340,6 +340,7 @@
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
     "version": "Version {{version}}",
-    "draftNotice": "This is a draft and has not yet taken effect."
+    "privacyTitle": "Privacy Policy",
+    "termsTitle": "Terms of Use"
   }
 }

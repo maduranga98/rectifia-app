@@ -340,6 +340,7 @@
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",
     "version": "අනුවාදය {{version}}",
-    "draftNotice": "මෙය කෙටුම්පතක් වන අතර තවම බලාත්මක වී නොමැත."
+    "privacyTitle": "පෞද්ගලිකත්ව ප්‍රතිපත්තිය",
+    "termsTitle": "භාවිත කොන්දේසි"
   }
 }
