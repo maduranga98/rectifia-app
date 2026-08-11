@@ -1205,6 +1205,44 @@
     },
     "signedInAs": "{{email}} ලෙස පිවිසී ඇත"
   },
+  "employeesPage": {
+    "importResult_one": "නව සේවකයෙකු {{added}} ආයාත කරන ලදී, {{updated}}ක් යාවත්කාලීන කරන ලදී.",
+    "importResult_other": "නව සේවකයින් {{added}} ආයාත කරන ලදී, {{updated}}ක් යාවත්කාලීන කරන ලදී.",
+    "nameOrId": "නම හෝ සේවක හැඳුනුම්පත",
+    "nameOrIdPlaceholder": "උදා. Dana Okoro හෝ EMP-0412",
+    "unassigned": "නොපවරන ලද",
+    "emailOptional": "විද්‍යුත් තැපෑල (විකල්පයි)",
+    "emailPlaceholder": "තවම නොදන්නේ නම් හිස්ව තබන්න",
+    "add": "එකතු කරන්න",
+    "description": "Pulse Check ලබන සියලුම දෙනා. මේවා Rectifia ගිණුම් නොවේ - මෙහි සේවකයින්ට පිවිසුමක් හෝ භූමිකාවක් නැත. කාර්ය මණ්ඩල ගිණුම් කාර්ය මණ්ඩල පිටුවේ ඇත.",
+    "bulkImport": {
+      "title": "තොග ආයාතය",
+      "description": "නම, දෙපාර්තමේන්තුව, සහ (විකල්පව) විද්‍යුත් තැපෑල තීරු සහිත CSV එකක් උඩුගත කරන්න.",
+      "downloadTemplate": "අච්චුව බාගන්න",
+      "csvFileLabel": "සේවක CSV ගොනුව",
+      "readyToImport_one": "සේවකයෙකු {{count}} ආයාත කිරීමට සූදානම්, {{missing}}ක් සම්බන්ධතා තොරතුරු නොමැතිව.",
+      "readyToImport_other": "සේවකයින් {{count}} ආයාත කිරීමට සූදානම්, {{missing}}ක් සම්බන්ධතා තොරතුරු නොමැතිව.",
+      "lineError": "පේළිය {{line}}: {{message}}",
+      "andMore_one": "සහ තවත් {{count}}ක්",
+      "andMore_other": "සහ තවත් {{count}}ක්",
+      "importCount_one": "{{count}} ආයාත කරන්න",
+      "importCount_other": "{{count}} ආයාත කරන්න"
+    },
+    "rosterCount_one": "ලේඛනයේ {{count}}ක්",
+    "rosterCount_other": "ලේඛනයේ {{count}}ක්",
+    "rosterCountMissing_one": "ලේඛනයේ {{count}}ක් - {{missing}}ක් සම්බන්ධතා තොරතුරු නොමැතිව",
+    "rosterCountMissing_other": "ලේඛනයේ {{count}}ක් - {{missing}}ක් සම්බන්ධතා තොරතුරු නොමැතිව",
+    "empty": {
+      "title": "තවම සේවකයින් නැත",
+      "description": "Pulse Check ලැබිය යුතු පුද්ගලයින් එකතු කරන්න, හෝ CSV එකකින් ඔවුන් ආයාත කරන්න."
+    },
+    "noDepartment": "දෙපාර්තමේන්තුවක් නැත",
+    "emailForLabel": "{{name}} සඳහා විද්‍යුත් තැපෑල",
+    "addEmail": "විද්‍යුත් තැපෑල එකතු කරන්න",
+    "deliverable": "ලබා දිය හැක",
+    "awaitingContactInfo": "සම්බන්ධතා තොරතුරු එනතුරු",
+    "remove": "ඉවත් කරන්න"
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",

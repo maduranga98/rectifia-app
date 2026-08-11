@@ -1205,6 +1205,44 @@
     },
     "signedInAs": "Signed in as {{email}}"
   },
+  "employeesPage": {
+    "importResult_one": "Imported {{added}} new employee, updated {{updated}}.",
+    "importResult_other": "Imported {{added}} new employees, updated {{updated}}.",
+    "nameOrId": "Name or employee ID",
+    "nameOrIdPlaceholder": "e.g. Dana Okoro or EMP-0412",
+    "unassigned": "Unassigned",
+    "emailOptional": "Email (optional)",
+    "emailPlaceholder": "Leave blank if not known yet",
+    "add": "Add",
+    "description": "Everyone who receives a Pulse Check. These are not Rectifia accounts - employees here have no login and no role. Staff accounts live on the Staff page.",
+    "bulkImport": {
+      "title": "Bulk import",
+      "description": "Upload a CSV with name, department, and (optionally) email columns.",
+      "downloadTemplate": "Download template",
+      "csvFileLabel": "Employee CSV file",
+      "readyToImport_one": "{{count}} employee ready to import, {{missing}} without contact info.",
+      "readyToImport_other": "{{count}} employees ready to import, {{missing}} without contact info.",
+      "lineError": "Line {{line}}: {{message}}",
+      "andMore_one": "and {{count}} more",
+      "andMore_other": "and {{count}} more",
+      "importCount_one": "Import {{count}}",
+      "importCount_other": "Import {{count}}"
+    },
+    "rosterCount_one": "{{count}} on the roster",
+    "rosterCount_other": "{{count}} on the roster",
+    "rosterCountMissing_one": "{{count}} on the roster - {{missing}} without contact info",
+    "rosterCountMissing_other": "{{count}} on the roster - {{missing}} without contact info",
+    "empty": {
+      "title": "No employees yet",
+      "description": "Add the people who should receive Pulse Checks, or import them from a CSV."
+    },
+    "noDepartment": "No department",
+    "emailForLabel": "Email for {{name}}",
+    "addEmail": "Add email",
+    "deliverable": "Deliverable",
+    "awaitingContactInfo": "Awaiting contact info",
+    "remove": "Remove"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",

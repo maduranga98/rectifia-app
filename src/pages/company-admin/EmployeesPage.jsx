@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   addEmployee,
   importEmployees,
@@ -36,6 +37,7 @@ function initials(employee) {
 // those people and marks it awaiting contact info, so nobody silently drops
 // off the roster.
 function EmployeesPage({ companyId }) {
+  const { t } = useTranslation()
   const [employees, setEmployees] = useState([])
   const [departments, setDepartments] = useState([])
   const [error, setError] = useState(null)
@@ -142,7 +144,7 @@ function EmployeesPage({ companyId }) {
     setError(null)
     try {
       const { added, updated } = await importEmployees(companyId, preview.employees)
-      setNotice(`Imported ${added} new employee${added === 1 ? '' : 's'}, updated ${updated}.`)
+      setNotice(t('employeesPage.importResult', { count: added, added, updated }))
       clearPreview()
       await refresh()
     } catch (err) {
@@ -166,8 +168,8 @@ function EmployeesPage({ companyId }) {
   const addForm = (
     <form onSubmit={handleAdd} className="flex flex-col gap-3 sm:flex-row sm:items-end">
       <Input
-        label="Name or employee ID"
-        placeholder="e.g. Dana Okoro or EMP-0412"
+        label={t('employeesPage.nameOrId')}
+        placeholder={t('employeesPage.nameOrIdPlaceholder')}
         value={form.name}
         onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
         className="sm:w-52"
@@ -176,11 +178,11 @@ function EmployeesPage({ companyId }) {
       <div className="sm:w-48">
         {departments.length > 0 ? (
           <Select
-            label="Department"
+            label={t('adminNav.departments')}
             value={form.department}
             onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
           >
-            <option value="">Unassigned</option>
+            <option value="">{t('employeesPage.unassigned')}</option>
             {departments.map((name) => (
               <option key={name} value={name}>
                 {name}
@@ -189,43 +191,40 @@ function EmployeesPage({ companyId }) {
           </Select>
         ) : (
           <Input
-            label="Department"
-            placeholder="e.g. Engineering"
+            label={t('adminNav.departments')}
+            placeholder={t('departmentsPage.newDepartmentPlaceholder')}
             value={form.department}
             onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
           />
         )}
       </div>
       <Input
-        label="Email (optional)"
+        label={t('employeesPage.emailOptional')}
         type="email"
-        placeholder="Leave blank if not known yet"
+        placeholder={t('employeesPage.emailPlaceholder')}
         value={form.email}
         onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
         className="sm:w-56"
       />
       <Button type="submit" variant="primary" icon="plus" disabled={!form.name.trim() || saving}>
-        Add
+        {t('employeesPage.add')}
       </Button>
     </form>
   )
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        Everyone who receives a Pulse Check. These are not Rectifia accounts - employees here have
-        no login and no role. Staff accounts live on the Staff page.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('employeesPage.description')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
       {notice && <Alert variant="success">{notice}</Alert>}
 
       <Card
-        title="Bulk import"
-        description="Upload a CSV with name, department, and (optionally) email columns."
+        title={t('employeesPage.bulkImport.title')}
+        description={t('employeesPage.bulkImport.description')}
         actions={
           <Button variant="secondary" size="sm" onClick={downloadTemplate}>
-            Download template
+            {t('employeesPage.bulkImport.downloadTemplate')}
           </Button>
         }
       >
@@ -234,7 +233,7 @@ function EmployeesPage({ companyId }) {
             ref={fileInputRef}
             type="file"
             accept=".csv,text/csv"
-            aria-label="Employee CSV file"
+            aria-label={t('employeesPage.bulkImport.csvFileLabel')}
             onChange={handleFileChosen}
             className="field"
           />
@@ -242,18 +241,25 @@ function EmployeesPage({ companyId }) {
           {preview && (
             <div className="flex flex-col gap-2 rounded-lg border border-line-soft bg-navy-50/40 p-4">
               <p className="text-sm text-charcoal">
-                <span className="font-medium">{preview.fileName}</span> - {preview.employees.length}{' '}
-                employee{preview.employees.length === 1 ? '' : 's'} ready to import,{' '}
-                {preview.employees.filter((row) => !row.email).length} without contact info.
+                <span className="font-medium">{preview.fileName}</span> -{' '}
+                {t('employeesPage.bulkImport.readyToImport', {
+                  count: preview.employees.length,
+                  missing: preview.employees.filter((row) => !row.email).length,
+                })}
               </p>
               {preview.errors.length > 0 && (
                 <ul className="list-inside list-disc text-xs text-muted">
                   {preview.errors.slice(0, 8).map((issue) => (
                     <li key={issue.lineNumber}>
-                      Line {issue.lineNumber}: {issue.message}
+                      {t('employeesPage.bulkImport.lineError', {
+                        line: issue.lineNumber,
+                        message: issue.message,
+                      })}
                     </li>
                   ))}
-                  {preview.errors.length > 8 && <li>and {preview.errors.length - 8} more</li>}
+                  {preview.errors.length > 8 && (
+                    <li>{t('employeesPage.bulkImport.andMore', { count: preview.errors.length - 8 })}</li>
+                  )}
                 </ul>
               )}
               <div className="flex gap-2">
@@ -263,10 +269,10 @@ function EmployeesPage({ companyId }) {
                   onClick={handleConfirmImport}
                   disabled={saving || preview.employees.length === 0}
                 >
-                  Import {preview.employees.length}
+                  {t('employeesPage.bulkImport.importCount', { count: preview.employees.length })}
                 </Button>
                 <Button variant="secondary" size="sm" onClick={clearPreview} disabled={saving}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </div>
@@ -278,11 +284,11 @@ function EmployeesPage({ companyId }) {
         <SkeletonList rows={4} />
       ) : (
         <Card
-          title="Employees"
+          title={t('adminNav.employees')}
           description={
             missingContact > 0
-              ? `${employees.length} on the roster - ${missingContact} without contact info`
-              : `${employees.length} on the roster`
+              ? t('employeesPage.rosterCountMissing', { count: employees.length, missing: missingContact })
+              : t('employeesPage.rosterCount', { count: employees.length })
           }
           padded={false}
           footer={employees.length > 0 ? addForm : undefined}
@@ -290,8 +296,8 @@ function EmployeesPage({ companyId }) {
           {employees.length === 0 ? (
             <EmptyState
               icon="staff"
-              title="No employees yet"
-              description="Add the people who should receive Pulse Checks, or import them from a CSV."
+              title={t('employeesPage.empty.title')}
+              description={t('employeesPage.empty.description')}
               action={addForm}
             />
           ) : (
@@ -310,14 +316,16 @@ function EmployeesPage({ companyId }) {
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-charcoal">{employee.name}</p>
-                    <p className="truncate text-xs text-muted">{employee.department ?? 'No department'}</p>
+                    <p className="truncate text-xs text-muted">
+                      {employee.department ?? t('employeesPage.noDepartment')}
+                    </p>
                   </div>
 
                   <input
-                    aria-label={`Email for ${employee.name}`}
+                    aria-label={t('employeesPage.emailForLabel', { name: employee.name })}
                     type="email"
                     defaultValue={employee.email ?? ''}
-                    placeholder="Add email"
+                    placeholder={t('employeesPage.addEmail')}
                     onBlur={(e) => handleFieldChange(employee, 'email', e.target.value)}
                     disabled={pendingId === employee.id}
                     className="field w-full sm:w-56"
@@ -325,10 +333,10 @@ function EmployeesPage({ companyId }) {
 
                   {isDeliverable(employee) ? (
                     <Badge tone="tone-low" dot>
-                      Deliverable
+                      {t('employeesPage.deliverable')}
                     </Badge>
                   ) : (
-                    <Badge tone="tone-info">Awaiting contact info</Badge>
+                    <Badge tone="tone-info">{t('employeesPage.awaitingContactInfo')}</Badge>
                   )}
 
                   <Button
@@ -337,7 +345,7 @@ function EmployeesPage({ companyId }) {
                     onClick={() => handleRemove(employee)}
                     disabled={pendingId === employee.id}
                   >
-                    Remove
+                    {t('employeesPage.remove')}
                   </Button>
                 </li>
               ))}
