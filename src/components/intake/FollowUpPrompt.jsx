@@ -1,37 +1,38 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FOLLOW_UP_ANSWERS, FOLLOW_UP_STATUS, submitFollowUpResponse } from '../../services/followUpService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Icon from '../ui/Icon'
 
-// The structured answers, in the order they are offered. Neutral and
-// non-leading by design: "nothing has changed" comes first, and nothing here
-// suggests retaliation is expected, likely, or common.
-const OPTIONS = [
-  { value: FOLLOW_UP_ANSWERS.NO_CHANGE, label: 'Nothing has changed' },
-  { value: FOLLOW_UP_ANSWERS.CONCERN, label: 'Something has happened since I reported' },
-  { value: FOLLOW_UP_ANSWERS.DECLINE, label: 'I would rather not answer' },
-  { value: FOLLOW_UP_ANSWERS.STOP, label: 'Please stop asking me' },
+// The structured answers, in the order they are offered, and the translation
+// key each status maps to. Neutral and non-leading by design: "nothing has
+// changed" comes first, and nothing here suggests retaliation is expected,
+// likely, or common.
+const OPTION_VALUES = [
+  { value: FOLLOW_UP_ANSWERS.NO_CHANGE, key: 'noChange' },
+  { value: FOLLOW_UP_ANSWERS.CONCERN, key: 'concern' },
+  { value: FOLLOW_UP_ANSWERS.DECLINE, key: 'decline' },
+  { value: FOLLOW_UP_ANSWERS.STOP, key: 'stop' },
 ]
 
-const ANSWERED_LABEL = {
-  [FOLLOW_UP_STATUS.ANSWERED_NO_CHANGE]: 'You answered: nothing has changed.',
-  [FOLLOW_UP_STATUS.ANSWERED_CONCERN]: 'You answered: something has happened.',
-  [FOLLOW_UP_STATUS.DECLINED]: 'You chose not to answer this check-in.',
-  [FOLLOW_UP_STATUS.NO_RESPONSE]: 'This check-in was not answered.',
+const ANSWERED_LABEL_KEY = {
+  [FOLLOW_UP_STATUS.ANSWERED_NO_CHANGE]: 'answeredNoChange',
+  [FOLLOW_UP_STATUS.ANSWERED_CONCERN]: 'answeredConcern',
+  [FOLLOW_UP_STATUS.DECLINED]: 'declined',
+  [FOLLOW_UP_STATUS.NO_RESPONSE]: 'noResponse',
 }
 
 // The one-off notice posted into the thread after a retaliation case is filed.
 // It shows the new Case ID only - the passcode is shown once, separately, at
 // the moment of filing and is never stored here.
 function NewCaseNotice({ followUp }) {
+  const { t } = useTranslation()
   return (
-    <Alert variant="info" title="A separate case was opened">
+    <Alert variant="info" title={t('followUpPrompt.newCase.title')}>
       <p className="text-sm">
-        New case <strong>{followUp.newCaseId}</strong>.{' '}
-        {followUp.linked
-          ? 'You chose to link it to this case, so its handler will know the same person filed both.'
-          : 'It is standalone and carries no reference to this case.'}
+        {t('followUpPrompt.newCase.caseLabel', { caseId: followUp.newCaseId })}{' '}
+        {followUp.linked ? t('followUpPrompt.newCase.linked') : t('followUpPrompt.newCase.standalone')}
       </p>
     </Alert>
   )
@@ -42,6 +43,7 @@ function NewCaseNotice({ followUp }) {
 // investigator viewing the thread sees the prompt and its status but cannot
 // answer on the reporter's behalf.
 function FollowUpPrompt({ caseId, passcode, followUp, interactive, onAnswered }) {
+  const { t } = useTranslation()
   const [answer, setAnswer] = useState(null)
   const [freeText, setFreeText] = useState('')
   const [wantsToFile, setWantsToFile] = useState(false)
@@ -86,19 +88,15 @@ function FollowUpPrompt({ caseId, passcode, followUp, interactive, onAnswered })
   // recovered, so this panel makes saving it the reporter's job before moving on.
   if (filed) {
     return (
-      <Alert variant="success" title="Your new case has been opened">
-        <p className="text-sm">
-          Case ID <strong>{filed.newCaseId}</strong>
-        </p>
+      <Alert variant="success" title={t('followUpPrompt.filed.title')}>
+        <p className="text-sm">{t('followUpPrompt.filed.caseId', { caseId: filed.newCaseId })}</p>
         <p className="mt-1 text-sm">
-          Passcode <strong className="font-mono">{filed.newPasscode}</strong>
+          {t('followUpPrompt.filed.passcodeLabel')}{' '}
+          <strong className="font-mono">{filed.newPasscode}</strong>
         </p>
         <p className="mt-2 text-xs">
-          Save both now. This passcode is shown only once and cannot be recovered. It is separate
-          from your existing case passcode.
-          {filed.linked
-            ? ' You chose to link this to your earlier case.'
-            : ' This case is standalone and does not reference your earlier case.'}
+          {t('followUpPrompt.filed.saveNote')}
+          {filed.linked ? t('followUpPrompt.filed.linked') : t('followUpPrompt.filed.standalone')}
         </p>
       </Alert>
     )
@@ -108,19 +106,23 @@ function FollowUpPrompt({ caseId, passcode, followUp, interactive, onAnswered })
     <div className="rounded-lg border border-line border-l-4 border-l-low bg-surface p-3.5 shadow-sm">
       <div className="flex items-center gap-1.5 text-xs font-medium text-low">
         <Icon name="shield" className="h-3.5 w-3.5" />
-        Follow-up check-in
+        {t('followUpPrompt.title')}
       </div>
       <p className="mt-1.5 whitespace-pre-wrap text-sm text-charcoal">{followUp?.text ?? ''}</p>
 
       {answered ? (
-        <p className="mt-2 text-xs text-muted">{ANSWERED_LABEL[followUp.status] ?? 'Answered.'}</p>
+        <p className="mt-2 text-xs text-muted">
+          {ANSWERED_LABEL_KEY[followUp.status]
+            ? t(`followUpPrompt.answeredLabels.${ANSWERED_LABEL_KEY[followUp.status]}`)
+            : t('followUpPrompt.answeredLabels.fallback')}
+        </p>
       ) : !interactive ? (
-        <p className="mt-2 text-xs text-muted">Awaiting the reporter’s response.</p>
+        <p className="mt-2 text-xs text-muted">{t('followUpPrompt.awaitingResponse')}</p>
       ) : (
         <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-2.5">
           <fieldset className="flex flex-col gap-1.5">
-            <legend className="sr-only">Your answer</legend>
-            {OPTIONS.map((option) => (
+            <legend className="sr-only">{t('followUpPrompt.yourAnswer')}</legend>
+            {OPTION_VALUES.map((option) => (
               <label key={option.value} className="flex items-center gap-2 text-sm text-charcoal">
                 <input
                   type="radio"
@@ -130,7 +132,7 @@ function FollowUpPrompt({ caseId, passcode, followUp, interactive, onAnswered })
                   onChange={() => setAnswer(option.value)}
                   className="h-4 w-4"
                 />
-                {option.label}
+                {t(`followUpPrompt.options.${option.key}`)}
               </label>
             ))}
           </fieldset>
@@ -138,13 +140,13 @@ function FollowUpPrompt({ caseId, passcode, followUp, interactive, onAnswered })
           {isConcern && (
             <div className="flex flex-col gap-2.5 rounded-md border border-line bg-canvas p-3">
               <label className="flex flex-col gap-1 text-xs text-muted">
-                Anything you would like to add (optional)
+                {t('followUpPrompt.addAnything')}
                 <textarea
                   value={freeText}
                   onChange={(e) => setFreeText(e.target.value)}
                   rows={3}
                   className="field resize-y text-sm"
-                  placeholder="Only shared if you choose to open a new case below."
+                  placeholder={t('followUpPrompt.addAnythingPlaceholder')}
                 />
               </label>
 
@@ -155,10 +157,7 @@ function FollowUpPrompt({ caseId, passcode, followUp, interactive, onAnswered })
                   onChange={(e) => setWantsToFile(e.target.checked)}
                   className="mt-0.5 h-4 w-4"
                 />
-                <span>
-                  Open a new, separate case about this. Your earlier case stays closed and
-                  unchanged.
-                </span>
+                <span>{t('followUpPrompt.openNewCase')}</span>
               </label>
 
               {wantsToFile && (
@@ -169,11 +168,7 @@ function FollowUpPrompt({ caseId, passcode, followUp, interactive, onAnswered })
                     onChange={(e) => setLinkToOriginal(e.target.checked)}
                     className="mt-0.5 h-4 w-4"
                   />
-                  <span>
-                    Link it to this case. If you tick this, the new case’s handler will know the
-                    same person filed the earlier case. Leave it unticked and the new case is
-                    completely standalone. This is your choice.
-                  </span>
+                  <span>{t('followUpPrompt.linkToOriginal')}</span>
                 </label>
               )}
             </div>
@@ -187,10 +182,12 @@ function FollowUpPrompt({ caseId, passcode, followUp, interactive, onAnswered })
               variant="primary"
               size="sm"
               loading={submitting}
-              loadingLabel="Sending"
+              loadingLabel={t('caseThread.sending')}
               disabled={!answer}
             >
-              {isConcern && wantsToFile ? 'Submit and open a new case' : 'Submit answer'}
+              {isConcern && wantsToFile
+                ? t('followUpPrompt.submitAndOpenCase')
+                : t('followUpPrompt.submitAnswer')}
             </Button>
           </div>
         </form>

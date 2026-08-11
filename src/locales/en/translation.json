@@ -791,6 +791,44 @@
       "save": "Save log entry"
     }
   },
+  "followUpPrompt": {
+    "title": "Follow-up check-in",
+    "newCase": {
+      "title": "A separate case was opened",
+      "caseLabel": "New case {{caseId}}.",
+      "linked": "You chose to link it to this case, so its handler will know the same person filed both.",
+      "standalone": "It is standalone and carries no reference to this case."
+    },
+    "filed": {
+      "title": "Your new case has been opened",
+      "caseId": "Case ID {{caseId}}",
+      "passcodeLabel": "Passcode",
+      "saveNote": "Save both now. This passcode is shown only once and cannot be recovered. It is separate from your existing case passcode.",
+      "linked": " You chose to link this to your earlier case.",
+      "standalone": " This case is standalone and does not reference your earlier case."
+    },
+    "answeredLabels": {
+      "answeredNoChange": "You answered: nothing has changed.",
+      "answeredConcern": "You answered: something has happened.",
+      "declined": "You chose not to answer this check-in.",
+      "noResponse": "This check-in was not answered.",
+      "fallback": "Answered."
+    },
+    "awaitingResponse": "Awaiting the reporter's response.",
+    "yourAnswer": "Your answer",
+    "options": {
+      "noChange": "Nothing has changed",
+      "concern": "Something has happened since I reported",
+      "decline": "I would rather not answer",
+      "stop": "Please stop asking me"
+    },
+    "addAnything": "Anything you would like to add (optional)",
+    "addAnythingPlaceholder": "Only shared if you choose to open a new case below.",
+    "openNewCase": "Open a new, separate case about this. Your earlier case stays closed and unchanged.",
+    "linkToOriginal": "Link it to this case. If you tick this, the new case's handler will know the same person filed the earlier case. Leave it unticked and the new case is completely standalone. This is your choice.",
+    "submitAndOpenCase": "Submit and open a new case",
+    "submitAnswer": "Submit answer"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
