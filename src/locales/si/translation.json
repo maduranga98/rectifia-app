@@ -2441,6 +2441,26 @@
     "sharesCardDescription": "මෙම නඩුව සඳහා සක්‍රීය සහ අතීත බාහිර බෙදාගැනීම්.",
     "noShares": "තවම බාහිර බෙදාගැනීම් නැත"
   },
+  "handlerDashboard": {
+    "openCasesAssigned_one": "ඔබට විවෘත නඩුවක් පවරා ඇත.",
+    "openCasesAssigned_other": "ඔබට විවෘත නඩු {{count}}ක් පවරා ඇත.",
+    "refreshing": "නැවුම් කරමින්",
+    "refresh": "නැවුම් කරන්න",
+    "empty": {
+      "title": "ඔබට පවරන ලද නඩු නැත",
+      "description": "මාර්ග කිරීමේ නීතියක් ඔබ වෙත එකක් යවන විට නව නඩු ස්වයංක්‍රීයව මෙහි පැමිණේ."
+    },
+    "sortBy": "අනුපිළිවෙළට කරන්නේ",
+    "sortOptions": {
+      "default": "ප්‍රමුඛතා අනුපිළිවෙළ (පෙරනිමි)",
+      "deadline": "ළඟම අවසාන දිනය",
+      "recent": "වඩාත් මෑතක පවරන ලද"
+    },
+    "uncategorized": "වර්ගීකරණය නොකළ",
+    "assignedAt": " · පවරන ලද්දේ {{date}}",
+    "crisisFlagged": "අර්බුදයක් ලෙස සලකුණු කර ඇත",
+    "highPriority": "ඉහළ ප්‍රමුඛතාවය"
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",

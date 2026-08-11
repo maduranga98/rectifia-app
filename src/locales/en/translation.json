@@ -2441,6 +2441,26 @@
     "sharesCardDescription": "Active and past external shares for this case.",
     "noShares": "No external shares yet"
   },
+  "handlerDashboard": {
+    "openCasesAssigned_one": "{{count}} open case assigned to you.",
+    "openCasesAssigned_other": "{{count}} open cases assigned to you.",
+    "refreshing": "Refreshing",
+    "refresh": "Refresh",
+    "empty": {
+      "title": "No cases assigned to you",
+      "description": "New cases arrive here automatically when a routing rule sends one your way."
+    },
+    "sortBy": "Sort by",
+    "sortOptions": {
+      "default": "Triage order (default)",
+      "deadline": "Nearest deadline",
+      "recent": "Most recently assigned"
+    },
+    "uncategorized": "Uncategorized",
+    "assignedAt": " · assigned {{date}}",
+    "crisisFlagged": "Crisis flagged",
+    "highPriority": "High priority"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
