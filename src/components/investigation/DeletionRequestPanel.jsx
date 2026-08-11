@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { approveDeletionRequest, declineDeletionRequest } from '../../services/retentionService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
@@ -19,6 +20,7 @@ const MIN_REASON_LENGTH = 10
 // leaves the case untouched. Both require a written reason, and both are
 // logged to deletionLog - this is a decision, not a formality.
 function DeletionRequestPanel({ caseData, onChanged, onDeleted }) {
+  const { t } = useTranslation()
   const [reason, setReason] = useState('')
   const [action, setAction] = useState(null) // 'approve' | 'decline' | null
   const [confirmingApprove, setConfirmingApprove] = useState(false)
@@ -32,7 +34,7 @@ function DeletionRequestPanel({ caseData, onChanged, onDeleted }) {
   const requestedAt = caseData.deletionRequested?.at?.toMillis?.()
   const requestedAtLabel = requestedAt
     ? new Date(requestedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-    : 'recently'
+    : t('deletionRequestPanel.recently')
 
   async function handleApprove() {
     if (!reasonValid) return
@@ -67,19 +69,12 @@ function DeletionRequestPanel({ caseData, onChanged, onDeleted }) {
   }
 
   return (
-    <Alert variant="warning" title="This reporter has requested deletion of this case">
+    <Alert variant="warning" title={t('deletionRequestPanel.title')}>
       <div className="flex flex-col gap-3">
-        <p>
-          Requested {requestedAtLabel}. Approving permanently and immediately deletes this case&apos;s
-          content - the narrative, messages, questionnaire answers, and any evidence files. This
-          cannot be undone. Declining leaves the case exactly as it is.
-        </p>
+        <p>{t('deletionRequestPanel.body', { date: requestedAtLabel })}</p>
 
         {onHold && (
-          <Alert variant="error">
-            This case is under legal hold. It cannot be approved for deletion until the hold is
-            released.
-          </Alert>
+          <Alert variant="error">{t('deletionRequestPanel.onHold')}</Alert>
         )}
 
         {!action ? (
@@ -89,21 +84,21 @@ function DeletionRequestPanel({ caseData, onChanged, onDeleted }) {
               disabled={onHold}
               onClick={() => setAction('approve')}
             >
-              Review to approve
+              {t('deletionRequestPanel.reviewToApprove')}
             </Button>
             <Button variant="secondary" onClick={() => setAction('decline')}>
-              Review to decline
+              {t('deletionRequestPanel.reviewToDecline')}
             </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             <Textarea
-              label={action === 'approve' ? 'Reason for approving deletion' : 'Reason for declining deletion'}
+              label={action === 'approve' ? t('deletionRequestPanel.approveReasonLabel') : t('deletionRequestPanel.declineReasonLabel')}
               rows={3}
               placeholder={
                 action === 'approve'
-                  ? 'Record why this case qualifies for erasure (min. 10 characters).'
-                  : 'Record why this case must be retained despite the request (min. 10 characters).'
+                  ? t('deletionRequestPanel.approveReasonPlaceholder')
+                  : t('deletionRequestPanel.declineReasonPlaceholder')
               }
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -116,7 +111,7 @@ function DeletionRequestPanel({ caseData, onChanged, onDeleted }) {
                   disabled={!reasonValid}
                   onClick={() => setConfirmingApprove(true)}
                 >
-                  Continue
+                  {t('deletionRequestPanel.continue')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -126,29 +121,25 @@ function DeletionRequestPanel({ caseData, onChanged, onDeleted }) {
                   }}
                   disabled={submitting}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             )}
 
             {action === 'approve' && confirmingApprove && (
-              <Alert variant="error" title="Permanently delete this case?">
-                <p>
-                  This will immediately and irreversibly delete the case narrative, messages,
-                  questionnaire answers and evidence for case {caseData.caseId ?? caseData.id}. There is
-                  no undo.
-                </p>
+              <Alert variant="error" title={t('deletionRequestPanel.confirmModal.title')}>
+                <p>{t('deletionRequestPanel.confirmModal.body', { caseId: caseData.caseId ?? caseData.id })}</p>
                 <div className="mt-3 flex gap-2">
                   <Button
                     variant="danger"
                     onClick={handleApprove}
                     loading={submitting}
-                    loadingLabel="Deleting"
+                    loadingLabel={t('deletionRequestPanel.deleting')}
                   >
-                    Yes, permanently delete
+                    {t('deletionRequestPanel.confirmModal.confirm')}
                   </Button>
                   <Button variant="ghost" onClick={() => setConfirmingApprove(false)} disabled={submitting}>
-                    Back
+                    {t('deletionRequestPanel.back')}
                   </Button>
                 </div>
               </Alert>
@@ -161,9 +152,9 @@ function DeletionRequestPanel({ caseData, onChanged, onDeleted }) {
                   disabled={!reasonValid}
                   onClick={handleDecline}
                   loading={submitting}
-                  loadingLabel="Saving"
+                  loadingLabel={t('deletionRequestPanel.saving')}
                 >
-                  Decline request
+                  {t('deletionRequestPanel.declineRequest')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -173,7 +164,7 @@ function DeletionRequestPanel({ caseData, onChanged, onDeleted }) {
                   }}
                   disabled={submitting}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             )}

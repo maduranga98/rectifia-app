@@ -2369,6 +2369,28 @@
     "unignore": "Unignore",
     "ignore": "Ignore"
   },
+  "deletionRequestPanel": {
+    "recently": "recently",
+    "title": "This reporter has requested deletion of this case",
+    "body": "Requested {{date}}. Approving permanently and immediately deletes this case's content - the narrative, messages, questionnaire answers, and any evidence files. This cannot be undone. Declining leaves the case exactly as it is.",
+    "onHold": "This case is under legal hold. It cannot be approved for deletion until the hold is released.",
+    "reviewToApprove": "Review to approve",
+    "reviewToDecline": "Review to decline",
+    "approveReasonLabel": "Reason for approving deletion",
+    "declineReasonLabel": "Reason for declining deletion",
+    "approveReasonPlaceholder": "Record why this case qualifies for erasure (min. 10 characters).",
+    "declineReasonPlaceholder": "Record why this case must be retained despite the request (min. 10 characters).",
+    "continue": "Continue",
+    "confirmModal": {
+      "title": "Permanently delete this case?",
+      "body": "This will immediately and irreversibly delete the case narrative, messages, questionnaire answers and evidence for case {{caseId}}. There is no undo.",
+      "confirm": "Yes, permanently delete"
+    },
+    "deleting": "Deleting",
+    "back": "Back",
+    "saving": "Saving",
+    "declineRequest": "Decline request"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
