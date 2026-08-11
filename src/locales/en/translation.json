@@ -854,6 +854,47 @@
     "turnOnReplyNotifications": "Turn on reply notifications",
     "notifyMe": "Notify me of replies"
   },
+  "caseCredentialsHandoff": {
+    "filesAttachedMessage": "Files attached when this report was filed.",
+    "couldNotAttach": "Could not attach to your case thread",
+    "filesYouAttached": "Files you attached",
+    "attaching": "Attaching your files…",
+    "attached": "Attached",
+    "failed": "Failed",
+    "someFilesFailed_one": "{{count}} file could not be attached. Your report was filed successfully regardless - once you have your Case ID and passcode, you can attach these files from your case thread instead.",
+    "someFilesFailed_other": "{{count}} files could not be attached. Your report was filed successfully regardless - once you have your Case ID and passcode, you can attach these files from your case thread instead.",
+    "keepPrivateOneLine": "Keep these somewhere private. They cannot be reissued - without them there is no way back into the case.",
+    "caseFiled": {
+      "title": "Case filed",
+      "body": "The report is now in the system and has been routed like any other case. The reporter has the same access to it as if they had filed it themselves — but only if you pass on the details below."
+    },
+    "backdateWarning": {
+      "title": "This report was received some time ago",
+      "body": "Its compliance deadlines were calculated from the date you entered, not from today, so one or both may already have passed. That is the correct reading of the case — check the handler dashboard for what is now outstanding."
+    },
+    "shownOnce": {
+      "title": "Shown once — these cannot be recovered",
+      "body1": "The passcode is stored only as a hash. Nobody can look it up, reset it, or send it on: not you, not a Company Admin, not Rectifia.",
+      "strong": "If you leave this screen without giving the reporter these details, they permanently lose access to their own case",
+      "body2": "— they will not be able to read replies, answer the investigator's questions, or add anything they remember later."
+    },
+    "giveToReporter": "Give these to the reporter",
+    "whereTheyCheck": "Where they check on it",
+    "linkFillsIn": "The link fills in the Case ID. It does not contain the passcode, so on its own it opens nothing.",
+    "copyAllDetails": "Copy all details",
+    "downloadToDevice": "Download to this device",
+    "copyFailedNote": "Couldn't copy automatically — select the details above and copy them.",
+    "downloadTradeoff": "Saves a plain-text file to this device's usual downloads location. On a company-managed device, that file can be visible to IT, endpoint monitoring, or backup tools — including your employer's, if that's who this report is about.",
+    "beforeYouClose": {
+      "title": "Before you close this",
+      "handOver": "Hand the Case ID and passcode to the reporter now, by whatever route they asked you to use.",
+      "dontKeepCopy": "Don't keep a copy in your own notes, inbox, or a shared drive — a passcode sitting in a mailbox is a way into someone's case that outlives this conversation. If you use the download option above to hand these off, delete that file the same way once the reporter has the details, not just from your notes.",
+      "identityEncrypted": "Their identity is encrypted and stored. It is not visible on any dashboard or in any case report, and reading it requires a Super Admin and a documented reason.",
+      "canReplyAnytime": "The reporter can reply to the investigator and add information at any time using these details."
+    },
+    "acknowledgment": "I have given the Case ID and passcode to the reporter.",
+    "done": "Done"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
