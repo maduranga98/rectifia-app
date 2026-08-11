@@ -1411,6 +1411,88 @@
       "bullet4": "Your name and the time are recorded against it. This is a change to what your whole workforce is asked, so it has an author."
     }
   },
+  "retentionPage": {
+    "durationDays_one": "{{days}} days (~{{years}} year)",
+    "durationDays_other": "{{days}} days (~{{years}} years)",
+    "unknownDate": "unknown",
+    "tierPreview": {
+      "nothingToDelete": "Nothing would be deleted on the next run.",
+      "recordsWouldBeDeleted_one": "record would be deleted, spanning {{oldest}} to {{newest}}",
+      "recordsWouldBeDeleted_other": "records would be deleted, spanning {{oldest}} to {{newest}}",
+      "truncatedNote": " (count is a floor - more match than were scanned)"
+    },
+    "savedNotice": "Retention settings saved.",
+    "holdPlacedNotice": "Legal hold placed on case {{caseId}}.",
+    "holdReleasedNotice": "Legal hold released on case {{caseId}}. It is now eligible for the next retention sweep.",
+    "summary": "Closed cases are permanently deleted {{caseDuration}} after closure. Reporter identities are deleted after {{identityDuration}}. This cannot be undone.",
+    "intro": "How long this company keeps case data before it is permanently deleted, and which cases are currently frozen against deletion by a legal hold. Deletion here is hard deletion - there is no soft-delete flag, no archive, and no recovery window.",
+    "windowsCard": { "title": "Retention windows" },
+    "fields": {
+      "identityRetentionDays": {
+        "label": "Reporter identity & contact data",
+        "description": "reporterIdentity, contactEmail, and push subscriptions - purged on this clock once a case is closed. Once an investigation is closed there is almost never a lawful basis to keep knowing who filed it."
+      },
+      "caseRetentionDays": {
+        "label": "Case content",
+        "description": "The case narrative, messages, questionnaire answers, and evidence files - hard-deleted this many days after the case CLOSES, never from when it was created."
+      },
+      "pulseResponseRetentionDays": {
+        "label": "Pulse Check responses",
+        "description": "Individual Pulse Check answers. The aggregated, k-anonymised summaries survive this window - only the individual responses that fed them are deleted."
+      },
+      "auditLogRetentionDays": {
+        "label": "Audit logs",
+        "description": "identityAccessAuditLog, triageAccessLog, staffIntakeAuditLog and evidenceAccessLog. These run on their own clock and outlive the case they describe - a log proving who decrypted an identity is worthless if it is destroyed on the same schedule as the thing it protects."
+      }
+    },
+    "floor": "Floor: {{days}} days",
+    "maximum": ", maximum {{days}} days{{constraint}}",
+    "constrainedBy_one": " (constrained by your {{jurisdictions}} jurisdiction)",
+    "constrainedBy_other": " (constrained by your {{jurisdictions}} jurisdictions)",
+    "noCeiling": " (no ceiling)",
+    "clampedWarning": {
+      "title": "A stored value now exceeds your jurisdiction's ceiling",
+      "item": "{{label}}: currently stored as {{stored}} days, but will be clamped to {{clampedTo}} days on the next retention run. This happens automatically - saving new values below will not retroactively change what happened to any data already purged."
+    },
+    "shorteningWarning": {
+      "title": "This shortens at least one window",
+      "body": "Run a preview below before saving - a shortened window deletes more, sooner, and this cannot be undone once the next sweep runs."
+    },
+    "saving": "Saving",
+    "saveButton": "Save retention settings",
+    "previewFirstHint": "Preview this exact change before saving.",
+    "previewCard": {
+      "title": "Preview next sweep",
+      "description": "A dry run against the values above - shows what would be permanently deleted the next time the retention sweep runs. Deletes nothing.",
+      "refresh": "Refresh preview",
+      "run": "Run preview",
+      "hint": "Run a preview to see counts before saving.",
+      "stale": "These results are for a previously entered set of values, not the ones currently in the form. Run the preview again to see the current values."
+    },
+    "checking": "Checking",
+    "tiers": {
+      "identity": "Tier 1 - reporter identity & contact data",
+      "caseContent": "Tier 2 - case content (permanent case deletion)",
+      "pulseResponses": "Pulse Check responses"
+    },
+    "legalHolds": {
+      "title": "Legal holds",
+      "description": "A case on legal hold is skipped by every retention sweep, including the identity-purge tier - litigation freezes identity data too. Restricted to Company Admin and Super Admin.",
+      "placeHold": "Place a hold",
+      "caseIdLabel": "Case ID",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Why this case must be frozen against deletion (min. 10 characters).",
+      "placingHold": "Placing hold",
+      "placeButton": "Place legal hold",
+      "empty": "No cases currently on legal hold",
+      "setBy": "Set {{date}} by {{uid}}",
+      "unknownUid": "unknown",
+      "releaseReasonLabel": "Reason for releasing this hold",
+      "releasing": "Releasing",
+      "confirmRelease": "Confirm release",
+      "releaseButton": "Release hold"
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
