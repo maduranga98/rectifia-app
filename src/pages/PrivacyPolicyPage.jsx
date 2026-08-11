@@ -2,13 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Logo from '../components/ui/Logo'
 import Alert from '../components/ui/Alert'
-import {
-  policyVersion,
-  isDraft,
-  lastUpdated,
-  draftNotice,
-  sections,
-} from '../content/legal/privacyPolicy'
+import { policyVersion, isDraft, lastUpdated, getPrivacyPolicyContent } from '../content/legal/privacyPolicy'
 
 // A section's body is an array of items - a string is a paragraph, an array
 // of strings is a bullet list. Kept this simple (rather than a richer schema)
@@ -43,13 +37,14 @@ function SectionBody({ body }) {
 // login link, a Manager reading it cold all land here the same way), so it
 // gets its own minimal chrome instead of borrowing one flow's.
 //
-// The legal body text itself (sections, draftNotice - src/content/legal/
-// privacyPolicy.js) is left in English rather than machine-translated: an
-// inaccurate translation of a compliance document is worse than none, and
-// getting it right needs legal review, not a rendering pass. Only the
-// surrounding chrome is localized here.
+// The legal body text (sections, draftNotice - src/content/legal/
+// privacyPolicy.js) is a plain-language translation of the same draft
+// English copy, not an independent legal translation - see that file's
+// header comment. Both language versions need the same counsel review
+// before `isDraft` is flipped.
 function PrivacyPolicyPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const { draftNotice, sections } = getPrivacyPolicyContent(i18n.language)
 
   return (
     <div className="flex min-h-screen flex-col">
