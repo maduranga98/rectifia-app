@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { getCompanyStats } from '../../services/companyStatsService'
@@ -6,6 +7,7 @@ import { assignCompanySlug, getCompany } from '../../services/companyService'
 import { listRoutingRules, listStaff } from '../../services/routingService'
 import { listPulseSummaries } from '../../services/pulseCheckService'
 import { CATEGORIES } from '../../data/categories'
+import i18n from '../../services/i18n'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -31,10 +33,10 @@ const SENTIMENT_TONE = (score) => {
 // tell a reader whether 58 is good; the badge does, and it uses the same
 // thresholds as the colour so the two can never disagree.
 const SENTIMENT_LABEL = (score) => {
-  if (score === null || score === undefined) return 'no data'
-  if (score < 40) return 'needs attention'
-  if (score < 60) return 'mixed'
-  return 'healthy'
+  if (score === null || score === undefined) return i18n.t('overviewPage.sentiment.noData')
+  if (score < 40) return i18n.t('overviewPage.sentiment.needsAttention')
+  if (score < 60) return i18n.t('overviewPage.sentiment.mixed')
+  return i18n.t('overviewPage.sentiment.healthy')
 }
 
 const categoryLabelById = new Map(CATEGORIES.map((c) => [c.id, c.label]))
@@ -71,6 +73,7 @@ function BreakdownList({ entries, labelFor = (key) => key, toneFor = () => 'tone
 // The QR half of a ShareableLink - split out so the tracking address below
 // can skip it entirely rather than rendering and then hiding it.
 function ShareableLinkQr({ url, qrAlt, downloadName }) {
+  const { t } = useTranslation()
   const [qrDataUrl, setQrDataUrl] = useState(null)
 
   useEffect(() => {
@@ -102,12 +105,12 @@ function ShareableLinkQr({ url, qrAlt, downloadName }) {
             download={downloadName}
             className="btn btn-secondary mt-2 flex w-40 justify-center"
           >
-            Download QR
+            {t('overviewPage.downloadQr')}
           </a>
         </>
       ) : (
         <div className="flex h-40 w-40 items-center justify-center rounded-lg border border-line bg-line-soft text-xs text-muted">
-          Generating…
+          {t('overviewPage.generatingQr')}
         </div>
       )}
     </div>
@@ -119,6 +122,7 @@ function ShareableLinkQr({ url, qrAlt, downloadName }) {
 // wherever the app is actually served (localhost in dev, the real domain in
 // production) rather than a hard-coded host.
 function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   async function copyLink() {
@@ -143,7 +147,7 @@ function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
           {url}
         </code>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={copyLink}>{copied ? 'Copied' : 'Copy link'}</Button>
+          <Button onClick={copyLink}>{copied ? t('overviewPage.copied') : t('overviewPage.copyLink')}</Button>
         </div>
       </div>
     </div>
@@ -170,6 +174,7 @@ function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
 // Admin write the field, so the button is a convenience on top of a
 // server-enforced permission rather than the thing granting it.
 function ReportingLinkCard({ company, onSlugGenerated }) {
+  const { t } = useTranslation()
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState(null)
 
@@ -195,37 +200,30 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
   }
 
   return (
-    <Card title="Reporting links">
+    <Card title={t('overviewPage.reportingLinks.title')}>
       {!slug ? (
         <div className="flex flex-col items-start gap-3">
-          <p className="text-sm text-muted">
-            This company doesn&apos;t have a reporting link yet. Generating one creates the
-            public address employees use to file confidential reports - it can only be
-            created once, and stays the same afterwards.
-          </p>
+          <p className="text-sm text-muted">{t('overviewPage.reportingLinks.noSlugBody')}</p>
           {generateError && <Alert variant="error">{generateError}</Alert>}
           <Button
             variant="primary"
             onClick={generateLink}
             loading={generating}
-            loadingLabel="Generating"
+            loadingLabel={t('overviewPage.reportingLinks.generating')}
             disabled={!company?.id}
           >
-            Generate reporting link
+            {t('overviewPage.reportingLinks.generateButton')}
           </Button>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          <p className="text-sm text-muted">
-            Print or post the QR below to invite reports - it&apos;s the only one meant for a
-            poster. It requires no login and no name.
-          </p>
+          <p className="text-sm text-muted">{t('overviewPage.reportingLinks.postBody')}</p>
 
           <ShareableLink
-            heading="File a report"
-            description="Opens the confidential intake form for your company. Anyone with this link can file - no login, no name required."
+            heading={t('overviewPage.reportingLinks.fileReport.heading')}
+            description={t('overviewPage.reportingLinks.fileReport.description')}
             url={submitUrl}
-            qrAlt="QR code linking to the confidential reporting form for this company"
+            qrAlt={t('overviewPage.reportingLinks.fileReport.qrAlt')}
             downloadName="reporting-qr.png"
           />
         </div>
@@ -254,6 +252,7 @@ function SectionHeading({ children, hint }) {
 //   no path to the underlying pulseResponses.
 // Still no read path anywhere here to cases/, messages/, or caseMetadata/.
 function OverviewPage({ companyId }) {
+  const { t } = useTranslation()
   const [stats, setStats] = useState(null)
   const [staff, setStaff] = useState([])
   const [routingRules, setRoutingRules] = useState([])
@@ -307,12 +306,9 @@ function OverviewPage({ companyId }) {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted">
-          Aggregate case activity, staffing, and wellbeing signals for your company. Case
-          content itself is never shown to this role - only counts.
-        </p>
-        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
-          Refresh
+        <p className="max-w-2xl text-sm text-muted">{t('overviewPage.intro')}</p>
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel={t('overviewPage.refreshing')}>
+          {t('overviewPage.refresh')}
         </Button>
       </div>
 
@@ -324,19 +320,19 @@ function OverviewPage({ companyId }) {
           Only shown once the company doc has loaded, so it never flashes during
           the initial fetch. */}
       {!firstLoad && company && !company.crisisContact && (
-        <Alert variant="warning" title="No crisis contact configured">
-          Reports flagged with crisis language currently have no recipient — the notification is
-          generated but reaches no one. Set a named crisis contact on the{' '}
-          <Link to="/admin/settings" className="font-medium underline">
-            Settings
-          </Link>{' '}
-          page.
+        <Alert variant="warning" title={t('overviewPage.noCrisisContact.title')}>
+          <Trans
+            i18nKey="overviewPage.noCrisisContact.body"
+            components={{
+              link: <Link to="/admin/settings" className="font-medium underline" />,
+            }}
+          />
         </Alert>
       )}
 
       <section className="flex flex-col gap-3">
-        <SectionHeading hint="Share these QR codes or links so employees can file confidential reports - and find their way back to one they already filed.">
-          Reporting links
+        <SectionHeading hint={t('overviewPage.reportingLinksHint')}>
+          {t('overviewPage.reportingLinksHeading')}
         </SectionHeading>
         {firstLoad ? (
           <SkeletonList rows={1} />
@@ -346,8 +342,8 @@ function OverviewPage({ companyId }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <SectionHeading hint="Counts only, updated as cases move through their lifecycle.">
-          Case overview
+        <SectionHeading hint={t('overviewPage.caseOverviewHint')}>
+          {t('overviewPage.caseOverviewHeading')}
         </SectionHeading>
 
         {firstLoad ? (
@@ -356,24 +352,24 @@ function OverviewPage({ companyId }) {
           <Card padded={false}>
             <EmptyState
               icon="cases"
-              title="No case activity yet"
-              description="Once the first report is submitted, open, closed, and overdue counts appear here."
+              title={t('overviewPage.noActivity.title')}
+              description={t('overviewPage.noActivity.description')}
             />
           </Card>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatTile label="Open cases" value={stats.openCount ?? 0} tone="tone-info" icon="cases" />
-              <StatTile label="Closed cases" value={stats.closedCount ?? 0} tone="tone-neutral" icon="check" />
+              <StatTile label={t('overviewPage.stats.openCases')} value={stats.openCount ?? 0} tone="tone-info" icon="cases" />
+              <StatTile label={t('overviewPage.stats.closedCases')} value={stats.closedCount ?? 0} tone="tone-neutral" icon="check" />
               <StatTile
-                label="Overdue deadlines"
+                label={t('overviewPage.stats.overdueDeadlines')}
                 value={stats.overdueCount ?? 0}
                 tone={stats.overdueCount > 0 ? 'tone-critical' : 'tone-neutral'}
                 icon="alert"
               />
               <StatTile
-                label="Approaching deadlines"
-                hint="Due within 48 hours"
+                label={t('overviewPage.stats.approachingDeadlines')}
+                hint={t('overviewPage.stats.approachingDeadlinesHint')}
                 value={stats.approachingDeadlineCount ?? 0}
                 tone={stats.approachingDeadlineCount > 0 ? 'tone-high' : 'tone-neutral'}
                 icon="clock"
@@ -381,9 +377,9 @@ function OverviewPage({ companyId }) {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <Card title="Open cases by priority">
+              <Card title={t('overviewPage.byPriority.title')}>
                 {priorityEntries.length === 0 ? (
-                  <p className="text-sm text-muted">No open cases.</p>
+                  <p className="text-sm text-muted">{t('overviewPage.byPriority.empty')}</p>
                 ) : (
                   <BreakdownList
                     entries={priorityEntries}
@@ -391,13 +387,15 @@ function OverviewPage({ companyId }) {
                   />
                 )}
               </Card>
-              <Card title="Cases by category">
+              <Card title={t('overviewPage.byCategory.title')}>
                 {categoryEntries.length === 0 ? (
-                  <p className="text-sm text-muted">No cases yet.</p>
+                  <p className="text-sm text-muted">{t('overviewPage.byCategory.empty')}</p>
                 ) : (
                   <BreakdownList
                     entries={categoryEntries}
-                    labelFor={(key) => categoryLabelById.get(key) ?? key}
+                    labelFor={(key) =>
+                      t(`categories.${key}.label`, { defaultValue: categoryLabelById.get(key) ?? key })
+                    }
                   />
                 )}
               </Card>
@@ -407,8 +405,8 @@ function OverviewPage({ companyId }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <SectionHeading hint="Who is available to take cases, and how they get assigned.">
-          Staff &amp; routing
+        <SectionHeading hint={t('overviewPage.staffRoutingHint')}>
+          {t('overviewPage.staffRoutingHeading')}
         </SectionHeading>
 
         {firstLoad ? (
@@ -416,24 +414,24 @@ function OverviewPage({ companyId }) {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatTile label="Active staff" value={activeStaffCount} tone="tone-info" icon="staff" />
-              <StatTile label="Case handlers" value={caseHandlerCount} tone="tone-neutral" icon="shield" />
+              <StatTile label={t('overviewPage.stats.activeStaff')} value={activeStaffCount} tone="tone-info" icon="staff" />
+              <StatTile label={t('overviewPage.stats.caseHandlers')} value={caseHandlerCount} tone="tone-neutral" icon="shield" />
               <StatTile
-                label="Routing rules"
-                hint="Category and department mappings"
+                label={t('overviewPage.stats.routingRules')}
+                hint={t('overviewPage.stats.routingRulesHint')}
                 value={routingRules.length}
                 tone={routingRules.length === 0 ? 'tone-high' : 'tone-neutral'}
                 icon="routing"
               />
             </div>
 
-            <Card title="Open cases by handler" padded={handlerEntries.length > 0}>
+            <Card title={t('overviewPage.byHandler.title')} padded={handlerEntries.length > 0}>
               {handlerEntries.length === 0 ? (
                 <EmptyState
                   compact
                   icon="staff"
-                  title="No open cases assigned"
-                  description="Assigned workload per handler shows up here as cases come in."
+                  title={t('overviewPage.byHandler.empty.title')}
+                  description={t('overviewPage.byHandler.empty.description')}
                 />
               ) : (
                 <BreakdownList
@@ -447,8 +445,8 @@ function OverviewPage({ companyId }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <SectionHeading hint="Department and period averages - never an individual response.">
-          Pulse check sentiment
+        <SectionHeading hint={t('overviewPage.pulseSentimentHint')}>
+          {t('overviewPage.pulseSentimentHeading')}
         </SectionHeading>
 
         {firstLoad ? (
@@ -462,8 +460,8 @@ function OverviewPage({ companyId }) {
           <Card padded={false}>
             <EmptyState
               icon="pulse"
-              title="Not enough responses yet to show a summary"
-              description="Department sentiment averages appear once enough people in a department have responded. Below that minimum, no average is shown, so it can never stand in for one person's answer."
+              title={t('overviewPage.pulseEmpty.title')}
+              description={t('overviewPage.pulseEmpty.description')}
             />
           </Card>
         ) : (
@@ -473,7 +471,7 @@ function OverviewPage({ companyId }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-medium text-charcoal">
-                      {s.department ?? 'Unspecified department'}
+                      {s.department ?? t('overviewPage.unspecifiedDepartment')}
                     </p>
                     <p className="text-xs text-muted">{s.period}</p>
                   </div>
@@ -485,7 +483,7 @@ function OverviewPage({ companyId }) {
                   {s.averageSentiment ?? '-'}
                 </p>
                 <p className="text-xs text-muted">
-                  avg. sentiment across {s.responseCount} response{s.responseCount === 1 ? '' : 's'}
+                  {t('overviewPage.avgSentimentAcross', { count: s.responseCount })}
                 </p>
               </Card>
             ))}

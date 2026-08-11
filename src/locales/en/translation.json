@@ -1493,6 +1493,82 @@
       "releaseButton": "Release hold"
     }
   },
+  "overviewPage": {
+    "sentiment": {
+      "noData": "no data",
+      "needsAttention": "needs attention",
+      "mixed": "mixed",
+      "healthy": "healthy"
+    },
+    "downloadQr": "Download QR",
+    "generatingQr": "Generating…",
+    "copied": "Copied",
+    "copyLink": "Copy link",
+    "reportingLinks": {
+      "title": "Reporting links",
+      "noSlugBody": "This company doesn't have a reporting link yet. Generating one creates the public address employees use to file confidential reports - it can only be created once, and stays the same afterwards.",
+      "generating": "Generating",
+      "generateButton": "Generate reporting link",
+      "postBody": "Print or post the QR below to invite reports - it's the only one meant for a poster. It requires no login and no name.",
+      "fileReport": {
+        "heading": "File a report",
+        "description": "Opens the confidential intake form for your company. Anyone with this link can file - no login, no name required.",
+        "qrAlt": "QR code linking to the confidential reporting form for this company"
+      }
+    },
+    "intro": "Aggregate case activity, staffing, and wellbeing signals for your company. Case content itself is never shown to this role - only counts.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing",
+    "noCrisisContact": {
+      "title": "No crisis contact configured",
+      "body": "Reports flagged with crisis language currently have no recipient — the notification is generated but reaches no one. Set a named crisis contact on the <link>Settings</link> page."
+    },
+    "reportingLinksHeading": "Reporting links",
+    "reportingLinksHint": "Share these QR codes or links so employees can file confidential reports - and find their way back to one they already filed.",
+    "caseOverviewHeading": "Case overview",
+    "caseOverviewHint": "Counts only, updated as cases move through their lifecycle.",
+    "noActivity": {
+      "title": "No case activity yet",
+      "description": "Once the first report is submitted, open, closed, and overdue counts appear here."
+    },
+    "stats": {
+      "openCases": "Open cases",
+      "closedCases": "Closed cases",
+      "overdueDeadlines": "Overdue deadlines",
+      "approachingDeadlines": "Approaching deadlines",
+      "approachingDeadlinesHint": "Due within 48 hours",
+      "activeStaff": "Active staff",
+      "caseHandlers": "Case handlers",
+      "routingRules": "Routing rules",
+      "routingRulesHint": "Category and department mappings"
+    },
+    "byPriority": {
+      "title": "Open cases by priority",
+      "empty": "No open cases."
+    },
+    "byCategory": {
+      "title": "Cases by category",
+      "empty": "No cases yet."
+    },
+    "staffRoutingHeading": "Staff & routing",
+    "staffRoutingHint": "Who is available to take cases, and how they get assigned.",
+    "byHandler": {
+      "title": "Open cases by handler",
+      "empty": {
+        "title": "No open cases assigned",
+        "description": "Assigned workload per handler shows up here as cases come in."
+      }
+    },
+    "pulseSentimentHeading": "Pulse check sentiment",
+    "pulseSentimentHint": "Department and period averages - never an individual response.",
+    "pulseEmpty": {
+      "title": "Not enough responses yet to show a summary",
+      "description": "Department sentiment averages appear once enough people in a department have responded. Below that minimum, no average is shown, so it can never stand in for one person's answer."
+    },
+    "unspecifiedDepartment": "Unspecified department",
+    "avgSentimentAcross_one": "avg. sentiment across {{count}} response",
+    "avgSentimentAcross_other": "avg. sentiment across {{count}} responses"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
