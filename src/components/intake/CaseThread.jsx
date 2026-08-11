@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   addManualLogEntry,
   getCaseThread,
@@ -23,18 +24,18 @@ function formatTimestamp(ms) {
   return new Date(ms).toLocaleString()
 }
 
-function messageAuthorLabel(message) {
-  if (message.type === 'manual_log') return 'Investigator log'
-  if (message.sender === 'ai') return 'AI assistant'
-  if (message.sender === 'investigator') return 'Case Handler'
+function messageAuthorLabel(message, t) {
+  if (message.type === 'manual_log') return t('caseThread.authors.investigatorLog')
+  if (message.sender === 'ai') return t('caseThread.authors.aiAssistant')
+  if (message.sender === 'investigator') return t('caseThread.authors.caseHandler')
   // Written only server-side, and only by
   // functions/src/intake/identityTransition.js: a note that the reporter
   // identified themselves, or added or removed a contact address. It carries
   // no identity content, and both the reporter and the handler see the same
   // text - the change is meant to be legible in the timeline, which is
   // different from being explained to one side.
-  if (message.sender === 'system') return 'Case record'
-  return 'Reporter'
+  if (message.sender === 'system') return t('caseThread.authors.caseRecord')
+  return t('caseThread.authors.reporter')
 }
 
 // Bubble treatment per author. "Mine" (whoever is reading) sits on the
@@ -68,6 +69,7 @@ function formatSize(bytes) {
 // signed URL only exists after an await, and a popup blocker will stop an
 // async window.open that is no longer attributable to the click.
 function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
+  const { t } = useTranslation()
   const [opening, setOpening] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -108,9 +110,9 @@ function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
         <Icon name="document" className="h-3.5 w-3.5" />
         {attachment.label}
         {size && <span className="opacity-70">({size})</span>}
-        {opening && <span className="opacity-70">opening…</span>}
+        {opening && <span className="opacity-70">{t('caseThread.opening')}</span>}
       </button>
-      {failed && <span className="block text-xs opacity-80">Could not open this file.</span>}
+      {failed && <span className="block text-xs opacity-80">{t('caseThread.openFailed')}</span>}
     </>
   )
 }
@@ -126,6 +128,7 @@ function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
 // carry its own <h2> and page padding, which meant it could only ever be
 // dropped onto a page by itself.
 function CaseThread({ caseId, mode, passcode }) {
+  const { t } = useTranslation()
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [pendingFile, setPendingFile] = useState(null)
@@ -153,7 +156,7 @@ function CaseThread({ caseId, mode, passcode }) {
     // reporter callable anyway just trades a clear error for its generic
     // 'invalid-argument' one.
     if (mode === 'reporter' && !passcode) {
-      setLoadError('A passcode is required to load this case.')
+      setLoadError(t('caseThread.errors.passcodeRequired'))
       return
     }
     try {
@@ -172,7 +175,7 @@ function CaseThread({ caseId, mode, passcode }) {
       }
       setLoadError(err.message)
     }
-  }, [caseId, mode, passcode])
+  }, [caseId, mode, passcode, t])
 
   useEffect(() => {
     refresh()
@@ -248,7 +251,7 @@ function CaseThread({ caseId, mode, passcode }) {
               size="sm"
               onClick={() => setRetryToken((token) => token + 1)}
             >
-              Retry
+              {t('common.retry')}
             </Button>
           </div>
         </Alert>
@@ -259,8 +262,8 @@ function CaseThread({ caseId, mode, passcode }) {
           <EmptyState
             compact
             icon="mail"
-            title="No messages yet"
-            description="Anything sent here is added to the case record permanently."
+            title={t('caseThread.noMessages.title')}
+            description={t('caseThread.noMessages.description')}
           />
         )}
 
@@ -301,7 +304,7 @@ function CaseThread({ caseId, mode, passcode }) {
                     mine ? 'text-navy-200' : 'text-muted'
                   }`}
                 >
-                  <span className="font-medium">{messageAuthorLabel(message)}</span>
+                  <span className="font-medium">{messageAuthorLabel(message, t)}</span>
                   <span>{formatTimestamp(message.timestamp)}</span>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-sm">{message.text}</p>
@@ -331,18 +334,18 @@ function CaseThread({ caseId, mode, passcode }) {
 
       <form onSubmit={handleSend} className="flex flex-col gap-2 border-t border-line-soft pt-4">
         <textarea
-          aria-label="Message"
+          aria-label={t('caseThread.messageLabel')}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           rows={3}
-          placeholder="Type a message..."
+          placeholder={t('caseThread.messagePlaceholder')}
           className="field resize-y"
         />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
             <span className="btn btn-secondary px-2.5 py-1.5 text-xs">
               <Icon name="plus" className="h-3.5 w-3.5" />
-              Attach file
+              {t('caseThread.attachFile')}
             </span>
             <input
               type="file"
@@ -357,10 +360,10 @@ function CaseThread({ caseId, mode, passcode }) {
             variant="primary"
             className="ml-auto"
             loading={sending}
-            loadingLabel="Sending"
+            loadingLabel={t('caseThread.sending')}
             disabled={!draft.trim() && !pendingFile}
           >
-            Send
+            {t('caseThread.send')}
           </Button>
         </div>
       </form>
@@ -381,7 +384,7 @@ function CaseThread({ caseId, mode, passcode }) {
             aria-expanded={showResources}
           >
             <Icon name="shield" className="h-3.5 w-3.5" />
-            Need support now?
+            {t('reporterLayout.needSupport')}
           </button>
           {showResources && (
             <div className="mt-3">
@@ -403,16 +406,16 @@ function CaseThread({ caseId, mode, passcode }) {
               onClick={() => setShowLogForm(true)}
               className="text-gold-600"
             >
-              Add manual log entry
+              {t('caseThread.manualLog.add')}
             </Button>
           ) : (
             <form onSubmit={handleAddLog} className="flex flex-col gap-2">
               <textarea
-                aria-label="Manual log entry"
+                aria-label={t('caseThread.manualLog.label')}
                 value={logDraft}
                 onChange={(e) => setLogDraft(e.target.value)}
                 rows={2}
-                placeholder="e.g. Called witness X, summary: ..."
+                placeholder={t('caseThread.manualLog.placeholder')}
                 className="field border-gold-200"
               />
               <div className="flex gap-2">
@@ -421,13 +424,13 @@ function CaseThread({ caseId, mode, passcode }) {
                   variant="accent"
                   size="sm"
                   loading={sending}
-                  loadingLabel="Saving"
+                  loadingLabel={t('contactChannelPanel.form.saving')}
                   disabled={!logDraft.trim()}
                 >
-                  Save log entry
+                  {t('caseThread.manualLog.save')}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowLogForm(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </form>

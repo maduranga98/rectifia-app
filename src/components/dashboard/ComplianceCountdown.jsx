@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../services/i18n'
 import Icon from '../ui/Icon'
 
 const HOUR_MS = 60 * 60 * 1000
@@ -13,10 +15,12 @@ function toMillis(value) {
 }
 
 function formatCountdown(msRemaining) {
-  if (msRemaining <= 0) return 'Overdue'
+  if (msRemaining <= 0) return i18n.t('complianceCountdown.overdue')
   const days = Math.floor(msRemaining / DAY_MS)
   const hours = Math.floor((msRemaining % DAY_MS) / HOUR_MS)
-  return days > 0 ? `${days}d ${hours}h left` : `${hours}h left`
+  return days > 0
+    ? i18n.t('complianceCountdown.daysHoursLeft', { days, hours })
+    : i18n.t('complianceCountdown.hoursLeft', { hours })
 }
 
 function urgencyTone(msRemaining) {
@@ -29,6 +33,7 @@ function urgencyTone(msRemaining) {
 // given) is shown as done regardless of how much time is left - the
 // countdown only matters for deadlines still pending.
 function DeadlineRow({ label, dueAt, actionedAt, actionedLabel }) {
+  const { t } = useTranslation()
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
@@ -58,7 +63,9 @@ function DeadlineRow({ label, dueAt, actionedAt, actionedLabel }) {
           {actioned ? actionedLabel : formatCountdown(msRemaining)}
         </span>
       </div>
-      <p className="mt-1 text-xs opacity-80">Due {new Date(dueMs).toLocaleString()}</p>
+      <p className="mt-1 text-xs opacity-80">
+        {t('complianceCountdown.due', { date: new Date(dueMs).toLocaleString() })}
+      </p>
     </div>
   )
 }
@@ -72,25 +79,28 @@ function DeadlineRow({ label, dueAt, actionedAt, actionedLabel }) {
 // The section heading belongs to whatever card this is dropped into, not to
 // this component - it used to render its own and ended up doubled.
 function ComplianceCountdown({ caseData }) {
+  const { t } = useTranslation()
   if (!caseData) return null
 
   return (
     <div className="flex flex-col gap-2.5">
       <DeadlineRow
-        label="Acknowledgment"
+        label={t('complianceCountdown.acknowledgment')}
         dueAt={caseData.acknowledgmentDueAt}
         actionedAt={caseData.acknowledgmentSentAt}
-        actionedLabel="Sent"
+        actionedLabel={t('complianceCountdown.sent')}
       />
       <DeadlineRow
-        label="Feedback to reporter"
+        label={t('complianceCountdown.feedbackToReporter')}
         dueAt={caseData.feedbackDueAt}
         actionedAt={caseData.feedbackGivenAt}
-        actionedLabel="Given"
+        actionedLabel={t('complianceCountdown.given')}
       />
 
       {caseData.complianceRuleApplied && (
-        <p className="text-xs text-muted">Rule applied: {caseData.complianceRuleApplied}</p>
+        <p className="text-xs text-muted">
+          {t('complianceCountdown.ruleApplied', { rule: caseData.complianceRuleApplied })}
+        </p>
       )}
     </div>
   )

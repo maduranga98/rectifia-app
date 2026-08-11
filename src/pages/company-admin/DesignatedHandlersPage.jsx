@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../contexts/AuthContext'
 import { getCompany } from '../../services/companyService'
 import { listCaseHandlers } from '../../services/routingService'
@@ -28,15 +29,15 @@ function formatDate(value) {
 // handler's own acknowledgment exist - see designatedHandlers.js. This maps
 // that pair, plus 'revoked' and 'none' (never designated at all), to the
 // label/tone/icon this page renders everywhere a status appears.
-function designationStatus(record) {
+function designationStatus(record, t) {
   if (!record || record.status !== 'active') {
     return record?.status === 'revoked'
-      ? { key: 'revoked', label: 'Revoked', tone: 'tone-neutral', icon: 'close' }
-      : { key: 'none', label: 'Not designated', tone: 'tone-neutral', icon: 'close' }
+      ? { key: 'revoked', label: t('designatedHandlersPage.status.revoked'), tone: 'tone-neutral', icon: 'close' }
+      : { key: 'none', label: t('designatedHandlersPage.status.none'), tone: 'tone-neutral', icon: 'close' }
   }
   return record.confidentialityAcknowledgedAt
-    ? { key: 'acknowledged', label: 'Designated · acknowledged', tone: 'tone-low', icon: 'check' }
-    : { key: 'pending', label: 'Designated · awaiting acknowledgment', tone: 'tone-medium', icon: 'clock' }
+    ? { key: 'acknowledged', label: t('designatedHandlersPage.status.acknowledged'), tone: 'tone-low', icon: 'check' }
+    : { key: 'pending', label: t('designatedHandlersPage.status.pending'), tone: 'tone-medium', icon: 'clock' }
 }
 
 // The Company Admin / designatedHandlers-permitted management console: lists
@@ -44,6 +45,7 @@ function designationStatus(record) {
 // revoke action. Read-only for everyone else, the same posture as
 // RoutingRulesPage's own list vs. its edit controls.
 function ManagementList({ companyId, handlers, designations, loading, onChanged }) {
+  const { t } = useTranslation()
   const [busyStaffId, setBusyStaffId] = useState(null)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
@@ -54,7 +56,7 @@ function ManagementList({ companyId, handlers, designations, loading, onChanged 
     setNotice(null)
     try {
       await designateHandler(companyId, staffId)
-      setNotice('Designated. They will see a confidentiality acknowledgment to accept.')
+      setNotice(t('designatedHandlersPage.designatedNotice'))
       await onChanged()
     } catch (err) {
       setError(err.message)
@@ -69,7 +71,7 @@ function ManagementList({ companyId, handlers, designations, loading, onChanged 
     setNotice(null)
     try {
       await revokeHandlerDesignation(companyId, staffId, 'Revoked from the designated handler register')
-      setNotice('Designation revoked.')
+      setNotice(t('designatedHandlersPage.revokedNotice'))
       await onChanged()
     } catch (err) {
       setError(err.message)
@@ -84,8 +86,8 @@ function ManagementList({ companyId, handlers, designations, loading, onChanged 
     return (
       <EmptyState
         icon="shield"
-        title="No Case Handlers yet"
-        description="Invite a Case Handler under Staff before designating anyone here."
+        title={t('designatedHandlersPage.noHandlers.title')}
+        description={t('designatedHandlersPage.noHandlers.description')}
       />
     )
   }
@@ -95,11 +97,15 @@ function ManagementList({ companyId, handlers, designations, loading, onChanged 
       {error && <Alert variant="error">{error}</Alert>}
       {notice && <Alert variant="success">{notice}</Alert>}
 
-      <Card title="Case Handlers" description={`${handlers.length} on staff`} padded={false}>
+      <Card
+        title={t('adminNav.pageTitles.staff')}
+        description={t('designatedHandlersPage.onStaff', { count: handlers.length })}
+        padded={false}
+      >
         <ul className="divide-y divide-line-soft">
           {handlers.map((handler) => {
             const record = designations.find((d) => d.id === handler.id) ?? null
-            const status = designationStatus(record)
+            const status = designationStatus(record, t)
             const isActive = record?.status === 'active'
             const busy = busyStaffId === handler.id
 
@@ -111,8 +117,9 @@ function ManagementList({ companyId, handlers, designations, loading, onChanged 
                   </p>
                   {record && (
                     <p className="mt-0.5 text-xs text-muted">
-                      Designated {formatDate(record.designatedAt)}
-                      {record.status === 'revoked' && ` · revoked ${formatDate(record.revokedAt)}`}
+                      {t('designatedHandlersPage.designatedOn', { date: formatDate(record.designatedAt) })}
+                      {record.status === 'revoked' &&
+                        ` · ${t('designatedHandlersPage.revokedOn', { date: formatDate(record.revokedAt) })}`}
                     </p>
                   )}
                 </div>
@@ -128,7 +135,7 @@ function ManagementList({ companyId, handlers, designations, loading, onChanged 
                     disabled={busy}
                     onClick={() => handleRevoke(handler.id)}
                   >
-                    Revoke
+                    {t('designatedHandlersPage.revoke')}
                   </Button>
                 ) : (
                   <Button
@@ -138,7 +145,7 @@ function ManagementList({ companyId, handlers, designations, loading, onChanged 
                     disabled={busy}
                     onClick={() => handleDesignate(handler.id)}
                   >
-                    Designate
+                    {t('designatedHandlersPage.designate')}
                   </Button>
                 )}
               </li>
@@ -156,6 +163,7 @@ function ManagementList({ companyId, handlers, designations, loading, onChanged 
 // this only ever acts on the caller's own uid, so there is nothing here for
 // anyone to do on behalf of someone else.
 function SelfAcknowledgment({ companyId, record, loading, onChanged }) {
+  const { t } = useTranslation()
   const [acknowledging, setAcknowledging] = useState(false)
   const [error, setError] = useState(null)
 
@@ -174,16 +182,20 @@ function SelfAcknowledgment({ companyId, record, loading, onChanged }) {
 
   if (loading) return <SkeletonList rows={1} />
 
-  const status = designationStatus(record)
+  const status = designationStatus(record, t)
 
   if (!record || record.status !== 'active') {
     return (
-      <Card title="Your designation status">
+      <Card title={t('designatedHandlersPage.yourStatus')}>
         <EmptyState
           compact
           icon="shield"
-          title={record?.status === 'revoked' ? 'Your designation was revoked' : 'You are not currently designated'}
-          description="Ask your Company Admin if you believe this is not correct."
+          title={
+            record?.status === 'revoked'
+              ? t('designatedHandlersPage.self.revokedTitle')
+              : t('designatedHandlersPage.self.notDesignatedTitle')
+          }
+          description={t('designatedHandlersPage.self.askAdmin')}
         />
       </Card>
     )
@@ -191,13 +203,15 @@ function SelfAcknowledgment({ companyId, record, loading, onChanged }) {
 
   if (record.confidentialityAcknowledgedAt) {
     return (
-      <Card title="Your designation status">
+      <Card title={t('designatedHandlersPage.yourStatus')}>
         <div className="flex items-center gap-2.5">
           <Badge tone={status.tone} icon={status.icon}>
             {status.label}
           </Badge>
           <span className="text-xs text-muted">
-            Acknowledged {formatDate(record.confidentialityAcknowledgedAt)}
+            {t('designatedHandlersPage.self.acknowledgedOn', {
+              date: formatDate(record.confidentialityAcknowledgedAt),
+            })}
           </span>
         </div>
       </Card>
@@ -206,11 +220,17 @@ function SelfAcknowledgment({ companyId, record, loading, onChanged }) {
 
   return (
     <Card
-      title="Confidentiality acknowledgment required"
-      description="You have been designated a 従事者 (designated handler). Read and accept the obligation below to complete your designation."
+      title={t('designatedHandlersPage.self.acknowledgmentRequired.title')}
+      description={t('designatedHandlersPage.self.acknowledgmentRequired.description')}
     >
       <div className="flex flex-col gap-3">
         {error && <Alert variant="error">{error}</Alert>}
+        {/* CONFIDENTIALITY_ACKNOWLEDGMENT_TEXT is fixed legal text tied to
+            Japan's Whistleblower Protection Act - left untranslated rather
+            than machine-translated, same reasoning as the draft privacy
+            policy/terms: an inaccurate translation of a statutory obligation
+            is worse than none, and this text (unlike those) isn't even
+            marked draft, so there's no safe placeholder to fall back to. */}
         <p className="rounded-lg border border-line bg-canvas px-3.5 py-3 text-sm text-charcoal">
           {CONFIDENTIALITY_ACKNOWLEDGMENT_TEXT}
         </p>
@@ -218,11 +238,11 @@ function SelfAcknowledgment({ companyId, record, loading, onChanged }) {
           variant="primary"
           icon="check"
           loading={acknowledging}
-          loadingLabel="Acknowledging"
+          loadingLabel={t('designatedHandlersPage.self.acknowledging')}
           onClick={handleAcknowledge}
           className="self-start"
         >
-          I acknowledge and accept
+          {t('designatedHandlersPage.self.acknowledgeButton')}
         </Button>
       </div>
     </Card>
@@ -241,6 +261,7 @@ function SelfAcknowledgment({ companyId, record, loading, onChanged }) {
 // content, no case IDs, no counts of cases handled - and nothing here is
 // ever shown on any reporter-facing view.
 function DesignatedHandlersPage({ companyId }) {
+  const { t } = useTranslation()
   const { user, role, hasPermission } = useAuth()
   const isManager = role === 'companyAdmin' || hasPermission('designatedHandlers')
   const isSelfHandler = !isManager && role === 'caseHandler'
@@ -288,29 +309,21 @@ function DesignatedHandlersPage({ companyId }) {
 
   if (!isManager && !isSelfHandler) {
     return (
-      <Alert variant="error" title="Not available">
-        This page is for Company Admin, a designatedHandlers-permitted role, or a Case Handler
-        viewing their own designation.
+      <Alert variant="error" title={t('designatedHandlersPage.notAvailable.title')}>
+        {t('designatedHandlersPage.notAvailable.body')}
       </Alert>
     )
   }
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        Japan's Whistleblower Protection Act expects reports to be handled by a formally
-        designated 従事者 (designated handler). This register records who has been designated,
-        by whom, and whether they have accepted the confidentiality obligation that comes with
-        it - metadata only, never case content.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('designatedHandlersPage.description')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
 
       {!loading && !isJp && (
-        <Alert variant="info" title="Japan (JP) is not configured for this company">
-          The designated handler register is optional while JP is not among this company's
-          configured jurisdictions - cases are never blocked on it. You can still designate
-          handlers here ahead of adding JP, or leave the register empty.
+        <Alert variant="info" title={t('designatedHandlersPage.notConfigured.title')}>
+          {t('designatedHandlersPage.notConfigured.body')}
         </Alert>
       )}
 
@@ -334,7 +347,7 @@ function DesignatedHandlersPage({ companyId }) {
       {!isManager && user?.email && (
         <p className="text-xs text-subtle">
           <Icon name="staff" className="mr-1 inline h-3 w-3" />
-          Signed in as {user.email}
+          {t('designatedHandlersPage.signedInAs', { email: user.email })}
         </p>
       )}
     </div>

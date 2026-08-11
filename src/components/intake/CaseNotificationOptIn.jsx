@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import {
   subscribeToCaseUpdates,
   unsubscribeFromCaseUpdates,
@@ -39,16 +40,12 @@ function pushSupported() {
 }
 
 function NoDetailsNote() {
-  return (
-    <p className="text-xs text-muted">
-      A notification never contains any detail about your case — no message text, no category,
-      nothing that could identify the report. It only tells you there is an update to come back
-      and read here.
-    </p>
-  )
+  const { t } = useTranslation()
+  return <p className="text-xs text-muted">{t('caseNotificationOptIn.noDetailsNote')}</p>
 }
 
 function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
+  const { t } = useTranslation()
   const supported = pushSupported()
   // Read the live browser permission up front. It is global to the site, not to
   // this case, so 'granted' does not mean this case is subscribed yet - it only
@@ -129,12 +126,13 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
       <div className={wrapper}>
         <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
           <Icon name="mail" className="h-4 w-4 text-muted" />
-          Get notified when there&apos;s a reply
+          {t('caseNotificationOptIn.getNotified')}
         </p>
         <p className="text-sm text-muted">
-          On iPhone and iPad, notifications only work once this site is added to your Home Screen.
-          Tap the Share button in Safari, choose <strong>Add to Home Screen</strong>, then open
-          Rectifia from your home screen and come back to this page to turn them on.
+          <Trans
+            i18nKey="caseNotificationOptIn.iosInstall"
+            components={{ strong: <strong /> }}
+          />
         </p>
         <NoDetailsNote />
       </div>
@@ -148,12 +146,9 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
       <div className={wrapper}>
         <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
           <Icon name="mail" className="h-4 w-4 text-muted" />
-          Notifications aren&apos;t available in this browser
+          {t('caseNotificationOptIn.unsupported.title')}
         </p>
-        <p className="text-xs text-muted">
-          This browser can&apos;t send you case updates. You can still come back any time with your
-          Case ID and passcode to read replies.
-        </p>
+        <p className="text-xs text-muted">{t('caseNotificationOptIn.unsupported.body')}</p>
       </div>
     )
   }
@@ -165,14 +160,9 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
       <div className={wrapper}>
         <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
           <Icon name="mail" className="h-4 w-4 text-muted" />
-          Notifications are blocked for this site
+          {t('caseNotificationOptIn.blocked.title')}
         </p>
-        <p className="text-xs text-muted">
-          Your browser is set to block notifications here, so we can&apos;t turn them on from this
-          page. To allow them, open this site&apos;s permissions — usually the icon at the left of
-          the address bar, or Settings → Site settings → Notifications — set notifications to Allow,
-          then reload this page.
-        </p>
+        <p className="text-xs text-muted">{t('caseNotificationOptIn.blocked.body')}</p>
         <NoDetailsNote />
       </div>
     )
@@ -184,20 +174,14 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
     // to undo that from the same screen they enabled it on.
     return (
       <div className={wrapper}>
-        <Alert variant="success" title="You'll be notified of replies">
-          This device will get a notification when there&apos;s a reply on your case. It won&apos;t
-          say anything about the case itself — just that there&apos;s an update to check.
+        <Alert variant="success" title={t('caseNotificationOptIn.subscribed.title')}>
+          {t('caseNotificationOptIn.subscribed.body')}
         </Alert>
         {disableStatus === 'done' ? (
-          <Alert variant="info">
-            Notifications are off for this device. Reopen this page any time to turn them back on.
-          </Alert>
+          <Alert variant="info">{t('caseNotificationOptIn.subscribed.turnedOff')}</Alert>
         ) : (
           <>
-            <p className="text-xs text-muted">
-              On a shared or work device, turn notifications off before you leave — otherwise the
-              next person using this browser will see the update prompts.
-            </p>
+            <p className="text-xs text-muted">{t('caseNotificationOptIn.subscribed.sharedDeviceNote')}</p>
             {disableStatus === 'error' && disableError && (
               <Alert variant="error">{disableError}</Alert>
             )}
@@ -206,9 +190,9 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
                 variant="ghost"
                 onClick={disable}
                 loading={disableStatus === 'working'}
-                loadingLabel="Turning off"
+                loadingLabel={t('caseNotificationOptIn.turningOff')}
               >
-                Turn off on this device
+                {t('caseNotificationOptIn.turnOffThisDevice')}
               </Button>
             </div>
           </>
@@ -222,12 +206,9 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
     <div className={wrapper}>
       <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
         <Icon name="mail" className="h-4 w-4 text-muted" />
-        Get notified when there&apos;s a reply
+        {t('caseNotificationOptIn.getNotified')}
       </p>
-      <p className="text-sm text-muted">
-        Turn on notifications on this device so you know when your handler responds, without having
-        to keep checking back.
-      </p>
+      <p className="text-sm text-muted">{t('caseNotificationOptIn.turnOnBody')}</p>
       <NoDetailsNote />
       {status === 'error' && error && <Alert variant="error">{error}</Alert>}
       <div>
@@ -236,9 +217,11 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
           icon="mail"
           onClick={enable}
           loading={status === 'working'}
-          loadingLabel="Turning on"
+          loadingLabel={t('caseNotificationOptIn.turningOn')}
         >
-          {permission === 'granted' ? 'Turn on reply notifications' : 'Notify me of replies'}
+          {permission === 'granted'
+            ? t('caseNotificationOptIn.turnOnReplyNotifications')
+            : t('caseNotificationOptIn.notifyMe')}
         </Button>
       </div>
     </div>

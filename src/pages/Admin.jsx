@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
@@ -65,38 +66,47 @@ import PulseTrendsPage from './staff/PulseTrendsPage'
 // what filterNavByFlags/filterNavByAccess operate over - both still run on
 // the flat array below, so a route being gated in or out never has to know
 // about grouping.
+// `labelKey`/`sectionKey` are adminNav.* translation keys, resolved with
+// `t()` when navItems is built in Admin() below - see Dashboard.jsx's
+// identical convention for NAV_BY_ROLE.
 const NAV_ITEMS = [
-  { to: '/admin/overview', label: 'Overview', icon: 'overview', section: 'Cases' },
-  { to: '/admin/cases', label: 'Cases', icon: 'cases', section: 'Cases' },
-  { to: '/admin/analytics', label: 'Analytics', icon: 'sparkle', section: 'Cases' },
+  { to: '/admin/overview', labelKey: 'adminNav.overview', icon: 'overview', sectionKey: 'adminNav.sections.cases' },
+  { to: '/admin/cases', labelKey: 'adminNav.cases', icon: 'cases', sectionKey: 'adminNav.sections.cases' },
+  { to: '/admin/analytics', labelKey: 'adminNav.analytics', icon: 'sparkle', sectionKey: 'adminNav.sections.cases' },
   {
     to: '/admin/departments',
-    label: 'Departments',
+    labelKey: 'adminNav.departments',
     icon: 'departments',
     permission: 'departments',
-    section: 'Organization',
+    sectionKey: 'adminNav.sections.organization',
   },
   {
     to: '/admin/staff',
-    label: 'Staff',
+    labelKey: 'adminNav.staff',
     icon: 'staff',
     permission: 'staffManagement',
-    section: 'Organization',
+    sectionKey: 'adminNav.sections.organization',
   },
-  { to: '/admin/employees', label: 'Employees', icon: 'pulse', flag: 'pulseCheck', section: 'Organization' },
+  {
+    to: '/admin/employees',
+    labelKey: 'adminNav.employees',
+    icon: 'pulse',
+    flag: 'pulseCheck',
+    sectionKey: 'adminNav.sections.organization',
+  },
   {
     to: '/admin/routing',
-    label: 'Routing rules',
+    labelKey: 'adminNav.routingRules',
     icon: 'routing',
     permission: 'routingRules',
-    section: 'Organization',
+    sectionKey: 'adminNav.sections.organization',
   },
   {
     to: '/admin/policies',
-    label: 'Policies',
+    labelKey: 'adminNav.policies',
     icon: 'document',
     permission: 'policyManagement',
-    section: 'Policy & compliance',
+    sectionKey: 'adminNav.sections.policyCompliance',
   },
   // JP's designated-handler (従事者) register - see DesignatedHandlersPage.jsx.
   // No `flag` gate: the register stays reachable even for a company without
@@ -104,26 +114,26 @@ const NAV_ITEMS = [
   // a company can designate handlers ahead of adding the jurisdiction.
   {
     to: '/admin/designated-handlers',
-    label: 'Designated handlers',
+    labelKey: 'adminNav.designatedHandlers',
     icon: 'shield',
     permission: 'designatedHandlers',
-    section: 'Policy & compliance',
+    sectionKey: 'adminNav.sections.policyCompliance',
   },
   // Sits next to Settings deliberately: pulseCheckCadence (how often check-ins
   // go out) lives there, and this is what those check-ins ask.
   {
     to: '/admin/pulse-questions',
-    label: 'Pulse questions',
+    labelKey: 'adminNav.pulseQuestions',
     icon: 'pulse',
     flag: 'pulseCheck',
-    section: 'Policy & compliance',
+    sectionKey: 'adminNav.sections.policyCompliance',
   },
   {
     to: '/admin/retention',
-    label: 'Data retention',
+    labelKey: 'adminNav.dataRetention',
     icon: 'clock',
     permission: 'retentionSettings',
-    section: 'Policy & compliance',
+    sectionKey: 'adminNav.sections.policyCompliance',
   },
   // Module 25's opt-in control. Deliberately not under Settings: opting in
   // publishes an aggregate representation of this company's closed cases to
@@ -131,18 +141,24 @@ const NAV_ITEMS = [
   // decision rather than a checkbox on a settings screen.
   {
     to: '/admin/benchmark',
-    label: 'Benchmark pool',
+    labelKey: 'adminNav.benchmarkPool',
     icon: 'overview',
     flag: 'benchmarkPool',
-    section: 'Policy & compliance',
+    sectionKey: 'adminNav.sections.policyCompliance',
   },
-  { to: '/admin/billing', label: 'Billing', icon: 'billing', permission: 'billingView', section: 'Account' },
+  {
+    to: '/admin/billing',
+    labelKey: 'adminNav.billing',
+    icon: 'billing',
+    permission: 'billingView',
+    sectionKey: 'adminNav.sections.account',
+  },
   {
     to: '/admin/settings',
-    label: 'Settings',
+    labelKey: 'adminNav.settings',
     icon: 'settings',
     permission: 'complianceConfig',
-    section: 'Account',
+    sectionKey: 'adminNav.sections.account',
   },
   // The one permission whose page otherwise lives under /dashboard (the
   // Manager's "Team wellness"); pulseAggregateView opens this /admin
@@ -150,11 +166,11 @@ const NAV_ITEMS = [
   // it rides along wherever it's granted, same as before grouping existed.
   {
     to: '/admin/wellness',
-    label: 'Team wellness',
+    labelKey: 'adminNav.teamWellness',
     icon: 'pulse',
     flag: 'pulseCheck',
     permission: 'pulseAggregateView',
-    section: 'Account',
+    sectionKey: 'adminNav.sections.account',
   },
 ]
 
@@ -172,23 +188,23 @@ function filterNavByAccess(navItems, { isCompanyAdmin, hasPermission }) {
   return navItems.filter((item) => item.permission && hasPermission(item.permission))
 }
 
-const PAGE_TITLES = {
-  overview: 'Overview',
-  cases: 'Cases',
-  analytics: 'Analytics & reporting',
-  departments: 'Departments',
-  policies: 'Policies',
-  'designated-handlers': 'Designated handlers',
-  staff: 'Staff',
-  roles: 'Staff',
-  employees: 'Employees',
-  'pulse-questions': 'Pulse check questions',
-  routing: 'Routing rules',
-  billing: 'Subscription & billing',
-  settings: 'Company settings',
-  retention: 'Data retention & deletion',
-  benchmark: 'Cross-company benchmark pool',
-  wellness: 'Team wellness',
+const PAGE_TITLE_KEYS = {
+  overview: 'adminNav.pageTitles.overview',
+  cases: 'adminNav.pageTitles.cases',
+  analytics: 'adminNav.pageTitles.analytics',
+  departments: 'adminNav.pageTitles.departments',
+  policies: 'adminNav.pageTitles.policies',
+  'designated-handlers': 'adminNav.pageTitles.designatedHandlers',
+  staff: 'adminNav.pageTitles.staff',
+  roles: 'adminNav.pageTitles.staff',
+  employees: 'adminNav.pageTitles.employees',
+  'pulse-questions': 'adminNav.pageTitles.pulseQuestions',
+  routing: 'adminNav.pageTitles.routing',
+  billing: 'adminNav.pageTitles.billing',
+  settings: 'adminNav.pageTitles.settings',
+  retention: 'adminNav.pageTitles.retention',
+  benchmark: 'adminNav.pageTitles.benchmark',
+  wellness: 'adminNav.pageTitles.wellness',
 }
 
 // The first /admin page an account is entitled to - where the index route
@@ -200,6 +216,7 @@ function indexPathFor(navItems) {
 }
 
 function Admin() {
+  const { t } = useTranslation()
   const { user, companyId, role, customRoleName, hasPermission } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -208,7 +225,9 @@ function Admin() {
   const { enabled: pulseCheckEnabled } = useFeatureFlag('pulseCheck')
   const { enabled: benchmarkPoolEnabled } = useFeatureFlag('benchmarkPool')
   const flags = { pulseCheck: pulseCheckEnabled, benchmarkPool: benchmarkPoolEnabled }
-  const navItems = filterNavByAccess(filterNavByFlags(NAV_ITEMS, flags), { isCompanyAdmin, hasPermission })
+  const navItems = filterNavByAccess(filterNavByFlags(NAV_ITEMS, flags), { isCompanyAdmin, hasPermission }).map(
+    (item) => ({ ...item, label: t(item.labelKey), section: t(item.sectionKey) })
+  )
   const toIndex = <Navigate to={indexPathFor(navItems)} replace />
 
   // Gates one <Route>'s element the same way its NAV_ITEMS entry is gated
@@ -229,8 +248,10 @@ function Admin() {
   }
 
   const section = location.pathname.split('/')[2] ?? 'overview'
-  const roleLabel = customRoleName ?? 'Company Admin'
-  const scopeLabel = isCompanyAdmin ? 'Company administration' : customRoleName ?? 'Staff'
+  const roleLabel = customRoleName ?? t('roles.companyAdmin')
+  const scopeLabel = isCompanyAdmin
+    ? t('adminNav.companyAdministration')
+    : (customRoleName ?? t('roles.staff'))
 
   return (
     <AppShell
@@ -239,8 +260,8 @@ function Admin() {
       userEmail={user?.email}
       roleLabel={roleLabel}
       onSignOut={handleSignOut}
-      eyebrow="Company dashboard"
-      title={PAGE_TITLES[section] ?? 'Overview'}
+      eyebrow={t('adminNav.eyebrow')}
+      title={t(PAGE_TITLE_KEYS[section] ?? 'adminNav.pageTitles.overview')}
     >
       {companyId ? navItems.length === 0 ? (
         // A custom-role holder whose only permission's page sits behind a
@@ -251,8 +272,8 @@ function Admin() {
         // same as Dashboard.jsx's identical edge case.
         <Card padded={false} className="mx-auto max-w-2xl">
           <EmptyState
-            title="This feature is currently disabled"
-            description="Ask a Super Admin to enable it for your company."
+            title={t('dashboardNav.featureDisabled.title')}
+            description={t('dashboardNav.featureDisabled.description')}
           />
         </Card>
       ) : (
@@ -333,9 +354,8 @@ function Admin() {
         // No companyId claim means the account was never linked to a company
         // - an empty panel would look like the company had no data, so say
         // what is actually wrong.
-        <Alert variant="error" title="Account not linked to a company">
-          This account ({user?.email}) is not linked to a company, so there is nothing to
-          administer. Ask Lumora to re-issue the account.
+        <Alert variant="error" title={t('dashboardNav.notLinked.title')}>
+          {t('adminNav.notLinkedBody', { email: user?.email })}
         </Alert>
       )}
     </AppShell>

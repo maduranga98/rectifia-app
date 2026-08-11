@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import Logo from '../components/ui/Logo'
 import Alert from '../components/ui/Alert'
-import { policyVersion, isDraft, lastUpdated, draftNotice, sections } from '../content/legal/terms'
+import { policyVersion, isDraft, lastUpdated, getTermsContent } from '../content/legal/terms'
 
 // Same body-rendering shape as PrivacyPolicyPage.jsx's SectionBody - a string
 // is a paragraph, an array of strings is a bullet list. Kept as a small local
@@ -33,10 +33,10 @@ function SectionBody({ body }) {
 
 // Reachable with no auth and no Case ID - see PrivacyPolicyPage.jsx's header
 // comment for why this has its own minimal chrome rather than ReporterLayout,
-// and for why the legal body text is left in English while only the chrome
-// is localized.
+// and for the caveat on the localized legal body text below.
 function TermsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const { draftNotice, sections } = getTermsContent(i18n.language)
 
   return (
     <div className="flex min-h-screen flex-col">

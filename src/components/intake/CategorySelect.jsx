@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CATEGORIES } from '../../data/categories'
 import Button from '../ui/Button'
 import Icon from '../ui/Icon'
@@ -15,6 +16,7 @@ import Icon from '../ui/Icon'
 // notice gate advancing past this step without CategorySelect needing to
 // know anything about what it's gating on.
 function CategorySelect({ onSelect, canContinue = true, children }) {
+  const { t } = useTranslation()
   const [selected, setSelected] = useState(null)
 
   function handleContinue() {
@@ -61,8 +63,10 @@ function CategorySelect({ onSelect, canContinue = true, children }) {
                   (useless on a phone, where filing a report is the baseline
                   case here). */}
               <span className="min-w-0 flex-1">
-                <span className="block font-medium text-charcoal">{category.label}</span>
-                <span className="mt-0.5 block text-sm text-muted">{category.description}</span>
+                <span className="block font-medium text-charcoal">{t(`categories.${category.id}.label`)}</span>
+                <span className="mt-0.5 block text-sm text-muted">
+                  {t(`categories.${category.id}.description`)}
+                </span>
               </span>
             </label>
           )
@@ -79,10 +83,10 @@ function CategorySelect({ onSelect, canContinue = true, children }) {
           disabled={!selected || !canContinue}
           className="min-h-11 self-start"
         >
-          Continue
+          {t('categorySelect.continue')}
         </Button>
         {selected && !canContinue && (
-          <p className="text-xs text-muted">Acknowledge the notice above to continue.</p>
+          <p className="text-xs text-muted">{t('categorySelect.acknowledgeToContinue')}</p>
         )}
       </div>
     </div>

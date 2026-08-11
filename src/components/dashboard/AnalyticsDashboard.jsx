@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import {
   CATEGORY_LABELS,
   exportComplianceReport,
@@ -30,8 +31,9 @@ function sumField(periods, field) {
 // component ever saw it (aggregateCaseAnalytics.js omits any key below
 // MIN_AGGREGATE_CASES from the document entirely).
 function BarList({ entries, labelFor, max }) {
+  const { t } = useTranslation()
   if (entries.length === 0) {
-    return <p className="text-xs text-muted">No segment reached the reporting threshold in this range.</p>
+    return <p className="text-xs text-muted">{t('analyticsDashboard.noSegment')}</p>
   }
   const peak = max ?? Math.max(...entries.map(([, count]) => count), 1)
   return (
@@ -53,7 +55,9 @@ function BarList({ entries, labelFor, max }) {
 }
 
 // One row per trend period, sparkline-style bars for a single numeric field.
-function TrendBars({ periods, field, format = (v) => v, emptyLabel = 'no data' }) {
+function TrendBars({ periods, field, format = (v) => v, emptyLabel }) {
+  const { t } = useTranslation()
+  const resolvedEmptyLabel = emptyLabel ?? t('analyticsDashboard.noData')
   const values = periods.map((p) => p[field]).filter((v) => v != null)
   const peak = Math.max(...values, 1)
   return (
@@ -72,7 +76,7 @@ function TrendBars({ periods, field, format = (v) => v, emptyLabel = 'no data' }
               )}
             </span>
             <span className="w-20 shrink-0 text-right tabular-nums text-charcoal">
-              {value == null ? emptyLabel : format(value)}
+              {value == null ? resolvedEmptyLabel : format(value)}
             </span>
           </li>
         )
@@ -82,19 +86,20 @@ function TrendBars({ periods, field, format = (v) => v, emptyLabel = 'no data' }
 }
 
 function DistributionBars({ period }) {
+  const { t } = useTranslation()
   if (period.distributionSuppressed || !period.severityDistribution) {
-    return <p className="text-xs text-muted">Insufficient cases this period to show a distribution.</p>
+    return <p className="text-xs text-muted">{t('analyticsDashboard.insufficientForDistribution')}</p>
   }
   const severityEntries = SCORE_BUCKET_ORDER.map((band) => [band, period.severityDistribution[band] ?? 0])
   const evidenceEntries = SCORE_BUCKET_ORDER.map((band) => [band, period.evidenceDistribution[band] ?? 0])
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div>
-        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Severity score</p>
+        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">{t('analyticsDashboard.severityScore')}</p>
         <BarList entries={severityEntries} />
       </div>
       <div>
-        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Evidence score</p>
+        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">{t('analyticsDashboard.evidenceScore')}</p>
         <BarList entries={evidenceEntries} />
       </div>
     </div>
@@ -109,6 +114,7 @@ function DistributionBars({ period }) {
 // caseHandler alike (see firestore.rules), but exporting an offline copy is
 // narrower - see exportComplianceReport.js for why.
 function AnalyticsDashboard({ companyId, canExport = false }) {
+  const { t } = useTranslation()
   const [trend, setTrend] = useState([])
   const [consistency, setConsistency] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -191,13 +197,10 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted">
-          Trends and Consistency Engine insights, aggregated from case metadata only. No case narrative,
-          questionnaire response, or message ever reaches this dashboard.
-        </p>
+        <p className="max-w-2xl text-sm text-muted">{t('analyticsDashboard.intro')}</p>
         <div className="flex items-center gap-2">
-          <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
-            Refresh
+          <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel={t('analyticsDashboard.refreshing')}>
+            {t('analyticsDashboard.refresh')}
           </Button>
           {canExport && (
             <Button
@@ -205,10 +208,10 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
               icon="document"
               onClick={handleExport}
               loading={exporting}
-              loadingLabel="Compiling"
+              loadingLabel={t('analyticsDashboard.compiling')}
               disabled={trend.length === 0}
             >
-              Export compliance report
+              {t('analyticsDashboard.exportReport')}
             </Button>
           )}
         </div>
@@ -217,34 +220,47 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
       {error && <Alert variant="error">{error}</Alert>}
       {exportError && <Alert variant="error">{exportError}</Alert>}
       {exportResult && (
-        <Alert variant="success" title="Report ready">
-          Covers {exportResult.range.startPeriod} to {exportResult.range.endPeriod} ({exportResult.pageCount} pages).{' '}
-          <a href={exportResult.downloadUrl} target="_blank" rel="noreferrer" className="font-semibold underline">
-            Download PDF
-          </a>{' '}
-          — link expires in 15 minutes.
+        <Alert variant="success" title={t('analyticsDashboard.reportReady.title')}>
+          <Trans
+            i18nKey="analyticsDashboard.reportReady.body"
+            values={{
+              start: exportResult.range.startPeriod,
+              end: exportResult.range.endPeriod,
+              pages: exportResult.pageCount,
+            }}
+            components={{
+              link: (
+                <a
+                  href={exportResult.downloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold underline"
+                />
+              ),
+            }}
+          />
         </Alert>
       )}
 
       {trend.length === 0 ? (
         <EmptyState
           icon="overview"
-          title="No analytics yet"
-          description="Nothing has been computed for this company yet. Check back after the next daily analytics run."
+          title={t('analyticsDashboard.empty.title')}
+          description={t('analyticsDashboard.empty.description')}
         />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <StatTile label="Total case volume" hint="Trailing 12 months" value={totalCaseCount} tone="tone-info" icon="cases" />
+            <StatTile label={t('analyticsDashboard.totalCaseVolume')} hint={t('analyticsDashboard.trailing12Months')} value={totalCaseCount} tone="tone-info" icon="cases" />
             <StatTile
-              label="Avg. time to resolution"
+              label={t('analyticsDashboard.avgTimeToResolution')}
               hint={latestPeriod?.period}
-              value={latestPeriod?.avgResolutionDays == null ? '—' : `${latestPeriod.avgResolutionDays}d`}
+              value={latestPeriod?.avgResolutionDays == null ? '—' : t('analyticsDashboard.daysValue', { days: latestPeriod.avgResolutionDays })}
               tone="tone-neutral"
               icon="clock"
             />
             <StatTile
-              label="Acknowledged within window"
+              label={t('analyticsDashboard.acknowledgedWithinWindow')}
               hint={latestPeriod?.compliance?.ruleLabel}
               value={formatPercent(latestPeriod?.compliance?.acknowledgedWithinWindowRate)}
               tone={
@@ -256,7 +272,7 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
               icon="check"
             />
             <StatTile
-              label="Resolved within window"
+              label={t('analyticsDashboard.resolvedWithinWindow')}
               hint={latestPeriod?.compliance?.ruleLabel}
               value={formatPercent(latestPeriod?.compliance?.resolvedWithinWindowRate)}
               tone={
@@ -269,40 +285,43 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
             />
           </div>
 
-          <Card title="Case volume by category" description="Summed across the trailing window. Categories below the reporting threshold are omitted.">
-            <BarList entries={categoryTotals} labelFor={(key) => CATEGORY_LABELS[key] ?? key} />
+          <Card title={t('analyticsDashboard.byCategory.title')} description={t('analyticsDashboard.byCategory.description')}>
+            <BarList
+              entries={categoryTotals}
+              labelFor={(key) => t(`categories.${key}.label`, { defaultValue: CATEGORY_LABELS[key] ?? key })}
+            />
           </Card>
 
-          <Card title="Case volume by department" description="Summed across the trailing window. Departments below the reporting threshold are omitted.">
+          <Card title={t('analyticsDashboard.byDepartment.title')} description={t('analyticsDashboard.byDepartment.description')}>
             <BarList entries={departmentTotals} />
           </Card>
 
-          <Card title="Average time to resolution" description="Days from case creation to closure, by month.">
-            <TrendBars periods={trend} field="avgResolutionDays" format={(v) => `${v}d`} />
+          <Card title={t('analyticsDashboard.avgResolutionTime.title')} description={t('analyticsDashboard.avgResolutionTime.description')}>
+            <TrendBars periods={trend} field="avgResolutionDays" format={(v) => t('analyticsDashboard.daysValue', { days: v })} />
           </Card>
 
           <Card
-            title="Compliance-deadline hit rate"
-            description="Share of cases acknowledged and resolved within the applicable jurisdiction's window, by month."
+            title={t('analyticsDashboard.complianceHitRate.title')}
+            description={t('analyticsDashboard.complianceHitRate.description')}
           >
             <div className="flex flex-col gap-4">
               <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Acknowledged in window</p>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">{t('analyticsDashboard.acknowledgedInWindow')}</p>
                 <TrendBars periods={trend.map((p) => ({ period: p.period, value: p.compliance.acknowledgedWithinWindowRate }))} field="value" format={formatPercent} />
               </div>
               <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">Resolved in window</p>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted">{t('analyticsDashboard.resolvedInWindow')}</p>
                 <TrendBars periods={trend.map((p) => ({ period: p.period, value: p.compliance.resolvedWithinWindowRate }))} field="value" format={formatPercent} />
               </div>
             </div>
           </Card>
 
           <Card
-            title="Severity & evidence score distribution"
-            description="Latest period. Aggregate buckets only — never a single case's exact score."
+            title={t('analyticsDashboard.distribution.title')}
+            description={t('analyticsDashboard.distribution.description')}
             actions={
               latestPeriod?.distributionSuppressed ? (
-                <Badge tone="tone-neutral">Insufficient data</Badge>
+                <Badge tone="tone-neutral">{t('analyticsDashboard.insufficientData')}</Badge>
               ) : null
             }
           >

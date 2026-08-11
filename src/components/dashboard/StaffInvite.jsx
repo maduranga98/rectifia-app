@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { inviteStaff } from '../../services/staffService'
 import { getCompany } from '../../services/companyService'
 import { listCustomRoles } from '../../services/roleService'
@@ -9,22 +10,22 @@ import Button from '../ui/Button'
 import Card from '../ui/Card'
 import { Input, Select } from '../ui/Field'
 
-// What each role can actually do, said in the form rather than left to the
-// admin's memory - picking the wrong role here is the difference between
-// someone seeing case content and not.
-const ROLE_HINTS = {
-  companyAdmin: 'Settings, staff, and routing. Never sees case content.',
-  hrCoordinator: 'Company-wide case oversight and reassignment.',
-  caseHandler: 'Investigates the cases assigned to them.',
-  manager: 'Aggregate team wellbeing only.',
-  pulseCheckReviewer: 'Individual pulse check responses.',
-}
-
 // Company Admin enters an email + role; the actual account creation, custom
 // claim, and set-your-password link all happen server-side
 // (functions/src/staff/inviteStaff.js) - this form never sees or handles a
 // password.
 function StaffInvite({ companyId, onInvited }) {
+  const { t } = useTranslation()
+  // What each role can actually do, said in the form rather than left to the
+  // admin's memory - picking the wrong role here is the difference between
+  // someone seeing case content and not.
+  const ROLE_HINTS = {
+    companyAdmin: t('staffInvite.roleHints.companyAdmin'),
+    hrCoordinator: t('staffInvite.roleHints.hrCoordinator'),
+    caseHandler: t('staffInvite.roleHints.caseHandler'),
+    manager: t('staffInvite.roleHints.manager'),
+    pulseCheckReviewer: t('staffInvite.roleHints.pulseCheckReviewer'),
+  }
   const [email, setEmail] = useState('')
   // Two mutually exclusive ways to assign access, mirroring the
   // "exactly one of role / customRoleId" invariant inviteStaff.js enforces
@@ -90,7 +91,7 @@ function StaffInvite({ companyId, onInvited }) {
   async function handleSubmit(e) {
     e.preventDefault()
     if (roleType === 'custom' && !customRoleId) {
-      setError('Choose a custom role, or create one on the Custom roles page first.')
+      setError(t('staffInvite.chooseCustomRole'))
       return
     }
     setSubmitting(true)
@@ -104,7 +105,7 @@ function StaffInvite({ companyId, onInvited }) {
         actorId: auth.currentUser?.uid,
         departments: isManager ? selectedDepartments : undefined,
       })
-      setSuccess(`Invite sent to ${email.trim()}`)
+      setSuccess(t('staffInvite.inviteSent', { email: email.trim() }))
       setEmail('')
       setSelectedDepartments([])
       onInvited?.()
@@ -117,13 +118,13 @@ function StaffInvite({ companyId, onInvited }) {
 
   return (
     <Card
-      title="Invite a team member"
-      description="They receive a link to set their own password - no password is handled here."
+      title={t('staffInvite.title')}
+      description={t('staffInvite.description')}
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
-            label="Work email"
+            label={t('staffInvite.workEmail')}
             type="email"
             required
             autoComplete="off"
@@ -132,34 +133,31 @@ function StaffInvite({ companyId, onInvited }) {
             onChange={(e) => setEmail(e.target.value)}
           />
           <Select
-            label="Role type"
+            label={t('staffInvite.roleType')}
             value={roleType}
-            hint="A fixed role, or a custom role built on the Custom roles page."
+            hint={t('staffInvite.roleTypeHint')}
             onChange={(e) => setRoleType(e.target.value)}
           >
-            <option value="fixed">Fixed role</option>
-            <option value="custom">Custom role</option>
+            <option value="fixed">{t('staffInvite.fixedRole')}</option>
+            <option value="custom">{t('staffInvite.customRole')}</option>
           </Select>
         </div>
 
         {roleType === 'fixed' ? (
-          <Select label="Role" value={role} hint={ROLE_HINTS[role]} onChange={(e) => setRole(e.target.value)}>
+          <Select label={t('staffInvite.role')} value={role} hint={ROLE_HINTS[role]} onChange={(e) => setRole(e.target.value)}>
             {ASSIGNABLE_ROLES.map((r) => (
               <option key={r} value={r}>
-                {ROLE_LABELS[r]}
+                {t(`roles.${r}`, { defaultValue: ROLE_LABELS[r] })}
               </option>
             ))}
           </Select>
         ) : customRoles.length === 0 ? (
-          <Alert variant="warning">
-            No custom roles exist yet. Create one on the Custom roles page before inviting someone into
-            it.
-          </Alert>
+          <Alert variant="warning">{t('staffInvite.noCustomRoles')}</Alert>
         ) : (
           <Select
-            label="Custom role"
+            label={t('staffInvite.customRole')}
             value={customRoleId}
-            hint="Case Handler and HR Coordinator can never appear here - they aren't composable."
+            hint={t('staffInvite.customRoleHint')}
             onChange={(e) => setCustomRoleId(e.target.value)}
           >
             {customRoles.map((r) => (
@@ -172,17 +170,10 @@ function StaffInvite({ companyId, onInvited }) {
 
         {isManager && (
           <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-medium text-charcoal">Departments</legend>
-            <p className="text-xs text-muted">
-              A manager only sees aggregate pulse results for the departments assigned here. Names
-              must match the department as it appears on employee records.
-            </p>
+            <legend className="text-sm font-medium text-charcoal">{t('staffInvite.departmentsLegend')}</legend>
+            <p className="text-xs text-muted">{t('staffInvite.departmentsHint')}</p>
             {companyDepartments.length === 0 ? (
-              <Alert variant="warning">
-                No departments are configured yet. Add departments on the Departments page before
-                inviting a manager, or invite them now and assign departments from the staff list
-                later.
-              </Alert>
+              <Alert variant="warning">{t('staffInvite.noDepartments')}</Alert>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {companyDepartments.map((dept) => {
@@ -218,10 +209,10 @@ function StaffInvite({ companyId, onInvited }) {
           icon="mail"
           className="self-start"
           loading={submitting}
-          loadingLabel="Sending invite"
+          loadingLabel={t('staffInvite.sending')}
           disabled={!email.trim() || (roleType === 'custom' && !customRoleId)}
         >
-          Send invite
+          {t('staffInvite.sendInvite')}
         </Button>
       </form>
     </Card>

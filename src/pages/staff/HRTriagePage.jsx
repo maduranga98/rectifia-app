@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNow, useReassign } from '../../hooks/useCaseTable'
 import CasesTable from '../../components/dashboard/CasesTable'
 import CaseTriageModal from '../../components/dashboard/CaseTriageModal'
@@ -29,6 +30,7 @@ function isTriageable(caseRow) {
 // Triage is a distinct job, which is why it is a page of its own rather than a
 // button on every row of the main queue.
 function HRTriagePage({ companyId, cases, handlers, loading, error, refresh }) {
+  const { t } = useTranslation()
   const now = useNow()
   const { reassigningId, reassignError, handleReassign } = useReassign(companyId, refresh)
   const [triageCaseId, setTriageCaseId] = useState(null)
@@ -37,11 +39,9 @@ function HRTriagePage({ companyId, cases, handlers, loading, error, refresh }) {
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted">
-          Unassigned cases still waiting to be read and placed with a handler.
-        </p>
-        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
-          Refresh
+        <p className="max-w-2xl text-sm text-muted">{t('hrTriagePage.description')}</p>
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel={t('hrCasesPage.refreshing')}>
+          {t('hrCasesPage.refresh')}
         </Button>
       </div>
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ROLES } from '../../constants/roles'
 import { AggregateTrendsView } from '../../components/pulse-check/PulseTrendDashboard'
 import { listQuestionSetVersions } from '../../services/pulseQuestionService'
@@ -45,12 +46,13 @@ function formatDate(ms) {
 // republished, and whether the change touched the standard questions (a Lumora
 // code change) or only the company's own added ones.
 function QuestionSetTimeline({ versions }) {
+  const { t } = useTranslation()
   if (versions.length === 0) return null
 
   return (
     <Card
-      title="Questionnaire changes"
-      description="Each point where this company republished its check-in questions."
+      title={t('pulseTrendsPage.timeline.title')}
+      description={t('pulseTrendsPage.timeline.description')}
       padded={false}
     >
       <ul className="divide-y divide-line-soft">
@@ -61,35 +63,32 @@ function QuestionSetTimeline({ versions }) {
           const added = (v.questions ?? []).filter((q) => q.tier === 'supplementary').length
           return (
             <li key={v.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 py-3">
-              <span className="text-sm font-medium text-charcoal">Version {v.version}</span>
+              <span className="text-sm font-medium text-charcoal">
+                {t('pulseTrendsPage.timeline.version', { version: v.version })}
+              </span>
               <span className="text-xs text-muted">
-                {ms ? formatDate(ms) : 'date unavailable'}
-                {ms && ` · period ${periodOf(ms)}`}
+                {ms ? formatDate(ms) : t('pulseTrendsPage.timeline.dateUnavailable')}
+                {ms && ` · ${t('pulseTrendsPage.timeline.period', { period: periodOf(ms) })}`}
               </span>
               <span className="text-xs text-muted">
                 {added === 0
-                  ? 'standard questions only'
-                  : `${added} added question${added === 1 ? '' : 's'}`}
+                  ? t('pulseTrendsPage.timeline.standardOnly')
+                  : t('pulseTrendsPage.timeline.addedQuestions', { count: added })}
               </span>
               {coreChanged && (
-                <span className="text-xs text-medium">
-                  standard questions were reworded at this point
-                </span>
+                <span className="text-xs text-medium">{t('pulseTrendsPage.timeline.coreReworded')}</span>
               )}
             </li>
           )
         })}
       </ul>
-      <p className="border-t border-line px-5 py-3 text-xs text-muted">
-        Averages stay comparable across these boundaries: they are calculated from the four
-        standard questions only, which no company can change. A company&apos;s own added questions
-        never feed an average or a trend.
-      </p>
+      <p className="border-t border-line px-5 py-3 text-xs text-muted">{t('pulseTrendsPage.timeline.footnote')}</p>
     </Card>
   )
 }
 
 function PulseTrendsPage({ companyId, role, departments }) {
+  const { t } = useTranslation()
   const scopedDepartments = role === ROLES.MANAGER ? departments : undefined
   // Read once here and shared by both consumers below - the per-card markers
   // and the timeline panel are two views of the same list.
@@ -121,9 +120,7 @@ function PulseTrendsPage({ companyId, role, departments }) {
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        Department and period averages. Individual responses are never attributed to a person here.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('pulseTrendsPage.description')}</p>
       <AggregateTrendsView
         companyId={companyId}
         departments={scopedDepartments}

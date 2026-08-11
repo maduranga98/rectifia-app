@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   ACTION_CATEGORIES,
   MIN_REASON_LENGTH,
@@ -40,14 +41,15 @@ function humanize(value) {
 }
 
 export function ConsistencyFlags({ caseData }) {
+  const { t } = useTranslation()
   const check = caseData.consistencyCheck
   if (!check) {
     return (
       <EmptyState
         compact
         icon="sparkle"
-        title="No consistency check yet"
-        description="A check runs automatically once an action is proposed on this case."
+        title={t('caseDetailView.consistencyFlags.empty.title')}
+        description={t('caseDetailView.consistencyFlags.empty.description')}
       />
     )
   }
@@ -55,11 +57,13 @@ export function ConsistencyFlags({ caseData }) {
   return (
     <div className="flex flex-col gap-2">
       <Badge tone={CONSISTENCY_TONE[check.status] ?? CONSISTENCY_TONE.unrankable} dot>
-        {humanize(check.status)}
+        {t(`caseDetailView.consistencyStatus.${check.status}`, { defaultValue: humanize(check.status) })}
       </Badge>
       {check.flag && <p className="text-sm text-charcoal">{check.flag.message}</p>}
       {typeof check.similarCaseCount === 'number' && (
-        <p className="text-xs text-muted">{check.similarCaseCount} similar case(s) considered.</p>
+        <p className="text-xs text-muted">
+          {t('caseDetailView.consistencyFlags.similarCasesConsidered', { count: check.similarCaseCount })}
+        </p>
       )}
     </div>
   )
@@ -103,6 +107,7 @@ const FLAG_DIRECTION_VARIANT = {
 }
 
 function ConsistencyFlagBanner({ caseData, onChanged }) {
+  const { t } = useTranslation()
   const check = caseData.consistencyCheck
   const flag = check?.status === 'flagged' ? check.flag : null
   const [note, setNote] = useState('')
@@ -130,9 +135,11 @@ function ConsistencyFlagBanner({ caseData, onChanged }) {
 
   if (reviewed) {
     return (
-      <Alert variant="success" title="Consistency flag reviewed">
+      <Alert variant="success" title={t('caseDetailView.flagReviewed.title')}>
         <p>{flag.message}</p>
-        {flag.reviewNote && <p className="mt-1.5">Reviewer note: {flag.reviewNote}</p>}
+        {flag.reviewNote && (
+          <p className="mt-1.5">{t('caseDetailView.flagReviewed.reviewerNote', { note: flag.reviewNote })}</p>
+        )}
       </Alert>
     )
   }
@@ -141,21 +148,19 @@ function ConsistencyFlagBanner({ caseData, onChanged }) {
     <div className="flex flex-col gap-3">
       <Alert
         variant={FLAG_DIRECTION_VARIANT[flag.direction] ?? 'warning'}
-        title={`Consistency flag - proposed action is ${humanize(flag.direction)} than typical`}
+        title={t('caseDetailView.flagBanner.title', {
+          direction: t(`caseDetailView.flagDirection.${flag.direction}`, { defaultValue: humanize(flag.direction) }),
+        })}
       >
         <p>{flag.message}</p>
-        <p className="mt-1.5 text-xs">
-          This is informational only. It does not suggest an action or stop you from proposing or
-          closing this case - the decision remains yours. Add a note to record that you have seen
-          and considered it.
-        </p>
+        <p className="mt-1.5 text-xs">{t('caseDetailView.flagBanner.body')}</p>
       </Alert>
 
       <form onSubmit={handleReview} className="flex flex-col gap-3">
         <Textarea
-          label="Review note"
+          label={t('caseDetailView.flagBanner.reviewNoteLabel')}
           rows={2}
-          placeholder="Note why the proposed action is appropriate despite the flag."
+          placeholder={t('caseDetailView.flagBanner.reviewNotePlaceholder')}
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
@@ -164,10 +169,10 @@ function ConsistencyFlagBanner({ caseData, onChanged }) {
           variant="secondary"
           className="self-start"
           loading={submitting}
-          loadingLabel="Saving"
+          loadingLabel={t('caseDetailView.saving')}
           disabled={!note.trim()}
         >
-          Mark reviewed
+          {t('caseDetailView.flagBanner.markReviewed')}
         </Button>
       </form>
 
@@ -176,7 +181,7 @@ function ConsistencyFlagBanner({ caseData, onChanged }) {
   )
 }
 
-const IDENTITY_FIELD_LABELS = {
+const IDENTITY_FIELD_LABEL_DEFAULTS = {
   name: 'Name',
   email: 'Email',
   phone: 'Phone',
@@ -188,16 +193,17 @@ const IDENTITY_FIELD_LABELS = {
 // decrypted object returned by the callable - it lives only in the parent's
 // component state for this session and is never persisted.
 function RevealedIdentity({ identity }) {
+  const { t } = useTranslation()
   const entries = Object.entries(identity ?? {}).filter(([, value]) => value != null && value !== '')
   if (entries.length === 0) {
-    return <p className="text-sm text-muted">No identity fields were stored.</p>
+    return <p className="text-sm text-muted">{t('caseDetailView.identity.noFieldsStored')}</p>
   }
   return (
     <dl className="flex flex-col divide-y divide-line-soft">
       {entries.map(([key, value]) => (
         <div key={key} className="py-2 first:pt-0 last:pb-0">
           <dt className="text-xs font-medium uppercase tracking-[0.04em] text-muted">
-            {IDENTITY_FIELD_LABELS[key] ?? humanize(key)}
+            {t(`caseDetailView.identity.fields.${key}`, { defaultValue: IDENTITY_FIELD_LABEL_DEFAULTS[key] ?? humanize(key) })}
           </dt>
           <dd className="mt-1 text-sm text-charcoal">
             {Array.isArray(value) ? value.join(', ') : String(value)}
@@ -221,6 +227,7 @@ function RevealedIdentity({ identity }) {
 // confidential, so submitCase recorded the tier but vaulted nothing - there is
 // simply nobody named to reveal).
 export function ReporterIdentityCard({ caseData }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const [reason, setReason] = useState('')
   const [identity, setIdentity] = useState(null)
@@ -250,15 +257,15 @@ export function ReporterIdentityCard({ caseData }) {
   }
 
   return (
-    <Card title="Reporter identity" padded={false}>
+    <Card title={t('caseDetailView.identity.title')} padded={false}>
       <div className="px-5 py-4">
         {!expanded ? (
           <div className="flex flex-col gap-2">
             <p className="text-sm text-muted">
-              This is a confidential-tier report.{' '}
+              {t('caseDetailView.identity.confidentialIntro')}{' '}
               {hasIdentityOnFile
-                ? 'Reporter identity details are on file and can be revealed with a logged reason.'
-                : 'The reporter self-submitted and provided no identity details, so there is nothing to reveal.'}
+                ? t('caseDetailView.identity.onFileHint')
+                : t('caseDetailView.identity.nothingToReveal')}
             </p>
             <Button
               variant="secondary"
@@ -266,26 +273,22 @@ export function ReporterIdentityCard({ caseData }) {
               className="self-start"
               onClick={() => setExpanded(true)}
             >
-              {hasIdentityOnFile ? 'Reveal reporter identity' : 'Show identity status'}
+              {hasIdentityOnFile ? t('caseDetailView.identity.revealButton') : t('caseDetailView.identity.showStatusButton')}
             </Button>
           </div>
         ) : !hasIdentityOnFile ? (
           <div className="flex flex-col gap-3">
-            <Alert variant="info" title="No identity on file">
-              This reporter filed confidentially through the web form and chose not to provide any
-              identifying details. Nothing was stored, so there is nothing to reveal here - the
-              case thread is the only channel back to them.
+            <Alert variant="info" title={t('caseDetailView.identity.noneOnFile.title')}>
+              {t('caseDetailView.identity.noneOnFile.body')}
             </Alert>
             <Button variant="ghost" className="self-start" onClick={() => setExpanded(false)}>
-              Hide
+              {t('caseDetailView.identity.hide')}
             </Button>
           </div>
         ) : identity ? (
           <div className="flex flex-col gap-3">
-            <Alert variant="warning" title="Identity revealed - this access has been logged">
-              Your identity, this case, and your reason are recorded in the access log. This is
-              shown for this session only and is not stored here; leaving and returning will require
-              a fresh reason.
+            <Alert variant="warning" title={t('caseDetailView.identity.revealed.title')}>
+              {t('caseDetailView.identity.revealed.body')}
             </Alert>
             <RevealedIdentity identity={identity} />
             <Button
@@ -296,27 +299,31 @@ export function ReporterIdentityCard({ caseData }) {
                 setReason('')
               }}
             >
-              Hide identity
+              {t('caseDetailView.identity.hideIdentity')}
             </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-charcoal">
               {fieldsOnFile.length > 0
-                ? `On file for this reporter: ${fieldsOnFile
-                    .map((f) => (IDENTITY_FIELD_LABELS[f] ?? f).toLowerCase())
-                    .join(', ')}.`
-                : 'Reporter identity details are on file.'}
+                ? t('caseDetailView.identity.onFileList', {
+                    fields: fieldsOnFile
+                      .map((f) =>
+                        t(`caseDetailView.identity.fields.${f}`, {
+                          defaultValue: IDENTITY_FIELD_LABEL_DEFAULTS[f] ?? f,
+                        }).toLowerCase()
+                      )
+                      .join(', '),
+                  })
+                : t('caseDetailView.identity.onFileGeneric')}
             </p>
-            <Alert variant="warning" title="Revealing identity is logged and attributable">
-              Revealing a confidential reporter&apos;s identity is a deliberate act. Before you
-              proceed, know that your identity, this case, the time, and the reason you type below
-              are written to the access log. Only do this when you have a documented reason to.
+            <Alert variant="warning" title={t('caseDetailView.identity.revealWarning.title')}>
+              {t('caseDetailView.identity.revealWarning.body')}
             </Alert>
             <Textarea
-              label="Reason for revealing this identity"
+              label={t('caseDetailView.identity.reasonLabel')}
               rows={3}
-              placeholder="Record why this reporter's identity needs to be revealed (min. 10 characters)."
+              placeholder={t('caseDetailView.identity.reasonPlaceholder')}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
@@ -326,13 +333,13 @@ export function ReporterIdentityCard({ caseData }) {
                 icon="shield"
                 onClick={handleReveal}
                 loading={revealing}
-                loadingLabel="Revealing"
+                loadingLabel={t('caseDetailView.identity.revealing')}
                 disabled={!reasonValid}
               >
-                Reveal identity
+                {t('caseDetailView.identity.revealIdentityButton')}
               </Button>
               <Button variant="ghost" onClick={() => setExpanded(false)} disabled={revealing}>
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
             {error && <Alert variant="error">{error}</Alert>}
@@ -349,6 +356,7 @@ export function ReporterIdentityCard({ caseData }) {
 // case is a second, separate step gated on that check having finished
 // against the current proposal - see handlerService.closeCase.
 export function ActionForm({ caseData, onChanged }) {
+  const { t } = useTranslation()
   const [actionCategory, setActionCategory] = useState(ACTION_CATEGORIES[0])
   const [notes, setNotes] = useState('')
   const [effectiveDate, setEffectiveDate] = useState('')
@@ -391,8 +399,12 @@ export function ActionForm({ caseData, onChanged }) {
 
   if (alreadyClosed) {
     return (
-      <Alert variant="success" title="Case closed">
-        Final action: {humanize(caseData.actionTaken) ?? 'not recorded'}
+      <Alert variant="success" title={t('caseDetailView.actionForm.caseClosed')}>
+        {t('caseDetailView.actionForm.finalAction', {
+          action: caseData.actionTaken
+            ? t(`actionLabels.${caseData.actionTaken}`, { defaultValue: humanize(caseData.actionTaken) })
+            : t('caseDetailView.actionForm.notRecorded'),
+        })}
       </Alert>
     )
   }
@@ -404,19 +416,19 @@ export function ActionForm({ caseData, onChanged }) {
       <form onSubmit={handlePropose} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
-            label="Category of action"
+            label={t('caseDetailView.actionForm.categoryLabel')}
             value={actionCategory}
             onChange={(e) => setActionCategory(e.target.value)}
           >
             {ACTION_CATEGORIES.map((category) => (
               <option key={category} value={category}>
-                {humanize(category)}
+                {t(`actionLabels.${category}`, { defaultValue: humanize(category) })}
               </option>
             ))}
           </Select>
 
           <Input
-            label="Effective date"
+            label={t('caseDetailView.actionForm.effectiveDateLabel')}
             type="date"
             value={effectiveDate}
             onChange={(e) => setEffectiveDate(e.target.value)}
@@ -424,9 +436,9 @@ export function ActionForm({ caseData, onChanged }) {
         </div>
 
         <Textarea
-          label="Notes"
+          label={t('caseDetailView.actionForm.notesLabel')}
           rows={3}
-          placeholder="What is being done, and on what basis."
+          placeholder={t('caseDetailView.actionForm.notesPlaceholder')}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
@@ -436,22 +448,23 @@ export function ActionForm({ caseData, onChanged }) {
           variant="primary"
           className="self-start"
           loading={submitting}
-          loadingLabel="Saving"
+          loadingLabel={t('caseDetailView.saving')}
           disabled={!notes.trim() || !effectiveDate}
         >
-          {caseData.proposedAction ? 'Update proposed action' : 'Propose action'}
+          {caseData.proposedAction ? t('caseDetailView.actionForm.updateProposed') : t('caseDetailView.actionForm.propose')}
         </Button>
       </form>
 
       {caseData.proposedAction && (
         <div className="rounded-lg border border-line bg-navy-50/60 p-4">
           <p className="text-sm text-charcoal">
-            Proposed action: <strong>{humanize(caseData.proposedAction)}</strong>
+            {t('caseDetailView.actionForm.proposedAction')}{' '}
+            <strong>{t(`actionLabels.${caseData.proposedAction}`, { defaultValue: humanize(caseData.proposedAction) })}</strong>
           </p>
           <p className="mt-1.5 text-xs text-muted">
             {canClose
-              ? 'Consistency check complete - this case can be closed.'
-              : 'Waiting for the consistency check to finish against this proposal before the case can be closed.'}
+              ? t('caseDetailView.actionForm.checkComplete')
+              : t('caseDetailView.actionForm.checkWaiting')}
           </p>
           <Button
             variant="danger"
@@ -459,9 +472,9 @@ export function ActionForm({ caseData, onChanged }) {
             onClick={handleClose}
             disabled={!canClose}
             loading={submitting}
-            loadingLabel="Closing"
+            loadingLabel={t('caseDetailView.actionForm.closing')}
           >
-            Mark case closed
+            {t('caseDetailView.actionForm.markClosed')}
           </Button>
         </div>
       )}

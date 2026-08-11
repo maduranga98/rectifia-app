@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getCompany } from '../../services/companyService'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
@@ -23,6 +24,7 @@ const BILLING_TONE = {
 // calculator) lives in BillingQuote - this page just adds the subscription
 // status chip around it.
 function BillingPage({ companyId }) {
+  const { t } = useTranslation()
   const [company, setCompany] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -57,7 +59,7 @@ function BillingPage({ companyId }) {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">
-                  Subscription status
+                  {t('billingPage.subscriptionStatus')}
                 </p>
                 {company?.name && <p className="mt-1 text-sm text-muted">{company.name}</p>}
               </div>
@@ -69,9 +71,8 @@ function BillingPage({ companyId }) {
 
           <BillingQuote companyId={companyId} />
 
-          <Alert variant="info" title="Read-only">
-            Payment details and plan changes are handled outside this panel. Contact Lumora to
-            change your subscription.
+          <Alert variant="info" title={t('billingPage.readOnly.title')}>
+            {t('billingPage.readOnly.body')}
           </Alert>
         </>
       )}

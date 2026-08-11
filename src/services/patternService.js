@@ -1,5 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, where } from 'firebase/firestore'
 import { auth, firestore } from './firebase'
+import i18n from './i18n'
 
 const PATTERN_SIGNALS_COLLECTION = 'patternSignals'
 const PATTERN_SUMMARIES_COLLECTION = 'patternSignalSummaries'
@@ -67,9 +68,8 @@ export function formatSignalDate(value) {
 // what was counted and over what period. It does not say a department has a
 // problem, does not name a likely cause, and does not recommend an action -
 // the same discipline module 10's consistency flag holds to.
-export const SIGNAL_TYPE_LABEL = {
-  same_category: 'Same category',
-  cross_category: 'Across categories',
+export function signalTypeLabel(signalType) {
+  return i18n.t(`patternService.signalTypeLabel.${signalType}`, { defaultValue: null })
 }
 
 export const SIGNAL_TYPE_TONE = {
@@ -78,15 +78,17 @@ export const SIGNAL_TYPE_TONE = {
 }
 
 export function describeSignal(signal) {
-  const caseWord = signal.caseCount === 1 ? 'case' : 'cases'
-  if (signal.signalType === 'cross_category') {
-    return `${signal.caseCount} ${caseWord} across different categories in this department and role tier in the last ${signal.windowDays} days.`
-  }
-  return `${signal.caseCount} ${caseWord} in this department and role tier in the last ${signal.windowDays} days.`
+  return i18n.t('patternService.describeSignal', {
+    count: signal.caseCount,
+    windowDays: signal.windowDays,
+    context: signal.signalType === 'cross_category' ? 'crossCategory' : undefined,
+  })
 }
 
-export const CASE_COUNT_CAVEAT =
-  'This counts cases, not people. Reports are anonymous, so one person filing several times and several people filing once look identical here.'
+export function caseCountCaveat() {
+  return i18n.t('patternService.caseCountCaveat')
+}
 
-export const CROSS_CATEGORY_CAVEAT =
-  'These cases are of different kinds. That is weaker than a cluster of the same kind of report and should not be read as repeated conduct.'
+export function crossCategoryCaveat() {
+  return i18n.t('patternService.crossCategoryCaveat')
+}

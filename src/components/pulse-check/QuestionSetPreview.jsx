@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import PulseSurveyForm from './PulseSurveyForm'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
@@ -14,6 +15,7 @@ import Badge from '../ui/Badge'
 // somehow activated, submitPulseResponse has no credential to spend - there are
 // two independent reasons nothing can be recorded, not one.
 function QuestionSetPreview({ questionSet, companyName, unpublishedChanges = false, className = '' }) {
+  const { t } = useTranslation()
   const version = questionSet?.version
   const supplementaryCount = (questionSet?.questions ?? []).filter(
     (q) => q.tier === 'supplementary'
@@ -23,19 +25,20 @@ function QuestionSetPreview({ questionSet, companyName, unpublishedChanges = fal
     <div className={`flex flex-col gap-4 ${className}`}>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="tone-neutral">
-          {version ? `Published version ${version}` : 'Standard questions only'}
+          {version
+            ? t('questionSetPreview.publishedVersion', { version })
+            : t('questionSetPreview.standardOnly')}
         </Badge>
         <span className="text-xs text-muted">
           {supplementaryCount === 0
-            ? 'No added questions'
-            : `${supplementaryCount} added question${supplementaryCount === 1 ? '' : 's'}`}
+            ? t('questionSetPreview.noAddedQuestions')
+            : t('questionSetPreview.addedQuestions', { count: supplementaryCount })}
         </span>
       </div>
 
       {unpublishedChanges && (
-        <Alert variant="warning" title="This is the live version, not your draft">
-          You have unpublished changes. This preview shows what employees are receiving right now.
-          Publish to make your changes part of what is sent.
+        <Alert variant="warning" title={t('questionSetPreview.liveVersion.title')}>
+          {t('questionSetPreview.liveVersion.body')}
         </Alert>
       )}
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getCompanyQuote } from '../../services/billingService'
 import { calculateMonthlyPrice } from '../../utils/pricingCalculator'
 import Alert from '../ui/Alert'
@@ -6,13 +7,6 @@ import Card from '../ui/Card'
 import StatTile from '../ui/StatTile'
 import { Input } from '../ui/Field'
 import { SkeletonStats } from '../ui/Loading'
-
-const TIER_LABELS = {
-  starter: 'Starter',
-  growth: 'Growth',
-  scale: 'Scale',
-  enterprise: 'Enterprise',
-}
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat('en-US', {
@@ -28,6 +22,7 @@ function formatCurrency(amount) {
 // per-employee rate shown) and a progressive tier (base fee plus each
 // slice) - transparency into how the number was built, never a case count.
 function BreakdownReceipt({ breakdown }) {
+  const { t } = useTranslation()
   return (
     <ul className="flex flex-col divide-y divide-line-soft rounded-lg border border-line-soft">
       {breakdown.map((line, index) => (
@@ -37,8 +32,14 @@ function BreakdownReceipt({ breakdown }) {
             {line.employees != null && (
               <span className="text-muted">
                 {' '}
-                ({line.employees.toLocaleString()} {line.employees === 1 ? 'employee' : 'employees'}
-                {line.ratePerEmployee != null ? ` @ ${formatCurrency(line.ratePerEmployee)}` : ''})
+                (
+                {line.ratePerEmployee != null
+                  ? t('billingQuote.employeesAtRate', {
+                      count: line.employees,
+                      rate: formatCurrency(line.ratePerEmployee),
+                    })
+                  : t('billingQuote.employeesCount', { count: line.employees })}
+                )
               </span>
             )}
           </span>
@@ -55,6 +56,13 @@ function BreakdownReceipt({ breakdown }) {
 // function of headcount only, and this panel is read-only (no payment form,
 // no plan-change action; see BillingPage.jsx for that boundary).
 function BillingQuote({ companyId }) {
+  const { t } = useTranslation()
+  const TIER_LABELS = {
+    starter: t('billingQuote.tierLabels.starter'),
+    growth: t('billingQuote.tierLabels.growth'),
+    scale: t('billingQuote.tierLabels.scale'),
+    enterprise: t('billingQuote.tierLabels.enterprise'),
+  }
   const [current, setCurrent] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -88,8 +96,8 @@ function BillingQuote({ companyId }) {
 
   if (!current?.quote) {
     return (
-      <Alert variant="info" title="No billable headcount yet">
-        Add employees to your roster on the Employees page to see a billing quote.
+      <Alert variant="info" title={t('billingQuote.noHeadcount.title')}>
+        {t('billingQuote.noHeadcount.body')}
       </Alert>
     )
   }
@@ -108,7 +116,7 @@ function BillingQuote({ companyId }) {
         projectionError = err.message
       }
     } else {
-      projectionError = 'Enter a whole number of employees'
+      projectionError = t('billingQuote.enterWholeNumber')
     }
   }
 
@@ -117,70 +125,69 @@ function BillingQuote({ companyId }) {
       <Card padded={false} className="p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">Current tier</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentTier')}</p>
             <p className="mt-1 text-2xl font-semibold text-charcoal">
               {TIER_LABELS[quote.tier] ?? quote.tier}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">Current monthly price</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentMonthlyPrice')}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-charcoal">
               {formatCurrency(quote.monthlyPrice)}
-              <span className="text-sm font-normal text-muted">/mo</span>
+              <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
             </p>
           </div>
         </div>
       </Card>
 
       {quote.needsManualReview && (
-        <Alert variant="warning" title="Flagged for manual sales review">
-          At this headcount, pricing above 5,000 employees is reviewed by the Rectifia sales team rather
-          than fully automated. The estimate below is shown for transparency but is not a final quote.
+        <Alert variant="warning" title={t('billingQuote.manualReview.title')}>
+          {t('billingQuote.manualReview.body')}
         </Alert>
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <StatTile
-          label="Active employees"
+          label={t('billingQuote.activeEmployees')}
           value={employeeCount.toLocaleString()}
           tone="tone-neutral"
           icon="staff"
         />
         <StatTile
-          label="Effective rate per employee"
+          label={t('billingQuote.effectiveRate')}
           value={formatCurrency(quote.effectiveRatePerEmployee)}
           tone="tone-info"
           icon="billing"
-          hint="Blended: monthly price ÷ active employees"
+          hint={t('billingQuote.effectiveRateHint')}
         />
       </div>
 
-      <Card title="Price breakdown" description="How your current monthly price was built.">
+      <Card title={t('billingQuote.priceBreakdown.title')} description={t('billingQuote.priceBreakdown.description')}>
         <BreakdownReceipt breakdown={quote.breakdown} />
       </Card>
 
       <Card
-        title="Pulse Check add-on"
-        description="Billed separately from your core plan, at a flat per-employee rate."
+        title={t('billingQuote.pulseAddOn.title')}
+        description={t('billingQuote.pulseAddOn.description')}
       >
         <div className="flex items-center justify-between text-sm">
-          <span className="text-charcoal">{employeeCount.toLocaleString()} employees</span>
+          <span className="text-charcoal">{t('billingQuote.employeesCount', { count: employeeCount })}</span>
           <span className="font-medium tabular-nums text-charcoal">
-            {formatCurrency(pulseCheckAddOnPrice)}/mo
+            {formatCurrency(pulseCheckAddOnPrice)}{t('billingQuote.perMonth')}
           </span>
         </div>
       </Card>
 
       <Card
-        title="What if we grow?"
-        description="See your projected price at a future headcount before it happens - no cliffs, no surprise invoice."
+        title={t('billingQuote.whatIfCard.title')}
+        description={t('billingQuote.whatIfCard.description')}
       >
         <div className="flex flex-col gap-4">
           <Input
             type="number"
             min={1}
             step={1}
-            label="Projected headcount"
+            label={t('billingQuote.whatIfCard.projectedHeadcountLabel')}
             placeholder={String(employeeCount)}
             value={projectedInput}
             onChange={(e) => setProjectedInput(e.target.value)}
@@ -192,27 +199,22 @@ function BillingQuote({ companyId }) {
             <>
               <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-navy-50/60 px-4 py-3">
                 <span className="text-sm text-muted">
-                  Projected tier: <span className="font-medium text-charcoal">{TIER_LABELS[projectedQuote.tier] ?? projectedQuote.tier}</span>
+                  {t('billingQuote.whatIfCard.projectedTier')}{' '}
+                  <span className="font-medium text-charcoal">{TIER_LABELS[projectedQuote.tier] ?? projectedQuote.tier}</span>
                 </span>
                 <span className="text-xl font-semibold tabular-nums text-charcoal">
                   {formatCurrency(projectedQuote.monthlyPrice)}
-                  <span className="text-sm font-normal text-muted">/mo</span>
+                  <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
                 </span>
               </div>
 
               {projectedQuote.needsManualReview && (
-                <Alert variant="warning">
-                  This projection is above the 5,000-employee threshold where pricing moves to manual
-                  sales review - treat this figure as an estimate, not a locked-in price.
-                </Alert>
+                <Alert variant="warning">{t('billingQuote.whatIfCard.manualReviewNotice')}</Alert>
               )}
 
               <BreakdownReceipt breakdown={projectedQuote.breakdown} />
 
-              <p className="text-xs text-muted">
-                This projection is calculated instantly in your browser for planning purposes. Your actual
-                bill is always recalculated from your real roster at invoicing time.
-              </p>
+              <p className="text-xs text-muted">{t('billingQuote.whatIfCard.footnote')}</p>
             </>
           )}
         </div>

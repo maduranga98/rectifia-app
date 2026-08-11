@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import PatternSignals from '../../components/dashboard/PatternSignals'
 
 // PatternSignals, given a page of its own and the full width. A cluster lives
@@ -5,11 +6,10 @@ import PatternSignals from '../../components/dashboard/PatternSignals'
 // here it is the whole view. The component's internals are unchanged - it reads
 // the same patternSignals collection derived from the metadata mirror.
 function PatternsPage({ companyId }) {
+  const { t } = useTranslation()
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <p className="max-w-2xl text-sm text-muted">
-        Clusters of related reports across the company, derived from case metadata only.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('patternsPage.description')}</p>
       <PatternSignals companyId={companyId} />
     </div>
   )

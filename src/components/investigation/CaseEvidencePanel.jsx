@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { getCaseThreadForHandler, getEvidenceDownloadUrl } from '../../services/caseThreadService'
 import { buildEvidenceInventory } from '../../utils/evidenceInventory'
@@ -26,6 +27,7 @@ function formatSize(bytes) {
 // callable authorises by Firebase Auth identity). The URL is never stored
 // in state; it lives only inside this click handler.
 function OpenAction({ caseId, fileName }) {
+  const { t } = useTranslation()
   const [opening, setOpening] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -48,10 +50,10 @@ function OpenAction({ caseId, fileName }) {
 
   return (
     <div className="flex flex-col items-start gap-1">
-      <Button variant="secondary" size="sm" icon="document" onClick={open} loading={opening} loadingLabel="Opening" disabled={!fileName}>
-        Open
+      <Button variant="secondary" size="sm" icon="document" onClick={open} loading={opening} loadingLabel={t('caseEvidencePanel.opening')} disabled={!fileName}>
+        {t('caseEvidencePanel.open')}
       </Button>
-      {failed && <span className="text-xs text-critical">Could not open this file.</span>}
+      {failed && <span className="text-xs text-critical">{t('caseEvidencePanel.couldNotOpen')}</span>}
     </div>
   )
 }
@@ -64,6 +66,7 @@ function OpenAction({ caseId, fileName }) {
 // thread scatters evidence across dozens of messages a handler would
 // otherwise have to scroll through one at a time.
 function CaseEvidencePanel({ caseId }) {
+  const { t } = useTranslation()
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -90,27 +93,27 @@ function CaseEvidencePanel({ caseId }) {
 
   return (
     <Card
-      title="Evidence"
-      description={files.length > 0 ? `${files.length} file${files.length === 1 ? '' : 's'} attached across this case's thread.` : undefined}
+      title={t('caseEvidencePanel.title')}
+      description={files.length > 0 ? t('caseEvidencePanel.fileCount', { count: files.length }) : undefined}
       padded={files.length === 0}
     >
       {files.length === 0 ? (
         <EmptyState
           icon="document"
-          title="No evidence has been attached to this case yet."
+          title={t('caseEvidencePanel.empty')}
         />
       ) : (
         <div className="overflow-x-auto">
           <table className="data-table min-w-[760px]">
             <thead>
               <tr>
-                <th>File</th>
-                <th>Type</th>
-                <th>Size</th>
-                <th>Uploaded</th>
-                <th>Supplied by</th>
-                <th>Thread</th>
-                <th>Open</th>
+                <th>{t('caseEvidencePanel.headers.file')}</th>
+                <th>{t('caseEvidencePanel.headers.type')}</th>
+                <th>{t('caseEvidencePanel.headers.size')}</th>
+                <th>{t('caseEvidencePanel.headers.uploaded')}</th>
+                <th>{t('caseEvidencePanel.headers.suppliedBy')}</th>
+                <th>{t('caseEvidencePanel.headers.thread')}</th>
+                <th>{t('caseEvidencePanel.headers.open')}</th>
               </tr>
             </thead>
             <tbody>
@@ -131,7 +134,7 @@ function CaseEvidencePanel({ caseId }) {
                       to={`/dashboard/cases/${caseId}/thread#message-${file.messageId}`}
                       className="text-xs text-navy underline"
                     >
-                      View in thread
+                      {t('caseEvidencePanel.viewInThread')}
                     </Link>
                   </td>
                   <td>
