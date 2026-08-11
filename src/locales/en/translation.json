@@ -9,6 +9,7 @@
     "opensNewTab": "opens in a new tab",
     "loading": "Loading…",
     "loadingShort": "One moment.",
+    "and": "and",
     "cancel": "Cancel",
     "save": "Save",
     "submit": "Submit",
@@ -1241,6 +1242,44 @@
     "addEmail": "Add email",
     "deliverable": "Deliverable",
     "awaitingContactInfo": "Awaiting contact info",
+    "remove": "Remove"
+  },
+  "routingRulesPage": {
+    "ruleSaved": "Rule saved. Cases submitted from now on route to that handler automatically.",
+    "aDepartment": "a department",
+    "aCaseHandler": "a Case Handler",
+    "description": "Each rule maps a case category and department to the Case Handler it should be assigned to. New cases are routed automatically the moment they are submitted.",
+    "needsAttention": {
+      "title": "Needs attention",
+      "casesWaiting_one": "{{count}} case waiting because no rule covered it",
+      "casesWaiting_other": "{{count}} cases waiting because no rule covered it",
+      "body": "Configure the missing rule so future cases in that bucket route on their own, or assign this case to a handler now. Saving a rule does not place cases already waiting here. Nothing on this page shows what a report says - only where it should go."
+    },
+    "configureRule": "Configure rule",
+    "notSetUp": {
+      "title": "Routing is not set up yet",
+      "body": "You need {{missing}} before a rule can be saved. Unrouted cases fall back to manual assignment."
+    },
+    "addRule": {
+      "title": "Add a rule",
+      "description": "An existing category and department pair is overwritten rather than duplicated."
+    },
+    "category": "Category",
+    "noDepartmentsYet": "No departments yet",
+    "unspecifiedOption": "Unspecified",
+    "assignTo": "Assign to",
+    "selectCaseHandler": "Select a Case Handler",
+    "saveRule": "Save rule",
+    "unspecifiedHint": "Unspecified: reports where the reporter did not say which department the involved person works in.",
+    "activeRules": {
+      "title": "Active rules",
+      "configuredCount_one": "{{count}} configured",
+      "configuredCount_other": "{{count}} configured",
+      "empty": {
+        "title": "No routing rules yet",
+        "description": "Without a matching rule, an incoming case is flagged for manual assignment instead of going straight to a handler."
+      }
+    },
     "remove": "Remove"
   },
   "legal": {
