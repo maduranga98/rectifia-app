@@ -1058,6 +1058,30 @@
     "overdue": "Overdue",
     "dueWithin48h": "Due within 48 hours"
   },
+  "pulseResponsesPage": {
+    "description": "Individual pulse check responses with their AI sentiment summaries. Each answer is shown with the question that was asked at the time — not the current wording.",
+    "whatItAsks": {
+      "title": "What the check-in asks",
+      "description": "The questionnaire as employees currently receive it. Read-only — changing it is a Company Admin action."
+    },
+    "hidePreview": "Hide preview",
+    "showCurrentCheckIn": "Show the current check-in"
+  },
+  "pulseTrendsPage": {
+    "description": "Department and period averages. Individual responses are never attributed to a person here.",
+    "timeline": {
+      "title": "Questionnaire changes",
+      "description": "Each point where this company republished its check-in questions.",
+      "version": "Version {{version}}",
+      "dateUnavailable": "date unavailable",
+      "period": "period {{period}}",
+      "standardOnly": "standard questions only",
+      "addedQuestions_one": "{{count}} added question",
+      "addedQuestions_other": "{{count}} added questions",
+      "coreReworded": "standard questions were reworded at this point",
+      "footnote": "Averages stay comparable across these boundaries: they are calculated from the four standard questions only, which no company can change. A company's own added questions never feed an average or a trend."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
