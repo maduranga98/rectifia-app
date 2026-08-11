@@ -762,6 +762,35 @@
       "alreadyChosenNote": "This is the choice you already made when you filed your report - this is just where you follow through on it, whenever you want. Leaving this closed for now keeps your case exactly as it is."
     }
   },
+  "caseThread": {
+    "authors": {
+      "investigatorLog": "Investigator log",
+      "aiAssistant": "AI assistant",
+      "caseHandler": "Case Handler",
+      "caseRecord": "Case record",
+      "reporter": "Reporter"
+    },
+    "opening": "opening…",
+    "openFailed": "Could not open this file.",
+    "errors": {
+      "passcodeRequired": "A passcode is required to load this case."
+    },
+    "noMessages": {
+      "title": "No messages yet",
+      "description": "Anything sent here is added to the case record permanently."
+    },
+    "messageLabel": "Message",
+    "messagePlaceholder": "Type a message...",
+    "attachFile": "Attach file",
+    "sending": "Sending",
+    "send": "Send",
+    "manualLog": {
+      "add": "Add manual log entry",
+      "label": "Manual log entry",
+      "placeholder": "e.g. Called witness X, summary: ...",
+      "save": "Save log entry"
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
