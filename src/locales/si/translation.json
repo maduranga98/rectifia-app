@@ -948,6 +948,49 @@
       "body": "මෙම ගිණුම සමාගමකට සම්බන්ධ කර නොමැත. ආරාධනය නැවත නිකුත් කිරීමට ඔබගේ සමාගම් පරිපාලකගෙන් ඉල්ලන්න."
     }
   },
+  "adminNav": {
+    "overview": "දළ විශ්ලේෂණය",
+    "cases": "නඩු",
+    "analytics": "විශ්ලේෂණ",
+    "departments": "දෙපාර්තමේන්තු",
+    "staff": "කාර්ය මණ්ඩලය",
+    "employees": "සේවකයින්",
+    "routingRules": "මාර්ග කිරීමේ නීති",
+    "policies": "ප්‍රතිපත්ති",
+    "designatedHandlers": "නම් කළ හසුරුවන්නන්",
+    "pulseQuestions": "Pulse ප්‍රශ්න",
+    "dataRetention": "දත්ත රඳවා තබා ගැනීම",
+    "benchmarkPool": "සන්දර්භ එකතුව",
+    "billing": "බිල්පත්",
+    "settings": "සැකසුම්",
+    "teamWellness": "කණ්ඩායම් සුවතාව",
+    "sections": {
+      "cases": "නඩු",
+      "organization": "සංවිධානය",
+      "policyCompliance": "ප්‍රතිපත්ති සහ අනුකූලතාව",
+      "account": "ගිණුම"
+    },
+    "pageTitles": {
+      "overview": "දළ විශ්ලේෂණය",
+      "cases": "නඩු",
+      "analytics": "විශ්ලේෂණ සහ වාර්තාකරණය",
+      "departments": "දෙපාර්තමේන්තු",
+      "policies": "ප්‍රතිපත්ති",
+      "designatedHandlers": "නම් කළ හසුරුවන්නන්",
+      "staff": "කාර්ය මණ්ඩලය",
+      "employees": "සේවකයින්",
+      "pulseQuestions": "Pulse පරීක්ෂණ ප්‍රශ්න",
+      "routing": "මාර්ග කිරීමේ නීති",
+      "billing": "දායකත්වය සහ බිල්පත්",
+      "settings": "සමාගම් සැකසුම්",
+      "retention": "දත්ත රඳවා තබා ගැනීම සහ මකා දැමීම",
+      "benchmark": "අන්තර්-සමාගම් සන්දර්භ එකතුව",
+      "wellness": "කණ්ඩායම් සුවතාව"
+    },
+    "companyAdministration": "සමාගම් පරිපාලනය",
+    "eyebrow": "සමාගම් උපකරණ පුවරුව",
+    "notLinkedBody": "මෙම ගිණුම ({{email}}) සමාගමකට සම්බන්ධ කර නොමැති බැවින්, පරිපාලනය කිරීමට කිසිවක් නැත. ගිණුම නැවත නිකුත් කිරීමට Lumora ගෙන් ඉල්ලන්න."
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",

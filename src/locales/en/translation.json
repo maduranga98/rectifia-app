@@ -948,6 +948,49 @@
       "body": "This account is not linked to a company. Ask your Company Admin to re-issue the invite."
     }
   },
+  "adminNav": {
+    "overview": "Overview",
+    "cases": "Cases",
+    "analytics": "Analytics",
+    "departments": "Departments",
+    "staff": "Staff",
+    "employees": "Employees",
+    "routingRules": "Routing rules",
+    "policies": "Policies",
+    "designatedHandlers": "Designated handlers",
+    "pulseQuestions": "Pulse questions",
+    "dataRetention": "Data retention",
+    "benchmarkPool": "Benchmark pool",
+    "billing": "Billing",
+    "settings": "Settings",
+    "teamWellness": "Team wellness",
+    "sections": {
+      "cases": "Cases",
+      "organization": "Organization",
+      "policyCompliance": "Policy & compliance",
+      "account": "Account"
+    },
+    "pageTitles": {
+      "overview": "Overview",
+      "cases": "Cases",
+      "analytics": "Analytics & reporting",
+      "departments": "Departments",
+      "policies": "Policies",
+      "designatedHandlers": "Designated handlers",
+      "staff": "Staff",
+      "employees": "Employees",
+      "pulseQuestions": "Pulse check questions",
+      "routing": "Routing rules",
+      "billing": "Subscription & billing",
+      "settings": "Company settings",
+      "retention": "Data retention & deletion",
+      "benchmark": "Cross-company benchmark pool",
+      "wellness": "Team wellness"
+    },
+    "companyAdministration": "Company administration",
+    "eyebrow": "Company dashboard",
+    "notLinkedBody": "This account ({{email}}) is not linked to a company, so there is nothing to administer. Ask Lumora to re-issue the account."
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
