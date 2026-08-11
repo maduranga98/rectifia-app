@@ -1767,6 +1767,42 @@
     },
     "uploadButton": "Upload policy"
   },
+  "patternService": {
+    "signalTypeLabel": {
+      "same_category": "Same category",
+      "cross_category": "Across categories"
+    },
+    "describeSignal_one": "{{count}} case in this department and role tier in the last {{windowDays}} days.",
+    "describeSignal_other": "{{count}} cases in this department and role tier in the last {{windowDays}} days.",
+    "describeSignal_crossCategory_one": "{{count}} case across different categories in this department and role tier in the last {{windowDays}} days.",
+    "describeSignal_crossCategory_other": "{{count}} cases across different categories in this department and role tier in the last {{windowDays}} days.",
+    "caseCountCaveat": "This counts cases, not people. Reports are anonymous, so one person filing several times and several people filing once look identical here.",
+    "crossCategoryCaveat": "These cases are of different kinds. That is weaker than a cluster of the same kind of report and should not be read as repeated conduct."
+  },
+  "patternSignals": {
+    "title": "Pattern signals",
+    "description": "Repeat reports grouped by department and role tier over the last {{windowDays}} days. Recomputed daily.",
+    "empty": {
+      "title": "No pattern signals",
+      "description": "No department and role tier reached the reporting threshold in the last {{windowDays}} days."
+    },
+    "dateRange": "First {{first}}, most recent {{last}}.",
+    "suppressionNotice": {
+      "title": "Not enough people in this group to report safely",
+      "body_one": "{{count}} group reached the threshold but was withheld: fewer than {{minPopulation}} employees match the department and role tier. In a group that small, a department and a role tier identify a person, so the signal is not shown at all rather than shown less precisely.",
+      "body_other": "{{count}} groups reached the threshold but were withheld: fewer than {{minPopulation}} employees match the department and role tier. In a group that small, a department and a role tier identify a person, so the signal is not shown at all rather than shown less precisely.",
+      "body_missingDirectory_one": "{{count}} group reached the threshold but was withheld: fewer than {{minPopulation}} employees match the department and role tier, or the employee directory has no entry for that department. In a group that small, a department and a role tier identify a person, so the signal is not shown at all rather than shown less precisely.",
+      "body_missingDirectory_other": "{{count}} groups reached the threshold but were withheld: fewer than {{minPopulation}} employees match the department and role tier, or the employee directory has no entry for that department. In a group that small, a department and a role tier identify a person, so the signal is not shown at all rather than shown less precisely.",
+      "footnote_one": "Which group deliberately is not named here - naming it would be the same disclosure.",
+      "footnote_other": "Which groups deliberately are not named here - naming them would be the same disclosure."
+    }
+  },
+  "relatedPatternNotice": {
+    "title": "Part of a pattern signal - {{signalType}}",
+    "line": "{{department}} / {{roleTier}}: {{description}}",
+    "dateRange": "First {{first}}, most recent {{last}}. This case is one of them.",
+    "informationalOnly": "Informational only. It does not suggest a finding or an action on this case, and the other cases behind this count are not yours to read."
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
