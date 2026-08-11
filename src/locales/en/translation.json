@@ -1725,6 +1725,28 @@
     "given": "Given",
     "ruleApplied": "Rule applied: {{rule}}"
   },
+  "followUpStatus": {
+    "meta": {
+      "scheduled": { "label": "Scheduled", "hint": "Awaiting the first check-in" },
+      "sent": { "label": "Awaiting reply", "hint": "A check-in was posted" },
+      "answeredNoChange": { "label": "Nothing changed", "hint": "Reporter answered: nothing has changed" },
+      "answeredConcern": { "label": "Concern reported", "hint": "Reporter indicated something happened" },
+      "declined": { "label": "Declined / opted out", "hint": "Reporter chose not to answer" },
+      "noResponse": {
+        "label": "Unknown — no response",
+        "hint": "Reporter did not return. This is not evidence that nothing happened."
+      }
+    },
+    "title": "Retaliation follow-ups",
+    "description": "Post-closure check-ins with reporters. Metadata only — the reporter's answer stays with the handler of any case they choose to file.",
+    "empty": {
+      "title": "No follow-ups yet",
+      "description": "Follow-ups are scheduled automatically when a case closes."
+    },
+    "concernNotice_one": "<strong>{{count}}</strong> reporter indicated something happened after their case closed. If they chose to file, it is a new, separate case in the queue with its own handler.",
+    "concernNotice_other": "<strong>{{count}}</strong> reporters indicated something happened after their case closed. If they chose to file, it is a new, separate case in the queue with its own handler.",
+    "noResponseFootnote": "“Unknown — no response” means the reporter did not return, which is the expected case for an anonymous reporter. It is not a sign that nothing happened."
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
