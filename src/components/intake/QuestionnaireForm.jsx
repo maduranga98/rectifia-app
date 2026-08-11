@@ -453,8 +453,23 @@ function QuestionnaireForm({
               continuous control that reads the same whether it's a scale, a
               volume knob, or a filter. Discrete, tappable numbers make clear
               this is a pick-one scale, and they don't fight a touchscreen the
-              way a thin slider thumb does. */}
-          <div role="radiogroup" aria-labelledby={labelId} className="flex flex-wrap gap-2">
+              way a thin slider thumb does.
+
+              A grid with one column per step, not a flex-wrap row of
+              fixed-size circles - fixed 44px circles run out of room on a
+              narrow phone (five of them plus gaps is ~250px, more than the
+              card's content width leaves once the answered-mark and its gap
+              are subtracted), and flex-wrap's answer to that is dropping the
+              last circle onto a lonely second row. A grid divides the actual
+              available width evenly among all `steps.length` columns instead,
+              so the buttons shrink together and the row always reads as one
+              deliberate control, never a wrap. */}
+          <div
+            role="radiogroup"
+            aria-labelledby={labelId}
+            className="grid gap-2"
+            style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+          >
             {steps.map((n) => {
               const active = value === n
               return (
@@ -464,7 +479,7 @@ function QuestionnaireForm({
                   role="radio"
                   aria-checked={active}
                   onClick={() => setAnswer(question, n)}
-                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold tabular-nums transition-colors ${
+                  className={`flex aspect-square w-full min-h-11 items-center justify-center rounded-full border-2 text-sm font-semibold tabular-nums transition-colors ${
                     active
                       ? 'border-navy bg-navy text-white'
                       : 'border-line bg-surface text-charcoal hover:border-navy-200'
