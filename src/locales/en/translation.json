@@ -1714,6 +1714,17 @@
       "neutralNotice": "Check-ins are neutral and optional for the reporter. A reporter can always answer that nothing has changed, or ignore them entirely — there is no chasing. Changes here apply to cases closed from now on."
     }
   },
+  "complianceCountdown": {
+    "overdue": "Overdue",
+    "daysHoursLeft": "{{days}}d {{hours}}h left",
+    "hoursLeft": "{{hours}}h left",
+    "due": "Due {{date}}",
+    "acknowledgment": "Acknowledgment",
+    "sent": "Sent",
+    "feedbackToReporter": "Feedback to reporter",
+    "given": "Given",
+    "ruleApplied": "Rule applied: {{rule}}"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
