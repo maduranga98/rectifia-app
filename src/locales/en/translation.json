@@ -1129,6 +1129,39 @@
     "notAssigned": "Not assigned",
     "delete": "Delete"
   },
+  "policiesPage": {
+    "confirmDelete": "Delete \"{{title}}\" (v{{version}})? This removes the file and cannot be undone.",
+    "description": "Upload your organisation's own policy documents. Their text is extracted and used as reference context when the system reasons about a case, so the questions asked and the evidence sought reflect the procedure your own rules require. Policy never decides an outcome, and reporters never see it.",
+    "coverage": {
+      "title": "Category coverage",
+      "description": "Which case categories your active policies can ground.",
+      "covered": "covered",
+      "noPolicy": "no policy",
+      "nothingFor": "Nothing to draw on for: {{categories}}. Cases in these categories are handled exactly as they are today, without policy grounding."
+    },
+    "uploadTitle": "Upload a policy document",
+    "documents": {
+      "title": "Policy documents",
+      "uploadedCount_one": "{{count}} uploaded",
+      "uploadedCount_other": "{{count}} uploaded",
+      "empty": {
+        "title": "No policy documents yet",
+        "description": "Upload your first policy above to start grounding case handling in your own written rules."
+      }
+    },
+    "status": {
+      "active": "active",
+      "processing": "processing",
+      "archived": "archived",
+      "failed": "failed"
+    },
+    "chunkCount_one": "{{count}} chunk",
+    "chunkCount_other": "{{count}} chunks",
+    "uploaded": "Uploaded {{date}}",
+    "open": "Open",
+    "archive": "Archive",
+    "restore": "Restore"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
