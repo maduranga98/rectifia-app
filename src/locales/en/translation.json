@@ -1610,6 +1610,110 @@
       "button": "Remove permanently"
     }
   },
+  "settingsPage": {
+    "neverSent": "Never sent",
+    "currentlyInTimeZone": "Currently {{time}} in {{timeZone}}",
+    "saving": "Saving",
+    "sending": "Sending",
+    "unsavedChanges": "Unsaved changes",
+    "intro": "Company-wide settings: who is notified when a report is flagged as a crisis, how often Pulse Checks go out, and which jurisdictions drive compliance deadlines.",
+    "notices": {
+      "pulseOff": "Pulse checks turned off.",
+      "cadenceSet": "Pulse-check cadence set to {{cadence}}.",
+      "noInvitesQueued": "No invites were queued — there is no one active on the roster.",
+      "queuedFor_one": "Queued a pulse check for {{count}} employee. Delivery goes out shortly.",
+      "queuedFor_other": "Queued a pulse check for {{count}} employees. Delivery goes out shortly.",
+      "jurisdictionsUpdated": "Jurisdictions updated. This applies to cases created from now on.",
+      "timeZoneSet": "Time zone set to {{timeZone}}.",
+      "followUpOff": "Follow-ups turned off for future closed cases.",
+      "followUpSaved": "Follow-up cadence saved. This applies to cases closed from now on.",
+      "crisisContactSaved": "Crisis contact saved. Crisis-flagged reports will now notify this person directly."
+    },
+    "cadenceLabels": {
+      "off": "Off - do not send",
+      "weekly": "Weekly",
+      "biweekly": "Every two weeks",
+      "monthly": "Monthly"
+    },
+    "jurisdictionLabels": {
+      "EU": "European Union",
+      "UK": "United Kingdom",
+      "US": "United States",
+      "AU": "Australia",
+      "JP": "Japan",
+      "LK": "Sri Lanka"
+    },
+    "crisisContact": {
+      "title": "Crisis contact",
+      "description": "The one person notified directly when a report is flagged with crisis language. These reports bypass normal case routing entirely and reach this person out of band, so it should be a named individual who can act immediately — not a shared inbox or a distribution list.",
+      "saveButton": "Save crisis contact",
+      "noneSet": {
+        "title": "No crisis contact set",
+        "body": "Until this is set, reports flagged with crisis language have no one to notify. Add a named contact below."
+      },
+      "nameLabel": "Contact name",
+      "namePlaceholder": "e.g. Dr. Jordan Lee, EAP counsellor",
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "hint": "A name is required, plus at least one way to reach them — an email, a phone number, or both. This can be an external provider such as an Employee Assistance Programme; they do not need a login on this platform."
+    },
+    "pulseCadence": {
+      "title": "Pulse Check cadence",
+      "description": "How often a pulse-check invite is queued for everyone on the roster.",
+      "selectLabel": "Send Pulse Checks",
+      "activeRoster": "Active roster",
+      "activeRosterHint": "People a send would reach",
+      "awaitingContact": "Awaiting contact info",
+      "awaitingContactHint": "On the roster but with no email",
+      "lastSent": "Last sent",
+      "awaitingContactNotice_one": "{{count}} roster member has no email on file, so their invite waits until an address is added. Add one on the <link>Employees</link> page.",
+      "awaitingContactNotice_other": "{{count}} roster members have no email on file, so their invite waits until an address is added. Add one on the <link>Employees</link> page.",
+      "noRoster": {
+        "title": "No one on the roster",
+        "body": "This cadence will send to nobody until you add employees. Add them on the <link>Employees</link> page."
+      },
+      "sendNowButton": "Send check-in now",
+      "setCadenceHint": "Set a cadence above before sending a check-in on demand.",
+      "addEmployeesHint": "Add employees before sending a check-in.",
+      "sendNowHint": "Queues a check-in for everyone active right now, outside the schedule."
+    },
+    "sendNowModal": {
+      "title": "Send a pulse check now?",
+      "body_one": "This queues a check-in for <strong>{{count}} active employee</strong> right away, regardless of the cadence schedule. Any outstanding pulse-check links are superseded — an employee still holding an older link will be sent a fresh one instead.",
+      "body_other": "This queues a check-in for <strong>{{count}} active employees</strong> right away, regardless of the cadence schedule. Any outstanding pulse-check links are superseded — an employee still holding an older link will be sent a fresh one instead.",
+      "awaitingContactNotice_one": "{{count}} of them has no email on file and will wait for an address before delivery.",
+      "awaitingContactNotice_other": "{{count}} of them have no email on file and will wait for an address before delivery.",
+      "confirm": "Send now"
+    },
+    "jurisdictions": {
+      "title": "Jurisdictions",
+      "description": "The jurisdictions this company operates in. Compliance deadlines follow the strictest one selected.",
+      "saveButton": "Save jurisdictions",
+      "deprecated": "{{label}} — deprecated, can be removed, cannot be re-added",
+      "atLeastOneRequired": "At least one jurisdiction is required.",
+      "strictestNotice": "Default compliance timeline follows <strong>{{jurisdiction}}</strong>, the strictest of the selected jurisdictions.",
+      "changeNotice": "Changing jurisdictions affects deadline computation for <strong>future cases only</strong>. Deadlines are set when a case is created and are not recomputed for cases that already exist."
+    },
+    "timeZone": {
+      "title": "Time zone",
+      "enterHint": "Enter an IANA time zone identifier, e.g. \"Europe/London\".",
+      "decidesHint": "This decides the local hour deadline escalations and pulse-check invitations go out at, not when compliance deadlines themselves fall due.",
+      "invalid": "Not a recognised time zone. Use an IANA identifier such as \"America/New_York\".",
+      "saveButton": "Save time zone"
+    },
+    "followUp": {
+      "title": "Retaliation follow-up check-ins",
+      "description": "After a case closes, reporters get neutral check-ins asking whether anything has changed. This applies to all categories by default — retaliation can follow any report.",
+      "saveButton": "Save follow-up settings",
+      "daysLabel": "Days after closure to check in",
+      "noneWillSend": "No check-ins will be sent.",
+      "checkInsSummary_one": "{{count}} check-in at day {{days}} after a case closes.",
+      "checkInsSummary_other": "{{count}} check-ins at day {{days}} after a case closes.",
+      "categoriesLegend": "Categories to follow up",
+      "categoriesHint": "All on by default. Untick a category to stop scheduling check-ins for cases closed in it.",
+      "neutralNotice": "Check-ins are neutral and optional for the reporter. A reporter can always answer that nothing has changed, or ignore them entirely — there is no chasing. Changes here apply to cases closed from now on."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
