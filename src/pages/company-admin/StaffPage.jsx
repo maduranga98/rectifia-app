@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { listStaff, updateStaffStatus } from '../../services/routingService'
 import { getCompany } from '../../services/companyService'
 import { removeStaffMember, updateStaffDepartments } from '../../services/staffService'
@@ -48,6 +49,7 @@ const ASSIGNABLE_FIXED_ROLES = [ROLES.HR_COORDINATOR, ROLES.CASE_HANDLER, ROLES.
 // are hard-gated to companyAdmin server-side regardless, but the tab is kept
 // out of reach here too rather than offering a control that always fails.
 function StaffPage({ companyId, initialTab = 'roster' }) {
+  const { t } = useTranslation()
   const { role } = useAuth()
   const isCompanyAdmin = role === ROLES.COMPANY_ADMIN
   const [activeTab, setActiveTab] = useState(initialTab === 'roles' && isCompanyAdmin ? 'roles' : 'roster')
@@ -106,7 +108,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
   async function handleToggleStatus(member) {
     const current = member.status ?? 'active'
     if (isLastActiveAdmin(member)) {
-      setError('Cannot suspend the last active Company Admin')
+      setError(t('staffPage.cannotSuspendLastAdmin'))
       return
     }
     setError(null)
@@ -162,12 +164,12 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
 
   async function handleSaveRole(member) {
     if (isLastActiveAdmin(member)) {
-      setError('Cannot move the last active Company Admin off that role')
+      setError(t('staffPage.cannotMoveLastAdmin'))
       return
     }
     const { role: selectedRole, customRoleId } = roleEditSelection
     if (!selectedRole && !customRoleId) {
-      setError('Choose a fixed role or a custom role')
+      setError(t('staffPage.chooseARole'))
       return
     }
     setError(null)
@@ -208,7 +210,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
       icon={showInvite ? 'close' : 'plus'}
       onClick={() => setShowInvite((v) => !v)}
     >
-      {showInvite ? 'Cancel' : 'Invite staff'}
+      {showInvite ? t('common.cancel') : t('staffPage.inviteStaff')}
     </Button>
   ) : null
 
@@ -217,8 +219,8 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
       {isCompanyAdmin && (
         <div className="flex gap-1 border-b border-line-soft">
           {[
-            { id: 'roster', label: 'Team members' },
-            { id: 'roles', label: 'Custom roles' },
+            { id: 'roster', label: t('staffPage.tabs.roster') },
+            { id: 'roles', label: t('staffPage.tabs.roles') },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -241,10 +243,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
       ) : (
         <>
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <p className="max-w-xl text-sm text-muted">
-              Everyone with access to your Rectifia workspace. Suspending a member revokes their
-              sign-in without removing their history.
-            </p>
+            <p className="max-w-xl text-sm text-muted">{t('staffPage.description')}</p>
             {inviteButton}
           </div>
 
@@ -264,15 +263,15 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
             <SkeletonList rows={4} />
           ) : (
             <Card
-              title="Team members"
-              description={`${staff.length} member${staff.length === 1 ? '' : 's'}`}
+              title={t('staffPage.teamMembers')}
+              description={t('staffPage.memberCount', { count: staff.length })}
               padded={false}
             >
               {staff.length === 0 ? (
                 <EmptyState
                   icon="staff"
-                  title="No staff yet"
-                  description="Invite HR coordinators, case handlers, and managers so cases can be routed and worked."
+                  title={t('staffPage.empty.title')}
+                  description={t('staffPage.empty.description')}
                   action={inviteButton}
                 />
               ) : (
@@ -307,10 +306,12 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                           </div>
 
                           <Badge tone="tone-info">
-                            {s.role ? ROLE_LABELS[s.role] ?? s.role : customRoleNames[s.customRoleId] ?? 'Custom role'}
+                            {s.role
+                              ? t(`roles.${s.role}`, { defaultValue: ROLE_LABELS[s.role] ?? s.role })
+                              : customRoleNames[s.customRoleId] ?? t('staffPage.customRole')}
                           </Badge>
                           <Badge tone={suspended ? 'tone-critical' : 'tone-low'} dot>
-                            {suspended ? 'Suspended' : 'Active'}
+                            {suspended ? t('staffPage.suspended') : t('staffPage.active')}
                           </Badge>
 
                           {isManager && (
@@ -320,7 +321,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                               onClick={() => (editingDepartments ? setEditingId(null) : startEditDepartments(s))}
                               disabled={pendingId === s.id}
                             >
-                              {editingDepartments ? 'Cancel' : 'Edit departments'}
+                              {editingDepartments ? t('common.cancel') : t('staffPage.editDepartments')}
                             </Button>
                           )}
 
@@ -331,7 +332,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                               onClick={() => (editingRole ? setRoleEditingId(null) : startEditRole(s))}
                               disabled={pendingId === s.id}
                             >
-                              {editingRole ? 'Cancel' : 'Change role'}
+                              {editingRole ? t('common.cancel') : t('staffPage.changeRole')}
                             </Button>
                           )}
 
@@ -340,9 +341,9 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                             size="sm"
                             onClick={() => handleToggleStatus(s)}
                             disabled={lastActiveAdmin || pendingId === s.id}
-                            title={lastActiveAdmin ? 'Cannot suspend the last active Company Admin' : undefined}
+                            title={lastActiveAdmin ? t('staffPage.cannotSuspendLastAdmin') : undefined}
                           >
-                            {suspended ? 'Reactivate' : 'Suspend'}
+                            {suspended ? t('staffPage.reactivate') : t('staffPage.suspend')}
                           </Button>
 
                           {isCompanyAdmin && (
@@ -352,17 +353,17 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                               onClick={() => (confirmingRemove ? setRemovingId(null) : setRemovingId(s.id))}
                               disabled={pendingId === s.id}
                             >
-                              Remove
+                              {t('staffPage.remove')}
                             </Button>
                           )}
                         </div>
 
                         {isManager && !editingDepartments && (
                           <div className="flex flex-wrap items-center gap-1.5 pl-12">
-                            <span className="text-xs text-muted">Pulse scope:</span>
+                            <span className="text-xs text-muted">{t('staffPage.pulseScope')}</span>
                             {assignedDepartments.length === 0 ? (
                               <span className="text-xs font-medium text-high">
-                                No departments assigned - this manager sees no pulse results
+                                {t('staffPage.noDepartmentsAssigned')}
                               </span>
                             ) : (
                               assignedDepartments.map((name) => (
@@ -377,10 +378,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                         {isManager && editingDepartments && (
                           <div className="flex flex-col gap-2 pl-12">
                             {companyDepartments.length === 0 ? (
-                              <p className="text-xs text-muted">
-                                No departments are configured. Add departments on the Departments page
-                                first.
-                              </p>
+                              <p className="text-xs text-muted">{t('staffPage.noDepartmentsConfigured')}</p>
                             ) : (
                               <div className="flex flex-wrap gap-2">
                                 {companyDepartments.map((dept) => {
@@ -412,9 +410,9 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                                 size="sm"
                                 onClick={() => handleSaveDepartments(s)}
                                 loading={pendingId === s.id}
-                                loadingLabel="Saving"
+                                loadingLabel={t('staffPage.saving')}
                               >
-                                Save departments
+                                {t('staffPage.saveDepartments')}
                               </Button>
                             </div>
                           </div>
@@ -424,27 +422,27 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                           <div className="flex flex-col gap-3 pl-12">
                             <div className="grid gap-3 sm:grid-cols-2">
                               <Select
-                                label="Fixed role"
+                                label={t('staffPage.fixedRole')}
                                 value={roleEditSelection.role}
                                 onChange={(e) =>
                                   setRoleEditSelection({ role: e.target.value, customRoleId: '' })
                                 }
                               >
-                                <option value="">None</option>
+                                <option value="">{t('staffPage.none')}</option>
                                 {ASSIGNABLE_FIXED_ROLES.map((r) => (
                                   <option key={r} value={r}>
-                                    {ROLE_LABELS[r]}
+                                    {t(`roles.${r}`, { defaultValue: ROLE_LABELS[r] })}
                                   </option>
                                 ))}
                               </Select>
                               <Select
-                                label="Custom role"
+                                label={t('staffPage.customRoleLabel')}
                                 value={roleEditSelection.customRoleId}
                                 onChange={(e) =>
                                   setRoleEditSelection({ role: '', customRoleId: e.target.value })
                                 }
                               >
-                                <option value="">None</option>
+                                <option value="">{t('staffPage.none')}</option>
                                 {customRoles.map((r) => (
                                   <option key={r.id} value={r.id}>
                                     {r.name}
@@ -452,21 +450,17 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                                 ))}
                               </Select>
                             </div>
-                            <p className="text-xs text-muted">
-                              Choose exactly one - a fixed role or a custom role, not both. Changing this
-                              member&apos;s role signs them out immediately; they will need to sign in
-                              again for it to take effect.
-                            </p>
+                            <p className="text-xs text-muted">{t('staffPage.chooseOneRoleHint')}</p>
                             <div>
                               <Button
                                 variant="primary"
                                 size="sm"
                                 onClick={() => handleSaveRole(s)}
                                 loading={pendingId === s.id}
-                                loadingLabel="Saving"
+                                loadingLabel={t('staffPage.saving')}
                                 disabled={!roleEditSelection.role && !roleEditSelection.customRoleId}
                               >
-                                Save role
+                                {t('staffPage.saveRole')}
                               </Button>
                             </div>
                           </div>
@@ -475,11 +469,11 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                         {confirmingRemove && (
                           <div className="flex flex-col gap-3 rounded-lg border border-critical-200 bg-critical/5 p-3 pl-12">
                             <p className="text-sm text-charcoal">
-                              Remove <strong>{s.name ?? s.email ?? s.id}</strong>? This permanently
-                              deletes their account and sign-in - it cannot be undone. If you only need
-                              to revoke their access temporarily, use{' '}
-                              <strong>Suspend</strong> instead; a suspended member can be reactivated
-                              later without losing anything.
+                              <Trans
+                                i18nKey="staffPage.removeConfirm.body"
+                                values={{ name: s.name ?? s.email ?? s.id }}
+                                components={{ strong: <strong /> }}
+                              />
                             </p>
                             <div className="flex gap-2">
                               <Button
@@ -487,12 +481,12 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                                 size="sm"
                                 onClick={() => handleRemove(s)}
                                 loading={pendingId === s.id}
-                                loadingLabel="Removing"
+                                loadingLabel={t('staffPage.removing')}
                               >
-                                Remove permanently
+                                {t('staffPage.removeConfirm.button')}
                               </Button>
                               <Button variant="secondary" size="sm" onClick={() => setRemovingId(null)}>
-                                Cancel
+                                {t('common.cancel')}
                               </Button>
                             </div>
                           </div>

@@ -1569,6 +1569,47 @@
     "avgSentimentAcross_one": "avg. sentiment across {{count}} response",
     "avgSentimentAcross_other": "avg. sentiment across {{count}} responses"
   },
+  "staffPage": {
+    "cannotSuspendLastAdmin": "Cannot suspend the last active Company Admin",
+    "cannotMoveLastAdmin": "Cannot move the last active Company Admin off that role",
+    "chooseARole": "Choose a fixed role or a custom role",
+    "inviteStaff": "Invite staff",
+    "tabs": {
+      "roster": "Team members",
+      "roles": "Custom roles"
+    },
+    "description": "Everyone with access to your Rectifia workspace. Suspending a member revokes their sign-in without removing their history.",
+    "teamMembers": "Team members",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "empty": {
+      "title": "No staff yet",
+      "description": "Invite HR coordinators, case handlers, and managers so cases can be routed and worked."
+    },
+    "customRole": "Custom role",
+    "suspended": "Suspended",
+    "active": "Active",
+    "editDepartments": "Edit departments",
+    "changeRole": "Change role",
+    "reactivate": "Reactivate",
+    "suspend": "Suspend",
+    "remove": "Remove",
+    "pulseScope": "Pulse scope:",
+    "noDepartmentsAssigned": "No departments assigned - this manager sees no pulse results",
+    "noDepartmentsConfigured": "No departments are configured. Add departments on the Departments page first.",
+    "saving": "Saving",
+    "saveDepartments": "Save departments",
+    "fixedRole": "Fixed role",
+    "none": "None",
+    "customRoleLabel": "Custom role",
+    "chooseOneRoleHint": "Choose exactly one - a fixed role or a custom role, not both. Changing this member's role signs them out immediately; they will need to sign in again for it to take effect.",
+    "saveRole": "Save role",
+    "removing": "Removing",
+    "removeConfirm": {
+      "body": "Remove <strong>{{name}}</strong>? This permanently deletes their account and sign-in - it cannot be undone. If you only need to revoke their access temporarily, use <strong>Suspend</strong> instead; a suspended member can be reactivated later without losing anything.",
+      "button": "Remove permanently"
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
