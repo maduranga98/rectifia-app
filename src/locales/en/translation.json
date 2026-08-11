@@ -1282,6 +1282,71 @@
     },
     "remove": "Remove"
   },
+  "adminBenchmarkPage": {
+    "optedIn": "Opted in",
+    "notOptedIn": "Not opted in",
+    "optInSuccess": "Opted in. Your published cells will populate at the next monthly recompute — the first one may run within a few minutes.",
+    "withdrawSuccess": "Withdrawn. Your data will be removed from published figures at the next monthly recomputation.",
+    "intro": "The cross-company benchmark pool lets you see whether the shape of your closed cases is typical for your industry and headcount band, or an outlier. It is aggregate statistics only — never raw case data, never your company's identity, and cells below the anonymity thresholds are not published at all.",
+    "participation": {
+      "title": "Your participation",
+      "description": "Reading the pool requires contributing to it. A pool that can be read without contributing collapses into a one-way intelligence product, so both directions of participation are tied together."
+    },
+    "contributingAs": "Contributing as <strong>{{industry}}</strong> in size band <strong>{{band}}</strong>.",
+    "incompleteCellWarning": "Your industry or employee count no longer places your company inside a valid cell. Opt out and back in with an updated employee count to resume contributing and reading.",
+    "sharedData": {
+      "title": "What is and is not shared",
+      "description": "Read this before opting in or out. The acknowledgement below records that you have."
+    },
+    "withdrawCard": {
+      "title": "Withdraw",
+      "description": "Withdrawing takes effect at the next monthly recompute. Your contribution is removed completely — the pool is computed from scratch, not accumulated, so withdrawal is honest.",
+      "button": "Withdraw from the benchmark pool",
+      "body": "After withdrawal your dashboard will no longer show benchmark comparisons, because reading requires contributing. You can opt back in at any time."
+    },
+    "optInCard": {
+      "title": "Opt in",
+      "description": "Declare your industry and current employee count, acknowledge what is shared, and opt in.",
+      "button": "Opt in",
+      "loading": "Opting in",
+      "hint": "Pick an industry, enter your headcount, and tick the acknowledgement.",
+      "industryLabel": "Industry",
+      "industryPlaceholder": "Choose an industry…",
+      "employeeCountLabel": "Employee count",
+      "employeeCountHint": "Bands: {{bands}} employees.",
+      "acknowledgement": "I have read the description above of what is and is not shared, and I understand that withdrawing removes our data from published figures at the next monthly recomputation."
+    },
+    "withdrawModal": {
+      "title": "Withdraw from the benchmark pool?",
+      "body": "Your data is removed from all published figures at the next monthly recomputation. After withdrawal your dashboard will no longer show benchmark comparisons, because reading requires contributing.",
+      "confirm": "Withdraw",
+      "loading": "Withdrawing"
+    },
+    "disclosure": {
+      "leaves": {
+        "title": "What leaves this company's boundary",
+        "category": "The report category",
+        "scores": "Questionnaire scores, aggregated",
+        "tier": "The reporter's tier (anonymous or confidential)",
+        "action": "The action taken to close the case",
+        "closedDate": "The month the case was closed",
+        "industryBand": "Your declared industry and size band"
+      },
+      "never": {
+        "title": "What never leaves this company's boundary",
+        "narrative": "The report narrative or any free text",
+        "names": "Any names, of reporters or of people named in a report",
+        "identity": "The reporter's identity or contact information",
+        "caseId": "The case ID or any identifier that could be traced back to a specific case",
+        "deptNames": "Department names",
+        "companyIdentity": "Your company's identity — published figures never say which companies contributed"
+      },
+      "withdraw": {
+        "title": "Withdrawing",
+        "body": "Withdrawing removes your company's contribution from the pool completely at the next monthly recomputation — the pool is recomputed from scratch each time, not accumulated, so nothing from your company lingers in a published figure after you leave."
+      }
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
