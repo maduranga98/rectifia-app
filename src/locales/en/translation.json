@@ -1347,6 +1347,70 @@
       }
     }
   },
+  "pulseQuestionsPage": {
+    "typeLabels": {
+      "scale": "1-5 scale",
+      "freeText": "Free text"
+    },
+    "coreQuestions": {
+      "title": "Standard questions",
+      "description": "Every company asks these four, in this order, unchanged. They cannot be edited, reordered, or removed.",
+      "whyFixedTitle": "Why these are fixed",
+      "whyFixedBody": "The wellbeing trend on an individual response, and the department averages your managers see, are calculated from these four answers and nothing else. Comparing this month against last month only means something if the question was identical both times. If the wording could change, a “declining” trend might just be a reworded question, and a department average might be averaging answers to two different questions — with no way to tell afterwards which had happened. Questions you add below appear in the survey and in what your HR Coordinator reads, but they never feed those numbers, which is exactly what makes them safe to change whenever you like."
+    },
+    "intro": "What everyone on your roster is asked at each check-in. Four standard questions are fixed for every company; you can add up to {{max}} of your own.",
+    "neverPublished": {
+      "title": "Nothing published yet",
+      "body": "Check-ins are not sent until a questionnaire is published, so nobody is being asked anything right now. Press Publish below to send the standard questions — with or without any of your own."
+    },
+    "addedQuestions": {
+      "title": "Your added questions",
+      "description": "Optional, and yours to change. These appear in the survey and in what your HR Coordinator reads, but never affect the wellbeing trend or any department average."
+    },
+    "saveDraft": "Save draft",
+    "saving": "Saving",
+    "publish": "Publish",
+    "publishing": "Publishing",
+    "unsavedChanges": "Unsaved changes — save before publishing.",
+    "savedNotPublished": "Saved, but not yet sent to anyone. Publish to make it live.",
+    "publishToStart": "Publish to start sending check-ins.",
+    "liveUpToDate": "Live and up to date.",
+    "doNotAskWarning": {
+      "title": "Do not ask people to name other individuals",
+      "body": "A question that asks who someone's problem is with turns a wellness check into an informal reporting channel — without any of the protections the case system provides: no anonymity, no confidential handling, no investigation process, no retaliation follow-up. Answers here are shown to your HR Coordinator attributed to the employee who wrote them, by name. Keep these questions about how work feels, and let the reporting system handle reports."
+    },
+    "usedCount": "{{count}} of {{max}} used",
+    "addQuestion": "Add a question",
+    "noAddedQuestions": "No added questions. The four standard questions are asked on their own.",
+    "addedQuestionLabel": "Added question {{index}}",
+    "remove": "Remove",
+    "questionLabel": "Question",
+    "questionPlaceholder": "e.g. How clear were your priorities this week?",
+    "charactersCount": "{{length}} / {{max}} characters",
+    "answerType": "Answer type",
+    "everyQuestionNeedsText": "Every added question needs some text.",
+    "removalNotice": "Removing a question stops it being asked from the next publish onwards. Answers already given to it are kept, and your HR Coordinator can still read them with the question they were answering — old responses are never rewritten.",
+    "preview": {
+      "title": "Preview",
+      "description": "The check-in exactly as employees receive it. This shows what is published and live, not your draft."
+    },
+    "sendTestButton": "Email me a test check-in",
+    "sending": "Sending",
+    "sendTestHint": "Sends a real check-in link to your own staff email address, and nowhere else. The response it records is marked as a test and never reaches an average or a trend.",
+    "versionBadge": "Version {{version}}",
+    "publishedOn": "published {{date}}.",
+    "draftSaved": "Draft saved. Nothing has changed for employees yet — press Publish to send it.",
+    "publishedNotice": "Published version {{version}}. Check-ins sent from now on use it; links already in someone's inbox keep the questions they were sent with.",
+    "testSentNotice": "A test check-in is on its way to {{email}}. It behaves exactly like a real one, and the response it records is excluded from every average and every trend.",
+    "publishModal": {
+      "title": "Publish this questionnaire?",
+      "intro": "Publishing does four things, and they are worth reading before you press it:",
+      "bullet1": "It becomes what <strong>everyone on your roster</strong> is asked at every check-in from now on.",
+      "bullet2": "It is saved as a permanent version. Old responses keep pointing at the version they answered, so nothing already collected changes meaning.",
+      "bullet3": "Check-in links already sitting in someone's inbox keep the questions they were sent with — they are not switched over mid-flight.",
+      "bullet4": "Your name and the time are recorded against it. This is a change to what your whole workforce is asked, so it has an author."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
