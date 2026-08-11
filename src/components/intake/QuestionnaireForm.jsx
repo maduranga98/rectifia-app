@@ -219,6 +219,12 @@ function buildResponses(questions, answers) {
 // (which only arrives after submission). The partial draft is never sent
 // anywhere for this - see crisisTextCheck.js. Whether the resources were shown
 // is deliberately not recorded anywhere.
+// crisisSlot: optional node rendered immediately after the field of the
+// `triggersCrisisCheck` question, inside that same card - above the evidence
+// step and above the Continue button. The caller decides what (if anything)
+// goes here and when (typically a CrisisResources panel, gated on
+// onCrisisResourcesTrigger having fired) - this component only reserves the
+// spot right next to the field the reporter is looking at.
 function QuestionnaireForm({
   category,
   departments = [],
@@ -226,6 +232,7 @@ function QuestionnaireForm({
   onCrisisCheckField,
   onCrisisResourcesTrigger,
   allowEvidenceStaging = false,
+  crisisSlot,
 }) {
   const { t } = useTranslation()
   const questions = QUESTIONNAIRES[category]
@@ -550,7 +557,10 @@ function QuestionnaireForm({
           {block.map((question) => (
             <div key={question.id} className="flex items-start gap-3">
               <AnsweredMark answered={isAnswered(answers[question.id])} />
-              <div className="min-w-0 flex-1">{renderQuestionField(question)}</div>
+              <div className="min-w-0 flex-1">
+                {renderQuestionField(question)}
+                {question.triggersCrisisCheck && crisisSlot}
+              </div>
             </div>
           ))}
         </section>

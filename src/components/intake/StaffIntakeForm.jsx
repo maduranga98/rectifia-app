@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import CategorySelect from './CategorySelect'
 import QuestionnaireForm from './QuestionnaireForm'
 import CaseCredentialsHandoff from './CaseCredentialsHandoff'
+import CrisisResources from '../shared/CrisisResources'
 import { CATEGORIES } from '../../data/categories'
 import { getCompany } from '../../services/companyService'
 import {
@@ -69,6 +70,11 @@ function StaffIntakeForm({ companyId }) {
 
   // Step 1 - the questionnaire, captured but not yet filed.
   const [responses, setResponses] = useState(null)
+  // Sticky for the rest of this session once the in-browser check trips, same
+  // as Submit.jsx's reporter flow - never written to the case, sent to a
+  // server, or logged. See crisisTextCheck.js and CrisisResources.jsx for the
+  // constraints this exists under.
+  const [crisisTriggered, setCrisisTriggered] = useState(false)
 
   // Step 2 - the reporter's tier decision and, for confidential, who they are.
   const [tier, setTier] = useState('')
@@ -122,6 +128,7 @@ function StaffIntakeForm({ companyId }) {
     setReportedAtInput(toLocalInputValue(new Date()))
     setCategory(null)
     setResponses(null)
+    setCrisisTriggered(false)
     setTier('')
     setIdentity({ name: '', email: '', phone: '', jobTitle: '', notes: '' })
     setInformedConfirmed(false)
@@ -350,6 +357,18 @@ function StaffIntakeForm({ companyId }) {
               category={category}
               departments={departments}
               onSubmit={handleQuestionnaireSubmit}
+              onCrisisResourcesTrigger={() => setCrisisTriggered(true)}
+              // Addressed to the intake taker, not the reporter: these are
+              // resources they can read out to the person on the call, not
+              // support offered to themselves.
+              crisisSlot={
+                crisisTriggered && (
+                  <CrisisResources
+                    heading="Support resources for the reporter"
+                    intro="If what they described suggests they may be in crisis, you can offer them one of these to reach out to directly - separately from this report."
+                  />
+                )
+              }
             />
           </Card>
         </>

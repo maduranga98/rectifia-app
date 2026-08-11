@@ -4,8 +4,10 @@ import { defineConfig } from 'vitest/config'
 // functions in functions/src - no Firebase emulator, no network, no
 // Anthropic API calls (see functions/src/__tests__/support for how
 // admin.firestore() and the firebase-functions v2 wrappers are mocked
-// instead of stood up for real). Scoped to functions/src/__tests__ only:
-// this config does not run React component tests.
+// instead of stood up for real) - plus pure-function unit tests under
+// src/**/__tests__. Both sets stay on `environment: 'node'`: this config does
+// not run React component tests, and adding jsdom for one src/ suite would
+// slow every test here down for no benefit to it.
 //
 // resolve.alias covers ESM `import` of these packages (from test files);
 // support/setup.js additionally patches node:module's CJS resolver so a
@@ -26,7 +28,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['functions/src/**/__tests__/**/*.test.js'],
+    include: ['functions/src/**/__tests__/**/*.test.js', 'src/**/__tests__/**/*.test.js'],
     setupFiles: ['./functions/src/__tests__/support/setup.js'],
     globals: false,
     testTimeout: 5000,

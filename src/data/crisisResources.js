@@ -1,3 +1,5 @@
+import { regionFromTimeZone } from '../utils/regionFromTimeZone'
+
 // Static, hand-maintained crisis support resources, keyed by jurisdiction,
 // with an always-available international fallback.
 //
@@ -169,27 +171,73 @@ export const CRISIS_RESOURCES = {
   ],
 }
 
-// Resolves a set of jurisdiction codes to the resources to show. The
-// international fallback is ALWAYS included, and always alongside any
-// jurisdiction-specific entries rather than instead of them. Unknown codes are
-// ignored. When no jurisdictions are known (for example on the anonymous
-// reporter flow, where the client never learns the company's jurisdictions),
-// every regional list is offered so a reporter anywhere can find a route to
-// local help.
-export function resolveResources(jurisdictions) {
-  const codes =
-    Array.isArray(jurisdictions) && jurisdictions.length > 0
-      ? jurisdictions
-      : Object.keys(CRISIS_RESOURCES)
+// Display labels for the "other countries" grouping only - not used for
+// matching or storage, just so the four regional "Emergency services"
+// entries read as attributed to different countries instead of looking like
+// duplicates of each other.
+const REGION_LABELS = {
+  UK: 'United Kingdom',
+  US: 'United States',
+  EU: 'Europe',
+  AU: 'Australia',
+  JP: 'Japan',
+  LK: 'Sri Lanka',
+}
 
+function groupByRegion(codes) {
+  return codes
+    .map((code) => ({ jurisdiction: code, label: REGION_LABELS[code] ?? code, entries: CRISIS_RESOURCES[code] ?? [] }))
+    .filter((group) => group.entries.length > 0)
+}
+
+function dedupe(codes) {
   const seen = new Set()
-  const regional = []
+  const result = []
   for (const code of codes) {
     if (seen.has(code)) continue
     seen.add(code)
-    const entries = CRISIS_RESOURCES[code]
-    if (entries) regional.push(...entries)
+    result.push(code)
+  }
+  return result
+}
+
+// Resolves a set of jurisdiction codes to the resources to show, split into
+// `primary` (shown expanded) and `other` (every remaining region, grouped by
+// jurisdiction for a collapsed "other countries" expander). The international
+// fallback is ALWAYS included in `primary`, alongside any jurisdiction-
+// specific entries rather than instead of them. Unknown codes are ignored.
+//
+// An explicit `jurisdictions` argument always takes precedence. Absent one,
+// the browser's own time zone (see utils/regionFromTimeZone.js - nothing
+// transmitted, nothing stored) supplies a single best-guess region for
+// `primary`; every other region still remains reachable in `other`. If
+// neither resolves anything (unset jurisdictions and an unrecognised or
+// unavailable time zone), `primary` is the international fallback alone and
+// `other` lists every region - a reporter anywhere can still find local help.
+export function resolveResources(jurisdictions) {
+  const allCodes = Object.keys(CRISIS_RESOURCES)
+
+  if (Array.isArray(jurisdictions) && jurisdictions.length > 0) {
+    const codes = dedupe(jurisdictions)
+    const regional = codes.flatMap((code) => CRISIS_RESOURCES[code] ?? [])
+    const remaining = allCodes.filter((code) => !codes.includes(code))
+    return {
+      primary: [...regional, ...INTERNATIONAL_RESOURCES],
+      other: groupByRegion(remaining),
+    }
   }
 
-  return [...regional, ...INTERNATIONAL_RESOURCES]
+  const region = regionFromTimeZone()
+  if (region && CRISIS_RESOURCES[region]) {
+    const remaining = allCodes.filter((code) => code !== region)
+    return {
+      primary: [...CRISIS_RESOURCES[region], ...INTERNATIONAL_RESOURCES],
+      other: groupByRegion(remaining),
+    }
+  }
+
+  return {
+    primary: [...INTERNATIONAL_RESOURCES],
+    other: groupByRegion(allCodes),
+  }
 }

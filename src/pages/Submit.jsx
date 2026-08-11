@@ -289,17 +289,19 @@ function Submit() {
               onSubmit={handleQuestionnaireSubmit}
               onCrisisResourcesTrigger={() => setCrisisTriggered(true)}
               allowEvidenceStaging
+              // Appears directly under the field that tripped the in-browser
+              // check, inside the same card, above the evidence step and the
+              // Continue button - never below the form as a whole, where it
+              // reads as page footer and gets skipped. Nothing about this
+              // panel blocks, gates, or interrupts the submission; the
+              // reporter carries on exactly as they were. The anonymous
+              // reporting flow never learns the company's jurisdictions, so
+              // no set is passed - resolveResources falls back to a
+              // timezone-derived best guess plus every other region tucked
+              // in the collapsed "other countries" expander.
+              crisisSlot={crisisTriggered && <CrisisResources />}
             />
           </div>
-
-          {/* Appears the moment the in-browser check trips, alongside the form
-              the reporter is still filling in - never over it. Nothing about
-              this panel blocks, gates, or interrupts the submission; the
-              reporter carries on exactly as they were. The anonymous reporting
-              flow never learns the company's jurisdictions, so no set is passed
-              and every regional route plus the international fallback is
-              offered - the reporter may be anywhere. */}
-          {crisisTriggered && <CrisisResources />}
         </div>
       )}
 
