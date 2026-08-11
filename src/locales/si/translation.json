@@ -991,6 +991,43 @@
     "eyebrow": "සමාගම් උපකරණ පුවරුව",
     "notLinkedBody": "මෙම ගිණුම ({{email}}) සමාගමකට සම්බන්ධ කර නොමැති බැවින්, පරිපාලනය කිරීමට කිසිවක් නැත. ගිණුම නැවත නිකුත් කිරීමට Lumora ගෙන් ඉල්ලන්න."
   },
+  "caseWorkspace": {
+    "tabs": {
+      "thread": "පණිවිඩ මාලාව",
+      "questionnaire": "ප්‍රශ්නාවලිය",
+      "evidence": "සාක්ෂි",
+      "checklist": "පරීක්ෂණ ලැයිස්තුව",
+      "consistency": "ස්ථාවරත්වය",
+      "policy": "ප්‍රතිපත්ති යොමු",
+      "compliance": "අනුකූලතාව",
+      "patterns": "රටා",
+      "identity": "අනන්‍යතාව",
+      "share": "බාහිර බෙදාගැනීම",
+      "action": "ක්‍රියාමාර්ගය සහ වාර්තාව"
+    },
+    "actionReport": {
+      "backToCase": "නඩුවට ආපසු",
+      "caseOutcome": "නඩුවේ ප්‍රතිඵලය",
+      "takeAction": "ක්‍රියාමාර්ගයක් ගන්න",
+      "takeActionDescription": "ක්‍රියාමාර්ගයක් යෝජනා කිරීම ස්ථාවරත්ව පරීක්ෂාව ආරම්භ කරයි.",
+      "viewReport": "වාර්තාව බලන්න"
+    },
+    "needsAttention": "අවධානය අවශ්‍යයි",
+    "backToMyCases": "මගේ නඩු වෙත ආපසු",
+    "caseHeading": "නඩුව {{caseId}}",
+    "open": "විවෘතයි",
+    "highPriority": "ඉහළ ප්‍රමුඛතාව",
+    "routes": {
+      "thread": { "title": "නඩු පණිවිඩ මාලාව", "description": "වාර්තාකරු සහ ඔබ අතර පණිවිඩ." },
+      "questionnaire": { "title": "ප්‍රශ්නාවලි පිළිතුරු" },
+      "consistency": { "title": "ස්ථාවරත්ව පරීක්ෂාව" },
+      "compliance": { "title": "අනුකූලතා කාලසීමා" },
+      "patterns": {
+        "title": "සම්බන්ධිත රටා",
+        "description": "මෙම නඩුව සක්‍රීය සමාගම-පුරා රටා සංඥාවක් තුළ පවතීද යන්න."
+      }
+    }
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",

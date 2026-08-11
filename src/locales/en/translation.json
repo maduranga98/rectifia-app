@@ -991,6 +991,43 @@
     "eyebrow": "Company dashboard",
     "notLinkedBody": "This account ({{email}}) is not linked to a company, so there is nothing to administer. Ask Lumora to re-issue the account."
   },
+  "caseWorkspace": {
+    "tabs": {
+      "thread": "Thread",
+      "questionnaire": "Questionnaire",
+      "evidence": "Evidence",
+      "checklist": "Checklist",
+      "consistency": "Consistency",
+      "policy": "Policy references",
+      "compliance": "Compliance",
+      "patterns": "Patterns",
+      "identity": "Identity",
+      "share": "External share",
+      "action": "Action & report"
+    },
+    "actionReport": {
+      "backToCase": "Back to case",
+      "caseOutcome": "Case outcome",
+      "takeAction": "Take action",
+      "takeActionDescription": "Proposing an action starts the consistency check.",
+      "viewReport": "View report"
+    },
+    "needsAttention": "needs attention",
+    "backToMyCases": "Back to my cases",
+    "caseHeading": "Case {{caseId}}",
+    "open": "open",
+    "highPriority": "High priority",
+    "routes": {
+      "thread": { "title": "Case thread", "description": "Messages between the reporter and you." },
+      "questionnaire": { "title": "Questionnaire answers" },
+      "consistency": { "title": "Consistency check" },
+      "compliance": { "title": "Compliance deadlines" },
+      "patterns": {
+        "title": "Related patterns",
+        "description": "Whether this case sits inside an active company-wide pattern signal."
+      }
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
