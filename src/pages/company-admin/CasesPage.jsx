@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { listCaseHandlers, listCasesMissingRoutingRule, reassignCase } from '../../services/routingService'
 import { auth } from '../../services/firebase'
 import { CATEGORIES } from '../../data/categories'
@@ -37,6 +38,7 @@ function formatDate(value) {
 // getCaseForTriage callable's server-side allowlist; the list here is
 // metadata only, the same as every other company-admin surface.
 function CasesPage({ companyId }) {
+  const { t } = useTranslation()
   const [cases, setCases] = useState([])
   const [handlers, setHandlers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -82,7 +84,7 @@ function CasesPage({ companyId }) {
         handlerId,
         actorId: auth.currentUser?.uid,
       })
-      setNotice(`Case ${caseRow.caseId} assigned.`)
+      setNotice(t('adminCasesPage.caseAssigned', { caseId: caseRow.caseId }))
       await refresh()
     } catch (err) {
       setError(err.message)
@@ -94,13 +96,9 @@ function CasesPage({ companyId }) {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted">
-          Cases waiting to be placed because no routing rule covered them. Read the report to decide
-          who should handle it, then assign it to a Case Handler. Content appears only while you have
-          the case open — it stays with the handler once placed.
-        </p>
-        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
-          Refresh
+        <p className="max-w-2xl text-sm text-muted">{t('adminCasesPage.description')}</p>
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel={t('hrCasesPage.refreshing')}>
+          {t('hrCasesPage.refresh')}
         </Button>
       </div>
 
@@ -111,15 +109,15 @@ function CasesPage({ companyId }) {
         <SkeletonList rows={3} />
       ) : (
         <Card
-          title="Awaiting assignment"
-          description={`${cases.length} case${cases.length === 1 ? '' : 's'} waiting`}
+          title={t('adminCasesPage.awaitingAssignment')}
+          description={t('adminCasesPage.casesWaiting', { count: cases.length })}
           padded={false}
         >
           {cases.length === 0 ? (
             <EmptyState
               icon="cases"
-              title="No cases waiting for assignment"
-              description="Cases that can't be routed automatically show up here so you can read and place them. New submissions route to a handler on their own when a matching rule exists."
+              title={t('adminCasesPage.noCasesWaiting.title')}
+              description={t('adminCasesPage.noCasesWaiting.description')}
             />
           ) : (
             <ul className="divide-y divide-line-soft">
@@ -129,14 +127,14 @@ function CasesPage({ companyId }) {
                     <p className="font-mono text-sm font-semibold text-charcoal">{caseRow.caseId}</p>
                     <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                       <span>
-                        {CATEGORIES.find((c) => c.id === caseRow.category)?.label ??
-                          caseRow.category ??
-                          'Uncategorized'}
+                        {CATEGORIES.some((c) => c.id === caseRow.category)
+                          ? t(`categories.${caseRow.category}.label`)
+                          : (caseRow.category ?? t('adminCasesPage.uncategorized'))}
                       </span>
                       <span aria-hidden="true">·</span>
-                      <span>{caseRow.department ?? 'unspecified'}</span>
+                      <span>{caseRow.department ?? t('adminCasesPage.unspecified')}</span>
                       <span aria-hidden="true">·</span>
-                      <span>Submitted {formatDate(caseRow.createdAt)}</span>
+                      <span>{t('adminCasesPage.submitted', { date: formatDate(caseRow.createdAt) })}</span>
                     </p>
                   </div>
 
@@ -152,11 +150,11 @@ function CasesPage({ companyId }) {
                     icon="document"
                     onClick={() => setTriageCaseId(caseRow.caseId)}
                   >
-                    View
+                    {t('adminCasesPage.view')}
                   </Button>
 
                   <select
-                    aria-label={`Assign case ${caseRow.caseId}`}
+                    aria-label={t('adminCasesPage.assignCaseLabel', { caseId: caseRow.caseId })}
                     className="field w-44 py-1 text-xs"
                     value=""
                     disabled={assigningCaseId === caseRow.caseId || handlers.length === 0}
@@ -164,10 +162,10 @@ function CasesPage({ companyId }) {
                   >
                     <option value="" disabled>
                       {assigningCaseId === caseRow.caseId
-                        ? 'Assigning...'
+                        ? t('adminCasesPage.assigning')
                         : handlers.length === 0
-                          ? 'No Case Handlers yet'
-                          : 'Assign to...'}
+                          ? t('adminCasesPage.noHandlersYet')
+                          : t('adminCasesPage.assignTo')}
                     </option>
                     {handlers.map((h) => (
                       <option key={h.id} value={h.id}>
@@ -188,7 +186,7 @@ function CasesPage({ companyId }) {
           companyId={companyId}
           onClose={() => setTriageCaseId(null)}
           onAssigned={(caseId) => {
-            setNotice(`Case ${caseId} assigned.`)
+            setNotice(t('adminCasesPage.caseAssigned', { caseId }))
             refresh()
           }}
         />

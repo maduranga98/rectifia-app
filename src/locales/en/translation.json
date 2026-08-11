@@ -1089,6 +1089,25 @@
       "body": "Payment details and plan changes are handled outside this panel. Contact Lumora to change your subscription."
     }
   },
+  "adminCasesPage": {
+    "description": "Cases waiting to be placed because no routing rule covered them. Read the report to decide who should handle it, then assign it to a Case Handler. Content appears only while you have the case open — it stays with the handler once placed.",
+    "awaitingAssignment": "Awaiting assignment",
+    "casesWaiting_one": "{{count}} case waiting",
+    "casesWaiting_other": "{{count}} cases waiting",
+    "noCasesWaiting": {
+      "title": "No cases waiting for assignment",
+      "description": "Cases that can't be routed automatically show up here so you can read and place them. New submissions route to a handler on their own when a matching rule exists."
+    },
+    "uncategorized": "Uncategorized",
+    "unspecified": "unspecified",
+    "submitted": "Submitted {{date}}",
+    "view": "View",
+    "assignCaseLabel": "Assign case {{caseId}}",
+    "assigning": "Assigning...",
+    "noHandlersYet": "No Case Handlers yet",
+    "assignTo": "Assign to...",
+    "caseAssigned": "Case {{caseId}} assigned."
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
