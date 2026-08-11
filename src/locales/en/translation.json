@@ -1938,6 +1938,65 @@
     "sending": "Sending invite",
     "sendInvite": "Send invite"
   },
+  "permissionModules": {
+    "departments": {
+      "label": "Departments",
+      "description": "Create, rename, and manage the company department list."
+    },
+    "staffManagement": {
+      "label": "Staff management",
+      "description": "View the staff roster and suspend or reactivate accounts."
+    },
+    "routingRules": {
+      "label": "Routing rules",
+      "description": "Configure which Case Handler a category/department pairing routes to."
+    },
+    "policyManagement": {
+      "label": "Policy management",
+      "description": "Upload, archive, and restore the company's written policy documents."
+    },
+    "retentionSettings": {
+      "label": "Data retention settings",
+      "description": "Configure how long identities, cases, and pulse responses are retained."
+    },
+    "billingView": {
+      "label": "Billing (view only)",
+      "description": "View the current subscription tier and billing quote."
+    },
+    "complianceConfig": {
+      "label": "Compliance configuration",
+      "description": "Configure the jurisdictions the company reports and complies under."
+    },
+    "pulseAggregateView": {
+      "label": "Pulse Check aggregate view",
+      "description": "View department-level Pulse Check aggregate results. Never individual responses."
+    },
+    "designatedHandlers": {
+      "label": "Designated handlers (JP)",
+      "description": "Designate or revoke a Case Handler's 従事者 status under Japan's Whistleblower Protection Act, and view the register."
+    }
+  },
+  "roleBuilder": {
+    "newCustomRole": "New custom role",
+    "description": "Build named roles from a fixed set of permission modules. Case Handler and HR Coordinator are not composable - they are not offered here and cannot be built from these modules.",
+    "editCustomRole": "Edit custom role",
+    "roleNameLabel": "Role name",
+    "roleNamePlaceholder": "e.g. Billing Coordinator",
+    "permissionModulesLegend": "Permission modules",
+    "saving": "Saving",
+    "saveChanges": "Save changes",
+    "createRole": "Create role",
+    "empty": {
+      "title": "No custom roles yet",
+      "description": "Create a named role from the permission modules above to assign to staff who aren't Case Handlers or HR Coordinators."
+    },
+    "customRolesTitle": "Custom roles",
+    "roleCount_one": "{{count}} role",
+    "roleCount_other": "{{count}} roles",
+    "edit": "Edit",
+    "deleting": "Deleting",
+    "delete": "Delete"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
