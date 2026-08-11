@@ -1042,6 +1042,22 @@
     "refreshing": "Refreshing",
     "refresh": "Refresh"
   },
+  "hrTriagePage": {
+    "description": "Unassigned cases still waiting to be read and placed with a handler."
+  },
+  "hrOverviewPage": {
+    "description": "Every case in the company, by metadata only. Case content stays with the assigned handler.",
+    "openCases": "Open cases",
+    "deadlinePressure": "Deadline pressure",
+    "deadlinePressureHint": "Approaching or past a compliance deadline",
+    "unassigned": "Unassigned",
+    "complianceSummary": {
+      "title": "Compliance summary",
+      "description": "Deadlines across the company's open cases."
+    },
+    "overdue": "Overdue",
+    "dueWithin48h": "Due within 48 hours"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",

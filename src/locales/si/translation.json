@@ -1042,6 +1042,22 @@
     "refreshing": "නැවුම් කරමින්",
     "refresh": "නැවුම් කරන්න"
   },
+  "hrTriagePage": {
+    "description": "හසුරුවන්නෙකු සමඟ තැබීමට තවම කියවීමට සහ පවරා ගැනීමට රැඳී සිටින නොපවරන ලද නඩු."
+  },
+  "hrOverviewPage": {
+    "description": "සමාගමේ සෑම නඩුවක්ම, පශ්චාත් දත්ත වලින් පමණි. නඩු අන්තර්ගතය පවරන ලද හසුරුවන්නා සමඟ පවතී.",
+    "openCases": "විවෘත නඩු",
+    "deadlinePressure": "කාලසීමා පීඩනය",
+    "deadlinePressureHint": "අනුකූලතා කාලසීමාවක් ළඟාවෙමින් හෝ ඉකුත් වී",
+    "unassigned": "නොපවරන ලද",
+    "complianceSummary": {
+      "title": "අනුකූලතා සාරාංශය",
+      "description": "සමාගමේ විවෘත නඩු පුරා කාලසීමා."
+    },
+    "overdue": "ඉකුත් වී ඇත",
+    "dueWithin48h": "පැය 48ක් තුළ නියමිතයි"
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",

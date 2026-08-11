@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   APPROACHING_DEADLINE_WINDOW_MS,
   nextDeadlineMs,
@@ -16,6 +17,7 @@ import { SkeletonStats } from '../../components/ui/Loading'
 // landing here after the All cases page is instant. Metadata only: counts and
 // deadlines, never case content.
 function HROverviewPage({ cases, loading, error, refresh }) {
+  const { t } = useTranslation()
   const now = useNow()
 
   const openCount = cases.filter((c) => c.status !== 'closed').length
@@ -39,12 +41,9 @@ function HROverviewPage({ cases, loading, error, refresh }) {
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted">
-          Every case in the company, by metadata only. Case content stays with the assigned
-          handler.
-        </p>
-        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
-          Refresh
+        <p className="max-w-2xl text-sm text-muted">{t('hrOverviewPage.description')}</p>
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel={t('hrCasesPage.refreshing')}>
+          {t('hrCasesPage.refresh')}
         </Button>
       </div>
 
@@ -55,35 +54,35 @@ function HROverviewPage({ cases, loading, error, refresh }) {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <StatTile label="Open cases" value={openCount} tone="tone-info" icon="cases" />
+            <StatTile label={t('hrOverviewPage.openCases')} value={openCount} tone="tone-info" icon="cases" />
             <StatTile
-              label="Deadline pressure"
-              hint="Approaching or past a compliance deadline"
+              label={t('hrOverviewPage.deadlinePressure')}
+              hint={t('hrOverviewPage.deadlinePressureHint')}
               value={deadlinePressure}
               tone={deadlinePressure > 0 ? 'tone-high' : 'tone-low'}
               icon="clock"
             />
             <StatTile
-              label="Unassigned"
+              label={t('hrOverviewPage.unassigned')}
               value={unassignedCount}
               tone={unassignedCount > 0 ? 'tone-critical' : 'tone-neutral'}
               icon="alert"
             />
           </div>
 
-          <Card title="Compliance summary" description="Deadlines across the company's open cases.">
+          <Card title={t('hrOverviewPage.complianceSummary.title')} description={t('hrOverviewPage.complianceSummary.description')}>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <div>
                 <p className="text-3xl font-semibold tabular-nums text-charcoal">{overdueCount}</p>
-                <p className="text-sm text-muted">Overdue</p>
+                <p className="text-sm text-muted">{t('hrOverviewPage.overdue')}</p>
               </div>
               <div>
                 <p className="text-3xl font-semibold tabular-nums text-charcoal">{approachingCount}</p>
-                <p className="text-sm text-muted">Due within 48 hours</p>
+                <p className="text-sm text-muted">{t('hrOverviewPage.dueWithin48h')}</p>
               </div>
               <div>
                 <p className="text-3xl font-semibold tabular-nums text-charcoal">{openCount}</p>
-                <p className="text-sm text-muted">Open cases</p>
+                <p className="text-sm text-muted">{t('hrOverviewPage.openCases')}</p>
               </div>
             </div>
           </Card>
