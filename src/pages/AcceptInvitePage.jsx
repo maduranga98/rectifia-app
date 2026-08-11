@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { verifyInviteCode, acceptInvite, signIn, markInviteAccepted } from '../services/authService'
 import AuthLayout from '../components/shared/AuthLayout'
 import Alert from '../components/ui/Alert'
@@ -12,6 +13,7 @@ import { FullPageLoader } from '../components/ui/Loading'
 // expired or already-used code, so that's what drives the error state below
 // rather than a separate Firestore "used" lookup.
 function AcceptInvitePage() {
+  const { t } = useTranslation()
   const { token } = useParams()
   const navigate = useNavigate()
   const [email, setEmail] = useState(null)
@@ -32,8 +34,8 @@ function AcceptInvitePage() {
         if (!cancelled) {
           setTokenError(
             err.code === 'auth/expired-action-code' || err.code === 'auth/invalid-action-code'
-              ? 'This invite link has expired or has already been used. Ask your Company Admin to send a new one.'
-              : 'This invite link is not valid.'
+              ? t('acceptInvite.errors.expired')
+              : t('acceptInvite.errors.invalid')
           )
         }
       } finally {
@@ -44,17 +46,17 @@ function AcceptInvitePage() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [token, t])
 
   async function handleSubmit(e) {
     e.preventDefault()
     setFormError(null)
     if (password.length < 8) {
-      setFormError('Password must be at least 8 characters')
+      setFormError(t('acceptInvite.errors.tooShort'))
       return
     }
     if (password !== confirmPassword) {
-      setFormError('Passwords do not match')
+      setFormError(t('acceptInvite.errors.mismatch'))
       return
     }
     setSubmitting(true)
@@ -67,27 +69,27 @@ function AcceptInvitePage() {
       await markInviteAccepted()
       navigate('/dashboard', { replace: true })
     } catch {
-      setFormError('Could not set your password. Please try again.')
+      setFormError(t('acceptInvite.errors.setPasswordFailed'))
     } finally {
       setSubmitting(false)
     }
   }
 
   if (checking) {
-    return <FullPageLoader label="Checking your invite" />
+    return <FullPageLoader label={t('acceptInvite.checking')} />
   }
 
   if (tokenError) {
     return (
       <AuthLayout
-        title="Invite not available"
+        title={t('acceptInvite.notAvailable.title')}
         footer={
           <Link to="/login" className="font-medium text-navy hover:underline">
-            Go to sign in
+            {t('acceptInvite.notAvailable.goToSignIn')}
           </Link>
         }
       >
-        <Alert variant="error" title="This link cannot be used">
+        <Alert variant="error" title={t('acceptInvite.notAvailable.alertTitle')}>
           {tokenError}
         </Alert>
       </AuthLayout>
@@ -96,27 +98,27 @@ function AcceptInvitePage() {
 
   return (
     <AuthLayout
-      title="Set up your account"
-      description="Choose a password and you're in."
+      title={t('acceptInvite.title')}
+      description={t('acceptInvite.description')}
     >
       <form onSubmit={handleSubmit} className="card flex flex-col gap-4 p-6">
-        <Input label="Your email" type="email" value={email ?? ''} readOnly disabled />
+        <Input label={t('acceptInvite.yourEmail')} type="email" value={email ?? ''} readOnly disabled />
         <Input
-          label="Choose a password"
+          label={t('acceptInvite.choosePassword')}
           type="password"
           required
           autoComplete="new-password"
-          placeholder="At least 8 characters"
-          hint="Use at least 8 characters."
+          placeholder={t('acceptInvite.atLeast8')}
+          hint={t('acceptInvite.hint')}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
         <Input
-          label="Confirm password"
+          label={t('acceptInvite.confirmPassword')}
           type="password"
           required
           autoComplete="new-password"
-          placeholder="Re-enter your password"
+          placeholder={t('acceptInvite.reEnter')}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
@@ -129,9 +131,9 @@ function AcceptInvitePage() {
           size="lg"
           className="w-full"
           loading={submitting}
-          loadingLabel="Setting up"
+          loadingLabel={t('acceptInvite.settingUp')}
         >
-          Set password and continue
+          {t('acceptInvite.setPasswordAndContinue')}
         </Button>
       </form>
     </AuthLayout>
