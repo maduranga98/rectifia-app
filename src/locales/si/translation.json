@@ -2263,6 +2263,90 @@
     },
     "viewInThread": "තුනියේ බලන්න"
   },
+  "caseReport": {
+    "author": {
+      "investigatorLog": "විමර්ශක ලඝු-සටහන",
+      "system": "පද්ධතිය",
+      "aiAssistant": "AI සහායක",
+      "caseHandler": "නඩු හසුරුවන්නා",
+      "reporter": "වාර්තාකරු"
+    },
+    "submittedByOn": "{{by}} විසින් {{date}} දින ඉදිරිපත් කරන ලදි",
+    "openingEllipsis": "විවෘත කරමින්…",
+    "open": "විවෘත කරන්න",
+    "couldNotOpen": "මෙම ගොනුව විවෘත කළ නොහැකි විය.",
+    "title": "නඩු වාර්තාව",
+    "summary": {
+      "title": "නඩු සාරාංශය",
+      "category": "වර්ගය",
+      "status": "තත්ත්වය",
+      "created": "නිර්මාණය කළේ",
+      "closed": "වසා දැම්මේ",
+      "severityScore": "බරපතලකම් ලකුණ",
+      "evidenceScore": "සාක්ෂි ලකුණ"
+    },
+    "timeline": {
+      "title": "පණිවිඩ කාලරේඛාව",
+      "empty": "පණිවිඩ නැත."
+    },
+    "evidence": {
+      "title": "සාක්ෂි",
+      "empty": "ඇමුණුම් නැත."
+    },
+    "manualLog": {
+      "title": "විමර්ශක අතින් ලඝු-සටහන",
+      "empty": "අතින් ලඝු-සටහන් ඇතුළත් කිරීම් නැත."
+    },
+    "consistencyCheck": {
+      "title": "අනුකූලතා පරීක්ෂාව",
+      "empty": "මෙම නඩුව සඳහා අනුකූලතා පරීක්ෂාවක් ධාවනය වී නැත.",
+      "status": "තත්ත්වය",
+      "flag": "සලකුණ",
+      "none": "කිසිවක් නැත",
+      "typicalAction": "සාමාන්‍ය ක්‍රියාමාර්ගය",
+      "resolutionNotes": "විසඳුම් සටහන්"
+    },
+    "policyInEffect": {
+      "title": "ක්‍රියාත්මක ප්‍රතිපත්තිය",
+      "empty": "එය නිර්මාණය කළ විට මෙම නඩුවේ වර්ගය සඳහා සමාගමේ ප්‍රතිපත්තියක් ක්‍රියාත්මකව නොතිබුණි."
+    },
+    "finalAction": {
+      "title": "ගත් අවසාන ක්‍රියාමාර්ගය",
+      "action": "ක්‍රියාමාර්ගය",
+      "notYetDecided": "තවම තීරණය කර නැත",
+      "effectiveDate": "ක්‍රියාත්මක වන දිනය",
+      "notes": "සටහන්"
+    },
+    "complianceLog": {
+      "title": "අනුකූලතා අවසාන දින ලඝු-සටහන",
+      "ruleApplied": "යෙදූ නීතිය",
+      "acknowledgmentDue": "පිළිගැනීමේ නියමිත දිනය",
+      "acknowledgmentSent": "පිළිගැනීම යවන ලද දිනය",
+      "feedbackDue": "ප්‍රතිචාරයේ නියමිත දිනය",
+      "feedbackGiven": "ප්‍රතිචාරය ලබා දුන් දිනය"
+    },
+    "externalShares": {
+      "title": "බාහිර බෙදාගැනීම්",
+      "description": "සංවිධානයෙන් පිටත මෙම නඩුව බෙදාගත්තේ කවුරුන් සමඟද - මෙම නඩුව දුටුවේ කවුරුන්ද යන්න නඩු ඉතිහාසයේ කොටසකි.",
+      "empty": "මෙම නඩුව සඳහා කිසි විටෙකත් බාහිර බෙදාගැනීම් නිර්මාණය කර නොමැත.",
+      "unknownOrganisation": "නොදන්නා සංවිධානය",
+      "summaryLine": "{{recipient}} · {{scope}} විෂය පථය · නිර්මාණය කළේ {{created}} · කල් ඉකුත් වන්නේ {{expires}}",
+      "accessCount_one": "ප්‍රවේශයක්",
+      "accessCount_other": "ප්‍රවේශ {{count}}ක්",
+      "lastAccessed": ", අවසන් වරට {{date}}",
+      "revokedReason": " · අවලංගු කළේ: {{reason}}"
+    },
+    "restrictedIdentity": {
+      "title": "සීමිත - වාර්තාකරු අනන්‍යතාවය",
+      "description": "රහස්‍ය මට්ටම. වාර්තාකරු අනන්‍යතාවය දැකීමට බලයලත් භූමිකා සඳහා පමණක් දෘශ්‍යමානයි.",
+      "status": "තත්ත්වය",
+      "detailsOnFile": "ගොනුවේ ඇති විස්තර",
+      "access": "ප්‍රවේශය",
+      "identifiedThemselves": "තමන්ව හඳුනා දුන්නේය",
+      "identifiedThemselvesValue": "{{date}} ({{by}}) - {{note}}",
+      "notAuthorized": "මෙම නඩුව සඳහා වාර්තාකරු අනන්‍යතාවය බැලීමට ඔබට බලය නැත."
+    }
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",

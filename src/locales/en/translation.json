@@ -2263,6 +2263,90 @@
     },
     "viewInThread": "View in thread"
   },
+  "caseReport": {
+    "author": {
+      "investigatorLog": "Investigator log",
+      "system": "System",
+      "aiAssistant": "AI assistant",
+      "caseHandler": "Case Handler",
+      "reporter": "Reporter"
+    },
+    "submittedByOn": "submitted by {{by}} on {{date}}",
+    "openingEllipsis": "Opening…",
+    "open": "Open",
+    "couldNotOpen": "Could not open this file.",
+    "title": "Case report",
+    "summary": {
+      "title": "Case summary",
+      "category": "Category",
+      "status": "Status",
+      "created": "Created",
+      "closed": "Closed",
+      "severityScore": "Severity score",
+      "evidenceScore": "Evidence score"
+    },
+    "timeline": {
+      "title": "Message timeline",
+      "empty": "No messages."
+    },
+    "evidence": {
+      "title": "Evidence",
+      "empty": "No attachments."
+    },
+    "manualLog": {
+      "title": "Investigator manual log",
+      "empty": "No manual log entries."
+    },
+    "consistencyCheck": {
+      "title": "Consistency check",
+      "empty": "No consistency check has run for this case.",
+      "status": "Status",
+      "flag": "Flag",
+      "none": "None",
+      "typicalAction": "Typical action",
+      "resolutionNotes": "Resolution notes"
+    },
+    "policyInEffect": {
+      "title": "Policy in effect",
+      "empty": "No company policy was in effect for this case's category when it was created."
+    },
+    "finalAction": {
+      "title": "Final action taken",
+      "action": "Action",
+      "notYetDecided": "Not yet decided",
+      "effectiveDate": "Effective date",
+      "notes": "Notes"
+    },
+    "complianceLog": {
+      "title": "Compliance deadline log",
+      "ruleApplied": "Rule applied",
+      "acknowledgmentDue": "Acknowledgment due",
+      "acknowledgmentSent": "Acknowledgment sent",
+      "feedbackDue": "Feedback due",
+      "feedbackGiven": "Feedback given"
+    },
+    "externalShares": {
+      "title": "External shares",
+      "description": "Who this case was shared with outside the organisation - who saw this case is part of the case history.",
+      "empty": "No external shares were ever created for this case.",
+      "unknownOrganisation": "Unknown organisation",
+      "summaryLine": "{{recipient}} · {{scope}} scope · created {{created}} · expires {{expires}}",
+      "accessCount_one": "{{count}} access",
+      "accessCount_other": "{{count}} accesses",
+      "lastAccessed": ", last {{date}}",
+      "revokedReason": " · revoked: {{reason}}"
+    },
+    "restrictedIdentity": {
+      "title": "Restricted - reporter identity",
+      "description": "Confidential tier. Visible only to roles authorized to see reporter identity.",
+      "status": "Status",
+      "detailsOnFile": "Details on file",
+      "access": "Access",
+      "identifiedThemselves": "Identified themselves",
+      "identifiedThemselvesValue": "{{date}} ({{by}}) - {{note}}",
+      "notAuthorized": "You are not authorized to view reporter identity for this case."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
