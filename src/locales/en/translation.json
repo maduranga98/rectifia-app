@@ -901,6 +901,53 @@
     "closeNavigation": "Close navigation",
     "openNavigation": "Open navigation"
   },
+  "roles": {
+    "companyAdmin": "Company Admin",
+    "hrCoordinator": "HR Coordinator",
+    "caseHandler": "Case Handler",
+    "manager": "Manager",
+    "pulseCheckReviewer": "Pulse Check Reviewer",
+    "staff": "Staff"
+  },
+  "dashboardNav": {
+    "overview": "Overview",
+    "allCases": "All cases",
+    "awaitingTriage": "Awaiting triage",
+    "patterns": "Patterns",
+    "followUps": "Follow-ups",
+    "pulseChecks": "Pulse checks",
+    "trends": "Trends",
+    "benchmark": "Benchmark",
+    "analytics": "Analytics",
+    "fileAReport": "File a report",
+    "myCases": "My cases",
+    "myDesignation": "My designation",
+    "pulseResponses": "Pulse responses",
+    "teamWellness": "Team wellness",
+    "caseWorkspace": "Case workspace",
+    "dashboard": "Dashboard",
+    "eyebrow": "Dashboard",
+    "featureDisabled": {
+      "title": "This feature is currently disabled",
+      "description": "Ask a Super Admin to enable it for your company."
+    },
+    "nothingToShow": {
+      "title": "Nothing to show yet",
+      "description": "No dashboard is configured for the {{role}} role yet."
+    },
+    "noPermissions": {
+      "title": "No permissions assigned",
+      "body": "This role has no permissions assigned yet. Ask your Company Admin to add permissions to the role."
+    },
+    "noRole": {
+      "title": "No role assigned",
+      "body": "This account has no role assigned yet, so there is nothing to show. Ask your Company Admin to re-issue the invite."
+    },
+    "notLinked": {
+      "title": "Account not linked to a company",
+      "body": "This account is not linked to a company. Ask your Company Admin to re-issue the invite."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
