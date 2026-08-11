@@ -10,7 +10,7 @@ import CaseNotificationOptIn from '../components/intake/CaseNotificationOptIn'
 import { uploadStagedEvidence, StagedEvidenceStatus } from '../components/intake/CaseCredentialsHandoff'
 import { CATEGORIES } from '../data/categories'
 import { resolveCompanySlug, submitCase } from '../services/caseAccessService'
-import { downloadSimplePdf } from '../utils/simplePdf'
+import { downloadSimplePdf, RECTIFIA_BRAND_COLOR } from '../utils/simplePdf'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
@@ -207,6 +207,12 @@ function Submit() {
     if (!completed) return
     downloadSimplePdf(
       [
+        // Rectifia's own wordmark, not the reporting company's - same
+        // privacy constraint as the rest of this document, see the comment
+        // above this function.
+        { text: 'RECTIFIA', bold: true, color: RECTIFIA_BRAND_COLOR },
+        { rule: true, color: RECTIFIA_BRAND_COLOR },
+        '',
         { text: t('submit.pdf.heading'), bold: true },
         '',
         t('submit.filed.caseId') + `: ${completed.caseId}`,

@@ -5,10 +5,12 @@
 // directly: one page, one font, one content stream.
 //
 // `lines` is rendered top to bottom, one per line, at 72pt margins on a
-// US-Letter page. A line can be a string (regular weight) or
-// `{ text, bold }` for a heading. Nothing here parses or validates PDF - it
-// only ever emits it, so there is no untrusted-input surface to worry about
-// beyond escaping the text itself.
+// US-Letter page. A line can be a string (regular weight), `{ text, bold }`
+// for a heading, `{ text, bold, color }` for a colored heading (Rectifia's
+// wordmark uses this), or `{ rule: true }` for a thin horizontal divider.
+// `color` is `[r, g, b]` in the 0-1 range PDF's `rg` operator expects.
+// Nothing here parses or validates PDF - it only ever emits it, so there is
+// no untrusted-input surface to worry about beyond escaping the text itself.
 const PAGE_WIDTH = 612
 const PAGE_HEIGHT = 792
 const MARGIN = 72
@@ -16,24 +18,57 @@ const LINE_HEIGHT = 20
 const FONT_SIZE_REGULAR = 12
 const FONT_SIZE_BOLD = 13
 
+// Rectifia navy (--color-navy in index.css), as 0-1 RGB - the one accent
+// this generic PDF is allowed to use, since it names Rectifia, not the
+// reporting company (see CaseCredentialsHandoff.jsx for why the two are
+// kept apart).
+export const RECTIFIA_BRAND_COLOR = [0.043, 0.173, 0.286]
+
 function escapePdfText(value) {
   return String(value).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
+}
+
+function formatColorComponent(value) {
+  return Math.min(1, Math.max(0, value)).toFixed(3)
 }
 
 function buildContentStream(lines) {
   let y = PAGE_HEIGHT - MARGIN
   const ops = ['BT']
   let currentFont = null
+  let coloredText = false
 
   for (const line of lines) {
+    if (line && typeof line === 'object' && line.rule) {
+      // A thin filled rectangle, drawn between text blocks - fill/stroke ops
+      // aren't valid inside BT/ET, so the text block closes, the rule draws,
+      // and a fresh block reopens for whatever follows.
+      const ruleColor = line.color ?? [0.85, 0.85, 0.85]
+      ops.push('ET')
+      ops.push(ruleColor.map(formatColorComponent).join(' ') + ' rg')
+      ops.push(`72 ${y - 4} 468 1 re`, 'f')
+      ops.push('0 0 0 rg', 'BT')
+      currentFont = null
+      y -= LINE_HEIGHT
+      continue
+    }
+
     const isBold = typeof line === 'object' && line !== null && line.bold
     const text = typeof line === 'object' && line !== null ? line.text : line
+    const color = typeof line === 'object' && line !== null ? line.color : null
     const font = isBold ? '/F2' : '/F1'
     const size = isBold ? FONT_SIZE_BOLD : FONT_SIZE_REGULAR
 
     if (font !== currentFont) {
       ops.push(`${font} ${size} Tf`)
       currentFont = font
+    }
+    if (color) {
+      ops.push(color.map(formatColorComponent).join(' ') + ' rg')
+      coloredText = true
+    } else if (coloredText) {
+      ops.push('0 0 0 rg')
+      coloredText = false
     }
     ops.push(`72 ${y} Td (${escapePdfText(text ?? '')}) Tj`)
     // Td offsets are relative to the previous Td, not absolute, so the y

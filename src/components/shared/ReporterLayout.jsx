@@ -99,7 +99,7 @@ function ReporterLayout({
       <header className="relative border-b border-line bg-surface">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4">
           <Logo size="md" />
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
             <button
               ref={supportToggleRef}
               type="button"
