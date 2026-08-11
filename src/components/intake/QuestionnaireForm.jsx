@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import harassmentQuestions from '../../data/questionnaires/harassment'
 import toxicManagementQuestions from '../../data/questionnaires/toxicManagement'
 import retaliationQuestions from '../../data/questionnaires/retaliation'
@@ -29,7 +30,8 @@ function isAnswered(value) {
 // A quiet, non-badge marker so a reporter can tell a question is optional
 // before they try to answer it, not by hitting a validation error at submit.
 function OptionalMarker() {
-  return <span className="ml-1.5 text-xs font-normal text-muted">Optional</span>
+  const { t } = useTranslation()
+  return <span className="ml-1.5 text-xs font-normal text-muted">{t('questionnaireForm.optional')}</span>
 }
 
 // A long questionnaire read as one continuous column, with nothing marking
@@ -82,32 +84,26 @@ function formatFileSize(bytes) {
 // attached to it rather than a generic failure after the case already
 // exists.
 function EvidenceStagingStep({ stagedFiles, onFilesChosen, onRemoveFile, rejections }) {
+  const { t } = useTranslation()
+
   return (
     <section className="card flex flex-col gap-4 p-5 sm:p-6">
       <div>
         <p className="text-sm font-medium text-charcoal">
-          Attach evidence
+          {t('questionnaireForm.evidence.title')}
           <OptionalMarker />
         </p>
-        <p className="mt-1 text-sm text-muted">
-          A screenshot, a document, or a photo can identify you even when your written answers
-          don't - a filename, the content itself, or details hidden in a photo's file
-          information can all carry your name. Attaching anything here is entirely your choice;
-          you can also skip this and add files later from your case thread once you have your
-          Case ID and passcode.
-        </p>
+        <p className="mt-1 text-sm text-muted">{t('questionnaireForm.evidence.body')}</p>
       </div>
 
       <label className="flex w-fit cursor-pointer items-center gap-2">
         <span className="btn btn-secondary px-3 py-2 text-xs">
           <Icon name="plus" className="h-3.5 w-3.5" />
-          Attach a file
+          {t('questionnaireForm.evidence.attachFile')}
         </span>
         <input type="file" multiple onChange={onFilesChosen} className="sr-only" />
       </label>
-      <p className="text-xs text-muted">
-        PDF, images, plain text, CSV, or Office documents, up to 25MB each.
-      </p>
+      <p className="text-xs text-muted">{t('questionnaireForm.evidence.fileTypeNote')}</p>
 
       {rejections.length > 0 && (
         <Alert variant="error">
@@ -135,7 +131,7 @@ function EvidenceStagingStep({ stagedFiles, onFilesChosen, onRemoveFile, rejecti
                 onClick={() => onRemoveFile(staged.key)}
                 className="shrink-0 text-xs text-muted underline hover:text-charcoal"
               >
-                Remove
+                {t('questionnaireForm.evidence.remove')}
               </button>
             </li>
           ))}
@@ -156,13 +152,13 @@ const NOT_SPECIFIED_OPTION = '__not_specified__'
 // why: it has to be the company's own department list, not free text). The
 // questionnaire files stay company-agnostic - this is the one place that
 // resolves them against the company passed into the form.
-function companyDepartmentOptions(departments) {
+function companyDepartmentOptions(departments, t) {
   return [
     ...(departments ?? []).map((department) => ({
       value: department.name,
       label: department.name,
     })),
-    { value: NOT_SPECIFIED_OPTION, label: "I'd rather not say" },
+    { value: NOT_SPECIFIED_OPTION, label: t('questionnaireForm.notSpecified') },
   ]
 }
 
@@ -231,6 +227,7 @@ function QuestionnaireForm({
   onCrisisResourcesTrigger,
   allowEvidenceStaging = false,
 }) {
+  const { t } = useTranslation()
   const questions = QUESTIONNAIRES[category]
   const [answers, setAnswers] = useState({})
   const [submitting, setSubmitting] = useState(false)
@@ -239,7 +236,7 @@ function QuestionnaireForm({
   const [rejections, setRejections] = useState([])
 
   if (!questions) {
-    return <Alert variant="error">Unknown case category.</Alert>
+    return <Alert variant="error">{t('questionnaireForm.errors.unknownCategory')}</Alert>
   }
 
   // Every accepted file is validated the moment it is chosen, not at
@@ -299,7 +296,7 @@ function QuestionnaireForm({
       .filter((question) => !question.optional)
       .some((question) => !isAnswered(answers[question.id]))
     if (requiredMissing) {
-      setError('Please answer every question before submitting.')
+      setError(t('questionnaireForm.errors.incomplete'))
       return
     }
 
@@ -326,11 +323,23 @@ function QuestionnaireForm({
   // marker, those are the caller's job so every question type shares one
   // scan-and-track treatment regardless of which control it renders.
   function renderQuestionField(question) {
+    // Static question/option copy is looked up as
+    // questionnaire.<category>.<questionId>.{text,options.<value>} rather
+    // than read off the question object - the QUESTIONNAIRES data stays
+    // company-agnostic and language-agnostic, and its `id`/`value` fields
+    // are the stable keys scoring (module 6) and this translation lookup
+    // both key off. Company department names (dynamicOptions) are real data,
+    // not UI copy, so they render as-is regardless of language.
+    const questionText = t(`questionnaire.${category}.${question.id}.text`)
+
     if (question.type === 'select') {
       const isCompanyDepartmentSelect = question.dynamicOptions === 'companyDepartments'
       const options = isCompanyDepartmentSelect
-        ? companyDepartmentOptions(departments)
-        : question.options
+        ? companyDepartmentOptions(departments, t)
+        : question.options.map((option) => ({
+            value: option.value,
+            label: t(`questionnaire.${category}.${question.id}.options.${option.value}`),
+          }))
       const answer = answers[question.id]
       // A department answer of `null` ("I'd rather not say") has to render
       // as that option, not fall back to the disabled placeholder - `??`
@@ -342,7 +351,7 @@ function QuestionnaireForm({
           id={question.id}
           label={
             <>
-              {question.text}
+              {questionText}
               {question.optional && <OptionalMarker />}
             </>
           }
@@ -358,7 +367,7 @@ function QuestionnaireForm({
           }}
         >
           <option value="" disabled>
-            Select an answer
+            {t('questionnaireForm.selectAnswer')}
           </option>
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -373,13 +382,13 @@ function QuestionnaireForm({
       return (
         <fieldset className="flex flex-col gap-2.5">
           <legend className="flex flex-wrap items-center gap-2 text-sm font-medium text-charcoal">
-            {question.text}
+            {questionText}
             {question.optional && <OptionalMarker />}
             {/* A pill, not just hint text below the label - multiselect and
                 scale used to read as near-identical option lists. This tags
                 "more than one answer" as a property of the question, visible
                 before a reporter starts picking, not discovered by trial. */}
-            <span className="pill tone-info">Choose all that apply</span>
+            <span className="pill tone-info">{t('questionnaireForm.chooseAllThatApply')}</span>
           </legend>
           <div className="flex flex-col gap-2">
             {question.options.map((option) => {
@@ -410,7 +419,9 @@ function QuestionnaireForm({
                   >
                     {checked && <Icon name="check" className="h-3 w-3" strokeWidth={3} />}
                   </span>
-                  <span className="text-charcoal">{option.label}</span>
+                  <span className="text-charcoal">
+                    {t(`questionnaire.${category}.${question.id}.options.${option.value}`)}
+                  </span>
                 </label>
               )
             })}
@@ -420,7 +431,9 @@ function QuestionnaireForm({
     }
 
     if (question.type === 'scale') {
-      const { min, max, minLabel, maxLabel } = question.options
+      const { min, max } = question.options
+      const minLabel = t(`questionnaire.${category}.${question.id}.scale.minLabel`)
+      const maxLabel = t(`questionnaire.${category}.${question.id}.scale.maxLabel`)
       // No fallback to `min` here, unlike the old slider - a slider thumb
       // resting at its lowest position still looked answered at a glance,
       // which fought the new answered/unanswered marker. Nothing is
@@ -433,7 +446,7 @@ function QuestionnaireForm({
       return (
         <div className="flex flex-col gap-2.5">
           <span id={labelId} className="text-sm font-medium text-charcoal">
-            {question.text}
+            {questionText}
             {question.optional && <OptionalMarker />}
           </span>
           {/* A row of numbered buttons, not a slider - a slider is one
@@ -475,7 +488,7 @@ function QuestionnaireForm({
         id={question.id}
         label={
           <>
-            {question.text}
+            {questionText}
             {question.optional && <OptionalMarker />}
           </>
         }
@@ -494,8 +507,10 @@ function QuestionnaireForm({
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs text-muted">
           <span>
-            {answeredCount} of {questions.length} answered
-            {remaining > 0 && <span className="text-muted"> · {remaining} left</span>}
+            {t('questionnaireForm.progress.answered', { answered: answeredCount, total: questions.length })}
+            {remaining > 0 && (
+              <span className="text-muted"> · {t('questionnaireForm.progress.remaining', { count: remaining })}</span>
+            )}
           </span>
           <span className="tabular-nums">{progress}%</span>
         </div>
@@ -514,7 +529,7 @@ function QuestionnaireForm({
         <section key={block[0].id} className="card flex flex-col gap-5 p-5 sm:p-6">
           {blocks.length > 1 && (
             <p className="text-xs font-semibold tracking-wide text-muted uppercase">
-              Part {blockIndex + 1} of {blocks.length}
+              {t('questionnaireForm.partOf', { current: blockIndex + 1, total: blocks.length })}
             </p>
           )}
           {block.map((question) => (
@@ -547,9 +562,9 @@ function QuestionnaireForm({
         size="lg"
         className="min-h-11 self-start"
         loading={submitting}
-        loadingLabel="Submitting"
+        loadingLabel={t('questionnaireForm.submitting')}
       >
-        Continue
+        {t('categorySelect.continue')}
       </Button>
     </form>
   )
