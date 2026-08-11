@@ -1803,6 +1803,44 @@
     "dateRange": "First {{first}}, most recent {{last}}. This case is one of them.",
     "informationalOnly": "Informational only. It does not suggest a finding or an action on this case, and the other cases behind this count are not yours to read."
   },
+  "actionLabels": {
+    "no_action": "No action",
+    "coaching": "Coaching",
+    "verbal_warning": "Verbal warning",
+    "written_warning": "Written warning",
+    "performance_improvement_plan": "Performance improvement plan",
+    "suspension": "Suspension",
+    "demotion": "Demotion",
+    "termination": "Termination"
+  },
+  "departmentTierLabels": {
+    "junior": "Junior",
+    "senior": "Senior",
+    "manager": "Manager",
+    "unspecified": "Unspecified"
+  },
+  "consistencyInsights": {
+    "noRankedActions": "No ranked actions recorded for this segment yet.",
+    "severityBand": "Severity band",
+    "insufficientData": "Insufficient data",
+    "insufficientDataBody_one": "{{count}} closed case on file for this category — not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a new or low-volume category, not an error.",
+    "insufficientDataBody_other": "{{count}} closed cases on file for this category — not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a new or low-volume category, not an error.",
+    "closedCasesOnFile_one": "{{count}} closed case on file",
+    "closedCasesOnFile_other": "{{count}} closed cases on file",
+    "consistent": "Consistent",
+    "flaggedHarsher": "Flagged harsher",
+    "flaggedLenient": "Flagged lenient",
+    "noDepartmentTier": "No department tier within this category reached the reporting threshold on its own, even though the category total did.",
+    "tierCases": "{{tier}} ({{count}} cases)",
+    "typicalAction": "Typical action:",
+    "title": "Consistency Engine",
+    "loadingDescription": "Company-wide pattern across closed cases.",
+    "description": "Where this company's own historical outcomes sit, per category and seniority tier. Aggregate only — no single case's score or action is shown.",
+    "empty": {
+      "title": "No consistency data yet",
+      "description": "Nothing has been computed for this company yet. Check back after the next daily analytics run."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",

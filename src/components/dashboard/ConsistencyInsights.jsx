@@ -1,10 +1,11 @@
+import { useTranslation } from 'react-i18next'
 import { CATEGORY_LABELS } from '../../services/analyticsService'
 import Badge from '../ui/Badge'
 import Card from '../ui/Card'
 import EmptyState from '../ui/EmptyState'
 import { SkeletonList } from '../ui/Loading'
 
-const ACTION_LABELS = {
+const ACTION_LABEL_DEFAULTS = {
   no_action: 'No action',
   coaching: 'Coaching',
   verbal_warning: 'Verbal warning',
@@ -15,7 +16,7 @@ const ACTION_LABELS = {
   termination: 'Termination',
 }
 
-const DEPARTMENT_TIER_LABELS = {
+const DEPARTMENT_TIER_LABEL_DEFAULTS = {
   junior: 'Junior',
   senior: 'Senior',
   manager: 'Manager',
@@ -28,13 +29,14 @@ const DEPARTMENT_TIER_LABELS = {
 // for a tier whose case count fell below the reporting floor (that tier
 // simply has no entry in `departments`, per aggregateCaseAnalytics.js).
 function SeverityActionGrid({ severityActionCounts }) {
+  const { t } = useTranslation()
   const bands = Object.keys(severityActionCounts)
   const actionsSeen = new Set()
   bands.forEach((band) => Object.keys(severityActionCounts[band]).forEach((a) => actionsSeen.add(a)))
   const actions = [...actionsSeen]
 
   if (actions.length === 0) {
-    return <p className="text-xs text-muted">No ranked actions recorded for this segment yet.</p>
+    return <p className="text-xs text-muted">{t('consistencyInsights.noRankedActions')}</p>
   }
 
   return (
@@ -42,10 +44,10 @@ function SeverityActionGrid({ severityActionCounts }) {
       <table className="w-full min-w-[420px] text-xs">
         <thead>
           <tr className="text-left text-muted">
-            <th className="py-1 pr-3 font-medium">Severity band</th>
+            <th className="py-1 pr-3 font-medium">{t('consistencyInsights.severityBand')}</th>
             {actions.map((action) => (
               <th key={action} className="py-1 pr-3 font-medium">
-                {ACTION_LABELS[action] ?? action}
+                {t(`actionLabels.${action}`, { defaultValue: ACTION_LABEL_DEFAULTS[action] ?? action })}
               </th>
             ))}
           </tr>
@@ -68,19 +70,18 @@ function SeverityActionGrid({ severityActionCounts }) {
 }
 
 function CategorySection({ category, summary }) {
-  const label = CATEGORY_LABELS[category] ?? category
+  const { t } = useTranslation()
+  const label = t(`categories.${category}.label`, { defaultValue: CATEGORY_LABELS[category] ?? category })
 
   if (!summary || summary.status === 'insufficient_data') {
     return (
       <div className="flex flex-col gap-1.5 py-4 first:pt-0 last:pb-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-charcoal">{label}</span>
-          <Badge tone="tone-neutral">Insufficient data</Badge>
+          <Badge tone="tone-neutral">{t('consistencyInsights.insufficientData')}</Badge>
         </div>
         <p className="text-xs text-muted">
-          {summary?.referenceCaseCount ?? 0} closed case{summary?.referenceCaseCount === 1 ? '' : 's'} on file for this
-          category — not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a
-          new or low-volume category, not an error.
+          {t('consistencyInsights.insufficientDataBody', { count: summary?.referenceCaseCount ?? 0 })}
         </p>
       </div>
     )
@@ -93,40 +94,47 @@ function CategorySection({ category, summary }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-charcoal">{label}</span>
         <Badge tone="tone-low" dot>
-          {summary.referenceCaseCount} closed cases on file
+          {t('consistencyInsights.closedCasesOnFile', { count: summary.referenceCaseCount })}
         </Badge>
       </div>
 
       <div className="grid grid-cols-3 gap-3 text-sm">
         <div>
-          <p className="text-xs uppercase tracking-wide text-muted">Consistent</p>
+          <p className="text-xs uppercase tracking-wide text-muted">{t('consistencyInsights.consistent')}</p>
           <p className="mt-0.5 text-lg font-semibold tabular-nums text-low">{summary.consistentCount}</p>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wide text-muted">Flagged harsher</p>
+          <p className="text-xs uppercase tracking-wide text-muted">{t('consistencyInsights.flaggedHarsher')}</p>
           <p className="mt-0.5 text-lg font-semibold tabular-nums text-critical">{summary.harsherCount}</p>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wide text-muted">Flagged lenient</p>
+          <p className="text-xs uppercase tracking-wide text-muted">{t('consistencyInsights.flaggedLenient')}</p>
           <p className="mt-0.5 text-lg font-semibold tabular-nums text-gold-600">{summary.lenientCount}</p>
         </div>
       </div>
 
       {departmentEntries.length === 0 ? (
-        <p className="text-xs text-muted">
-          No department tier within this category reached the reporting threshold on its own, even though the
-          category total did.
-        </p>
+        <p className="text-xs text-muted">{t('consistencyInsights.noDepartmentTier')}</p>
       ) : (
         <div className="flex flex-col gap-3">
           {departmentEntries.map(([tier, dept]) => (
             <div key={tier} className="rounded-lg border border-line-soft p-3">
               <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
                 <span className="font-medium text-charcoal">
-                  {DEPARTMENT_TIER_LABELS[tier] ?? tier} ({dept.caseCount} cases)
+                  {t('consistencyInsights.tierCases', {
+                    tier: t(`departmentTierLabels.${tier}`, { defaultValue: DEPARTMENT_TIER_LABEL_DEFAULTS[tier] ?? tier }),
+                    count: dept.caseCount,
+                  })}
                 </span>
                 <span className="text-muted">
-                  Typical action: <span className="text-charcoal">{ACTION_LABELS[dept.typicalAction] ?? dept.typicalAction ?? '—'}</span>
+                  {t('consistencyInsights.typicalAction')}{' '}
+                  <span className="text-charcoal">
+                    {dept.typicalAction
+                      ? t(`actionLabels.${dept.typicalAction}`, {
+                          defaultValue: ACTION_LABEL_DEFAULTS[dept.typicalAction] ?? dept.typicalAction,
+                        })
+                      : '—'}
+                  </span>
                 </span>
               </div>
               <SeverityActionGrid severityActionCounts={dept.severityActionCounts} />
@@ -147,9 +155,10 @@ function CategorySection({ category, summary }) {
 // referenceCases (module 10's existing metadata-only pool) scoped to this
 // company - never cases/{caseId}, never a cross-company comparison.
 function ConsistencyInsights({ data, loading }) {
+  const { t } = useTranslation()
   if (loading) {
     return (
-      <Card title="Consistency Engine" description="Company-wide pattern across closed cases.">
+      <Card title={t('consistencyInsights.title')} description={t('consistencyInsights.loadingDescription')}>
         <SkeletonList rows={3} />
       </Card>
     )
@@ -159,15 +168,15 @@ function ConsistencyInsights({ data, loading }) {
 
   return (
     <Card
-      title="Consistency Engine"
-      description="Where this company's own historical outcomes sit, per category and seniority tier. Aggregate only — no single case's score or action is shown."
+      title={t('consistencyInsights.title')}
+      description={t('consistencyInsights.description')}
     >
       {entries.length === 0 ? (
         <EmptyState
           compact
           icon="sparkle"
-          title="No consistency data yet"
-          description="Nothing has been computed for this company yet. Check back after the next daily analytics run."
+          title={t('consistencyInsights.empty.title')}
+          description={t('consistencyInsights.empty.description')}
         />
       ) : (
         <ul className="flex flex-col divide-y divide-line-soft">
