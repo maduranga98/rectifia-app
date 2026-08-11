@@ -712,6 +712,56 @@
       "noThanks": "No thanks"
     }
   },
+  "identityPanel": {
+    "confirmPhrase": "IDENTIFY ME",
+    "whatThisMeans": { "title": "What this means" },
+    "whatDoesNotChange": {
+      "title": "What does not change",
+      "subjectNeverSees": "The person your report is about never sees your name, or that you gave one.",
+      "hrNeverSees": "The HR Coordinator who oversees the case queue never sees it.",
+      "adminNeverSees": "Your Company Admin never sees it.",
+      "nothingElseChanges": "Nothing you have already written in this case changes, and no message is sent to anyone asking about it."
+    },
+    "cannotBeUndone": {
+      "title": "This cannot be undone",
+      "body1": "Once your details are stored they stay part of this case's record until it ends. We are not offering an undo button, because it could not mean what it says: removing your details from a live investigation would destroy part of its record, and leaving them in place while telling you they were gone would not be true.",
+      "body2": "You are under no obligation to do this. Your case is worked the same way either way, and if you would rather stay anonymous, close this and carry on."
+    },
+    "giveAsMuchAsYouWant": "Give as much or as little as you want — one detail is enough. Anything you leave blank is simply not stored.",
+    "fields": {
+      "name": "Your name",
+      "email": "Email address",
+      "emailHint": "For the investigator to reach you directly. This is separate from update notifications, which never contain case details.",
+      "phone": "Phone",
+      "jobTitle": "Job title",
+      "notes": "Anything else you want them to know",
+      "confirmLabel": "Type {{phrase}} to confirm",
+      "confirmHint": "Typed out in full, so this is never something that happens on a stray click."
+    },
+    "upgrade": {
+      "collapsedTitle": "Your report is anonymous",
+      "collapsedBody": "Nobody working on this case knows who you are, and nothing here will ask you to change that. If you would rather the investigator could contact you directly, you can choose to tell them who you are.",
+      "collapsedCta": "Read what that would mean",
+      "expandedTitle": "Telling the investigator who you are",
+      "whatChanges": "The handler assigned to your case will be able to see the details you give below. They are encrypted when stored, the handler has to give a written reason to decrypt them, and every time anyone looks it is recorded.",
+      "submitLabel": "Tell the investigator who I am",
+      "cancelLabel": "Stay anonymous",
+      "doneTitle": "Your details are on the case",
+      "doneBody": "The handler assigned to your case can now find out who you are. Nobody else can, and nobody was told to ask you for this."
+    },
+    "provide": {
+      "collapsedTitle": "You chose to be identifiable to the investigator",
+      "collapsedBody": "When you filed this report, you chose to let the investigator know who you are. That choice was recorded, but no details were collected yet - you can add them whenever you're ready, there's no deadline.",
+      "collapsedCta": "Add your details",
+      "expandedTitle": "Give the investigator your details",
+      "whatChanges": "The handler assigned to your case will be able to see the details you give below. They are encrypted when stored, the handler has to give a written reason to decrypt them, and every time anyone looks it is recorded.",
+      "submitLabel": "Give the investigator my details",
+      "cancelLabel": "Not right now",
+      "doneTitle": "Your details are on the case",
+      "doneBody": "The handler assigned to your case can now find out who you are. Nobody else can, and nobody was told to ask you for this.",
+      "alreadyChosenNote": "This is the choice you already made when you filed your report - this is just where you follow through on it, whenever you want. Leaving this closed for now keeps your case exactly as it is."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
