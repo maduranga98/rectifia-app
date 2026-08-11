@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { resolveResources } from '../../data/crisisResources'
 import Icon from '../ui/Icon'
 
@@ -23,22 +24,23 @@ import Icon from '../ui/Icon'
 // placement; the defaults suit an inline appearance.
 function CrisisResources({
   jurisdictions,
-  heading = 'Support is available',
-  intro = 'If things feel like a lot right now, you can reach people who are there to help — any time, and separately from this report.',
+  heading,
+  intro,
   className = '',
 }) {
+  const { t } = useTranslation()
   const resources = resolveResources(jurisdictions)
 
   return (
     <section
       className={`rounded-xl border border-line bg-navy-50/60 p-5 ${className}`}
-      aria-label="Support resources"
+      aria-label={t('crisisResources.ariaLabel')}
     >
       <div className="flex items-start gap-2.5">
         <Icon name="shield" className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-charcoal">{heading}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted">{intro}</p>
+          <h2 className="text-sm font-semibold text-charcoal">{heading ?? t('crisisResources.heading')}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">{intro ?? t('crisisResources.intro')}</p>
         </div>
       </div>
 
@@ -63,12 +65,7 @@ function CrisisResources({
       {/* Stated plainly, not buried: what Rectifia does and does not know, and
           that it cannot summon help. We make no confidentiality claim about the
           external services above - each one speaks for itself. */}
-      <p className="mt-4 text-xs leading-relaxed text-muted">
-        These are independent services, not part of Rectifia. Rectifia is not an emergency service
-        and cannot contact any of them for you or send help on your behalf. Rectifia cannot see
-        that you have opened this panel, and does not record it. If someone is in immediate danger,
-        please use the emergency number for where you are.
-      </p>
+      <p className="mt-4 text-xs leading-relaxed text-muted">{t('crisisResources.disclaimer')}</p>
     </section>
   )
 }

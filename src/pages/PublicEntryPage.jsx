@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import ReporterLayout from '../components/shared/ReporterLayout'
 import Alert from '../components/ui/Alert'
 import Card from '../components/ui/Card'
@@ -19,10 +20,12 @@ import Icon from '../components/ui/Icon'
 // The reporting link the employer published is the only way in, and that is
 // the point rather than a gap.
 function PublicEntryPage() {
+  const { t } = useTranslation()
+
   return (
     <ReporterLayout
-      title="Rectifia"
-      description="Confidential workplace reporting. Choose where you're headed."
+      title={t('publicEntry.title')}
+      description={t('publicEntry.description')}
     >
       <div className="flex flex-col gap-4">
         <Card>
@@ -33,26 +36,21 @@ function PublicEntryPage() {
               </span>
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-charcoal">
-                  Track an existing case
+                  {t('reporterLayout.trackExisting')}
                 </h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted">
-                  Already filed a report? Enter the Case ID and passcode you were given at the
-                  time to read your handler&apos;s replies and send a message back. No account,
-                  no sign-in.
+                  {t('publicEntry.trackCard.body')}
                 </p>
               </div>
             </div>
             <Link to="/case" className="btn btn-primary self-start">
-              Track an existing case
+              {t('reporterLayout.trackExisting')}
             </Link>
           </div>
         </Card>
 
-        <Alert variant="info" title="Filing a new report starts with your employer's link">
-          Reports go to one specific company, so they can only be filed through the reporting
-          link or QR code your employer published - on a noticeboard, an intranet page, or a
-          handbook. There is no way to look a company up from here. If you don&apos;t have the
-          link, ask however your workplace shares it.
+        <Alert variant="info" title={t('publicEntry.alert.title')}>
+          {t('publicEntry.alert.body')}
         </Alert>
 
         <Card>
@@ -62,24 +60,19 @@ function PublicEntryPage() {
                 <Icon name="shield" className="h-4.5 w-4.5" />
               </span>
               <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-charcoal">Staff sign in</h2>
+                <h2 className="text-sm font-semibold text-charcoal">{t('publicEntry.staffCard.title')}</h2>
                 <p className="mt-1 text-sm leading-relaxed text-muted">
-                  For case handlers, HR coordinators, managers, and administrators with a
-                  Rectifia account.
+                  {t('publicEntry.staffCard.body')}
                 </p>
               </div>
             </div>
             <Link to="/login" className="btn btn-secondary self-start">
-              Staff sign in
+              {t('publicEntry.staffCard.title')}
             </Link>
           </div>
         </Card>
 
-        <p className="text-xs leading-relaxed text-muted">
-          Lost your Case ID or passcode? Neither is stored in a form anyone can read back, so
-          they cannot be recovered or reset - not by us, and not by your employer. Filing a new
-          report is the only way forward.
-        </p>
+        <p className="text-xs leading-relaxed text-muted">{t('publicEntry.lostCredentials')}</p>
       </div>
     </ReporterLayout>
   )

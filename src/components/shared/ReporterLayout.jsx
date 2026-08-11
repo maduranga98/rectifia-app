@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
 import CrisisResources from './CrisisResources'
 import Icon from '../ui/Icon'
 import Logo from '../ui/Logo'
+import LanguageSwitcher from './LanguageSwitcher'
 
 // A reporter who already filed can only get back to their case through
 // /case, and until this lived in the chrome the only links to it sat on two
@@ -41,13 +43,14 @@ function ReporterLayout({
   footerNote,
   unsavedWarning,
 }) {
+  const { t } = useTranslation()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   // A persistent, low-key way to reach support resources from every
   // reporter-facing screen - no trigger has to fire, and nothing has to be
   // answered first. It floats over the page as a dismissible panel; it is
-  // never a modal that has to be dismissed, and opening it is not recorded
-  // anywhere.
+  // never a modal that has to be dismissed. Whoever renders it stays in full
+  // control of their screen.
   const [showSupport, setShowSupport] = useState(false)
   const supportPanelRef = useRef(null)
   const supportToggleRef = useRef(null)
@@ -104,17 +107,18 @@ function ReporterLayout({
               className="min-h-11 px-1 text-xs text-muted underline hover:text-charcoal"
               aria-expanded={showSupport}
             >
-              Need support now?
+              {t('reporterLayout.needSupport')}
             </button>
             {!isTrackingRoute(pathname) && (
               <Button size="sm" icon="search" className="min-h-11" onClick={trackExistingCase}>
-                Track an existing case
+                {t('reporterLayout.trackExisting')}
               </Button>
             )}
             <span className="flex items-center gap-1.5 text-xs text-muted">
               <Icon name="shield" className="h-3.5 w-3.5" />
-              Confidential
+              {t('reporterLayout.confidential')}
             </span>
+            <LanguageSwitcher />
           </div>
         </div>
         {/* Floats over the page, anchored below the chrome, instead of
@@ -145,7 +149,7 @@ function ReporterLayout({
                   supportToggleRef.current?.focus()
                 }}
               >
-                Back to the form
+                {t('reporterLayout.backToForm')}
               </Button>
             </div>
           </div>
@@ -161,12 +165,16 @@ function ReporterLayout({
                 skimming under stress. */}
             <div className="flex items-baseline justify-between gap-2 text-xs">
               <span className="font-medium text-charcoal">
-                Step {currentStep + 1} of {steps.length}: {steps[currentStep]}
+                {t('reporterLayout.stepLabel', {
+                  current: currentStep + 1,
+                  total: steps.length,
+                  name: steps[currentStep],
+                })}
               </span>
               <span className="shrink-0 text-muted">
                 {currentStep >= steps.length - 1
-                  ? 'Last step'
-                  : `${steps.length - currentStep - 1} to go`}
+                  ? t('reporterLayout.lastStep')
+                  : t('reporterLayout.stepsToGo', { count: steps.length - currentStep - 1 })}
               </span>
             </div>
             <ol className="flex items-center gap-2">
@@ -236,7 +244,7 @@ function ReporterLayout({
               rel="noopener noreferrer"
               className="underline hover:text-charcoal"
             >
-              Privacy policy <span className="text-muted">(opens in a new tab)</span>
+              {t('reporterLayout.privacyPolicy')} <span className="text-muted">({t('common.opensNewTab')})</span>
             </Link>
             <Link
               to="/terms"
@@ -244,7 +252,7 @@ function ReporterLayout({
               rel="noopener noreferrer"
               className="underline hover:text-charcoal"
             >
-              Terms of use <span className="text-muted">(opens in a new tab)</span>
+              {t('reporterLayout.termsOfUse')} <span className="text-muted">({t('common.opensNewTab')})</span>
             </Link>
           </nav>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { sendPasswordReset } from '../services/authService'
 import AuthLayout from '../components/shared/AuthLayout'
 import Alert from '../components/ui/Alert'
@@ -7,6 +8,7 @@ import Button from '../components/ui/Button'
 import { Input } from '../components/ui/Field'
 
 function ForgotPasswordPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -19,14 +21,14 @@ function ForgotPasswordPage() {
     setSuccess(null)
     try {
       await sendPasswordReset(email)
-      setSuccess('If an account exists for that email, a password reset link has been sent.')
+      setSuccess(t('forgotPassword.successMessage'))
     } catch (err) {
       // Never reveal whether the address has an account - user-not-found
       // gets the same success message as a real send.
       if (err.code === 'auth/user-not-found') {
-        setSuccess('If an account exists for that email, a password reset link has been sent.')
+        setSuccess(t('forgotPassword.successMessage'))
       } else {
-        setError('Could not send the reset email. Please try again.')
+        setError(t('forgotPassword.errorMessage'))
       }
     } finally {
       setSubmitting(false)
@@ -35,17 +37,17 @@ function ForgotPasswordPage() {
 
   return (
     <AuthLayout
-      title="Reset your password"
-      description="We'll email you a link to set a new one."
+      title={t('forgotPassword.title')}
+      description={t('forgotPassword.description')}
       footer={
         <Link to="/login" className="font-medium text-navy hover:underline">
-          Back to sign in
+          {t('forgotPassword.backToSignIn')}
         </Link>
       }
     >
       <form onSubmit={handleSubmit} className="card flex flex-col gap-4 p-6">
         <Input
-          label="Work email"
+          label={t('login.workEmail')}
           type="email"
           required
           autoComplete="email"
@@ -64,9 +66,9 @@ function ForgotPasswordPage() {
           className="w-full"
           icon="mail"
           loading={submitting}
-          loadingLabel="Sending"
+          loadingLabel={t('forgotPassword.sending')}
         >
-          Send reset link
+          {t('forgotPassword.sendResetLink')}
         </Button>
       </form>
     </AuthLayout>

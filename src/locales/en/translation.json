@@ -1,5 +1,345 @@
 {
   "app": {
     "name": "Rectifia"
+  },
+  "language": {
+    "switcher": "Language"
+  },
+  "common": {
+    "opensNewTab": "opens in a new tab",
+    "loading": "Loading…",
+    "loadingShort": "One moment.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "close": "Close",
+    "retry": "Try again",
+    "error": "Something went wrong",
+    "required": "Required"
+  },
+  "crisisResources": {
+    "ariaLabel": "Support resources",
+    "heading": "Support is available",
+    "intro": "If things feel like a lot right now, you can reach people who are there to help — any time, and separately from this report.",
+    "disclaimer": "These are independent services, not part of Rectifia. Rectifia is not an emergency service and cannot contact any of them for you or send help on your behalf. Rectifia cannot see that you have opened this panel, and does not record it. If someone is in immediate danger, please use the emergency number for where you are."
+  },
+  "reporterLayout": {
+    "needSupport": "Need support now?",
+    "trackExisting": "Track an existing case",
+    "confidential": "Confidential",
+    "backToForm": "Back to the form",
+    "stepLabel": "Step {{current}} of {{total}}: {{name}}",
+    "lastStep": "Last step",
+    "stepsToGo_one": "{{count}} to go",
+    "stepsToGo_other": "{{count}} to go",
+    "privacyPolicy": "Privacy policy",
+    "termsOfUse": "Terms of use"
+  },
+  "authLayout": {
+    "tagline": {
+      "line1": "Speak up safely.",
+      "line2": "Resolve it properly."
+    },
+    "description": "Rectifia is the workplace reporting and case-management platform behind confidential disclosures, investigations, and compliance deadlines.",
+    "points": {
+      "confidential": {
+        "title": "Confidential by design",
+        "body": "Reports are handled on a need-to-know basis, and each role only ever sees the case data it is entitled to."
+      },
+      "deadlines": {
+        "title": "Deadlines tracked for you",
+        "body": "Acknowledgment and feedback windows are calculated per jurisdiction and counted down on every case."
+      },
+      "routing": {
+        "title": "Routed to the right handler",
+        "body": "Category and department rules assign new cases automatically the moment they are submitted."
+      }
+    },
+    "byline": "A Lumora product"
+  },
+  "login": {
+    "title": "Staff sign in",
+    "description": "Use the account your Company Admin issued you.",
+    "reportingNotice": "Reporting something? You do not need an account - use the case link or Case ID you were given.",
+    "workEmail": "Work email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in",
+    "forgotPassword": "Forgot your password?",
+    "errors": {
+      "invalidCredentials": "Incorrect email or password",
+      "generic": "Could not sign in right now. Please try again."
+    }
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "description": "We'll email you a link to set a new one.",
+    "backToSignIn": "Back to sign in",
+    "sendResetLink": "Send reset link",
+    "sending": "Sending",
+    "successMessage": "If an account exists for that email, a password reset link has been sent.",
+    "errorMessage": "Could not send the reset email. Please try again."
+  },
+  "acceptInvite": {
+    "checking": "Checking your invite",
+    "title": "Set up your account",
+    "description": "Choose a password and you're in.",
+    "yourEmail": "Your email",
+    "choosePassword": "Choose a password",
+    "atLeast8": "At least 8 characters",
+    "hint": "Use at least 8 characters.",
+    "confirmPassword": "Confirm password",
+    "reEnter": "Re-enter your password",
+    "settingUp": "Setting up",
+    "setPasswordAndContinue": "Set password and continue",
+    "notAvailable": {
+      "title": "Invite not available",
+      "goToSignIn": "Go to sign in",
+      "alertTitle": "This link cannot be used"
+    },
+    "errors": {
+      "expired": "This invite link has expired or has already been used. Ask your Company Admin to send a new one.",
+      "invalid": "This invite link is not valid.",
+      "tooShort": "Password must be at least 8 characters",
+      "mismatch": "Passwords do not match",
+      "setPasswordFailed": "Could not set your password. Please try again."
+    }
+  },
+  "publicEntry": {
+    "title": "Rectifia",
+    "description": "Confidential workplace reporting. Choose where you're headed.",
+    "trackCard": {
+      "body": "Already filed a report? Enter the Case ID and passcode you were given at the time to read your handler's replies and send a message back. No account, no sign-in."
+    },
+    "alert": {
+      "title": "Filing a new report starts with your employer's link",
+      "body": "Reports go to one specific company, so they can only be filed through the reporting link or QR code your employer published - on a noticeboard, an intranet page, or a handbook. There is no way to look a company up from here. If you don't have the link, ask however your workplace shares it."
+    },
+    "staffCard": {
+      "title": "Staff sign in",
+      "body": "For case handlers, HR coordinators, managers, and administrators with a Rectifia account."
+    },
+    "lostCredentials": "Lost your Case ID or passcode? Neither is stored in a form anyone can read back, so they cannot be recovered or reset - not by us, and not by your employer. Filing a new report is the only way forward."
+  },
+  "submit": {
+    "steps": {
+      "category": "Category",
+      "details": "Details",
+      "yourChoice": "Your choice",
+      "submit": "Submit"
+    },
+    "loading": {
+      "title": "Loading…",
+      "description": "Checking your reporting link.",
+      "oneMoment": "One moment…"
+    },
+    "invalidLink": {
+      "title": "This reporting link isn't valid",
+      "description": "We couldn't find the company for this link.",
+      "alertTitle": "Reporting link not recognised",
+      "alertBody": "The link you followed doesn't point to a company that accepts reports through Rectifia. Double-check the address, or ask whoever shared it for a current one.",
+      "tempUnavailable": "If this keeps happening, the reporting service may be temporarily unavailable."
+    },
+    "tiers": {
+      "anonymous": {
+        "label": "Stay anonymous",
+        "summary": "Nobody can ever identify you.",
+        "detail": "No name, email, or phone number is recorded anywhere on this report - not encrypted, not stored blank, simply never collected. Nobody at your employer, nobody at Rectifia, and nobody with a court order can look you up afterwards. You can still read replies and answer questions using your Case ID and passcode. Be aware that some investigations are harder to complete this way, and a few cannot be resolved at all, because the investigator has no way to come back to you for the detail they need."
+      },
+      "confidential": {
+        "label": "Be identifiable to the investigator only",
+        "summary": "Only the person assigned to your case sees who you are.",
+        "detail": "Choosing this records your choice - it does not collect anything yet. You are not asked for your details on this screen. When you open your case, you'll be able to give the investigator your name, email, phone, or whatever you're willing to share; it is encrypted the moment you submit it, and never appears on any dashboard, in any report, or to anyone else at your employer. The investigator can come back to you with follow-up questions once you do, which usually makes a case easier to resolve. Nothing requires you to do this by a deadline, and leaving it blank is a choice you can make too."
+      }
+    },
+    "steps0": {
+      "titleGeneric": "What's this report about?",
+      "descriptionWithCompany": "Reporting to {{company}}. Choose the category that best fits your situation. The questions that follow are tailored to it.",
+      "descriptionNoCompany": "Choose the category that best fits your situation. The questions that follow are tailored to it."
+    },
+    "steps1": {
+      "title": "Tell us what happened",
+      "description": "{{category}} — answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.",
+      "defaultCategory": "Your report",
+      "changeCategory": "Change category"
+    },
+    "steps2": {
+      "title": "One last choice — how should we record you?",
+      "description": "Your answers are ready to file. Nothing has been submitted yet. This last question is yours alone to answer, and it cannot be changed afterwards.",
+      "backToAnswers": "Back to your answers",
+      "fileReport": "File my report",
+      "filingYourReport": "Filing your report",
+      "credentialsShownOnce": "Your Case ID and passcode are shown once, on the next screen."
+    },
+    "steps3": {
+      "title": "Report filed",
+      "description": "Your report has been submitted. Save your Case ID and passcode below."
+    },
+    "unsavedWarning": {
+      "answers": "Leaving now discards the answers you have entered - this report has not been submitted yet and nothing is saved. Continue to case tracking?",
+      "credentials": "Have you saved your Case ID and passcode? They are shown only on this screen and cannot be recovered afterwards. Continue to case tracking?"
+    },
+    "footerNote": "Rectifia does not record your name, email, or IP address with this report unless you choose to include it in an answer.",
+    "filed": {
+      "alertTitle": "Your report has been filed",
+      "summary_one": "{{count}} answer recorded for {{category}}. Save the details below before you close this page.",
+      "summary_other": "{{count}} answers recorded for {{category}}. Save the details below before you close this page.",
+      "caseId": "Case ID",
+      "passcode": "Passcode",
+      "whereToCheck": "Where to check on your case",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "downloadPdf": "Download as PDF",
+      "copyFailedNote": "Couldn't copy automatically — select the link above and copy it.",
+      "linkExplanation": "The link opens the tracking form with your Case ID filled in. It does not contain your passcode — you will still be asked for it.",
+      "passcodeWarningTitle": "Your passcode cannot be recovered",
+      "passcodeWarningBody1": "It is stored only as a hash, so no one — not Rectifia, not your employer, not the handler on your case — can look it up, reset it, or send it to you. There is no account and no email address attached to this report to recover it to.",
+      "passcodeWarningStrong": "If you lose the Case ID or passcode, you permanently lose access to this case",
+      "passcodeWarningBody2": "and its messages, and filing a new report is the only way to be heard again.",
+      "beforeYouLeave": {
+        "title": "Before you leave this page",
+        "bookmark": "Bookmark the link above, or screenshot this screen.",
+        "writePasscode": "Write the passcode somewhere only you can reach — a screenshot on a work device may not be private.",
+        "comeBack": "Come back any time to read replies from your handler and answer them."
+      },
+      "fileAnother": "File another report"
+    },
+    "pdf": {
+      "heading": "Case tracking details",
+      "trackLine": "Track it here: {{url}}",
+      "keepPrivate1": "Keep this somewhere private. These details cannot be reissued - without",
+      "keepPrivate2": "them there is no way back into this case."
+    }
+  },
+  "pulseCheck": {
+    "title": "Wellness check-in",
+    "checkingLink": "Checking your link…",
+    "descriptionForCompany": "This check-in is for {{company}}.",
+    "descriptionGeneric": "A short, confidential check-in from your organization.",
+    "invalidStates": {
+      "used": {
+        "title": "Your response has already been recorded",
+        "description": "This check-in was already completed - there is nothing more to do. Thank you; your earlier response was saved."
+      },
+      "expired": {
+        "title": "This check-in link has expired",
+        "description": "Pulse-check links are open only for a limited time. A new one will arrive with the next check-in - no action is needed from you now."
+      },
+      "invalid": {
+        "title": "This check-in link isn't valid",
+        "description": "The link may be incomplete or mistyped. Please open the most recent link from your invitation email exactly as it was sent."
+      },
+      "rate_limited": {
+        "title": "Too many attempts on this link",
+        "description": "This check-in link has been opened too many times and is no longer accepting attempts. A new link will arrive with your next check-in - no action is needed from you now."
+      },
+      "error": {
+        "title": "We couldn't open your check-in",
+        "description": "Something went wrong on our side while loading this check-in. Please try again in a few minutes - your link is fine."
+      }
+    }
+  },
+  "caseDetail": {
+    "access": {
+      "title": "Access your case",
+      "description": "No account needed. Enter the Case ID and passcode you were given when you submitted your report.",
+      "footerNote": "Lost your Case ID or passcode? They cannot be recovered - neither is stored in a readable form. You would need to submit a new report."
+    },
+    "thread": {
+      "title": "Case {{caseNumber}}",
+      "description": "Messages here go to the handler assigned to your case. Everything is kept on the case record.",
+      "cardTitle": "Case thread"
+    },
+    "identityOnFile": "Your details are on file, held encrypted. Reading them requires an authorised, logged reveal by the handler assigned to your case."
+  },
+  "sharedCaseView": {
+    "watermark": {
+      "unknownRecipient": "Unknown recipient",
+      "unknownOrganisation": "Unknown organisation"
+    },
+    "nothingOnFile": "Nothing on file.",
+    "evidence": {
+      "opening": "Opening",
+      "open": "Open",
+      "openFailed": "Could not open this file."
+    },
+    "acceptance": {
+      "title": "Confidentiality undertaking",
+      "description": "Before you can view this case record, confirm your name and accept the terms of this access.",
+      "fullName": "Your full name",
+      "undertakingText": "I confirm that I am the named recipient of this link, that I will not download, print, screenshot, forward, or otherwise reproduce this case record beyond what is necessary for the stated purpose, and that I understand this access is logged, watermarked, and revocable at any time.",
+      "confirming": "Confirming",
+      "acceptAndContinue": "Accept and continue"
+    },
+    "printDisabledAlert": "Printing is disabled for this shared case view.",
+    "printDisabledNotice": "Printing is disabled for this shared case view.",
+    "errors": {
+      "missingInfo": "This link is missing required information.",
+      "acceptanceFailed": "Could not confirm acceptance. Please try again."
+    },
+    "linkInvalid": {
+      "title": "This link is no longer valid"
+    },
+    "banner": {
+      "title": "Confidential external share — {{company}}",
+      "defaultOrganisation": "this organisation",
+      "details": "Shared by {{sharedBy}} · scope: {{scope}} · access expires {{expires}}",
+      "defaultHandler": "the assigned case handler",
+      "viewingAs": "Viewing as {{name}} ({{organisation}}). This record is watermarked, logged, cannot be downloaded or printed, and can be revoked at any time. Evidence files marked \"Open\" below may be opened individually; each open is logged separately."
+    },
+    "caseHeading": "Case {{caseId}}",
+    "purpose": "Purpose of this share: {{purpose}}",
+    "sections": {
+      "summary": {
+        "title": "Case summary",
+        "category": "Category",
+        "status": "Status",
+        "priority": "Priority",
+        "severityScore": "Severity score",
+        "evidenceScore": "Evidence score",
+        "opened": "Opened",
+        "closed": "Closed"
+      },
+      "finalAction": {
+        "title": "Final action taken",
+        "action": "Action",
+        "notYetDecided": "Not yet decided",
+        "effectiveDate": "Effective date",
+        "notes": "Notes"
+      },
+      "complianceLog": {
+        "title": "Compliance deadline log",
+        "ruleApplied": "Rule applied",
+        "acknowledgmentDue": "Acknowledgment due",
+        "acknowledgmentSent": "Acknowledgment sent",
+        "feedbackDue": "Feedback due",
+        "feedbackGiven": "Feedback given"
+      },
+      "questionnaire": {
+        "title": "Questionnaire answers",
+        "empty": "No questionnaire responses on file."
+      },
+      "timeline": {
+        "title": "Message timeline",
+        "description": "Reporter, case handler, and AI assistant messages.",
+        "empty": "No messages."
+      },
+      "evidence": {
+        "title": "Evidence",
+        "description": "Every attachment on this case is listed for reference. Only the files the Case Handler selected for this share can be opened; the rest are metadata only.",
+        "empty": "No attachments.",
+        "notShared": "Not shared",
+        "unknownType": "unknown type"
+      }
+    },
+    "footer": "This is a read-only, time-limited external share generated by Rectifia. It contains no way to navigate to any other case, search, or compare against other records."
+  },
+  "legal": {
+    "backToHome": "Back to Rectifia",
+    "lastUpdated": "Last updated {{date}}",
+    "version": "Version {{version}}",
+    "draftNotice": "This is a draft and has not yet taken effect."
   }
 }

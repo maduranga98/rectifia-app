@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { signIn } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import AuthLayout from '../components/shared/AuthLayout'
@@ -12,6 +13,7 @@ import { Input } from '../components/ui/Field'
 // created directly by Lumora. Reporter Case-ID access (module 4) is a
 // separate flow entirely and is never reachable from this page.
 function LoginPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -34,8 +36,8 @@ function LoginPage() {
     } catch (err) {
       setError(
         err?.code?.startsWith('auth/')
-          ? 'Incorrect email or password'
-          : 'Could not sign in right now. Please try again.'
+          ? t('login.errors.invalidCredentials')
+          : t('login.errors.generic')
       )
     } finally {
       setSubmitting(false)
@@ -49,20 +51,17 @@ function LoginPage() {
 
   return (
     <AuthLayout
-      title="Staff sign in"
-      description="Use the account your Company Admin issued you."
+      title={t('login.title')}
+      description={t('login.description')}
       footer={
         <div className="flex flex-col gap-3">
-          <p>
-            Reporting something? You do not need an account - use the case link or Case ID you
-            were given.
-          </p>
+          <p>{t('login.reportingNotice')}</p>
           <p className="flex gap-4 text-xs">
             <Link to="/privacy" className="underline hover:text-charcoal">
-              Privacy policy
+              {t('reporterLayout.privacyPolicy')}
             </Link>
             <Link to="/terms" className="underline hover:text-charcoal">
-              Terms of use
+              {t('reporterLayout.termsOfUse')}
             </Link>
           </p>
         </div>
@@ -70,7 +69,7 @@ function LoginPage() {
     >
       <form onSubmit={handleSubmit} className="card flex flex-col gap-4 p-6">
         <Input
-          label="Work email"
+          label={t('login.workEmail')}
           type="email"
           required
           autoComplete="email"
@@ -79,7 +78,7 @@ function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
         />
         <Input
-          label="Password"
+          label={t('login.password')}
           type="password"
           required
           autoComplete="current-password"
@@ -96,16 +95,16 @@ function LoginPage() {
           size="lg"
           className="w-full"
           loading={submitting}
-          loadingLabel="Signing in"
+          loadingLabel={t('login.signingIn')}
         >
-          Sign in
+          {t('login.signIn')}
         </Button>
 
         <Link
           to="/forgot-password"
           className="self-center text-sm font-medium text-navy hover:text-navy-600 hover:underline"
         >
-          Forgot your password?
+          {t('login.forgotPassword')}
         </Link>
       </form>
     </AuthLayout>
