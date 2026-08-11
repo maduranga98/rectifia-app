@@ -1869,6 +1869,49 @@
     },
     "roundingFootnote": "Cells publish only when at least 5 companies and 25 cases contribute; below either threshold nothing is published at all, so an \"insufficient data\" row is not an error. Every published figure is rounded — medians, percentages to the nearest 5 — because unrounded values over small populations leak more than they inform."
   },
+  "billingQuote": {
+    "tierLabels": {
+      "starter": "Starter",
+      "growth": "Growth",
+      "scale": "Scale",
+      "enterprise": "Enterprise"
+    },
+    "employeesAtRate_one": "{{count}} employee @ {{rate}}",
+    "employeesAtRate_other": "{{count}} employees @ {{rate}}",
+    "employeesCount_one": "{{count}} employee",
+    "employeesCount_other": "{{count}} employees",
+    "noHeadcount": {
+      "title": "No billable headcount yet",
+      "body": "Add employees to your roster on the Employees page to see a billing quote."
+    },
+    "enterWholeNumber": "Enter a whole number of employees",
+    "currentTier": "Current tier",
+    "currentMonthlyPrice": "Current monthly price",
+    "perMonth": "/mo",
+    "manualReview": {
+      "title": "Flagged for manual sales review",
+      "body": "At this headcount, pricing above 5,000 employees is reviewed by the Rectifia sales team rather than fully automated. The estimate below is shown for transparency but is not a final quote."
+    },
+    "activeEmployees": "Active employees",
+    "effectiveRate": "Effective rate per employee",
+    "effectiveRateHint": "Blended: monthly price ÷ active employees",
+    "priceBreakdown": {
+      "title": "Price breakdown",
+      "description": "How your current monthly price was built."
+    },
+    "pulseAddOn": {
+      "title": "Pulse Check add-on",
+      "description": "Billed separately from your core plan, at a flat per-employee rate."
+    },
+    "whatIfCard": {
+      "title": "What if we grow?",
+      "description": "See your projected price at a future headcount before it happens - no cliffs, no surprise invoice.",
+      "projectedHeadcountLabel": "Projected headcount",
+      "projectedTier": "Projected tier:",
+      "manualReviewNotice": "This projection is above the 5,000-employee threshold where pricing moves to manual sales review - treat this figure as an estimate, not a locked-in price.",
+      "footnote": "This projection is calculated instantly in your browser for planning purposes. Your actual bill is always recalculated from your real roster at invoicing time."
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
