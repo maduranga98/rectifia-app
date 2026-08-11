@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
-import { downloadSimplePdf } from '../../utils/simplePdf'
+import { downloadSimplePdf, RECTIFIA_BRAND_COLOR } from '../../utils/simplePdf'
 import { sendReporterMessage, uploadCaseEvidence } from '../../services/caseThreadService'
 import i18n from '../../services/i18n'
 
@@ -212,6 +212,12 @@ function CaseCredentialsHandoff({
   function downloadPdf() {
     downloadSimplePdf(
       [
+        // Rectifia's own wordmark, not the reporting company's - see the
+        // comment above downloadDetails() for why this document stays
+        // free of anything naming the employer.
+        { text: 'RECTIFIA', bold: true, color: RECTIFIA_BRAND_COLOR },
+        { rule: true, color: RECTIFIA_BRAND_COLOR },
+        '',
         { text: t('submit.pdf.heading'), bold: true },
         '',
         `${t('submit.filed.caseId')}: ${caseId}`,

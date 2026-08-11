@@ -15,6 +15,7 @@ const toxicManagementQuestions = [
     options: null,
     dynamicOptions: 'companyDepartments',
     severityWeight: null,
+    optional: true,
   },
   {
     id: 'toxic_manager_role',
@@ -31,6 +32,7 @@ const toxicManagementQuestions = [
       { value: 'unspecified', label: "I'd rather not say", severityWeight: null },
     ],
     severityWeight: null,
+    optional: true,
   },
   {
     id: 'toxic_manager_relationship',

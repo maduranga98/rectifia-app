@@ -63,9 +63,22 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   }
 
   function addDepartment() {
-    const trimmed = newDepartmentName.trim()
-    if (!trimmed) return
-    setDepartments((current) => [...current, createDepartment({ name: trimmed })])
+    const names = newDepartmentName
+      .split(',')
+      .map((name) => name.trim())
+      .filter(Boolean)
+    if (names.length === 0) return
+    setDepartments((current) => {
+      const existingNames = new Set(current.map((dept) => dept.name.toLowerCase()))
+      const additions = []
+      for (const name of names) {
+        const key = name.toLowerCase()
+        if (existingNames.has(key)) continue
+        existingNames.add(key)
+        additions.push(createDepartment({ name }))
+      }
+      return [...current, ...additions]
+    })
     setNewDepartmentName('')
   }
 
@@ -201,7 +214,8 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-charcoal">Departments</span>
         <p className="text-xs text-muted">
-          Departments feed case routing. You can assign a department head later.
+          Departments feed case routing. You can assign a department head later. Add several at
+          once by separating names with commas.
         </p>
         <div className="mt-1 flex gap-2">
           <input
@@ -217,7 +231,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
                 addDepartment()
               }
             }}
-            placeholder="e.g. Engineering"
+            placeholder="e.g. Engineering, Sales, Legal"
             className="field flex-1"
           />
           <Button icon="plus" onClick={addDepartment} disabled={!newDepartmentName.trim()}>
