@@ -1162,6 +1162,49 @@
     "archive": "Archive",
     "restore": "Restore"
   },
+  "designatedHandlersPage": {
+    "status": {
+      "revoked": "Revoked",
+      "none": "Not designated",
+      "acknowledged": "Designated · acknowledged",
+      "pending": "Designated · awaiting acknowledgment"
+    },
+    "designatedNotice": "Designated. They will see a confidentiality acknowledgment to accept.",
+    "revokedNotice": "Designation revoked.",
+    "noHandlers": {
+      "title": "No Case Handlers yet",
+      "description": "Invite a Case Handler under Staff before designating anyone here."
+    },
+    "onStaff_one": "{{count}} on staff",
+    "onStaff_other": "{{count}} on staff",
+    "designatedOn": "Designated {{date}}",
+    "revokedOn": "revoked {{date}}",
+    "revoke": "Revoke",
+    "designate": "Designate",
+    "yourStatus": "Your designation status",
+    "self": {
+      "revokedTitle": "Your designation was revoked",
+      "notDesignatedTitle": "You are not currently designated",
+      "askAdmin": "Ask your Company Admin if you believe this is not correct.",
+      "acknowledgedOn": "Acknowledged {{date}}",
+      "acknowledgmentRequired": {
+        "title": "Confidentiality acknowledgment required",
+        "description": "You have been designated a 従事者 (designated handler). Read and accept the obligation below to complete your designation."
+      },
+      "acknowledging": "Acknowledging",
+      "acknowledgeButton": "I acknowledge and accept"
+    },
+    "notAvailable": {
+      "title": "Not available",
+      "body": "This page is for Company Admin, a designatedHandlers-permitted role, or a Case Handler viewing their own designation."
+    },
+    "description": "Japan's Whistleblower Protection Act expects reports to be handled by a formally designated 従事者 (designated handler). This register records who has been designated, by whom, and whether they have accepted the confidentiality obligation that comes with it - metadata only, never case content.",
+    "notConfigured": {
+      "title": "Japan (JP) is not configured for this company",
+      "body": "The designated handler register is optional while JP is not among this company's configured jurisdictions - cases are never blocked on it. You can still designate handlers here ahead of adding JP, or leave the register empty."
+    },
+    "signedInAs": "Signed in as {{email}}"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
