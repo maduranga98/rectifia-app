@@ -2140,6 +2140,90 @@
     "pageOf": "Page {{page}} of {{total}}",
     "next": "Next"
   },
+  "caseDetailView": {
+    "saving": "Saving",
+    "consistencyStatus": {
+      "insufficient_data": "insufficient data",
+      "consistent": "consistent",
+      "unrankable": "unrankable",
+      "flagged": "flagged"
+    },
+    "consistencyFlags": {
+      "empty": {
+        "title": "No consistency check yet",
+        "description": "A check runs automatically once an action is proposed on this case."
+      },
+      "similarCasesConsidered_one": "{{count}} similar case considered.",
+      "similarCasesConsidered_other": "{{count}} similar cases considered."
+    },
+    "flagReviewed": {
+      "title": "Consistency flag reviewed",
+      "reviewerNote": "Reviewer note: {{note}}"
+    },
+    "flagDirection": {
+      "harsher": "harsher",
+      "lenient": "lenient"
+    },
+    "flagBanner": {
+      "title": "Consistency flag - proposed action is {{direction}} than typical",
+      "body": "This is informational only. It does not suggest an action or stop you from proposing or closing this case - the decision remains yours. Add a note to record that you have seen and considered it.",
+      "reviewNoteLabel": "Review note",
+      "reviewNotePlaceholder": "Note why the proposed action is appropriate despite the flag.",
+      "markReviewed": "Mark reviewed"
+    },
+    "identity": {
+      "noFieldsStored": "No identity fields were stored.",
+      "fields": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "jobTitle": "Job title",
+        "notes": "Notes"
+      },
+      "title": "Reporter identity",
+      "confidentialIntro": "This is a confidential-tier report.",
+      "onFileHint": "Reporter identity details are on file and can be revealed with a logged reason.",
+      "nothingToReveal": "The reporter self-submitted and provided no identity details, so there is nothing to reveal.",
+      "revealButton": "Reveal reporter identity",
+      "showStatusButton": "Show identity status",
+      "noneOnFile": {
+        "title": "No identity on file",
+        "body": "This reporter filed confidentially through the web form and chose not to provide any identifying details. Nothing was stored, so there is nothing to reveal here - the case thread is the only channel back to them."
+      },
+      "hide": "Hide",
+      "revealed": {
+        "title": "Identity revealed - this access has been logged",
+        "body": "Your identity, this case, and your reason are recorded in the access log. This is shown for this session only and is not stored here; leaving and returning will require a fresh reason."
+      },
+      "hideIdentity": "Hide identity",
+      "onFileList": "On file for this reporter: {{fields}}.",
+      "onFileGeneric": "Reporter identity details are on file.",
+      "revealWarning": {
+        "title": "Revealing identity is logged and attributable",
+        "body": "Revealing a confidential reporter's identity is a deliberate act. Before you proceed, know that your identity, this case, the time, and the reason you type below are written to the access log. Only do this when you have a documented reason to."
+      },
+      "reasonLabel": "Reason for revealing this identity",
+      "reasonPlaceholder": "Record why this reporter's identity needs to be revealed (min. 10 characters).",
+      "revealing": "Revealing",
+      "revealIdentityButton": "Reveal identity"
+    },
+    "actionForm": {
+      "caseClosed": "Case closed",
+      "finalAction": "Final action: {{action}}",
+      "notRecorded": "not recorded",
+      "categoryLabel": "Category of action",
+      "effectiveDateLabel": "Effective date",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "What is being done, and on what basis.",
+      "updateProposed": "Update proposed action",
+      "propose": "Propose action",
+      "proposedAction": "Proposed action:",
+      "checkComplete": "Consistency check complete - this case can be closed.",
+      "checkWaiting": "Waiting for the consistency check to finish against this proposal before the case can be closed.",
+      "closing": "Closing",
+      "markClosed": "Mark case closed"
+    }
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
