@@ -1028,6 +1028,20 @@
       }
     }
   },
+  "patternsPage": {
+    "description": "Clusters of related reports across the company, derived from case metadata only."
+  },
+  "staffBenchmarkPage": {
+    "description": "How this company's closed cases compare to the wider pool for your industry and size band. Aggregate statistics only, and only for cells that clear the anonymity thresholds."
+  },
+  "followUpsPage": {
+    "description": "Where each case stands on its post-resolution retaliation check-in."
+  },
+  "hrCasesPage": {
+    "description": "Every case in the company, by metadata only.",
+    "refreshing": "Refreshing",
+    "refresh": "Refresh"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
