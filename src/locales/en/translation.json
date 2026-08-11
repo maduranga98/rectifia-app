@@ -2023,6 +2023,55 @@
     "assigning": "Assigning",
     "assign": "Assign"
   },
+  "analyticsDashboard": {
+    "noSegment": "No segment reached the reporting threshold in this range.",
+    "noData": "no data",
+    "insufficientForDistribution": "Insufficient cases this period to show a distribution.",
+    "severityScore": "Severity score",
+    "evidenceScore": "Evidence score",
+    "intro": "Trends and Consistency Engine insights, aggregated from case metadata only. No case narrative, questionnaire response, or message ever reaches this dashboard.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing",
+    "compiling": "Compiling",
+    "exportReport": "Export compliance report",
+    "reportReady": {
+      "title": "Report ready",
+      "body": "Covers {{start}} to {{end}} ({{pages}} pages). <link>Download PDF</link> — link expires in 15 minutes."
+    },
+    "empty": {
+      "title": "No analytics yet",
+      "description": "Nothing has been computed for this company yet. Check back after the next daily analytics run."
+    },
+    "totalCaseVolume": "Total case volume",
+    "trailing12Months": "Trailing 12 months",
+    "avgTimeToResolution": "Avg. time to resolution",
+    "daysValue": "{{days}}d",
+    "acknowledgedWithinWindow": "Acknowledged within window",
+    "resolvedWithinWindow": "Resolved within window",
+    "byCategory": {
+      "title": "Case volume by category",
+      "description": "Summed across the trailing window. Categories below the reporting threshold are omitted."
+    },
+    "byDepartment": {
+      "title": "Case volume by department",
+      "description": "Summed across the trailing window. Departments below the reporting threshold are omitted."
+    },
+    "avgResolutionTime": {
+      "title": "Average time to resolution",
+      "description": "Days from case creation to closure, by month."
+    },
+    "complianceHitRate": {
+      "title": "Compliance-deadline hit rate",
+      "description": "Share of cases acknowledged and resolved within the applicable jurisdiction's window, by month."
+    },
+    "acknowledgedInWindow": "Acknowledged in window",
+    "resolvedInWindow": "Resolved in window",
+    "distribution": {
+      "title": "Severity & evidence score distribution",
+      "description": "Latest period. Aggregate buckets only — never a single case's exact score."
+    },
+    "insufficientData": "Insufficient data"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
