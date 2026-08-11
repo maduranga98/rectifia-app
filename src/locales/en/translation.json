@@ -895,6 +895,12 @@
     "acknowledgment": "I have given the Case ID and passcode to the reporter.",
     "done": "Done"
   },
+  "appShell": {
+    "mainNav": "Main",
+    "signOut": "Sign out",
+    "closeNavigation": "Close navigation",
+    "openNavigation": "Open navigation"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",

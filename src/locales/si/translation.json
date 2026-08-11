@@ -895,6 +895,12 @@
     "acknowledgment": "මම නඩු අංකය සහ රහස් අංකය වාර්තාකරුට ලබා දී ඇත්තෙමි.",
     "done": "අවසන්"
   },
+  "appShell": {
+    "mainNav": "ප්‍රධාන",
+    "signOut": "පිටවෙන්න",
+    "closeNavigation": "සංචලනය වසන්න",
+    "openNavigation": "සංචලනය විවෘත කරන්න"
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",
