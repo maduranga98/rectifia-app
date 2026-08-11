@@ -1108,6 +1108,27 @@
     "assignTo": "Assign to...",
     "caseAssigned": "Case {{caseId}} assigned."
   },
+  "departmentsPage": {
+    "newDepartmentName": "New department name",
+    "newDepartmentPlaceholder": "e.g. Engineering",
+    "addDepartment": "Add department",
+    "description": "Departments organise your staff and feed the routing rules that assign incoming cases. Each one can have a department head.",
+    "unlisted": {
+      "title": "Some employee departments aren't in this list",
+      "body1": "These department names appear on employee records but not in your departments above:",
+      "body2": "Pulse summaries and manager scoping use the exact name as it appears on employees, so add a matching department (or correct the employee records) to route and scope them. Nothing is changed automatically."
+    },
+    "configuredCount_one": "{{count}} configured",
+    "configuredCount_other": "{{count}} configured",
+    "empty": {
+      "title": "No departments yet",
+      "description": "Add your first department to start organising staff and routing cases."
+    },
+    "departmentNameLabel": "Department name for {{name}}",
+    "head": "Head",
+    "notAssigned": "Not assigned",
+    "delete": "Delete"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
