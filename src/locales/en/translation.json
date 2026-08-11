@@ -2072,6 +2072,74 @@
     },
     "insufficientData": "Insufficient data"
   },
+  "caseStatus": {
+    "open": "open",
+    "assigned": "assigned",
+    "needs_manual_assignment": "needs manual assignment",
+    "closed": "closed"
+  },
+  "priorityLabels": {
+    "high": "high",
+    "medium": "medium",
+    "low": "low"
+  },
+  "assignmentLabels": {
+    "assigned": "assigned",
+    "unassigned": "unassigned"
+  },
+  "casesTable": {
+    "sortByDirection": "Sort by {{label}}, {{direction}}",
+    "sortBy": "Sort by {{label}}",
+    "ascending": "ascending",
+    "descending": "descending",
+    "headers": {
+      "category": "Category",
+      "priority": "Priority",
+      "status": "Status",
+      "severity": "Severity",
+      "evidence": "Evidence",
+      "assignedHandler": "Assigned handler",
+      "nextDeadline": "Next deadline",
+      "triage": "Triage",
+      "reassign": "Reassign"
+    },
+    "uncategorized": "Uncategorized",
+    "open": "open",
+    "unassigned": "Unassigned",
+    "title": "Cases",
+    "matchCount_one": "{{matched}} of {{total}} case match",
+    "matchCount_other": "{{matched}} of {{total}} cases match",
+    "caseCount_one": "{{count}} case",
+    "caseCount_other": "{{count}} cases",
+    "exportCsv": "Export CSV",
+    "empty": {
+      "title": "No cases here yet",
+      "description": "Submitted reports appear here the moment they are routed."
+    },
+    "filters": {
+      "category": "Category",
+      "allCategories": "All categories",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "priority": "Priority",
+      "allPriorities": "All priorities",
+      "assignment": "Assignment",
+      "all": "All"
+    },
+    "clearFilters": "Clear filters",
+    "noMatch": {
+      "title": "No cases match these filters",
+      "description": "Adjust or clear the filters above to see more."
+    },
+    "view": "View",
+    "reassignAriaLabel": "Reassign case {{caseId}}",
+    "reassigning": "Reassigning...",
+    "reassignTo": "Reassign to...",
+    "showingRange": "Showing {{from}}–{{to}} of {{total}}",
+    "previous": "Previous",
+    "pageOf": "Page {{page}} of {{total}}",
+    "next": "Next"
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",

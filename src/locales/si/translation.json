@@ -2072,6 +2072,74 @@
     },
     "insufficientData": "ප්‍රමාණවත් දත්ත නැත"
   },
+  "caseStatus": {
+    "open": "විවෘතයි",
+    "assigned": "පවරා ඇත",
+    "needs_manual_assignment": "අතින් පැවරීම අවශ්‍යයි",
+    "closed": "වසා ඇත"
+  },
+  "priorityLabels": {
+    "high": "ඉහළ",
+    "medium": "මධ්‍යම",
+    "low": "අඩු"
+  },
+  "assignmentLabels": {
+    "assigned": "පවරා ඇත",
+    "unassigned": "පවරා නැත"
+  },
+  "casesTable": {
+    "sortByDirection": "{{label}} අනුව අනුපිළිවෙළට කරන්න, {{direction}}",
+    "sortBy": "{{label}} අනුව අනුපිළිවෙළට කරන්න",
+    "ascending": "ආරෝහණ",
+    "descending": "අවරෝහණ",
+    "headers": {
+      "category": "වර්ගය",
+      "priority": "ප්‍රමුඛතාවය",
+      "status": "තත්ත්වය",
+      "severity": "බරපතලකම",
+      "evidence": "සාක්ෂි",
+      "assignedHandler": "පවරන ලද හසුරුවන්නා",
+      "nextDeadline": "ඊළඟ අවසාන දිනය",
+      "triage": "ප්‍රමුඛතා තීරණය",
+      "reassign": "නැවත පවරන්න"
+    },
+    "uncategorized": "වර්ගීකරණය නොකළ",
+    "open": "විවෘතයි",
+    "unassigned": "පවරා නැත",
+    "title": "නඩු",
+    "matchCount_one": "{{total}}න් නඩුවක් ගැලපේ",
+    "matchCount_other": "{{total}}න් {{matched}}ක් ගැලපේ",
+    "caseCount_one": "නඩුවක්",
+    "caseCount_other": "නඩු {{count}}ක්",
+    "exportCsv": "CSV නිර්යාත කරන්න",
+    "empty": {
+      "title": "තවම මෙහි නඩු නැත",
+      "description": "ඉදිරිපත් කළ වාර්තා ඒවා මාර්ග කරන ක්ෂණයේම මෙහි දිස්වේ."
+    },
+    "filters": {
+      "category": "වර්ගය",
+      "allCategories": "සියලුම වර්ග",
+      "status": "තත්ත්වය",
+      "allStatuses": "සියලුම තත්ත්වයන්",
+      "priority": "ප්‍රමුඛතාවය",
+      "allPriorities": "සියලුම ප්‍රමුඛතා",
+      "assignment": "පැවරීම",
+      "all": "සියල්ල"
+    },
+    "clearFilters": "පෙරහන් හිස් කරන්න",
+    "noMatch": {
+      "title": "මෙම පෙරහන් වලට ගැලපෙන නඩු නැත",
+      "description": "වැඩිදුර බැලීමට ඉහත පෙරහන් සකස් කරන්න හෝ හිස් කරන්න."
+    },
+    "view": "බලන්න",
+    "reassignAriaLabel": "නඩුව {{caseId}} නැවත පවරන්න",
+    "reassigning": "නැවත පවරමින්...",
+    "reassignTo": "නැවත පවරන්නේ...",
+    "showingRange": "{{total}}න් {{from}}–{{to}} පෙන්වයි",
+    "previous": "පෙර",
+    "pageOf": "පිටුව {{page}} න් {{total}}",
+    "next": "ඊළඟ"
+  },
   "legal": {
     "backToHome": "Rectifia වෙත ආපසු",
     "lastUpdated": "අවසන් යාවත්කාලීන කළේ {{date}}",
