@@ -97,28 +97,36 @@ function ReporterLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="relative border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4">
-          <Logo size="md" />
-          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+        {/* Two deliberate rows, not one row that wraps when it runs out of
+            space - a header that only "works" by accident of overflow reads
+            as broken even when nothing technically clips. The brand row
+            carries the confidentiality promise as part of the wordmark
+            (Logo's subtitle) rather than as a separate item competing for
+            space; the action row is just the two things a reporter might
+            actually reach for mid-report. Both rows use the same
+            space-between shape at every width, so nothing reflows or
+            reorders as the viewport narrows - only the row heights (via
+            wrapping text) ever change. */}
+        <div className="mx-auto flex max-w-3xl flex-col gap-2.5 px-5 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <Logo size="md" subtitle={t('reporterLayout.confidential')} />
+            <LanguageSwitcher className="shrink-0" />
+          </div>
+          <div className="flex items-center justify-between gap-3">
             <button
               ref={supportToggleRef}
               type="button"
               onClick={() => setShowSupport((open) => !open)}
-              className="min-h-11 px-1 text-xs text-muted underline hover:text-charcoal"
+              className="min-h-9 text-xs text-muted underline hover:text-charcoal"
               aria-expanded={showSupport}
             >
               {t('reporterLayout.needSupport')}
             </button>
             {!isTrackingRoute(pathname) && (
-              <Button size="sm" icon="search" className="min-h-11" onClick={trackExistingCase}>
+              <Button size="sm" icon="search" className="min-h-9 shrink-0" onClick={trackExistingCase}>
                 {t('reporterLayout.trackExisting')}
               </Button>
             )}
-            <span className="flex items-center gap-1.5 text-xs text-muted">
-              <Icon name="shield" className="h-3.5 w-3.5" />
-              {t('reporterLayout.confidential')}
-            </span>
-            <LanguageSwitcher />
           </div>
         </div>
         {/* Floats over the page, anchored below the chrome, instead of
