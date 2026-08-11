@@ -2224,6 +2224,20 @@
       "markClosed": "Mark case closed"
     }
   },
+  "policyReferences": {
+    "policyDocument": "Policy document",
+    "title": "Policy references",
+    "description": "The clauses from your company's own policy that were used as reference context for this case.",
+    "empty": {
+      "title": "No policy grounding on this case",
+      "description": "No company policy was available for this category when the case was scored, so it was handled without policy context."
+    },
+    "version": "Version {{version}}",
+    "opening": "Opening",
+    "openSource": "Open source",
+    "unlabelledSection": "Unlabelled section",
+    "footnote": "Policy context informs the questions asked and the evidence sought. It does not determine the outcome — every determination on this case is yours."
+  },
   "legal": {
     "backToHome": "Back to Rectifia",
     "lastUpdated": "Last updated {{date}}",
