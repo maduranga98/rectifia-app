@@ -517,6 +517,77 @@
         "text": "Describe what happened, in your own words."
       }
     },
+    "discrimination": {
+      "discrimination_basis": {
+        "text": "Which protected characteristic(s) do you believe this is related to?",
+        "options": {
+          "race_ethnicity": "Race or ethnicity",
+          "gender_sex": "Gender or sex",
+          "age": "Age",
+          "disability": "Disability",
+          "religion": "Religion",
+          "national_origin": "National origin",
+          "sexual_orientation_gender_identity": "Sexual orientation or gender identity",
+          "pregnancy_parental_status": "Pregnancy or parental status",
+          "other": "Other"
+        }
+      },
+      "discrimination_form": {
+        "text": "What form did this discrimination take?",
+        "options": {
+          "hiring_promotion": "A hiring or promotion decision",
+          "pay_compensation": "A pay or compensation disparity",
+          "termination_layoff": "A termination or layoff selection",
+          "performance_evaluation": "Performance evaluation bias",
+          "task_assignment": "Differences in task or assignment given",
+          "exclusion_opportunities": "Exclusion from opportunities",
+          "comments_jokes": "Comments or jokes referencing a protected characteristic"
+        }
+      },
+      "discrimination_pattern": {
+        "text": "How would you describe the pattern?",
+        "options": {
+          "single": "A single instance",
+          "pattern": "A pattern over time",
+          "ongoing": "Ongoing / still happening"
+        }
+      },
+      "subject_department": {
+        "text": "What department does the involved person work in? (Optional)"
+      },
+      "subject_role": {
+        "text": "What is the involved person's role or title? (Optional)",
+        "options": {
+          "junior": "About the same level as me, or more junior",
+          "senior": "Senior to me, but not a manager (lead, supervisor, principal)",
+          "manager": "A manager, director or executive",
+          "unspecified": "I'd rather not say"
+        }
+      },
+      "discrimination_comparators": {
+        "text": "Do you know of anyone in a similar situation who was treated differently?",
+        "options": {
+          "yes": "Yes",
+          "no": "No",
+          "unsure": "Not sure"
+        }
+      },
+      "discrimination_documentation": {
+        "text": "Is there documentation of this (emails, review records, pay records)?",
+        "options": {
+          "yes": "Yes",
+          "no": "No",
+          "unsure": "Not sure"
+        }
+      },
+      "discrimination_impact": {
+        "text": "How much has this affected your ability to work?",
+        "scale": { "minLabel": "Not at all", "maxLabel": "Severely" }
+      },
+      "discrimination_details": {
+        "text": "Describe what happened, in your own words."
+      }
+    },
     "retaliation": {
       "retaliation_original_complaint_type": {
         "text": "What did you originally report or oppose?",
