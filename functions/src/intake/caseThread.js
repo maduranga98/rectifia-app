@@ -111,7 +111,7 @@ exports.getCaseThread = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   // Rate limited before the passcode is checked, so the limiter itself cannot
   // be used to distinguish a real Case ID from an invented one.
   await enforceRateLimit(firestore, 'getCaseThread', request)
-  await verifyReporterAccess(firestore, caseId, passcode)
+  const caseSnapshot = await verifyReporterAccess(firestore, caseId, passcode)
 
   const messagesSnapshot = await firestore
     .collection(CASES_COLLECTION)
@@ -120,7 +120,16 @@ exports.getCaseThread = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
     .orderBy('timestamp', 'asc')
     .get()
 
-  return { messages: messagesSnapshot.docs.map(serializeMessage) }
+  // scoreCase.js's crisisFlag is written server-side by an onCreate trigger
+  // that reads the case in whatever language it was submitted in - unlike
+  // the client's crisisTextCheck.js, it is not English-only. Surfacing it
+  // here is what lets a reporter who wrote in a language the browser check
+  // can't cover still see the same support panel. See CrisisResources.jsx's
+  // header comment for why nothing about this is ever logged or indicated.
+  return {
+    messages: messagesSnapshot.docs.map(serializeMessage),
+    crisisFlag: caseSnapshot.data()?.crisisFlag === true,
+  }
 })
 
 // The staff counterpart of getCaseThread above. A Case Handler has a

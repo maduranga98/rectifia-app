@@ -148,6 +148,12 @@ function CaseThread({ caseId, mode, passcode }) {
   // has to fire and nothing has to be answered. Toggling this open is not
   // recorded anywhere.
   const [showResources, setShowResources] = useState(false)
+  // scoreCase.js's server-side crisisFlag, read every time the thread loads.
+  // It works in every language the reporter might have written in, unlike
+  // the client-only check that gates the toggle above - when it's true the
+  // panel is shown automatically, identically to the manual toggle, with
+  // nothing on screen indicating which trigger fired it.
+  const [serverCrisisFlag, setServerCrisisFlag] = useState(false)
   const pollRef = useRef(null)
 
   const refresh = useCallback(async () => {
@@ -160,9 +166,13 @@ function CaseThread({ caseId, mode, passcode }) {
       return
     }
     try {
-      const fetched =
-        mode === 'investigator' ? await getCaseThreadForHandler(caseId) : await getCaseThread(caseId, passcode)
-      setMessages(fetched)
+      if (mode === 'investigator') {
+        setMessages(await getCaseThreadForHandler(caseId))
+      } else {
+        const { messages: fetched, crisisFlag } = await getCaseThread(caseId, passcode)
+        setMessages(fetched)
+        setServerCrisisFlag(crisisFlag)
+      }
       setLoadError(null)
     } catch (err) {
       // Stop polling rather than let a failed fetch keep re-firing itself -
@@ -386,7 +396,7 @@ function CaseThread({ caseId, mode, passcode }) {
             <Icon name="shield" className="h-3.5 w-3.5" />
             {t('reporterLayout.needSupport')}
           </button>
-          {showResources && (
+          {(showResources || serverCrisisFlag) && (
             <div className="mt-3">
               {/* The reporter's tab holds no jurisdiction, so every regional
                   route plus the international fallback is offered. */}
