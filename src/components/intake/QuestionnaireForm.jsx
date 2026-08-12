@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import harassmentQuestions from '../../data/questionnaires/harassment'
 import toxicManagementQuestions from '../../data/questionnaires/toxicManagement'
+import discriminationQuestions from '../../data/questionnaires/discrimination'
 import retaliationQuestions from '../../data/questionnaires/retaliation'
 import burnoutQuestions from '../../data/questionnaires/burnout'
 import Alert from '../ui/Alert'
@@ -14,6 +15,7 @@ import { validateEvidenceFile } from '../../services/caseThreadService'
 const QUESTIONNAIRES = {
   harassment: harassmentQuestions,
   toxicManagement: toxicManagementQuestions,
+  discrimination: discriminationQuestions,
   retaliation: retaliationQuestions,
   burnout: burnoutQuestions,
 }
