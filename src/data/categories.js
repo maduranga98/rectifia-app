@@ -13,6 +13,12 @@ export const CATEGORIES = [
       "A pattern of behavior from a manager that's undermining your wellbeing or ability to work.",
   },
   {
+    id: 'discrimination',
+    label: 'Discrimination',
+    description:
+      'Being treated unfairly at work because of a protected characteristic such as race, gender, age, or disability.',
+  },
+  {
     id: 'retaliation',
     label: 'Retaliation',
     description:
