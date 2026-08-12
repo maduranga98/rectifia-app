@@ -64,7 +64,11 @@ const requestEvidenceDownloadUrlCallable = httpsCallable(functions, 'requestEvid
 // (CaseThread.jsx) poll.
 export async function getCaseThread(caseId, passcode) {
   const result = await getCaseThreadCallable({ caseId, passcode })
-  return result.data.messages
+  // crisisFlag is scoreCase.js's server-side finding (any language), passed
+  // through so CaseThread.jsx can show the same support panel a client-side
+  // detection would - see that component's comment for why the two triggers
+  // must render identically and record nothing.
+  return { messages: result.data.messages, crisisFlag: result.data.crisisFlag === true }
 }
 
 // The staff counterpart of getCaseThread. The caller's identity comes from
