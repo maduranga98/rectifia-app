@@ -2,6 +2,7 @@ import { httpsCallable } from 'firebase/functions'
 import { functions } from './firebase'
 import harassmentQuestions from '../data/questionnaires/harassment'
 import toxicManagementQuestions from '../data/questionnaires/toxicManagement'
+import discriminationQuestions from '../data/questionnaires/discrimination'
 import retaliationQuestions from '../data/questionnaires/retaliation'
 import burnoutQuestions from '../data/questionnaires/burnout'
 
@@ -14,6 +15,7 @@ const getCaseForTriageCallable = httpsCallable(functions, 'getCaseForTriage')
 const QUESTIONNAIRES = {
   harassment: harassmentQuestions,
   toxicManagement: toxicManagementQuestions,
+  discrimination: discriminationQuestions,
   retaliation: retaliationQuestions,
   burnout: burnoutQuestions,
 }

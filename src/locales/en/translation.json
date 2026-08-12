@@ -347,6 +347,10 @@
       "label": "Toxic management",
       "description": "A pattern of behavior from a manager that's undermining your wellbeing or ability to work."
     },
+    "discrimination": {
+      "label": "Discrimination",
+      "description": "Being treated unfairly at work because of a protected characteristic such as race, gender, age, or disability."
+    },
     "retaliation": {
       "label": "Retaliation",
       "description": "Being treated worse after raising a concern, or after supporting someone who did."
