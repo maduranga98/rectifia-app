@@ -59,7 +59,6 @@ async function translateWithClaude({ apiKey, text, targetLang }) {
     max_tokens: 2048,
     system: TRANSLATION_SYSTEM_PROMPT,
     output_config: {
-      effort: 'low',
       format: { type: 'json_schema', schema: TRANSLATION_SCHEMA },
     },
     messages: [
