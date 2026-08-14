@@ -2306,7 +2306,11 @@
       "checkComplete": "Consistency check complete - this case can be closed.",
       "checkWaiting": "Waiting for the consistency check to finish against this proposal before the case can be closed.",
       "closing": "Closing",
-      "markClosed": "Mark case closed"
+      "markClosed": "Mark case closed",
+      "legalHold": {
+        "title": "Under legal hold",
+        "body": "Under legal hold — reason: {{reason}}. Set by {{setByUid}} on {{setAt}}. Only a Company Admin or Super Admin can lift this."
+      }
     }
   },
   "policyReferences": {

@@ -28,6 +28,12 @@ exports.proposeAction = onCall(async (request) => {
 
   const firestore = admin.firestore()
   const { caseRef, snapshot } = await loadCaseForHandler(firestore, caseId, uid)
+  if (snapshot.data().legalHold?.active === true) {
+    throw new HttpsError(
+      'failed-precondition',
+      'This case is under legal hold and cannot be modified until the hold is lifted'
+    )
+  }
   if (!OPEN_STATUSES_ALLOWING_ACTION.includes(snapshot.data().status)) {
     throw new HttpsError('failed-precondition', 'This case is already closed')
   }
@@ -56,6 +62,13 @@ exports.closeCase = onCall(async (request) => {
   const firestore = admin.firestore()
   const { caseRef, snapshot } = await loadCaseForHandler(firestore, caseId, uid)
   const caseData = snapshot.data()
+
+  if (caseData.legalHold?.active === true) {
+    throw new HttpsError(
+      'failed-precondition',
+      'This case is under legal hold and cannot be modified until the hold is lifted'
+    )
+  }
 
   if (!caseData.proposedAction) {
     throw new HttpsError('failed-precondition', 'Propose an action before closing this case')
