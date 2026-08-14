@@ -58,7 +58,6 @@ async function tagChunk({ apiKey, text }) {
     max_tokens: 512,
     system: SYSTEM_PROMPT,
     output_config: {
-      effort: 'low',
       format: { type: 'json_schema', schema: TAG_SCHEMA },
     },
     messages: [{ role: 'user', content: `Passage:\n${text}` }],
@@ -134,3 +133,4 @@ exports.tagPolicyChunks = onDocumentCreated(
 )
 
 exports.CATEGORIES = CATEGORIES
+exports.tagChunk = tagChunk

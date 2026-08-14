@@ -74,6 +74,7 @@ const {
   restorePolicyDocument,
   deletePolicyDocument,
 } = require('./src/policy/managePolicyDocument')
+const { backfillPolicyTags } = require('./src/policy/backfillPolicyTags')
 const { applyRetention } = require('./src/retention/applyRetention')
 const { setLegalHold, releaseLegalHold, listLegalHolds } = require('./src/retention/legalHold')
 const {
@@ -193,6 +194,7 @@ exports.tagPolicyChunks = tagPolicyChunks
 exports.archivePolicyDocument = archivePolicyDocument
 exports.restorePolicyDocument = restorePolicyDocument
 exports.deletePolicyDocument = deletePolicyDocument
+exports.backfillPolicyTags = backfillPolicyTags
 // Module 23: Data Retention, Deletion & Legal Hold. applyRetention is the
 // daily scheduled sweep; the rest are onCall - legal holds and the
 // reporter-initiated erasure request are both human-decided actions on a
