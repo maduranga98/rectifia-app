@@ -40,6 +40,12 @@ function humanize(value) {
   return typeof value === 'string' ? value.replace(/_/g, ' ') : value
 }
 
+function formatDate(value) {
+  const ms = typeof value?.toMillis === 'function' ? value.toMillis() : value
+  if (!ms) return '—'
+  return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
 export function ConsistencyFlags({ caseData }) {
   const { t } = useTranslation()
   const check = caseData.consistencyCheck
@@ -368,6 +374,7 @@ export function ActionForm({ caseData, onChanged }) {
     Boolean(caseData.proposedAction) &&
     Boolean(caseData.consistencyCheck?.checkedAt) &&
     caseData.consistencyCheck.checkedAt.toMillis() >= (caseData.proposedActionAt?.toMillis() ?? Infinity)
+  const onLegalHold = caseData.legalHold?.active === true
 
   async function handlePropose(event) {
     event.preventDefault()
@@ -395,6 +402,18 @@ export function ActionForm({ caseData, onChanged }) {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (onLegalHold) {
+    return (
+      <Alert variant="warning" title={t('caseDetailView.actionForm.legalHold.title')}>
+        {t('caseDetailView.actionForm.legalHold.body', {
+          reason: caseData.legalHold.reason,
+          setByUid: caseData.legalHold.setByUid,
+          setAt: formatDate(caseData.legalHold.setAt),
+        })}
+      </Alert>
+    )
   }
 
   if (alreadyClosed) {
