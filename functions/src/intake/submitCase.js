@@ -22,6 +22,7 @@ if (!admin.apps.length) {
 const KNOWN_CATEGORIES = new Set([
   'harassment',
   'toxicManagement',
+  'discrimination',
   'retaliation',
   'burnout',
 ])
