@@ -7,6 +7,7 @@ import {
   getEvidenceDownloadUrl,
   sendInvestigatorMessage,
   sendReporterMessage,
+  translateMessage,
   uploadCaseEvidence,
 } from '../../services/caseThreadService'
 import Alert from '../ui/Alert'
@@ -117,6 +118,60 @@ function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
   )
 }
 
+// Case Handler side only - see CaseThread's render below, which never
+// mounts this in mode === 'reporter'. Investigator-facing, on-demand, one
+// message at a time: clicking it calls translateMessage for the UI's
+// current language and renders the result beneath the original text, which
+// is never replaced or hidden. If the server already has a translation for
+// this language (message.translations[targetLang], passed down as
+// `existing` via serializeMessage), it renders immediately with no call.
+function MessageTranslation({ caseId, messageId, targetLang, existing, tone }) {
+  const { t } = useTranslation()
+  const [translation, setTranslation] = useState(existing ?? null)
+  const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    setTranslation(existing ?? null)
+  }, [existing])
+
+  async function handleTranslate() {
+    setLoading(true)
+    setFailed(false)
+    try {
+      const result = await translateMessage(caseId, messageId, targetLang)
+      setTranslation(result)
+    } catch {
+      setFailed(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (translation) {
+    return (
+      <div className={`mt-2 border-t border-dashed pt-2 ${tone}`}>
+        <p className="text-[11px] italic opacity-70">{t('caseThread.translate.resultLabel')}</p>
+        <p className="mt-0.5 whitespace-pre-wrap text-sm italic opacity-80">{translation.text}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-1.5">
+      <button
+        type="button"
+        onClick={handleTranslate}
+        disabled={loading}
+        className={`text-xs underline disabled:no-underline disabled:opacity-60 ${tone}`}
+      >
+        {loading ? t('caseThread.translate.loading') : t('caseThread.translate.action')}
+      </button>
+      {failed && <span className="ml-2 text-xs opacity-80">{t('caseThread.translate.failed')}</span>}
+    </div>
+  )
+}
+
 // The single ongoing communication channel for a case. Reporter messages,
 // AI follow-up questions, and Case Handler messages all share one timeline
 // - this component doubles as the audit trail, so nothing here is ever
@@ -128,7 +183,7 @@ function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
 // carry its own <h2> and page padding, which meant it could only ever be
 // dropped onto a page by itself.
 function CaseThread({ caseId, mode, passcode }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [pendingFile, setPendingFile] = useState(null)
@@ -334,6 +389,21 @@ function CaseThread({ caseId, mode, passcode }) {
                     ))}
                   </ul>
                 )}
+
+                {/* Case Handler side only - no reporter-facing counterpart. Hidden
+                    for a system record and a manual log entry, neither of which is
+                    a reporter's own words to translate. */}
+                {mode === 'investigator' &&
+                  message.sender !== 'system' &&
+                  message.type !== 'manual_log' && (
+                    <MessageTranslation
+                      caseId={caseId}
+                      messageId={message.id}
+                      targetLang={i18n.language}
+                      existing={message.translations?.[i18n.language]}
+                      tone={mine ? 'border-navy-200 text-white' : 'border-line text-charcoal'}
+                    />
+                  )}
               </div>
             </div>
           )
