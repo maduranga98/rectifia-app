@@ -866,6 +866,12 @@
       "label": "Manual log entry",
       "placeholder": "e.g. Called witness X, summary: ...",
       "save": "Save log entry"
+    },
+    "translate": {
+      "action": "Translate",
+      "loading": "Translating…",
+      "failed": "Translation failed.",
+      "resultLabel": "Translated from detected language — original above"
     }
   },
   "followUpPrompt": {

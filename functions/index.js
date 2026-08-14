@@ -19,6 +19,7 @@ const {
   removeContactEmail,
 } = require('./src/intake/identityTransition')
 const { aiFollowUp } = require('./src/intake/aiFollowUp')
+const { translateMessage } = require('./src/intake/translateMessage')
 const { generateChecklist, updateChecklistItem } = require('./src/intake/generateChecklist')
 const { storeReferenceCase } = require('./src/consistency/storeReferenceCase')
 const { checkConsistency } = require('./src/consistency/checkConsistency')
@@ -121,6 +122,7 @@ exports.removeContactEmail = removeContactEmail
 exports.requestEvidenceUploadUrl = requestEvidenceUploadUrl
 exports.requestEvidenceDownloadUrl = requestEvidenceDownloadUrl
 exports.aiFollowUp = aiFollowUp
+exports.translateMessage = translateMessage
 exports.generateChecklist = generateChecklist
 exports.updateChecklistItem = updateChecklistItem
 exports.storeReferenceCase = storeReferenceCase

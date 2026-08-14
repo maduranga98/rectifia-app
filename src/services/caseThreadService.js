@@ -55,6 +55,7 @@ const postReporterMessageCallable = httpsCallable(functions, 'postReporterMessag
 const postInvestigatorMessageCallable = httpsCallable(functions, 'postInvestigatorMessage')
 const requestEvidenceUploadUrlCallable = httpsCallable(functions, 'requestEvidenceUploadUrl')
 const requestEvidenceDownloadUrlCallable = httpsCallable(functions, 'requestEvidenceDownloadUrl')
+const translateMessageCallable = httpsCallable(functions, 'translateMessage')
 
 // Cases and their messages subcollection are not client-readable or
 // writable (see firestore.rules) - reporters have no Firebase Auth
@@ -163,4 +164,14 @@ export async function uploadCaseEvidence(caseId, file, passcode) {
 export async function getEvidenceDownloadUrl(caseId, fileName, passcode) {
   const { data } = await requestEvidenceDownloadUrlCallable({ caseId, fileName, passcode })
   return data.downloadUrl
+}
+
+// On-demand, per-message translation - Case Handler side only. The caller's
+// identity comes from their Firebase Auth ID token, same as
+// getCaseThreadForHandler; there is no reporter-facing counterpart and none
+// should be added (translateMessage.js authorises via loadCaseForHandler,
+// which the unauthenticated reporter/passcode path cannot satisfy).
+export async function translateMessage(caseId, messageId, targetLang) {
+  const { data } = await translateMessageCallable({ caseId, messageId, targetLang })
+  return data.translation
 }
