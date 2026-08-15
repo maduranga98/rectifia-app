@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { addContactEmail, removeContactEmail } from '../../services/identityTransitionService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
@@ -33,6 +34,7 @@ import { Input } from '../ui/Field'
 // this address and there never will be: an address that could recall a lost
 // Case ID would quietly become a second credential.
 function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, className = '' }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle') // idle | working | error
@@ -79,17 +81,10 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
       <div className={wrapper}>
         <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
           <Icon name="mail" className="h-4 w-4 text-muted" />
-          An email address is saved for updates
+          {t('contactChannelPanel.saved.title')}
         </p>
-        <p className="text-sm text-muted">
-          When there is an update on your case we send a short, deliberately vague message to that
-          address - it never mentions your case, this company, or what you reported. You still open
-          your case here with your Case ID and passcode.
-        </p>
-        <p className="text-xs text-muted">
-          Removing it deletes the address completely. Notifications stop; nothing else about your
-          case changes.
-        </p>
+        <p className="text-sm text-muted">{t('contactChannelPanel.saved.body')}</p>
+        <p className="text-xs text-muted">{t('contactChannelPanel.saved.removeNote')}</p>
         {status === 'error' && error && <Alert variant="error">{error}</Alert>}
         <div>
           <Button
@@ -97,9 +92,9 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
             size="sm"
             onClick={handleRemove}
             loading={status === 'working'}
-            loadingLabel="Removing"
+            loadingLabel={t('contactChannelPanel.removing')}
           >
-            Remove this address
+            {t('contactChannelPanel.removeAddress')}
           </Button>
         </div>
       </div>
@@ -111,15 +106,12 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
       <div className={wrapper}>
         <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
           <Icon name="mail" className="h-4 w-4 text-muted" />
-          Want to be emailed when there is an update?
+          {t('contactChannelPanel.offer.title')}
         </p>
-        <p className="text-sm text-muted">
-          Optional. Without it, you check back here whenever you like - nothing is lost by leaving
-          this alone.
-        </p>
+        <p className="text-sm text-muted">{t('contactChannelPanel.offer.body')}</p>
         <div>
           <Button variant="secondary" size="sm" onClick={() => setExpanded(true)}>
-            Read what that would mean
+            {t('contactChannelPanel.offer.readMore')}
           </Button>
         </div>
       </div>
@@ -130,53 +122,34 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
     <div className={wrapper}>
       <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
         <Icon name="mail" className="h-4 w-4 text-muted" />
-        Adding an email address for updates
+        {t('contactChannelPanel.form.title')}
       </p>
 
       {/* The trade-off, before the field. */}
       <div className="flex flex-col gap-2 rounded-lg border border-navy-200 bg-navy-50 p-3 text-sm text-charcoal">
-        <p className="font-medium">What this creates</p>
-        <p>
-          Saving an address creates a stored link between that address and this case. That link is
-          exactly what &ldquo;anonymous&rdquo; otherwise guarantees does not exist. It is encrypted
-          and nobody working on your case can read it - not your handler, not the HR Coordinator,
-          not your Company Admin - but it exists, and you should decide knowing that rather than
-          find out later.
-        </p>
+        <p className="font-medium">{t('contactChannelPanel.form.whatThisCreates.title')}</p>
+        <p>{t('contactChannelPanel.form.whatThisCreates.body')}</p>
 
-        <p className="mt-1 font-medium">A throwaway address is a fine choice</p>
-        <p>
-          A free burner address you make for this and nothing else works perfectly well here, and
-          for many people it is the sensible option. We would rather say that plainly than have you
-          use a work address because we stayed quiet about it.
-        </p>
+        <p className="mt-1 font-medium">{t('contactChannelPanel.form.throwaway.title')}</p>
+        <p>{t('contactChannelPanel.form.throwaway.body')}</p>
 
-        <p className="mt-1 font-medium">What the emails say</p>
-        <p>
-          As little as possible, on purpose. Something like &ldquo;You have an update&rdquo; and a
-          link to our front page - never your Case ID, the category, the status, or anything about
-          this company. Anyone glancing at your inbox learns nothing.
-        </p>
+        <p className="mt-1 font-medium">{t('contactChannelPanel.form.whatEmailsSay.title')}</p>
+        <p>{t('contactChannelPanel.form.whatEmailsSay.body')}</p>
 
-        <p className="mt-1 font-medium">You can take it back</p>
-        <p>
-          Remove it at any time from this page and the address is deleted, not just switched off.
-        </p>
-        <p>
-          This does not change who can see your report or affect how your case is handled, and your
-          case stays anonymous either way.
-        </p>
+        <p className="mt-1 font-medium">{t('contactChannelPanel.form.takeItBack.title')}</p>
+        <p>{t('contactChannelPanel.form.takeItBack.body1')}</p>
+        <p>{t('contactChannelPanel.form.takeItBack.body2')}</p>
       </div>
 
       <form onSubmit={handleAdd} className="flex flex-col gap-3">
         <Input
-          label="Email address"
+          label={t('contactChannelPanel.form.emailAddress')}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="off"
           placeholder="you@example.com"
-          hint="Keep hold of your Case ID and passcode either way - this address cannot be used to recover them."
+          hint={t('contactChannelPanel.form.emailHint')}
         />
 
         {status === 'error' && error && <Alert variant="error">{error}</Alert>}
@@ -187,9 +160,9 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
             variant="primary"
             disabled={!email.trim() || status === 'working'}
             loading={status === 'working'}
-            loadingLabel="Saving"
+            loadingLabel={t('contactChannelPanel.form.saving')}
           >
-            Save this address
+            {t('contactChannelPanel.form.saveAddress')}
           </Button>
           <Button
             variant="ghost"
@@ -200,7 +173,7 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
               setError(null)
             }}
           >
-            No thanks
+            {t('contactChannelPanel.form.noThanks')}
           </Button>
         </div>
       </form>

@@ -83,6 +83,29 @@ function serializeAttachment(attachment) {
   }
 }
 
+// A map keyed by target language code, e.g. { si: { text, sourceLanguageGuess,
+// model, translatedAt, translatedBy } } - written only by
+// translateMessage.js's on-demand, investigator-only callable, never by any
+// reporter-facing path. Absent entirely on a message nobody has translated,
+// which is why this always returns {} rather than the raw (possibly
+// undefined) field - CaseThread.jsx reads message.translations[lang]
+// unconditionally.
+function serializeTranslations(translations) {
+  if (!translations || typeof translations !== 'object') return {}
+  return Object.fromEntries(
+    Object.entries(translations).map(([lang, entry]) => [
+      lang,
+      {
+        text: entry?.text ?? '',
+        sourceLanguageGuess: entry?.sourceLanguageGuess ?? null,
+        model: entry?.model ?? null,
+        translatedAt: typeof entry?.translatedAt?.toMillis === 'function' ? entry.translatedAt.toMillis() : null,
+        translatedBy: entry?.translatedBy ?? null,
+      },
+    ])
+  )
+}
+
 function serializeMessage(doc) {
   const data = doc.data()
   return {
@@ -91,6 +114,7 @@ function serializeMessage(doc) {
     type: data.type ?? 'message',
     text: data.text ?? '',
     attachments: Array.isArray(data.attachments) ? data.attachments.map(serializeAttachment) : [],
+    translations: serializeTranslations(data.translations),
     // Structured payload for a 'follow_up' message: { index, kind, status,
     // answer } for a prompt, or { kind: 'new_case', newCaseId, linked } for the
     // filed-case notice. Absent (null) on every other message type. It carries
@@ -111,7 +135,7 @@ exports.getCaseThread = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   // Rate limited before the passcode is checked, so the limiter itself cannot
   // be used to distinguish a real Case ID from an invented one.
   await enforceRateLimit(firestore, 'getCaseThread', request)
-  await verifyReporterAccess(firestore, caseId, passcode)
+  const caseSnapshot = await verifyReporterAccess(firestore, caseId, passcode)
 
   const messagesSnapshot = await firestore
     .collection(CASES_COLLECTION)
@@ -120,7 +144,16 @@ exports.getCaseThread = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
     .orderBy('timestamp', 'asc')
     .get()
 
-  return { messages: messagesSnapshot.docs.map(serializeMessage) }
+  // scoreCase.js's crisisFlag is written server-side by an onCreate trigger
+  // that reads the case in whatever language it was submitted in - unlike
+  // the client's crisisTextCheck.js, it is not English-only. Surfacing it
+  // here is what lets a reporter who wrote in a language the browser check
+  // can't cover still see the same support panel. See CrisisResources.jsx's
+  // header comment for why nothing about this is ever logged or indicated.
+  return {
+    messages: messagesSnapshot.docs.map(serializeMessage),
+    crisisFlag: caseSnapshot.data()?.crisisFlag === true,
+  }
 })
 
 // The staff counterpart of getCaseThread above. A Case Handler has a

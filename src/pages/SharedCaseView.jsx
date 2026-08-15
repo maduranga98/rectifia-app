@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { getSharedCase, SCOPE_LABELS } from '../services/shareService'
+import { useTranslation } from 'react-i18next'
+import { getSharedCase, getSharedEvidenceDownloadUrl, SCOPE_LABELS } from '../services/shareService'
 import Alert from '../components/ui/Alert'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -23,9 +24,10 @@ function humanize(value) {
 // parent), so a screenshot cannot be taken of a watermark frozen in the
 // past: whatever moment the screenshot was taken at is baked into the image.
 function Watermark({ recipientName, recipientOrganisation, now }) {
-  const label = `${recipientName ?? 'Unknown recipient'} · ${recipientOrganisation ?? 'Unknown organisation'} · ${new Date(
-    now
-  ).toLocaleString()}`
+  const { t } = useTranslation()
+  const label = `${recipientName ?? t('sharedCaseView.watermark.unknownRecipient')} · ${
+    recipientOrganisation ?? t('sharedCaseView.watermark.unknownOrganisation')
+  } · ${new Date(now).toLocaleString()}`
 
   // A generous grid, not one centred stamp - a screenshot cropped to any
   // corner of the screen should still carry attribution.
@@ -63,8 +65,9 @@ function Section({ title, description, children }) {
 }
 
 function DetailList({ items }) {
+  const { t } = useTranslation()
   const filtered = items.filter(([, value]) => value !== null && value !== undefined && value !== '')
-  if (filtered.length === 0) return <p className="text-sm text-muted">Nothing on file.</p>
+  if (filtered.length === 0) return <p className="text-sm text-muted">{t('sharedCaseView.nothingOnFile')}</p>
   return (
     <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {filtered.map(([label, value]) => (
@@ -77,21 +80,57 @@ function DetailList({ items }) {
   )
 }
 
+// Opens one evidence file already in this share's frozen allowlist. Mints a
+// fresh, short-lived signed URL on click and never stores it - the same
+// discipline CaseThread.jsx's AttachmentLink and CaseEvidencePanel.jsx's
+// OpenAction use internally, extended out to this unauthenticated view.
+function EvidenceOpenAction({ shareId, token, fileName }) {
+  const { t } = useTranslation()
+  const [opening, setOpening] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  async function open() {
+    setOpening(true)
+    setFailed(false)
+    try {
+      const url = await getSharedEvidenceDownloadUrl(shareId, token, fileName)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.target = '_blank'
+      anchor.rel = 'noreferrer'
+      anchor.click()
+    } catch {
+      setFailed(true)
+    } finally {
+      setOpening(false)
+    }
+  }
+
+  return (
+    <div className="mt-1.5 flex flex-col items-start gap-1">
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="document"
+        onClick={open}
+        loading={opening}
+        loadingLabel={t('sharedCaseView.evidence.opening')}
+      >
+        {t('sharedCaseView.evidence.open')}
+      </Button>
+      {failed && <span className="text-xs text-critical">{t('sharedCaseView.evidence.openFailed')}</span>}
+    </div>
+  )
+}
+
 const SENDER_TONE = {
   Reporter: 'tone-neutral',
   'Case Handler': 'tone-info',
   'AI assistant': 'tone-info',
 }
 
-// The undertaking a recipient accepts on first access. Recorded verbatim as
-// the fact of acceptance (acceptedName + acceptedAt on the share document) -
-// the text itself is not stored per-acceptance, since it is fixed and
-// unconfigurable here, the same way renderReportPdf.js's classification
-// banner is fixed rather than a per-company setting.
-const UNDERTAKING_TEXT =
-  'I confirm that I am the named recipient of this link, that I will not download, print, screenshot, forward, or otherwise reproduce this case record beyond what is necessary for the stated purpose, and that I understand this access is logged, watermarked, and revocable at any time.'
-
 function AcceptanceGate({ onAccept, submitting, error }) {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [agreed, setAgreed] = useState(false)
   const canSubmit = name.trim().length >= 2 && agreed && !submitting
@@ -105,13 +144,16 @@ function AcceptanceGate({ onAccept, submitting, error }) {
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-5 px-5 py-12">
       <div>
-        <h1 className="text-lg font-semibold text-charcoal">Confidentiality undertaking</h1>
-        <p className="mt-1 text-sm text-muted">
-          Before you can view this case record, confirm your name and accept the terms of this access.
-        </p>
+        <h1 className="text-lg font-semibold text-charcoal">{t('sharedCaseView.acceptance.title')}</h1>
+        <p className="mt-1 text-sm text-muted">{t('sharedCaseView.acceptance.description')}</p>
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5">
-        <Input label="Your full name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input
+          label={t('sharedCaseView.acceptance.fullName')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
         <label className="flex items-start gap-2 text-sm text-charcoal">
           <input
             type="checkbox"
@@ -119,11 +161,23 @@ function AcceptanceGate({ onAccept, submitting, error }) {
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
           />
-          <span>{UNDERTAKING_TEXT}</span>
+          {/* The undertaking a recipient accepts on first access. Recorded
+              verbatim as the fact of acceptance (acceptedName + acceptedAt on
+              the share document) - the text itself is not stored
+              per-acceptance, since it is fixed and unconfigurable here, the
+              same way renderReportPdf.js's classification banner is fixed
+              rather than a per-company setting. */}
+          <span>{t('sharedCaseView.acceptance.undertakingText')}</span>
         </label>
         {error && <Alert variant="error">{error}</Alert>}
-        <Button type="submit" variant="primary" loading={submitting} loadingLabel="Confirming" disabled={!canSubmit}>
-          Accept and continue
+        <Button
+          type="submit"
+          variant="primary"
+          loading={submitting}
+          loadingLabel={t('sharedCaseView.acceptance.confirming')}
+          disabled={!canSubmit}
+        >
+          {t('sharedCaseView.acceptance.acceptAndContinue')}
         </Button>
       </form>
     </div>
@@ -138,6 +192,7 @@ function AcceptanceGate({ onAccept, submitting, error }) {
 // should be able to do exactly one thing from this page: read the one case
 // they were given access to.
 function SharedCaseView() {
+  const { t } = useTranslation()
   const { shareId } = useParams()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') ?? ''
@@ -166,11 +221,11 @@ function SharedCaseView() {
   // the actual control, not this listener.
   useEffect(() => {
     function handleBeforePrint() {
-      window.alert('Printing is disabled for this shared case view.')
+      window.alert(t('sharedCaseView.printDisabledAlert'))
     }
     window.addEventListener('beforeprint', handleBeforePrint)
     return () => window.removeEventListener('beforeprint', handleBeforePrint)
-  }, [])
+  }, [t])
 
   useEffect(() => {
     let cancelled = false
@@ -194,13 +249,13 @@ function SharedCaseView() {
     if (shareId && token) {
       load()
     } else {
-      setError('This link is missing required information.')
+      setError(t('sharedCaseView.errors.missingInfo'))
       setLoading(false)
     }
     return () => {
       cancelled = true
     }
-  }, [shareId, token])
+  }, [shareId, token, t])
 
   async function handleAccept(acceptedName) {
     setAcceptSubmitting(true)
@@ -209,7 +264,7 @@ function SharedCaseView() {
       const result = await getSharedCase({ shareId, token, acceptedName })
       if (result.requiresAcceptance) {
         // Should not happen once a valid name was sent, but fail safely.
-        setAcceptError('Could not confirm acceptance. Please try again.')
+        setAcceptError(t('sharedCaseView.errors.acceptanceFailed'))
         return
       }
       setData(result)
@@ -239,7 +294,7 @@ function SharedCaseView() {
       `}</style>
 
       <div className="shared-case-print-notice min-h-screen items-center justify-center p-8 text-center">
-        <p className="text-lg font-semibold text-charcoal">Printing is disabled for this shared case view.</p>
+        <p className="text-lg font-semibold text-charcoal">{t('sharedCaseView.printDisabledNotice')}</p>
       </div>
 
       <div className="shared-case-printable">
@@ -249,13 +304,13 @@ function SharedCaseView() {
 
         {loading && (
           <div className="flex min-h-screen items-center justify-center">
-            <p className="text-sm text-muted">Loading…</p>
+            <p className="text-sm text-muted">{t('common.loading')}</p>
           </div>
         )}
 
         {!loading && error && (
           <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-3 px-5 text-center">
-            <h1 className="text-lg font-semibold text-charcoal">This link is no longer valid</h1>
+            <h1 className="text-lg font-semibold text-charcoal">{t('sharedCaseView.linkInvalid.title')}</h1>
             <p className="text-sm text-muted">{error}</p>
           </div>
         )}
@@ -270,63 +325,76 @@ function SharedCaseView() {
                 Sticky so it stays visible while scrolling a long record. */}
             <div className="sticky top-3 z-40 rounded-xl border border-gold/50 bg-gold-50 px-4 py-3 shadow-sm">
               <p className="text-sm font-semibold text-charcoal">
-                Confidential external share - {data.companyName ?? 'this organisation'}
+                {t('sharedCaseView.banner.title', {
+                  company: data.companyName ?? t('sharedCaseView.banner.defaultOrganisation'),
+                })}
               </p>
               <p className="mt-0.5 text-xs text-charcoal">
-                Shared by {data.sharedByEmail ?? 'the assigned case handler'} · scope:{' '}
-                {SCOPE_LABELS[data.scope] ?? data.scope} · access expires {expiresLabel}
+                {t('sharedCaseView.banner.details', {
+                  sharedBy: data.sharedByEmail ?? t('sharedCaseView.banner.defaultHandler'),
+                  scope: SCOPE_LABELS[data.scope] ?? data.scope,
+                  expires: expiresLabel,
+                })}
               </p>
               <p className="mt-0.5 text-xs text-muted">
-                Viewing as {data.recipientName} ({data.recipientOrganisation}). This view is watermarked,
-                logged, cannot be downloaded or printed, and can be revoked at any time.
+                {t('sharedCaseView.banner.viewingAs', {
+                  name: data.recipientName,
+                  organisation: data.recipientOrganisation,
+                })}
               </p>
             </div>
 
             <div>
-              <h1 className="text-xl font-semibold text-charcoal">Case {data.caseId}</h1>
-              {data.purpose && <p className="mt-1 text-sm text-muted">Purpose of this share: {data.purpose}</p>}
+              <h1 className="text-xl font-semibold text-charcoal">{t('sharedCaseView.caseHeading', { caseId: data.caseId })}</h1>
+              {data.purpose && (
+                <p className="mt-1 text-sm text-muted">{t('sharedCaseView.purpose', { purpose: data.purpose })}</p>
+              )}
             </div>
 
-            <Section title="Case summary">
+            <Section title={t('sharedCaseView.sections.summary.title')}>
               <DetailList
                 items={[
-                  ['Category', humanize(data.summary?.category)],
-                  ['Status', humanize(data.summary?.status)],
-                  ['Priority', humanize(data.summary?.priority)],
-                  ['Severity score', data.summary?.severityScore],
-                  ['Evidence score', data.summary?.evidenceScore],
-                  ['Opened', formatTimestamp(data.summary?.createdAt)],
-                  ['Closed', formatTimestamp(data.summary?.closedAt)],
+                  [t('sharedCaseView.sections.summary.category'), humanize(data.summary?.category)],
+                  [t('sharedCaseView.sections.summary.status'), humanize(data.summary?.status)],
+                  [t('sharedCaseView.sections.summary.priority'), humanize(data.summary?.priority)],
+                  [t('sharedCaseView.sections.summary.severityScore'), data.summary?.severityScore],
+                  [t('sharedCaseView.sections.summary.evidenceScore'), data.summary?.evidenceScore],
+                  [t('sharedCaseView.sections.summary.opened'), formatTimestamp(data.summary?.createdAt)],
+                  [t('sharedCaseView.sections.summary.closed'), formatTimestamp(data.summary?.closedAt)],
                 ]}
               />
             </Section>
 
-            <Section title="Final action taken">
+            <Section title={t('sharedCaseView.sections.finalAction.title')}>
               <DetailList
                 items={[
-                  ['Action', humanize(data.finalAction?.actionTaken ?? data.finalAction?.proposedAction) || 'Not yet decided'],
-                  ['Effective date', formatTimestamp(data.finalAction?.actionEffectiveDate)],
-                  ['Notes', data.finalAction?.actionNotes],
+                  [
+                    t('sharedCaseView.sections.finalAction.action'),
+                    humanize(data.finalAction?.actionTaken ?? data.finalAction?.proposedAction) ||
+                      t('sharedCaseView.sections.finalAction.notYetDecided'),
+                  ],
+                  [t('sharedCaseView.sections.finalAction.effectiveDate'), formatTimestamp(data.finalAction?.actionEffectiveDate)],
+                  [t('sharedCaseView.sections.finalAction.notes'), data.finalAction?.actionNotes],
                 ]}
               />
             </Section>
 
-            <Section title="Compliance deadline log">
+            <Section title={t('sharedCaseView.sections.complianceLog.title')}>
               <DetailList
                 items={[
-                  ['Rule applied', data.complianceLog?.complianceRuleApplied],
-                  ['Acknowledgment due', formatTimestamp(data.complianceLog?.acknowledgmentDueAt)],
-                  ['Acknowledgment sent', formatTimestamp(data.complianceLog?.acknowledgmentSentAt)],
-                  ['Feedback due', formatTimestamp(data.complianceLog?.feedbackDueAt)],
-                  ['Feedback given', formatTimestamp(data.complianceLog?.feedbackGivenAt)],
+                  [t('sharedCaseView.sections.complianceLog.ruleApplied'), data.complianceLog?.complianceRuleApplied],
+                  [t('sharedCaseView.sections.complianceLog.acknowledgmentDue'), formatTimestamp(data.complianceLog?.acknowledgmentDueAt)],
+                  [t('sharedCaseView.sections.complianceLog.acknowledgmentSent'), formatTimestamp(data.complianceLog?.acknowledgmentSentAt)],
+                  [t('sharedCaseView.sections.complianceLog.feedbackDue'), formatTimestamp(data.complianceLog?.feedbackDueAt)],
+                  [t('sharedCaseView.sections.complianceLog.feedbackGiven'), formatTimestamp(data.complianceLog?.feedbackGivenAt)],
                 ]}
               />
             </Section>
 
             {Array.isArray(data.questionnaire) && (
-              <Section title="Questionnaire answers">
+              <Section title={t('sharedCaseView.sections.questionnaire.title')}>
                 {data.questionnaire.length === 0 ? (
-                  <p className="text-sm text-muted">No questionnaire responses on file.</p>
+                  <p className="text-sm text-muted">{t('sharedCaseView.sections.questionnaire.empty')}</p>
                 ) : (
                   <DetailList
                     items={data.questionnaire.map((entry) => [
@@ -339,9 +407,12 @@ function SharedCaseView() {
             )}
 
             {Array.isArray(data.timeline) && (
-              <Section title="Message timeline" description="Reporter, case handler, and AI assistant messages.">
+              <Section
+                title={t('sharedCaseView.sections.timeline.title')}
+                description={t('sharedCaseView.sections.timeline.description')}
+              >
                 {data.timeline.length === 0 ? (
-                  <p className="text-sm text-muted">No messages.</p>
+                  <p className="text-sm text-muted">{t('sharedCaseView.sections.timeline.empty')}</p>
                 ) : (
                   <ul className="flex flex-col divide-y divide-line-soft">
                     {data.timeline.map((message, index) => (
@@ -359,30 +430,34 @@ function SharedCaseView() {
             )}
 
             <Section
-              title="Evidence"
-              description="Metadata only - file name, type, size, and date. No download or preview is available in this view."
+              title={t('sharedCaseView.sections.evidence.title')}
+              description={t('sharedCaseView.sections.evidence.description')}
             >
               {!data.evidence || data.evidence.length === 0 ? (
-                <p className="text-sm text-muted">No attachments.</p>
+                <p className="text-sm text-muted">{t('sharedCaseView.sections.evidence.empty')}</p>
               ) : (
                 <ul className="flex flex-col gap-2 text-sm">
                   {data.evidence.map((item, index) => (
                     <li key={index} className="rounded-lg border border-line px-3 py-2">
-                      <p className="font-medium text-charcoal">{item.fileName}</p>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <p className="font-medium text-charcoal">{item.label}</p>
+                        {!item.shared && <Badge tone="tone-neutral">{t('sharedCaseView.sections.evidence.notShared')}</Badge>}
+                      </div>
                       <p className="text-xs text-muted">
-                        {item.contentType ?? 'unknown type'} · {item.sizeBytes ? `${Math.round(item.sizeBytes / 1024)} KB` : '-'}{' '}
-                        · {formatTimestamp(item.uploadedAt)}
+                        {item.contentType ?? t('sharedCaseView.sections.evidence.unknownType')} ·{' '}
+                        {item.sizeBytes ? `${Math.round(item.sizeBytes / 1024)} KB` : '-'} ·{' '}
+                        {formatTimestamp(item.uploadedAt)}
                       </p>
+                      {item.shared && (
+                        <EvidenceOpenAction shareId={shareId} token={token} fileName={item.fileName} />
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
             </Section>
 
-            <p className="pb-8 text-center text-xs text-muted">
-              This is a read-only, time-limited external share generated by Rectifia. It contains no way to
-              navigate to any other case, search, or compare against other records.
-            </p>
+            <p className="pb-8 text-center text-xs text-muted">{t('sharedCaseView.footer')}</p>
           </div>
         )}
       </div>

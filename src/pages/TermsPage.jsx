@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Logo from '../components/ui/Logo'
 import Alert from '../components/ui/Alert'
-import { policyVersion, isDraft, lastUpdated, draftNotice, sections } from '../content/legal/terms'
+import { policyVersion, isDraft, lastUpdated, getTermsContent } from '../content/legal/terms'
 
 // Same body-rendering shape as PrivacyPolicyPage.jsx's SectionBody - a string
 // is a paragraph, an array of strings is a bullet list. Kept as a small local
@@ -31,8 +32,12 @@ function SectionBody({ body }) {
 }
 
 // Reachable with no auth and no Case ID - see PrivacyPolicyPage.jsx's header
-// comment for why this has its own minimal chrome rather than ReporterLayout.
+// comment for why this has its own minimal chrome rather than ReporterLayout,
+// and for the caveat on the localized legal body text below.
 function TermsPage() {
+  const { t, i18n } = useTranslation()
+  const { draftNotice, sections } = getTermsContent(i18n.language)
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-surface">
@@ -41,7 +46,7 @@ function TermsPage() {
             <Logo size="md" />
           </Link>
           <Link to="/" className="text-xs text-muted underline hover:text-charcoal">
-            Back to Rectifia
+            {t('legal.backToHome')}
           </Link>
         </div>
       </header>
@@ -58,9 +63,9 @@ function TermsPage() {
         )}
 
         <div>
-          <h1 className="text-2xl font-semibold text-charcoal sm:text-3xl">Terms of Use</h1>
+          <h1 className="text-2xl font-semibold text-charcoal sm:text-3xl">{t('legal.termsTitle')}</h1>
           <p className="mt-2 text-xs text-muted">
-            Version {policyVersion} · Last updated {lastUpdated}
+            {t('legal.version', { version: policyVersion })} · {t('legal.lastUpdated', { date: lastUpdated })}
           </p>
         </div>
 
@@ -76,9 +81,9 @@ function TermsPage() {
 
       <footer className="border-t border-line px-5 py-5">
         <div className="mx-auto flex max-w-3xl items-center justify-between text-xs text-muted">
-          <span>Rectifia</span>
+          <span>{t('app.name')}</span>
           <Link to="/privacy" className="underline hover:text-charcoal">
-            Privacy policy
+            {t('reporterLayout.privacyPolicy')}
           </Link>
         </div>
       </footer>

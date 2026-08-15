@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { policyVersion } from '../../content/legal/privacyPolicy'
 
 // Shown at category selection - before the reporter has typed a single word
@@ -21,6 +22,7 @@ import { policyVersion } from '../../content/legal/privacyPolicy'
 // has to survive the reporter navigating back and forth between steps, and
 // because it's the parent that assembles the final submitCase payload.
 function DataHandlingNotice({ acknowledgment, onChange }) {
+  const { t } = useTranslation()
   const acknowledged = Boolean(acknowledgment?.acknowledged)
 
   function handleToggle(event) {
@@ -37,24 +39,12 @@ function DataHandlingNotice({ acknowledgment, onChange }) {
 
   return (
     <div className="card flex flex-col gap-3 p-5">
-      <h2 className="text-sm font-semibold text-charcoal">Before you continue</h2>
+      <h2 className="text-sm font-semibold text-charcoal">{t('dataHandlingNotice.title')}</h2>
 
       <ul className="flex flex-col gap-1.5 text-sm leading-relaxed text-muted">
-        <li>
-          Your answers are processed by an AI system (Anthropic) that structures your report,
-          scores its urgency and detail completeness, and suggests where it should be routed - it
-          never determines whether policy was broken and never decides your case&apos;s outcome;
-          that is always a person&apos;s call.
-        </li>
-        <li>
-          Choosing to stay anonymous later means no name, email, or phone number is ever
-          collected; choosing to be confidential means only your assigned investigator can ever
-          learn who you are, and only if you choose to tell them.
-        </li>
-        <li>
-          You&apos;ll get a Case ID and a one-time passcode when you file - if you lose either,
-          they cannot be recovered or reset.
-        </li>
+        <li>{t('dataHandlingNotice.points.aiProcessing')}</li>
+        <li>{t('dataHandlingNotice.points.tierChoice')}</li>
+        <li>{t('dataHandlingNotice.points.credentials')}</li>
       </ul>
 
       <label className="mt-1 flex cursor-pointer items-start gap-2.5 rounded-lg border border-line bg-surface p-3 text-sm">
@@ -65,16 +55,16 @@ function DataHandlingNotice({ acknowledgment, onChange }) {
           className="mt-0.5 h-4 w-4"
         />
         <span className="text-charcoal">
-          I understand how my report will be handled.{' '}
+          {t('dataHandlingNotice.acknowledgment')}{' '}
           <Link
             to="/privacy"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-navy underline hover:text-navy-600"
           >
-            Read the full privacy policy
+            {t('dataHandlingNotice.readPolicy')}
           </Link>{' '}
-          <span className="text-xs text-muted">(opens in a new tab, your progress is kept)</span>
+          <span className="text-xs text-muted">{t('dataHandlingNotice.opensNewTabNote')}</span>
         </span>
       </label>
     </div>

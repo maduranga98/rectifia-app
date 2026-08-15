@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { auth } from '../../services/firebase'
 import { exportReportPdf, listReportExports } from '../../services/reportService'
 import Alert from '../ui/Alert'
@@ -54,6 +55,7 @@ const MIN_REASON_LENGTH = 10
 // scratch and will refuse or omit it regardless of what this component
 // sends, so neither prop is a security boundary on its own.
 function ReportExportButton({ caseId, hasRestrictedIdentity = false, canIncludeIdentity = false }) {
+  const { t } = useTranslation()
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState(null)
   const [showIdentityPanel, setShowIdentityPanel] = useState(false)
@@ -121,9 +123,9 @@ function ReportExportButton({ caseId, hasRestrictedIdentity = false, canIncludeI
           icon="document"
           onClick={handlePrimaryClick}
           loading={exporting}
-          loadingLabel="Generating PDF…"
+          loadingLabel={t('reportExportButton.generatingPdf')}
         >
-          Export as PDF
+          {t('reportExportButton.exportAsPdf')}
         </Button>
       </div>
 
@@ -131,8 +133,8 @@ function ReportExportButton({ caseId, hasRestrictedIdentity = false, canIncludeI
 
       {showIdentityPanel && (
         <Card
-          title="Include reporter identity?"
-          description="Confidential tier only. Decrypts and prints the reporter's identity in the PDF's appendix, and is logged the same as any other identity access."
+          title={t('reportExportButton.identityPanel.title')}
+          description={t('reportExportButton.identityPanel.description')}
         >
           <div className="flex flex-col gap-3">
             <label className="flex items-center gap-2.5 text-sm text-charcoal">
@@ -142,13 +144,13 @@ function ReportExportButton({ caseId, hasRestrictedIdentity = false, canIncludeI
                 checked={includeIdentity}
                 onChange={(event) => setIncludeIdentity(event.target.checked)}
               />
-              Include reporter identity in this export
+              {t('reportExportButton.identityPanel.checkboxLabel')}
             </label>
 
             {includeIdentity && (
               <Textarea
-                label="Reason"
-                hint={`Documented legal reason, at least ${MIN_REASON_LENGTH} characters. Recorded in the identity access audit log.`}
+                label={t('reportExportButton.identityPanel.reasonLabel')}
+                hint={t('reportExportButton.identityPanel.reasonHint', { min: MIN_REASON_LENGTH })}
                 rows={2}
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
@@ -161,24 +163,24 @@ function ReportExportButton({ caseId, hasRestrictedIdentity = false, canIncludeI
                 icon="document"
                 onClick={runExport}
                 loading={exporting}
-                loadingLabel="Generating PDF…"
+                loadingLabel={t('reportExportButton.generatingPdf')}
                 disabled={reasonTooShort}
               >
-                Generate PDF
+                {t('reportExportButton.generatePdf')}
               </Button>
               <Button variant="ghost" onClick={() => setShowIdentityPanel(false)} disabled={exporting}>
-                Cancel
+                {t('common.cancel')}
               </Button>
             </div>
           </div>
         </Card>
       )}
 
-      <Card title="Export history" description="Every time this case's report has been rendered to PDF.">
+      <Card title={t('reportExportButton.history.title')} description={t('reportExportButton.history.description')}>
         {historyLoading ? (
-          <p className="text-sm text-muted">Loading…</p>
+          <p className="text-sm text-muted">{t('reportExportButton.history.loading')}</p>
         ) : history.length === 0 ? (
-          <p className="text-sm text-muted">This report has not been exported yet.</p>
+          <p className="text-sm text-muted">{t('reportExportButton.history.empty')}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line-soft">
             {history.map((entry) => (
@@ -188,13 +190,16 @@ function ReportExportButton({ caseId, hasRestrictedIdentity = false, canIncludeI
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-charcoal">
-                    {entry.exportedByUid === currentUid ? 'You' : entry.exportedByUid}
+                    {entry.exportedByUid === currentUid ? t('reportExportButton.history.you') : entry.exportedByUid}
                   </span>
                   <span className="text-xs text-muted">{formatTimestamp(entry.exportedAt)}</span>
-                  {entry.includedIdentity && <Badge tone="tone-high">Identity included</Badge>}
+                  {entry.includedIdentity && <Badge tone="tone-high">{t('reportExportButton.history.identityIncluded')}</Badge>}
                 </div>
                 <span className="text-xs text-muted">
-                  {entry.pageCount ?? '-'} pages · {formatBytes(entry.sizeBytes)}
+                  {t('reportExportButton.history.pagesAndSize', {
+                    pages: entry.pageCount ?? '-',
+                    size: formatBytes(entry.sizeBytes),
+                  })}
                 </span>
               </li>
             ))}

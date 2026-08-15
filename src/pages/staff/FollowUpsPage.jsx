@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import FollowUpStatus from '../../components/dashboard/FollowUpStatus'
 import Alert from '../../components/ui/Alert'
 import { SkeletonList } from '../../components/ui/Loading'
@@ -7,13 +8,12 @@ import { SkeletonList } from '../../components/ui/Loading'
 // never the reporter's free-text answer. Its internals are untouched; it just
 // gets a page and a heading here.
 function FollowUpsPage({ cases, loading, error }) {
+  const { t } = useTranslation()
   const firstLoad = loading && cases.length === 0
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
-      <p className="max-w-2xl text-sm text-muted">
-        Where each case stands on its post-resolution retaliation check-in.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('followUpsPage.description')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
 

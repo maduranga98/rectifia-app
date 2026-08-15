@@ -48,6 +48,48 @@ const CEILINGS = {
   auditLogRetentionDays: null,
 }
 
+// Per-jurisdiction overrides on top of DEFAULTS/CEILINGS, keyed by the same
+// codes companies.jurisdictions uses. Each entry supplies only the keys it
+// needs to override - anything absent falls through to the global default or
+// ceiling above. These are engineering defaults pending employment-law
+// review, not legal advice; a jurisdiction with no entry (UK, US, LK) means
+// the existing globals already reflect it, not that it was overlooked.
+const JURISDICTION_RETENTION = {
+  // GDPR Art. 5(1)(e) storage limitation pushes toward the shortest window
+  // that still serves the purpose: a 5-year case window and a 6-month
+  // post-closure identity window are the conservative reading. The ceiling
+  // matters more than the default here - an EU company should not be able
+  // to configure a 10-year case window regardless of what it sets. Pending
+  // employment-law review - this is an engineering default, not legal
+  // advice.
+  EU: {
+    caseRetentionDays: 1825, // 5 years
+    identityRetentionDays: 180, // 6 months
+    caseRetentionCeiling: 2555, // 7 years
+  },
+  // Japan's labour-related record-keeping obligations sit around 5 years
+  // post the 2020 Civil Code amendment; 5 years is the defensible default,
+  // with room up to 10 years for a company that needs it. Pending
+  // employment-law review - this is an engineering default, not legal
+  // advice.
+  JP: {
+    caseRetentionDays: 1825, // 5 years
+    caseRetentionCeiling: 3650, // 10 years
+  },
+  // Australia's Fair Work Act record-keeping expectations and
+  // employment-claim limitation periods both favour the longer end; the
+  // existing 7-year global default is already the right shape, so this
+  // entry only raises the ceiling to give a company room above it. Pending
+  // employment-law review - this is an engineering default, not legal
+  // advice.
+  AU: {
+    caseRetentionDays: 2555, // 7 years
+    caseRetentionCeiling: 3650, // 10 years
+  },
+  // UK, US and LK have no entry: the existing global DEFAULTS/CEILINGS
+  // already reflect them, so there is nothing to override.
+}
+
 // referenceCases holds category, severityScore, evidenceScore, department
 // tier, actionTaken and closedAt - no narrative, no names, no identifiers. It
 // is the entire basis of the Consistency & Bias Engine (module 10), and
@@ -81,23 +123,87 @@ function isPlausibleDayCount(value) {
   return typeof value === 'number' && Number.isFinite(value) && Number.isInteger(value) && value > 0
 }
 
+// A jurisdiction override's ceiling for `key` is stored under
+// `${key}Ceiling` (e.g. caseRetentionDays -> caseRetentionCeiling) rather
+// than in a parallel CEILINGS-shaped object, since most jurisdiction entries
+// only ever touch caseRetentionDays.
+function jurisdictionCeilingKey(key) {
+  return key.replace(/Days$/, 'Ceiling')
+}
+
+// Folds a company's jurisdictions into a single set of per-key defaults and
+// ceilings, strictest-wins: for each configurable key, the shortest default
+// and the shortest ceiling among the company's matching jurisdictions win,
+// the same reasoning getStrictestRule() in
+// functions/src/compliance/jurisdictionRules.js applies to deadlines - a
+// company operating in EU+AU is bound by the EU's tighter ceiling, not
+// whichever jurisdiction happens to be listed first. Jurisdictions with no
+// entry in JURISDICTION_RETENTION (or not in JURISDICTION_RETENTION at all)
+// simply don't contribute; a company with none resolves to the untouched
+// global DEFAULTS/CEILINGS.
+function resolveJurisdictionRetention(jurisdictions = []) {
+  const basis = (jurisdictions || []).filter((code) => JURISDICTION_RETENTION[code])
+  const defaults = { ...DEFAULTS }
+  const ceilings = { ...CEILINGS }
+
+  for (const key of CONFIGURABLE_KEYS) {
+    const ceilingKey = jurisdictionCeilingKey(key)
+    for (const code of basis) {
+      const entry = JURISDICTION_RETENTION[code]
+      if (typeof entry[key] === 'number' && entry[key] < defaults[key]) {
+        defaults[key] = entry[key]
+      }
+      if (typeof entry[ceilingKey] === 'number') {
+        if (typeof ceilings[key] !== 'number' || entry[ceilingKey] < ceilings[key]) {
+          ceilings[key] = entry[ceilingKey]
+        }
+      }
+    }
+  }
+
+  return { defaults, ceilings, basis }
+}
+
 // Applies a company's retention overrides on top of the defaults and clamps
 // every value to its floor/ceiling, so the result is always safe to hand
 // straight to applyRetention.js / previewRetention.js even if the stored
 // config predates a floor change or was written by a path that didn't
 // validate. `companyData` is a company doc's data() (or undefined for a
 // company with no retention config at all, which resolves to pure defaults).
+//
+// Resolution order, strictest-wins, all in one place:
+//   1. Start from the global DEFAULTS/CEILINGS.
+//   2. Fold in the company's jurisdictions (resolveJurisdictionRetention) -
+//      shortest default, shortest ceiling, per key.
+//   3. Apply the company's own stored `retention` overrides on top.
+//   4. Clamp against the global FLOORS (unchanged, jurisdiction-proof) and
+//      the jurisdiction-resolved ceiling from step 2.
+// A jurisdiction can tighten a ceiling but can never loosen or lower a
+// floor - FLOORS stay global because they are the one thing firestore.rules
+// also knows about and enforces independently.
 function resolveRetentionPolicy(companyData) {
   const stored = companyData?.retention ?? {}
+  const { defaults, ceilings, basis } = resolveJurisdictionRetention(companyData?.jurisdictions)
+
   const resolved = {}
+  const resolvedCeilings = {}
   for (const key of CONFIGURABLE_KEYS) {
     const candidate = stored[key]
-    const base = isPlausibleDayCount(candidate) ? candidate : DEFAULTS[key]
-    resolved[key] = clamp(key, base)
+    const base = isPlausibleDayCount(candidate) ? candidate : defaults[key]
+    const floor = FLOORS[key]
+    const ceiling = ceilings[key]
+    let clamped = base
+    if (clamped < floor) clamped = floor
+    if (typeof ceiling === 'number' && clamped > ceiling) clamped = ceiling
+    resolved[key] = clamped
+    resolvedCeilings[key] = ceiling
   }
+
   return {
     ...resolved,
     referenceCaseRetention: REFERENCE_CASE_RETENTION,
+    resolvedCeilings,
+    jurisdictionBasis: basis,
   }
 }
 
@@ -105,9 +211,11 @@ module.exports = {
   DEFAULTS,
   FLOORS,
   CEILINGS,
+  JURISDICTION_RETENTION,
   CONFIGURABLE_KEYS,
   REFERENCE_CASE_RETENTION,
   isPlausibleDayCount,
   clamp,
+  resolveJurisdictionRetention,
   resolveRetentionPolicy,
 }

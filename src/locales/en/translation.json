@@ -1,5 +1,2751 @@
 {
   "app": {
     "name": "Rectifia"
+  },
+  "language": {
+    "switcher": "Language"
+  },
+  "common": {
+    "opensNewTab": "opens in a new tab",
+    "loading": "Loading…",
+    "loadingShort": "One moment.",
+    "and": "and",
+    "cancel": "Cancel",
+    "save": "Save",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "close": "Close",
+    "retry": "Try again",
+    "error": "Something went wrong",
+    "required": "Required"
+  },
+  "crisisResources": {
+    "ariaLabel": "Support resources",
+    "heading": "Support is available",
+    "intro": "If things feel like a lot right now, you can reach people who are there to help - any time, and separately from this report.",
+    "otherCountries": "Support in other countries",
+    "disclaimer": "These are independent services, not part of Rectifia. Rectifia is not an emergency service and cannot contact any of them for you or send help on your behalf. Rectifia cannot see that you have opened this panel, and does not record it. If someone is in immediate danger, please use the emergency number for where you are."
+  },
+  "reporterLayout": {
+    "needSupport": "Need support now?",
+    "trackExisting": "Track an existing case",
+    "confidential": "Confidential",
+    "backToForm": "Back to the form",
+    "stepLabel": "Step {{current}} of {{total}}: {{name}}",
+    "lastStep": "Last step",
+    "stepsToGo_one": "{{count}} to go",
+    "stepsToGo_other": "{{count}} to go",
+    "privacyPolicy": "Privacy policy",
+    "termsOfUse": "Terms of use"
+  },
+  "authLayout": {
+    "tagline": {
+      "line1": "Speak up safely.",
+      "line2": "Resolve it properly."
+    },
+    "description": "Rectifia is the workplace reporting and case-management platform behind confidential disclosures, investigations, and compliance deadlines.",
+    "points": {
+      "confidential": {
+        "title": "Confidential by design",
+        "body": "Reports are handled on a need-to-know basis, and each role only ever sees the case data it is entitled to."
+      },
+      "deadlines": {
+        "title": "Deadlines tracked for you",
+        "body": "Acknowledgment and feedback windows are calculated per jurisdiction and counted down on every case."
+      },
+      "routing": {
+        "title": "Routed to the right handler",
+        "body": "Category and department rules assign new cases automatically the moment they are submitted."
+      }
+    },
+    "byline": "A Lumora product"
+  },
+  "login": {
+    "title": "Staff sign in",
+    "description": "Use the account your Company Admin issued you.",
+    "reportingNotice": "Reporting something? You do not need an account - use the case link or Case ID you were given.",
+    "workEmail": "Work email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in",
+    "forgotPassword": "Forgot your password?",
+    "errors": {
+      "invalidCredentials": "Incorrect email or password",
+      "generic": "Could not sign in right now. Please try again."
+    }
+  },
+  "forgotPassword": {
+    "title": "Reset your password",
+    "description": "We'll email you a link to set a new one.",
+    "backToSignIn": "Back to sign in",
+    "sendResetLink": "Send reset link",
+    "sending": "Sending",
+    "successMessage": "If an account exists for that email, a password reset link has been sent.",
+    "errorMessage": "Could not send the reset email. Please try again."
+  },
+  "acceptInvite": {
+    "checking": "Checking your invite",
+    "title": "Set up your account",
+    "description": "Choose a password and you're in.",
+    "yourEmail": "Your email",
+    "choosePassword": "Choose a password",
+    "atLeast8": "At least 8 characters",
+    "hint": "Use at least 8 characters.",
+    "confirmPassword": "Confirm password",
+    "reEnter": "Re-enter your password",
+    "settingUp": "Setting up",
+    "setPasswordAndContinue": "Set password and continue",
+    "notAvailable": {
+      "title": "Invite not available",
+      "goToSignIn": "Go to sign in",
+      "alertTitle": "This link cannot be used"
+    },
+    "errors": {
+      "expired": "This invite link has expired or has already been used. Ask your Company Admin to send a new one.",
+      "invalid": "This invite link is not valid.",
+      "tooShort": "Password must be at least 8 characters",
+      "mismatch": "Passwords do not match",
+      "setPasswordFailed": "Could not set your password. Please try again."
+    }
+  },
+  "publicEntry": {
+    "title": "Rectifia",
+    "description": "Confidential workplace reporting. Choose where you're headed.",
+    "trackCard": {
+      "body": "Already filed a report? Enter the Case ID and passcode you were given at the time to read your handler's replies and send a message back. No account, no sign-in."
+    },
+    "alert": {
+      "title": "Filing a new report starts with your employer's link",
+      "body": "Reports go to one specific company, so they can only be filed through the reporting link or QR code your employer published - on a noticeboard, an intranet page, or a handbook. There is no way to look a company up from here. If you don't have the link, ask however your workplace shares it."
+    },
+    "staffCard": {
+      "title": "Staff sign in",
+      "body": "For case handlers, HR coordinators, managers, and administrators with a Rectifia account."
+    },
+    "lostCredentials": "Lost your Case ID or passcode? Neither is stored in a form anyone can read back, so they cannot be recovered or reset - not by us, and not by your employer. Filing a new report is the only way forward."
+  },
+  "submit": {
+    "steps": {
+      "category": "Category",
+      "details": "Details",
+      "yourChoice": "Your choice",
+      "submit": "Submit"
+    },
+    "loading": {
+      "title": "Loading…",
+      "description": "Checking your reporting link.",
+      "oneMoment": "One moment…"
+    },
+    "invalidLink": {
+      "title": "This reporting link isn't valid",
+      "description": "We couldn't find the company for this link.",
+      "alertTitle": "Reporting link not recognised",
+      "alertBody": "The link you followed doesn't point to a company that accepts reports through Rectifia. Double-check the address, or ask whoever shared it for a current one.",
+      "tempUnavailable": "If this keeps happening, the reporting service may be temporarily unavailable."
+    },
+    "tiers": {
+      "anonymous": {
+        "label": "Stay anonymous",
+        "summary": "Nobody can ever identify you.",
+        "detail": "No name, email, or phone number is recorded anywhere on this report - not encrypted, not stored blank, simply never collected. Nobody at your employer, nobody at Rectifia, and nobody with a court order can look you up afterwards. You can still read replies and answer questions using your Case ID and passcode. Be aware that some investigations are harder to complete this way, and a few cannot be resolved at all, because the investigator has no way to come back to you for the detail they need."
+      },
+      "confidential": {
+        "label": "Be identifiable to the investigator only",
+        "summary": "Only the person assigned to your case sees who you are.",
+        "detail": "Choosing this records your choice - it does not collect anything yet. You are not asked for your details on this screen. When you open your case, you'll be able to give the investigator your name, email, phone, or whatever you're willing to share; it is encrypted the moment you submit it, and never appears on any dashboard, in any report, or to anyone else at your employer. The investigator can come back to you with follow-up questions once you do, which usually makes a case easier to resolve. Nothing requires you to do this by a deadline, and leaving it blank is a choice you can make too."
+      }
+    },
+    "steps0": {
+      "titleGeneric": "What's this report about?",
+      "descriptionWithCompany": "Reporting to {{company}}. Choose the category that best fits your situation. The questions that follow are tailored to it.",
+      "descriptionNoCompany": "Choose the category that best fits your situation. The questions that follow are tailored to it."
+    },
+    "steps1": {
+      "title": "Tell us what happened",
+      "description": "{{category}} - answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.",
+      "defaultCategory": "Your report",
+      "changeCategory": "Change category"
+    },
+    "steps2": {
+      "title": "One last choice - how should we record you?",
+      "description": "Your answers are ready to file. Nothing has been submitted yet. This last question is yours alone to answer, and it cannot be changed afterwards.",
+      "backToAnswers": "Back to your answers",
+      "fileReport": "File my report",
+      "filingYourReport": "Filing your report",
+      "credentialsShownOnce": "Your Case ID and passcode are shown once, on the next screen."
+    },
+    "steps3": {
+      "title": "Report filed",
+      "description": "Your report has been submitted. Save your Case ID and passcode below."
+    },
+    "unsavedWarning": {
+      "answers": "Leaving now discards the answers you have entered - this report has not been submitted yet and nothing is saved. Continue to case tracking?",
+      "credentials": "Have you saved your Case ID and passcode? They are shown only on this screen and cannot be recovered afterwards. Continue to case tracking?"
+    },
+    "footerNote": "Rectifia does not record your name, email, or IP address with this report unless you choose to include it in an answer.",
+    "filed": {
+      "alertTitle": "Your report has been filed",
+      "summary_one": "{{count}} answer recorded for {{category}}. Save the details below before you close this page.",
+      "summary_other": "{{count}} answers recorded for {{category}}. Save the details below before you close this page.",
+      "caseId": "Case ID",
+      "passcode": "Passcode",
+      "whereToCheck": "Where to check on your case",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "downloadPdf": "Download as PDF",
+      "copyFailedNote": "Couldn't copy automatically - select the link above and copy it.",
+      "linkExplanation": "The link opens the tracking form with your Case ID filled in. It does not contain your passcode - you will still be asked for it.",
+      "passcodeWarningTitle": "Your passcode cannot be recovered",
+      "passcodeWarningBody1": "It is stored only as a hash, so no one - not Rectifia, not your employer, not the handler on your case - can look it up, reset it, or send it to you. There is no account and no email address attached to this report to recover it to.",
+      "passcodeWarningStrong": "If you lose the Case ID or passcode, you permanently lose access to this case",
+      "passcodeWarningBody2": "and its messages, and filing a new report is the only way to be heard again.",
+      "beforeYouLeave": {
+        "title": "Before you leave this page",
+        "bookmark": "Bookmark the link above, or screenshot this screen.",
+        "writePasscode": "Write the passcode somewhere only you can reach - a screenshot on a work device may not be private.",
+        "comeBack": "Come back any time to read replies from your handler and answer them."
+      },
+      "fileAnother": "File another report"
+    },
+    "pdf": {
+      "heading": "Case tracking details",
+      "trackLine": "Track it here: {{url}}",
+      "keepPrivate1": "Keep this somewhere private. These details cannot be reissued - without",
+      "keepPrivate2": "them there is no way back into this case."
+    }
+  },
+  "pulseCheck": {
+    "title": "Wellness check-in",
+    "checkingLink": "Checking your link…",
+    "descriptionForCompany": "This check-in is for {{company}}.",
+    "descriptionGeneric": "A short, confidential check-in from your organization.",
+    "invalidStates": {
+      "used": {
+        "title": "Your response has already been recorded",
+        "description": "This check-in was already completed - there is nothing more to do. Thank you; your earlier response was saved."
+      },
+      "expired": {
+        "title": "This check-in link has expired",
+        "description": "Pulse-check links are open only for a limited time. A new one will arrive with the next check-in - no action is needed from you now."
+      },
+      "invalid": {
+        "title": "This check-in link isn't valid",
+        "description": "The link may be incomplete or mistyped. Please open the most recent link from your invitation email exactly as it was sent."
+      },
+      "rate_limited": {
+        "title": "Too many attempts on this link",
+        "description": "This check-in link has been opened too many times and is no longer accepting attempts. A new link will arrive with your next check-in - no action is needed from you now."
+      },
+      "error": {
+        "title": "We couldn't open your check-in",
+        "description": "Something went wrong on our side while loading this check-in. Please try again in a few minutes - your link is fine."
+      }
+    }
+  },
+  "caseDetail": {
+    "access": {
+      "title": "Access your case",
+      "description": "No account needed. Enter the Case ID and passcode you were given when you submitted your report.",
+      "footerNote": "Lost your Case ID or passcode? They cannot be recovered - neither is stored in a readable form. You would need to submit a new report."
+    },
+    "thread": {
+      "title": "Case {{caseNumber}}",
+      "description": "Messages here go to the handler assigned to your case. Everything is kept on the case record.",
+      "cardTitle": "Case thread"
+    },
+    "identityOnFile": "Your details are on file, held encrypted. Reading them requires an authorised, logged reveal by the handler assigned to your case."
+  },
+  "sharedCaseView": {
+    "watermark": {
+      "unknownRecipient": "Unknown recipient",
+      "unknownOrganisation": "Unknown organisation"
+    },
+    "nothingOnFile": "Nothing on file.",
+    "evidence": {
+      "opening": "Opening",
+      "open": "Open",
+      "openFailed": "Could not open this file."
+    },
+    "acceptance": {
+      "title": "Confidentiality undertaking",
+      "description": "Before you can view this case record, confirm your name and accept the terms of this access.",
+      "fullName": "Your full name",
+      "undertakingText": "I confirm that I am the named recipient of this link, that I will not download, print, screenshot, forward, or otherwise reproduce this case record beyond what is necessary for the stated purpose, and that I understand this access is logged, watermarked, and revocable at any time.",
+      "confirming": "Confirming",
+      "acceptAndContinue": "Accept and continue"
+    },
+    "printDisabledAlert": "Printing is disabled for this shared case view.",
+    "printDisabledNotice": "Printing is disabled for this shared case view.",
+    "errors": {
+      "missingInfo": "This link is missing required information.",
+      "acceptanceFailed": "Could not confirm acceptance. Please try again."
+    },
+    "linkInvalid": {
+      "title": "This link is no longer valid"
+    },
+    "banner": {
+      "title": "Confidential external share - {{company}}",
+      "defaultOrganisation": "this organisation",
+      "details": "Shared by {{sharedBy}} · scope: {{scope}} · access expires {{expires}}",
+      "defaultHandler": "the assigned case handler",
+      "viewingAs": "Viewing as {{name}} ({{organisation}}). This record is watermarked, logged, cannot be downloaded or printed, and can be revoked at any time. Evidence files marked \"Open\" below may be opened individually; each open is logged separately."
+    },
+    "caseHeading": "Case {{caseId}}",
+    "purpose": "Purpose of this share: {{purpose}}",
+    "sections": {
+      "summary": {
+        "title": "Case summary",
+        "category": "Category",
+        "status": "Status",
+        "priority": "Priority",
+        "severityScore": "Severity score",
+        "evidenceScore": "Evidence score",
+        "opened": "Opened",
+        "closed": "Closed"
+      },
+      "finalAction": {
+        "title": "Final action taken",
+        "action": "Action",
+        "notYetDecided": "Not yet decided",
+        "effectiveDate": "Effective date",
+        "notes": "Notes"
+      },
+      "complianceLog": {
+        "title": "Compliance deadline log",
+        "ruleApplied": "Rule applied",
+        "acknowledgmentDue": "Acknowledgment due",
+        "acknowledgmentSent": "Acknowledgment sent",
+        "feedbackDue": "Feedback due",
+        "feedbackGiven": "Feedback given"
+      },
+      "questionnaire": {
+        "title": "Questionnaire answers",
+        "empty": "No questionnaire responses on file."
+      },
+      "timeline": {
+        "title": "Message timeline",
+        "description": "Reporter, case handler, and AI assistant messages.",
+        "empty": "No messages."
+      },
+      "evidence": {
+        "title": "Evidence",
+        "description": "Every attachment on this case is listed for reference. Only the files the Case Handler selected for this share can be opened; the rest are metadata only.",
+        "empty": "No attachments.",
+        "notShared": "Not shared",
+        "unknownType": "unknown type"
+      }
+    },
+    "footer": "This is a read-only, time-limited external share generated by Rectifia. It contains no way to navigate to any other case, search, or compare against other records."
+  },
+  "categories": {
+    "harassment": {
+      "label": "Harassment",
+      "description": "Unwanted conduct targeting you or someone else - verbal, written, physical, or visual."
+    },
+    "toxicManagement": {
+      "label": "Toxic management",
+      "description": "A pattern of behavior from a manager that's undermining your wellbeing or ability to work."
+    },
+    "discrimination": {
+      "label": "Discrimination",
+      "description": "Being treated unfairly at work because of a protected characteristic such as race, gender, age, or disability."
+    },
+    "retaliation": {
+      "label": "Retaliation",
+      "description": "Being treated worse after raising a concern, or after supporting someone who did."
+    },
+    "burnout": {
+      "label": "Burnout",
+      "description": "Sustained work-related exhaustion that is affecting your health."
+    }
+  },
+  "categorySelect": {
+    "continue": "Continue",
+    "acknowledgeToContinue": "Acknowledge the notice above to continue."
+  },
+  "dataHandlingNotice": {
+    "title": "Before you continue",
+    "points": {
+      "aiProcessing": "Your answers are processed by an AI system (Anthropic) that structures your report, scores its urgency and detail completeness, and suggests where it should be routed - it never determines whether policy was broken and never decides your case's outcome; that is always a person's call.",
+      "tierChoice": "Choosing to stay anonymous later means no name, email, or phone number is ever collected; choosing to be confidential means only your assigned investigator can ever learn who you are, and only if you choose to tell them.",
+      "credentials": "You'll get a Case ID and a one-time passcode when you file - if you lose either, they cannot be recovered or reset."
+    },
+    "acknowledgment": "I understand how my report will be handled.",
+    "readPolicy": "Read the full privacy policy",
+    "opensNewTabNote": "(opens in a new tab, your progress is kept)"
+  },
+  "questionnaireForm": {
+    "optional": "Optional",
+    "selectAnswer": "Select an answer",
+    "chooseAllThatApply": "Choose all that apply",
+    "notSpecified": "I'd rather not say",
+    "submitting": "Submitting",
+    "partOf": "Part {{current}} of {{total}}",
+    "progress": {
+      "answered": "{{answered}} of {{total}} answered",
+      "remaining_one": "{{count}} left",
+      "remaining_other": "{{count}} left"
+    },
+    "errors": {
+      "unknownCategory": "Unknown case category.",
+      "incomplete": "Please answer every question before submitting."
+    },
+    "evidence": {
+      "title": "Attach evidence",
+      "body": "A screenshot, a document, or a photo can identify you even when your written answers don't - a filename, the content itself, or details hidden in a photo's file information can all carry your name. Attaching anything here is entirely your choice; you can also skip this and add files later from your case thread once you have your Case ID and passcode.",
+      "attachFile": "Attach a file",
+      "fileTypeNote": "PDF, images, plain text, CSV, or Office documents, up to 25MB each.",
+      "remove": "Remove"
+    }
+  },
+  "questionnaire": {
+    "harassment": {
+      "harassment_conduct_type": {
+        "text": "What type of conduct are you reporting?",
+        "options": {
+          "verbal": "Verbal (comments, jokes, slurs)",
+          "written": "Written (messages, emails, posts)",
+          "physical": "Physical (unwanted contact or gestures)",
+          "visual": "Visual (images or materials displayed)",
+          "exclusion": "Exclusion or isolation",
+          "other": "Other"
+        }
+      },
+      "harassment_frequency": {
+        "text": "How often has this happened?",
+        "options": {
+          "once": "A single incident",
+          "occasional": "A few times",
+          "repeated": "Repeatedly over weeks",
+          "ongoing": "Ongoing / still happening"
+        }
+      },
+      "harassment_power_dynamic": {
+        "text": "What is the involved person's relationship to you?",
+        "options": {
+          "direct_manager": "My direct manager",
+          "senior_leader": "A senior leader (not my direct manager)",
+          "peer": "A peer or colleague",
+          "report": "Someone who reports to me",
+          "external": "A client, vendor, or other external party"
+        }
+      },
+      "subject_department": {
+        "text": "What department does the involved person work in? (Optional)"
+      },
+      "subject_role": {
+        "text": "What is the involved person's role or title? (Optional)",
+        "options": {
+          "junior": "About the same level as me, or more junior",
+          "senior": "Senior to me, but not a manager (lead, supervisor, principal)",
+          "manager": "A manager, director or executive",
+          "unspecified": "I'd rather not say"
+        }
+      },
+      "harassment_witnesses": {
+        "text": "Were there any witnesses?",
+        "options": {
+          "yes": "Yes",
+          "no": "No",
+          "unsure": "Not sure"
+        }
+      },
+      "harassment_impact": {
+        "text": "How much has this affected your ability to work?",
+        "scale": { "minLabel": "Not at all", "maxLabel": "Severely" }
+      },
+      "harassment_details": {
+        "text": "Describe what happened, in your own words."
+      }
+    },
+    "toxicManagement": {
+      "toxic_manager_department": {
+        "text": "What department does the involved manager work in? (Optional)"
+      },
+      "toxic_manager_role": {
+        "text": "What is the involved manager's role or title? (Optional)",
+        "options": {
+          "junior": "About the same level as me, or more junior",
+          "senior": "Senior to me, but not a manager (lead, supervisor, principal)",
+          "manager": "A manager, director or executive",
+          "unspecified": "I'd rather not say"
+        }
+      },
+      "toxic_manager_relationship": {
+        "text": "Is this manager your direct manager?",
+        "options": {
+          "direct": "Yes, my direct manager",
+          "skip_level": "No, but they're above my direct manager",
+          "other_team": "No, they manage a different team"
+        }
+      },
+      "toxic_behaviors": {
+        "text": "Which behaviors have you experienced or witnessed?",
+        "options": {
+          "public_humiliation": "Public humiliation or belittling",
+          "unreasonable_demands": "Unreasonable demands or deadlines",
+          "credit_theft": "Taking credit for others' work",
+          "favoritism": "Favoritism or unfair treatment",
+          "micromanagement": "Excessive micromanagement",
+          "threats": "Threats about job security",
+          "yelling": "Yelling or aggressive outbursts"
+        }
+      },
+      "toxic_frequency": {
+        "text": "How often does this behavior occur?",
+        "options": {
+          "rare": "Rarely",
+          "monthly": "A few times a month",
+          "weekly": "Weekly",
+          "daily": "Almost daily"
+        }
+      },
+      "toxic_team_impact": {
+        "text": "How many people on the team do you believe are affected?",
+        "options": {
+          "just_me": "Just me",
+          "a_few": "A few of us",
+          "most": "Most of the team"
+        }
+      },
+      "toxic_impact": {
+        "text": "How much has this affected your wellbeing at work?",
+        "scale": { "minLabel": "Not at all", "maxLabel": "Severely" }
+      },
+      "toxic_details": {
+        "text": "Describe what happened, in your own words."
+      }
+    },
+    "discrimination": {
+      "discrimination_basis": {
+        "text": "Which protected characteristic(s) do you believe this is related to?",
+        "options": {
+          "race_ethnicity": "Race or ethnicity",
+          "gender_sex": "Gender or sex",
+          "age": "Age",
+          "disability": "Disability",
+          "religion": "Religion",
+          "national_origin": "National origin",
+          "sexual_orientation_gender_identity": "Sexual orientation or gender identity",
+          "pregnancy_parental_status": "Pregnancy or parental status",
+          "other": "Other"
+        }
+      },
+      "discrimination_form": {
+        "text": "What form did this discrimination take?",
+        "options": {
+          "hiring_promotion": "A hiring or promotion decision",
+          "pay_compensation": "A pay or compensation disparity",
+          "termination_layoff": "A termination or layoff selection",
+          "performance_evaluation": "Performance evaluation bias",
+          "task_assignment": "Differences in task or assignment given",
+          "exclusion_opportunities": "Exclusion from opportunities",
+          "comments_jokes": "Comments or jokes referencing a protected characteristic"
+        }
+      },
+      "discrimination_pattern": {
+        "text": "How would you describe the pattern?",
+        "options": {
+          "single": "A single instance",
+          "pattern": "A pattern over time",
+          "ongoing": "Ongoing / still happening"
+        }
+      },
+      "subject_department": {
+        "text": "What department does the involved person work in? (Optional)"
+      },
+      "subject_role": {
+        "text": "What is the involved person's role or title? (Optional)",
+        "options": {
+          "junior": "About the same level as me, or more junior",
+          "senior": "Senior to me, but not a manager (lead, supervisor, principal)",
+          "manager": "A manager, director or executive",
+          "unspecified": "I'd rather not say"
+        }
+      },
+      "discrimination_comparators": {
+        "text": "Do you know of anyone in a similar situation who was treated differently?",
+        "options": {
+          "yes": "Yes",
+          "no": "No",
+          "unsure": "Not sure"
+        }
+      },
+      "discrimination_documentation": {
+        "text": "Is there documentation of this (emails, review records, pay records)?",
+        "options": {
+          "yes": "Yes",
+          "no": "No",
+          "unsure": "Not sure"
+        }
+      },
+      "discrimination_impact": {
+        "text": "How much has this affected your ability to work?",
+        "scale": { "minLabel": "Not at all", "maxLabel": "Severely" }
+      },
+      "discrimination_details": {
+        "text": "Describe what happened, in your own words."
+      }
+    },
+    "retaliation": {
+      "retaliation_original_complaint_type": {
+        "text": "What did you originally report or oppose?",
+        "options": {
+          "harassment_report": "A harassment report",
+          "toxic_management_report": "A toxic management report",
+          "safety_concern": "A safety concern",
+          "legal_compliance_concern": "A legal or compliance concern",
+          "supported_colleague": "Supported a colleague's complaint",
+          "other": "Other"
+        }
+      },
+      "retaliation_original_complaint_timeframe": {
+        "text": "Approximately when did you make that original complaint?",
+        "options": {
+          "within_week": "Within the last week",
+          "within_month": "Within the last month",
+          "within_3_months": "1-3 months ago",
+          "within_6_months": "3-6 months ago",
+          "over_6_months": "More than 6 months ago"
+        }
+      },
+      "retaliation_action_type": {
+        "text": "What happened to you afterward that you believe was retaliation?",
+        "options": {
+          "demotion": "Demotion or loss of responsibilities",
+          "pay_cut": "Pay cut or withheld raise/bonus",
+          "termination": "Termination or threat of termination",
+          "negative_review": "Sudden negative performance review",
+          "exclusion": "Exclusion from meetings or projects",
+          "schedule_change": "Unfavorable schedule or assignment change",
+          "hostility": "Increased hostility or scrutiny",
+          "other": "Other"
+        }
+      },
+      "retaliation_action_timeframe": {
+        "text": "Approximately when did this retaliatory action happen?",
+        "options": {
+          "within_week": "Within the last week",
+          "within_month": "Within the last month",
+          "within_3_months": "1-3 months ago",
+          "within_6_months": "3-6 months ago",
+          "over_6_months": "More than 6 months ago"
+        }
+      },
+      "retaliation_actor_relationship": {
+        "text": "Who took the retaliatory action?",
+        "options": {
+          "same_person": "The person I originally reported",
+          "their_manager": "That person's manager",
+          "different_person": "Someone else entirely",
+          "unsure": "Not sure"
+        }
+      },
+      "subject_department": {
+        "text": "What department does the person who took that action work in? (Optional)"
+      },
+      "subject_role": {
+        "text": "What is that person's role or title? (Optional)",
+        "options": {
+          "junior": "About the same level as me, or more junior",
+          "senior": "Senior to me, but not a manager (lead, supervisor, principal)",
+          "manager": "A manager, director or executive",
+          "unspecified": "I'd rather not say"
+        }
+      },
+      "retaliation_details": {
+        "text": "Describe what happened, in your own words."
+      }
+    },
+    "burnout": {
+      "burnout_duration": {
+        "text": "How long have you been feeling this way?",
+        "options": {
+          "weeks": "A few weeks",
+          "months": "A couple of months",
+          "over_6_months": "Over 6 months",
+          "over_a_year": "Over a year"
+        }
+      },
+      "burnout_symptoms": {
+        "text": "Which of these have you been experiencing?",
+        "options": {
+          "exhaustion": "Persistent exhaustion",
+          "cynicism": "Cynicism or detachment from work",
+          "reduced_efficacy": "Feeling ineffective or unaccomplished",
+          "sleep_issues": "Sleep problems",
+          "physical_symptoms": "Physical symptoms (headaches, illness)",
+          "concentration": "Difficulty concentrating"
+        }
+      },
+      "burnout_workload": {
+        "text": "How would you describe your current workload?",
+        "options": {
+          "manageable": "Manageable",
+          "heavy": "Heavy but doable",
+          "excessive": "Excessive",
+          "unsustainable": "Unsustainable"
+        }
+      },
+      "burnout_support": {
+        "text": "Do you feel supported by your manager and team?",
+        "options": {
+          "yes": "Yes",
+          "somewhat": "Somewhat",
+          "no": "No"
+        }
+      },
+      "burnout_impact": {
+        "text": "How much is this affecting your day-to-day life?",
+        "scale": { "minLabel": "Not at all", "maxLabel": "Severely" }
+      },
+      "burnout_details": {
+        "text": "Tell us more about how you've been doing, in your own words."
+      },
+      "reporter_department": {
+        "text": "What department do you work in? (Optional - helps us spot company-wide trends, never shown to anyone individually.)"
+      }
+    }
+  },
+  "pulseSurveyForm": {
+    "defaultScaleLabels": ["Not at all", "Rarely", "Somewhat", "Mostly", "Very much"],
+    "defaultOrganization": "your organization",
+    "whoSeesThis": {
+      "title": "Who sees your response",
+      "individual": "Your <strong>HR Coordinator</strong> and <strong>Pulse Check Reviewer</strong> can see your individual response.",
+      "aggregate": "Your <strong>manager</strong> sees department-level aggregates only - never your individual answers."
+    },
+    "thanks": {
+      "title": "Thanks - your response has been recorded",
+      "description": "Your check-in for {{company}} has been saved."
+    },
+    "loadFailed": {
+      "title": "This check-in couldn't be loaded",
+      "description": "The questions didn't load. Please try opening your link again in a few minutes - nothing is wrong with your link."
+    },
+    "title": "Pulse check",
+    "description": "A few quick questions about how work is going at {{company}}. Takes under a minute.",
+    "previewAlert": {
+      "title": "Preview - nothing is recorded",
+      "body": "This is exactly what employees see. You can click through the scale and type in the boxes; nothing you enter here is saved, sent, or counted anywhere."
+    },
+    "submitDisabledInPreview": "Submit (disabled in preview)"
+  },
+  "questionSetPreview": {
+    "publishedVersion": "Published version {{version}}",
+    "standardOnly": "Standard questions only",
+    "noAddedQuestions": "No added questions",
+    "addedQuestions_one": "{{count}} added question",
+    "addedQuestions_other": "{{count}} added questions",
+    "liveVersion": {
+      "title": "This is the live version, not your draft",
+      "body": "You have unpublished changes. This preview shows what employees are receiving right now. Publish to make your changes part of what is sent."
+    }
+  },
+  "caseAccess": {
+    "caseId": "Case ID",
+    "passcode": "Passcode",
+    "hint": "Both were shown to you once, when you submitted your report.",
+    "checking": "Checking",
+    "accessCase": "Access case",
+    "errors": {
+      "invalid": "Case ID or passcode is incorrect."
+    }
+  },
+  "contactChannelPanel": {
+    "saved": {
+      "title": "An email address is saved for updates",
+      "body": "When there is an update on your case we send a short, deliberately vague message to that address - it never mentions your case, this company, or what you reported. You still open your case here with your Case ID and passcode.",
+      "removeNote": "Removing it deletes the address completely. Notifications stop; nothing else about your case changes."
+    },
+    "removing": "Removing",
+    "removeAddress": "Remove this address",
+    "offer": {
+      "title": "Want to be emailed when there is an update?",
+      "body": "Optional. Without it, you check back here whenever you like - nothing is lost by leaving this alone.",
+      "readMore": "Read what that would mean"
+    },
+    "form": {
+      "title": "Adding an email address for updates",
+      "whatThisCreates": {
+        "title": "What this creates",
+        "body": "Saving an address creates a stored link between that address and this case. That link is exactly what “anonymous” otherwise guarantees does not exist. It is encrypted and nobody working on your case can read it - not your handler, not the HR Coordinator, not your Company Admin - but it exists, and you should decide knowing that rather than find out later."
+      },
+      "throwaway": {
+        "title": "A throwaway address is a fine choice",
+        "body": "A free burner address you make for this and nothing else works perfectly well here, and for many people it is the sensible option. We would rather say that plainly than have you use a work address because we stayed quiet about it."
+      },
+      "whatEmailsSay": {
+        "title": "What the emails say",
+        "body": "As little as possible, on purpose. Something like “You have an update” and a link to our front page - never your Case ID, the category, the status, or anything about this company. Anyone glancing at your inbox learns nothing."
+      },
+      "takeItBack": {
+        "title": "You can take it back",
+        "body1": "Remove it at any time from this page and the address is deleted, not just switched off.",
+        "body2": "This does not change who can see your report or affect how your case is handled, and your case stays anonymous either way."
+      },
+      "emailAddress": "Email address",
+      "emailHint": "Keep hold of your Case ID and passcode either way - this address cannot be used to recover them.",
+      "saving": "Saving",
+      "saveAddress": "Save this address",
+      "noThanks": "No thanks"
+    }
+  },
+  "identityPanel": {
+    "confirmPhrase": "IDENTIFY ME",
+    "whatThisMeans": { "title": "What this means" },
+    "whatDoesNotChange": {
+      "title": "What does not change",
+      "subjectNeverSees": "The person your report is about never sees your name, or that you gave one.",
+      "hrNeverSees": "The HR Coordinator who oversees the case queue never sees it.",
+      "adminNeverSees": "Your Company Admin never sees it.",
+      "nothingElseChanges": "Nothing you have already written in this case changes, and no message is sent to anyone asking about it."
+    },
+    "cannotBeUndone": {
+      "title": "This cannot be undone",
+      "body1": "Once your details are stored they stay part of this case's record until it ends. We are not offering an undo button, because it could not mean what it says: removing your details from a live investigation would destroy part of its record, and leaving them in place while telling you they were gone would not be true.",
+      "body2": "You are under no obligation to do this. Your case is worked the same way either way, and if you would rather stay anonymous, close this and carry on."
+    },
+    "giveAsMuchAsYouWant": "Give as much or as little as you want - one detail is enough. Anything you leave blank is simply not stored.",
+    "fields": {
+      "name": "Your name",
+      "email": "Email address",
+      "emailHint": "For the investigator to reach you directly. This is separate from update notifications, which never contain case details.",
+      "phone": "Phone",
+      "jobTitle": "Job title",
+      "notes": "Anything else you want them to know",
+      "confirmLabel": "Type {{phrase}} to confirm",
+      "confirmHint": "Typed out in full, so this is never something that happens on a stray click."
+    },
+    "upgrade": {
+      "collapsedTitle": "Your report is anonymous",
+      "collapsedBody": "Nobody working on this case knows who you are, and nothing here will ask you to change that. If you would rather the investigator could contact you directly, you can choose to tell them who you are.",
+      "collapsedCta": "Read what that would mean",
+      "expandedTitle": "Telling the investigator who you are",
+      "whatChanges": "The handler assigned to your case will be able to see the details you give below. They are encrypted when stored, the handler has to give a written reason to decrypt them, and every time anyone looks it is recorded.",
+      "submitLabel": "Tell the investigator who I am",
+      "cancelLabel": "Stay anonymous",
+      "doneTitle": "Your details are on the case",
+      "doneBody": "The handler assigned to your case can now find out who you are. Nobody else can, and nobody was told to ask you for this."
+    },
+    "provide": {
+      "collapsedTitle": "You chose to be identifiable to the investigator",
+      "collapsedBody": "When you filed this report, you chose to let the investigator know who you are. That choice was recorded, but no details were collected yet - you can add them whenever you're ready, there's no deadline.",
+      "collapsedCta": "Add your details",
+      "expandedTitle": "Give the investigator your details",
+      "whatChanges": "The handler assigned to your case will be able to see the details you give below. They are encrypted when stored, the handler has to give a written reason to decrypt them, and every time anyone looks it is recorded.",
+      "submitLabel": "Give the investigator my details",
+      "cancelLabel": "Not right now",
+      "doneTitle": "Your details are on the case",
+      "doneBody": "The handler assigned to your case can now find out who you are. Nobody else can, and nobody was told to ask you for this.",
+      "alreadyChosenNote": "This is the choice you already made when you filed your report - this is just where you follow through on it, whenever you want. Leaving this closed for now keeps your case exactly as it is."
+    }
+  },
+  "caseThread": {
+    "authors": {
+      "investigatorLog": "Investigator log",
+      "aiAssistant": "AI assistant",
+      "caseHandler": "Case Handler",
+      "caseRecord": "Case record",
+      "reporter": "Reporter"
+    },
+    "opening": "opening…",
+    "openFailed": "Could not open this file.",
+    "errors": {
+      "passcodeRequired": "A passcode is required to load this case."
+    },
+    "noMessages": {
+      "title": "No messages yet",
+      "description": "Anything sent here is added to the case record permanently."
+    },
+    "messageLabel": "Message",
+    "messagePlaceholder": "Type a message...",
+    "attachFile": "Attach file",
+    "sending": "Sending",
+    "send": "Send",
+    "manualLog": {
+      "add": "Add manual log entry",
+      "label": "Manual log entry",
+      "placeholder": "e.g. Called witness X, summary: ...",
+      "save": "Save log entry"
+    },
+    "translate": {
+      "action": "Translate",
+      "loading": "Translating…",
+      "failed": "Translation failed.",
+      "resultLabel": "Translated from detected language - original above"
+    }
+  },
+  "followUpPrompt": {
+    "title": "Follow-up check-in",
+    "newCase": {
+      "title": "A separate case was opened",
+      "caseLabel": "New case {{caseId}}.",
+      "linked": "You chose to link it to this case, so its handler will know the same person filed both.",
+      "standalone": "It is standalone and carries no reference to this case."
+    },
+    "filed": {
+      "title": "Your new case has been opened",
+      "caseId": "Case ID {{caseId}}",
+      "passcodeLabel": "Passcode",
+      "saveNote": "Save both now. This passcode is shown only once and cannot be recovered. It is separate from your existing case passcode.",
+      "linked": " You chose to link this to your earlier case.",
+      "standalone": " This case is standalone and does not reference your earlier case."
+    },
+    "answeredLabels": {
+      "answeredNoChange": "You answered: nothing has changed.",
+      "answeredConcern": "You answered: something has happened.",
+      "declined": "You chose not to answer this check-in.",
+      "noResponse": "This check-in was not answered.",
+      "fallback": "Answered."
+    },
+    "awaitingResponse": "Awaiting the reporter's response.",
+    "yourAnswer": "Your answer",
+    "options": {
+      "noChange": "Nothing has changed",
+      "concern": "Something has happened since I reported",
+      "decline": "I would rather not answer",
+      "stop": "Please stop asking me"
+    },
+    "addAnything": "Anything you would like to add (optional)",
+    "addAnythingPlaceholder": "Only shared if you choose to open a new case below.",
+    "openNewCase": "Open a new, separate case about this. Your earlier case stays closed and unchanged.",
+    "linkToOriginal": "Link it to this case. If you tick this, the new case's handler will know the same person filed the earlier case. Leave it unticked and the new case is completely standalone. This is your choice.",
+    "submitAndOpenCase": "Submit and open a new case",
+    "submitAnswer": "Submit answer"
+  },
+  "caseNotificationOptIn": {
+    "noDetailsNote": "A notification never contains any detail about your case - no message text, no category, nothing that could identify the report. It only tells you there is an update to come back and read here.",
+    "getNotified": "Get notified when there's a reply",
+    "iosInstall": "On iPhone and iPad, notifications only work once this site is added to your Home Screen. Tap the Share button in Safari, choose <strong>Add to Home Screen</strong>, then open Rectifia from your home screen and come back to this page to turn them on.",
+    "unsupported": {
+      "title": "Notifications aren't available in this browser",
+      "body": "This browser can't send you case updates. You can still come back any time with your Case ID and passcode to read replies."
+    },
+    "blocked": {
+      "title": "Notifications are blocked for this site",
+      "body": "Your browser is set to block notifications here, so we can't turn them on from this page. To allow them, open this site's permissions - usually the icon at the left of the address bar, or Settings → Site settings → Notifications - set notifications to Allow, then reload this page."
+    },
+    "subscribed": {
+      "title": "You'll be notified of replies",
+      "body": "This device will get a notification when there's a reply on your case. It won't say anything about the case itself - just that there's an update to check.",
+      "turnedOff": "Notifications are off for this device. Reopen this page any time to turn them back on.",
+      "sharedDeviceNote": "On a shared or work device, turn notifications off before you leave - otherwise the next person using this browser will see the update prompts."
+    },
+    "turningOff": "Turning off",
+    "turnOffThisDevice": "Turn off on this device",
+    "turnOnBody": "Turn on notifications on this device so you know when your handler responds, without having to keep checking back.",
+    "turningOn": "Turning on",
+    "turnOnReplyNotifications": "Turn on reply notifications",
+    "notifyMe": "Notify me of replies"
+  },
+  "caseCredentialsHandoff": {
+    "filesAttachedMessage": "Files attached when this report was filed.",
+    "couldNotAttach": "Could not attach to your case thread",
+    "filesYouAttached": "Files you attached",
+    "attaching": "Attaching your files…",
+    "attached": "Attached",
+    "failed": "Failed",
+    "someFilesFailed_one": "{{count}} file could not be attached. Your report was filed successfully regardless - once you have your Case ID and passcode, you can attach these files from your case thread instead.",
+    "someFilesFailed_other": "{{count}} files could not be attached. Your report was filed successfully regardless - once you have your Case ID and passcode, you can attach these files from your case thread instead.",
+    "keepPrivateOneLine": "Keep these somewhere private. They cannot be reissued - without them there is no way back into the case.",
+    "caseFiled": {
+      "title": "Case filed",
+      "body": "The report is now in the system and has been routed like any other case. The reporter has the same access to it as if they had filed it themselves - but only if you pass on the details below."
+    },
+    "backdateWarning": {
+      "title": "This report was received some time ago",
+      "body": "Its compliance deadlines were calculated from the date you entered, not from today, so one or both may already have passed. That is the correct reading of the case - check the handler dashboard for what is now outstanding."
+    },
+    "shownOnce": {
+      "title": "Shown once - these cannot be recovered",
+      "body1": "The passcode is stored only as a hash. Nobody can look it up, reset it, or send it on: not you, not a Company Admin, not Rectifia.",
+      "strong": "If you leave this screen without giving the reporter these details, they permanently lose access to their own case",
+      "body2": "- they will not be able to read replies, answer the investigator's questions, or add anything they remember later."
+    },
+    "giveToReporter": "Give these to the reporter",
+    "whereTheyCheck": "Where they check on it",
+    "linkFillsIn": "The link fills in the Case ID. It does not contain the passcode, so on its own it opens nothing.",
+    "copyAllDetails": "Copy all details",
+    "downloadToDevice": "Download to this device",
+    "copyFailedNote": "Couldn't copy automatically - select the details above and copy them.",
+    "downloadTradeoff": "Saves a plain-text file to this device's usual downloads location. On a company-managed device, that file can be visible to IT, endpoint monitoring, or backup tools - including your employer's, if that's who this report is about.",
+    "beforeYouClose": {
+      "title": "Before you close this",
+      "handOver": "Hand the Case ID and passcode to the reporter now, by whatever route they asked you to use.",
+      "dontKeepCopy": "Don't keep a copy in your own notes, inbox, or a shared drive - a passcode sitting in a mailbox is a way into someone's case that outlives this conversation. If you use the download option above to hand these off, delete that file the same way once the reporter has the details, not just from your notes.",
+      "identityEncrypted": "Their identity is encrypted and stored. It is not visible on any dashboard or in any case report, and reading it requires a Super Admin and a documented reason.",
+      "canReplyAnytime": "The reporter can reply to the investigator and add information at any time using these details."
+    },
+    "acknowledgment": "I have given the Case ID and passcode to the reporter.",
+    "done": "Done"
+  },
+  "appShell": {
+    "mainNav": "Main",
+    "signOut": "Sign out",
+    "closeNavigation": "Close navigation",
+    "openNavigation": "Open navigation"
+  },
+  "roles": {
+    "companyAdmin": "Company Admin",
+    "hrCoordinator": "HR Coordinator",
+    "caseHandler": "Case Handler",
+    "manager": "Manager",
+    "pulseCheckReviewer": "Pulse Check Reviewer",
+    "staff": "Staff"
+  },
+  "dashboardNav": {
+    "overview": "Overview",
+    "allCases": "All cases",
+    "awaitingTriage": "Awaiting triage",
+    "patterns": "Patterns",
+    "followUps": "Follow-ups",
+    "pulseChecks": "Pulse checks",
+    "trends": "Trends",
+    "benchmark": "Benchmark",
+    "analytics": "Analytics",
+    "fileAReport": "File a report",
+    "myCases": "My cases",
+    "myDesignation": "My designation",
+    "pulseResponses": "Pulse responses",
+    "teamWellness": "Team wellness",
+    "help": "Help & Support",
+    "caseWorkspace": "Case workspace",
+    "dashboard": "Dashboard",
+    "eyebrow": "Dashboard",
+    "featureDisabled": {
+      "title": "This feature is currently disabled",
+      "description": "Ask a Super Admin to enable it for your company."
+    },
+    "nothingToShow": {
+      "title": "Nothing to show yet",
+      "description": "No dashboard is configured for the {{role}} role yet."
+    },
+    "noPermissions": {
+      "title": "No permissions assigned",
+      "body": "This role has no permissions assigned yet. Ask your Company Admin to add permissions to the role."
+    },
+    "noRole": {
+      "title": "No role assigned",
+      "body": "This account has no role assigned yet, so there is nothing to show. Ask your Company Admin to re-issue the invite."
+    },
+    "notLinked": {
+      "title": "Account not linked to a company",
+      "body": "This account is not linked to a company. Ask your Company Admin to re-issue the invite."
+    }
+  },
+  "adminNav": {
+    "overview": "Overview",
+    "cases": "Cases",
+    "analytics": "Analytics",
+    "departments": "Departments",
+    "staff": "Staff",
+    "employees": "Employees",
+    "routingRules": "Routing rules",
+    "policies": "Policies",
+    "designatedHandlers": "Designated handlers",
+    "pulseQuestions": "Pulse questions",
+    "dataRetention": "Data retention",
+    "benchmarkPool": "Benchmark pool",
+    "billing": "Billing",
+    "settings": "Settings",
+    "teamWellness": "Team wellness",
+    "help": "Help & Support",
+    "sections": {
+      "cases": "Cases",
+      "organization": "Organization",
+      "policyCompliance": "Policy & compliance",
+      "account": "Account"
+    },
+    "pageTitles": {
+      "overview": "Overview",
+      "cases": "Cases",
+      "analytics": "Analytics & reporting",
+      "departments": "Departments",
+      "policies": "Policies",
+      "designatedHandlers": "Designated handlers",
+      "staff": "Staff",
+      "employees": "Employees",
+      "pulseQuestions": "Pulse check questions",
+      "routing": "Routing rules",
+      "billing": "Subscription & billing",
+      "settings": "Company settings",
+      "retention": "Data retention & deletion",
+      "benchmark": "Cross-company benchmark pool",
+      "wellness": "Team wellness",
+      "help": "Help & Support"
+    },
+    "companyAdministration": "Company administration",
+    "eyebrow": "Company dashboard",
+    "notLinkedBody": "This account ({{email}}) is not linked to a company, so there is nothing to administer. Ask Lumora to re-issue the account."
+  },
+  "helpSupport": {
+    "faqTitle": "Frequently asked questions",
+    "escalationTitle": "Still need help?",
+    "roles": {
+      "companyAdmin": {
+        "intro": "Guidance for administering your company's Rectifia workspace - staff, routing, policies, and account settings.",
+        "faqs": [
+          {
+            "question": "How do I invite a new staff member?",
+            "answer": "Go to Staff, then Invite staff. Enter their email and choose a role - one of the built-in roles or a custom role you've assembled in Staff → Roles. They'll receive an email to set up their account."
+          },
+          {
+            "question": "What's the difference between a fixed role and a custom role?",
+            "answer": "Fixed roles (HR Coordinator, Case Handler, Manager, Pulse Check Reviewer) each come with a built-in set of pages. A custom role is a mix of individual permissions you assemble yourself in Staff → Roles, for when your organization's structure doesn't map cleanly onto those."
+          },
+          {
+            "question": "How does routing decide who gets a new case?",
+            "answer": "Routing rules match an incoming report to a department or handler. A report that doesn't match any rule lands under Cases → Needs attention for you to place manually."
+          },
+          {
+            "question": "What are Designated handlers, and when do I need them?",
+            "answer": "A Japan-specific compliance register of staff formally designated to receive reports. It's optional until you add Japan to your configured jurisdictions in Settings, but you can start designating people ahead of time."
+          },
+          {
+            "question": "Can I turn on Pulse Checks or the benchmark pool later?",
+            "answer": "Yes - both are optional features. Pulse Checks controls the check-in cadence and unlocks the related pages; the benchmark pool is an opt-in that shares anonymized, floored aggregates with other opted-in companies. Contact Lumora if you don't see the toggle for either."
+          },
+          {
+            "question": "Where do I control how long case data is kept?",
+            "answer": "Data retention, under Policy & compliance, controls how long closed case data is kept before deletion."
+          }
+        ],
+        "escalation": "For billing or platform-level issues, reach out to Lumora through your account representative. For questions about your organization's own policies, check with your leadership - Rectifia helps you enforce those policies, but doesn't set them."
+      },
+      "hrCoordinator": {
+        "intro": "How to triage, route, and follow up on reports across your company.",
+        "faqs": [
+          {
+            "question": "What shows up under Awaiting triage?",
+            "answer": "Newly submitted reports that haven't been routed yet. Opening one lets you review it and assign it to the right handler or department."
+          },
+          {
+            "question": "What is Patterns, and how does it work?",
+            "answer": "When your Company Admin has it enabled, Patterns highlights reports that may be related - same department, similar allegations, or a recurring name - so related cases aren't investigated in isolation. It's a signal to review, not a verdict."
+          },
+          {
+            "question": "How do Follow-ups work?",
+            "answer": "A case with an outstanding action gets a reminder on the interval your Company Admin configured in Settings. The Follow-ups page lists everything due or overdue."
+          },
+          {
+            "question": "What do Pulse responses and Trends show me?",
+            "answer": "Individual and aggregated answers from your company's pulse check cycle, if it's enabled. Aggregates only appear once enough responses exist, to protect anonymity."
+          },
+          {
+            "question": "Can I file a report on behalf of someone else?",
+            "answer": "Yes - File a report opens the same intake flow reporters use, useful for a phoned-in or in-person report."
+          },
+          {
+            "question": "What does the benchmark pool show me?",
+            "answer": "If your company has opted in to the cross-company benchmark pool, you can compare your anonymized case metrics against the aggregate of other opted-in companies."
+          }
+        ],
+        "escalation": "For access issues or to change what you can see, contact your Company Admin. For a technical problem with the platform itself, ask them to reach Lumora on your behalf."
+      },
+      "caseHandler": {
+        "intro": "Working a case from assignment through to resolution.",
+        "faqs": [
+          {
+            "question": "How do I know when a case is assigned to me?",
+            "answer": "It appears under My cases. Opening it takes you to the case workspace, with tabs for the message thread, questionnaire, evidence, and more."
+          },
+          {
+            "question": "How do I message a reporter without knowing who they are?",
+            "answer": "The Thread tab lets you send and receive messages through the case. Reporters stay anonymous unless they choose to reveal their identity, which appears on the Identity tab."
+          },
+          {
+            "question": "What does \"on legal hold\" mean for a case?",
+            "answer": "A legal hold freezes the case against further action or closure - you can still review it, but proposing an action or closing the report is blocked until the hold is lifted. A warning appears on the Action & report tab."
+          },
+          {
+            "question": "Can I translate a message that isn't in my language?",
+            "answer": "Yes - an on-demand translate option is available on individual thread messages."
+          },
+          {
+            "question": "What are the Consistency and Policy references tabs for?",
+            "answer": "Consistency flags contradictions across a reporter's answers and messages that may be worth following up on. Policy references links the report to the specific company policies it may concern."
+          },
+          {
+            "question": "What is My designation?",
+            "answer": "A self-service view of your Japan designated-handler status, if your company has that register configured. It's visible whether or not Japan is currently one of your company's jurisdictions."
+          }
+        ],
+        "escalation": "For questions about how a specific case should be handled, check with your HR Coordinator or Company Admin. For account access problems, contact your Company Admin."
+      },
+      "manager": {
+        "intro": "A read-only view of your team's wellbeing, aggregated from pulse check responses.",
+        "faqs": [
+          {
+            "question": "What does Team wellness show?",
+            "answer": "Aggregated pulse check results for your team's department, never individual responses."
+          },
+          {
+            "question": "Why don't I see a score for a small team?",
+            "answer": "Aggregates are hidden until enough responses exist to protect anonymity, so a very small team may not reach that threshold in some cycles."
+          },
+          {
+            "question": "How often does this update?",
+            "answer": "On whatever cadence your Company Admin set for pulse checks - weekly, biweekly, or monthly."
+          },
+          {
+            "question": "I'm concerned about a low score - what should I do?",
+            "answer": "This data doesn't identify individuals or specific concerns. Raise what you're seeing with HR or your Company Admin, who can look at it alongside anything reported through the case system."
+          },
+          {
+            "question": "Can I see who submitted a pulse response?",
+            "answer": "No - that visibility isn't exposed to Managers, by design."
+          }
+        ],
+        "escalation": "For access issues, contact your Company Admin. If you're worried about a specific employee, that's better raised directly with HR than through this dashboard."
+      },
+      "pulseCheckReviewer": {
+        "intro": "Reviewing pulse check responses and trends across your company.",
+        "faqs": [
+          {
+            "question": "What's the difference between Pulse responses and Trends?",
+            "answer": "Pulse responses shows individual submitted answers as they come in. Trends aggregates them over time, so you see direction rather than a single cycle's snapshot."
+          },
+          {
+            "question": "Why is a section of Trends empty?",
+            "answer": "Aggregates only display once enough responses exist for that period, to protect anonymity - a quiet cycle or a small group may not clear that threshold."
+          },
+          {
+            "question": "Who decides how often pulse checks go out?",
+            "answer": "Your Company Admin sets the cadence in Settings. You review what comes back, but the schedule itself isn't something you configure."
+          },
+          {
+            "question": "Can I identify who submitted a specific response?",
+            "answer": "No - pulse check responses are handled to protect respondent anonymity, and this role doesn't have that visibility."
+          },
+          {
+            "question": "What should I do if a response raises a serious concern?",
+            "answer": "Pulse checks are a wellbeing signal, not a report. If something needs formal follow-up, direct the person to file a report so it enters the case system."
+          }
+        ],
+        "escalation": "For access issues or questions about how pulse checks are configured, contact your Company Admin."
+      }
+    }
+  },
+  "caseWorkspace": {
+    "tabs": {
+      "thread": "Thread",
+      "questionnaire": "Questionnaire",
+      "evidence": "Evidence",
+      "checklist": "Checklist",
+      "consistency": "Consistency",
+      "policy": "Policy references",
+      "compliance": "Compliance",
+      "patterns": "Patterns",
+      "identity": "Identity",
+      "share": "External share",
+      "action": "Action & report"
+    },
+    "actionReport": {
+      "backToCase": "Back to case",
+      "caseOutcome": "Case outcome",
+      "takeAction": "Take action",
+      "takeActionDescription": "Proposing an action starts the consistency check.",
+      "viewReport": "View report"
+    },
+    "needsAttention": "needs attention",
+    "backToMyCases": "Back to my cases",
+    "caseHeading": "Case {{caseId}}",
+    "open": "open",
+    "highPriority": "High priority",
+    "routes": {
+      "thread": { "title": "Case thread", "description": "Messages between the reporter and you." },
+      "questionnaire": { "title": "Questionnaire answers" },
+      "consistency": { "title": "Consistency check" },
+      "compliance": { "title": "Compliance deadlines" },
+      "patterns": {
+        "title": "Related patterns",
+        "description": "Whether this case sits inside an active company-wide pattern signal."
+      }
+    }
+  },
+  "patternsPage": {
+    "description": "Clusters of related reports across the company, derived from case metadata only."
+  },
+  "staffBenchmarkPage": {
+    "description": "How this company's closed cases compare to the wider pool for your industry and size band. Aggregate statistics only, and only for cells that clear the anonymity thresholds."
+  },
+  "followUpsPage": {
+    "description": "Where each case stands on its post-resolution retaliation check-in."
+  },
+  "hrCasesPage": {
+    "description": "Every case in the company, by metadata only.",
+    "refreshing": "Refreshing",
+    "refresh": "Refresh"
+  },
+  "hrTriagePage": {
+    "description": "Unassigned cases still waiting to be read and placed with a handler."
+  },
+  "hrOverviewPage": {
+    "description": "Every case in the company, by metadata only. Case content stays with the assigned handler.",
+    "openCases": "Open cases",
+    "deadlinePressure": "Deadline pressure",
+    "deadlinePressureHint": "Approaching or past a compliance deadline",
+    "unassigned": "Unassigned",
+    "complianceSummary": {
+      "title": "Compliance summary",
+      "description": "Deadlines across the company's open cases."
+    },
+    "overdue": "Overdue",
+    "dueWithin48h": "Due within 48 hours"
+  },
+  "pulseResponsesPage": {
+    "description": "Individual pulse check responses with their AI sentiment summaries. Each answer is shown with the question that was asked at the time - not the current wording.",
+    "whatItAsks": {
+      "title": "What the check-in asks",
+      "description": "The questionnaire as employees currently receive it. Read-only - changing it is a Company Admin action."
+    },
+    "hidePreview": "Hide preview",
+    "showCurrentCheckIn": "Show the current check-in"
+  },
+  "pulseTrendsPage": {
+    "description": "Department and period averages. Individual responses are never attributed to a person here.",
+    "timeline": {
+      "title": "Questionnaire changes",
+      "description": "Each point where this company republished its check-in questions.",
+      "version": "Version {{version}}",
+      "dateUnavailable": "date unavailable",
+      "period": "period {{period}}",
+      "standardOnly": "standard questions only",
+      "addedQuestions_one": "{{count}} added question",
+      "addedQuestions_other": "{{count}} added questions",
+      "coreReworded": "standard questions were reworded at this point",
+      "footnote": "Averages stay comparable across these boundaries: they are calculated from the four standard questions only, which no company can change. A company's own added questions never feed an average or a trend."
+    }
+  },
+  "billingPage": {
+    "subscriptionStatus": "Subscription status",
+    "readOnly": {
+      "title": "Read-only",
+      "body": "Payment details and plan changes are handled outside this panel. Contact Lumora to change your subscription."
+    }
+  },
+  "adminCasesPage": {
+    "description": "Cases waiting to be placed because no routing rule covered them. Read the report to decide who should handle it, then assign it to a Case Handler. Content appears only while you have the case open - it stays with the handler once placed.",
+    "awaitingAssignment": "Awaiting assignment",
+    "casesWaiting_one": "{{count}} case waiting",
+    "casesWaiting_other": "{{count}} cases waiting",
+    "noCasesWaiting": {
+      "title": "No cases waiting for assignment",
+      "description": "Cases that can't be routed automatically show up here so you can read and place them. New submissions route to a handler on their own when a matching rule exists."
+    },
+    "uncategorized": "Uncategorized",
+    "unspecified": "unspecified",
+    "submitted": "Submitted {{date}}",
+    "view": "View",
+    "assignCaseLabel": "Assign case {{caseId}}",
+    "assigning": "Assigning...",
+    "noHandlersYet": "No Case Handlers yet",
+    "assignTo": "Assign to...",
+    "caseAssigned": "Case {{caseId}} assigned."
+  },
+  "departmentsPage": {
+    "newDepartmentName": "New department name",
+    "newDepartmentPlaceholder": "e.g. Engineering",
+    "addDepartment": "Add department",
+    "description": "Departments organise your staff and feed the routing rules that assign incoming cases. Each one can have a department head.",
+    "unlisted": {
+      "title": "Some employee departments aren't in this list",
+      "body1": "These department names appear on employee records but not in your departments above:",
+      "body2": "Pulse summaries and manager scoping use the exact name as it appears on employees, so add a matching department (or correct the employee records) to route and scope them. Nothing is changed automatically."
+    },
+    "configuredCount_one": "{{count}} configured",
+    "configuredCount_other": "{{count}} configured",
+    "empty": {
+      "title": "No departments yet",
+      "description": "Add your first department to start organising staff and routing cases."
+    },
+    "departmentNameLabel": "Department name for {{name}}",
+    "head": "Head",
+    "notAssigned": "Not assigned",
+    "delete": "Delete"
+  },
+  "policiesPage": {
+    "confirmDelete": "Delete \"{{title}}\" (v{{version}})? This removes the file and cannot be undone.",
+    "description": "Upload your organisation's own policy documents. Their text is extracted and used as reference context when the system reasons about a case, so the questions asked and the evidence sought reflect the procedure your own rules require. Policy never decides an outcome, and reporters never see it.",
+    "coverage": {
+      "title": "Category coverage",
+      "description": "Which case categories your active policies can ground.",
+      "covered": "covered",
+      "noPolicy": "no policy",
+      "nothingFor": "Nothing to draw on for: {{categories}}. Cases in these categories are handled exactly as they are today, without policy grounding."
+    },
+    "uploadTitle": "Upload a policy document",
+    "documents": {
+      "title": "Policy documents",
+      "uploadedCount_one": "{{count}} uploaded",
+      "uploadedCount_other": "{{count}} uploaded",
+      "empty": {
+        "title": "No policy documents yet",
+        "description": "Upload your first policy above to start grounding case handling in your own written rules."
+      }
+    },
+    "status": {
+      "active": "active",
+      "processing": "processing",
+      "archived": "archived",
+      "failed": "failed"
+    },
+    "chunkCount_one": "{{count}} chunk",
+    "chunkCount_other": "{{count}} chunks",
+    "uploaded": "Uploaded {{date}}",
+    "open": "Open",
+    "archive": "Archive",
+    "restore": "Restore"
+  },
+  "designatedHandlersPage": {
+    "status": {
+      "revoked": "Revoked",
+      "none": "Not designated",
+      "acknowledged": "Designated · acknowledged",
+      "pending": "Designated · awaiting acknowledgment"
+    },
+    "designatedNotice": "Designated. They will see a confidentiality acknowledgment to accept.",
+    "revokedNotice": "Designation revoked.",
+    "noHandlers": {
+      "title": "No Case Handlers yet",
+      "description": "Invite a Case Handler under Staff before designating anyone here."
+    },
+    "onStaff_one": "{{count}} on staff",
+    "onStaff_other": "{{count}} on staff",
+    "designatedOn": "Designated {{date}}",
+    "revokedOn": "revoked {{date}}",
+    "revoke": "Revoke",
+    "designate": "Designate",
+    "yourStatus": "Your designation status",
+    "self": {
+      "revokedTitle": "Your designation was revoked",
+      "notDesignatedTitle": "You are not currently designated",
+      "askAdmin": "Ask your Company Admin if you believe this is not correct.",
+      "acknowledgedOn": "Acknowledged {{date}}",
+      "acknowledgmentRequired": {
+        "title": "Confidentiality acknowledgment required",
+        "description": "You have been designated a 従事者 (designated handler). Read and accept the obligation below to complete your designation."
+      },
+      "acknowledging": "Acknowledging",
+      "acknowledgeButton": "I acknowledge and accept"
+    },
+    "notAvailable": {
+      "title": "Not available",
+      "body": "This page is for Company Admin, a designatedHandlers-permitted role, or a Case Handler viewing their own designation."
+    },
+    "description": "Japan's Whistleblower Protection Act expects reports to be handled by a formally designated 従事者 (designated handler). This register records who has been designated, by whom, and whether they have accepted the confidentiality obligation that comes with it - metadata only, never case content.",
+    "notConfigured": {
+      "title": "Japan (JP) is not configured for this company",
+      "body": "The designated handler register is optional while JP is not among this company's configured jurisdictions - cases are never blocked on it. You can still designate handlers here ahead of adding JP, or leave the register empty."
+    },
+    "signedInAs": "Signed in as {{email}}"
+  },
+  "employeesPage": {
+    "importResult_one": "Imported {{added}} new employee, updated {{updated}}.",
+    "importResult_other": "Imported {{added}} new employees, updated {{updated}}.",
+    "nameOrId": "Name or employee ID",
+    "nameOrIdPlaceholder": "e.g. Dana Okoro or EMP-0412",
+    "unassigned": "Unassigned",
+    "emailOptional": "Email (optional)",
+    "emailPlaceholder": "Leave blank if not known yet",
+    "add": "Add",
+    "description": "Everyone who receives a Pulse Check. These are not Rectifia accounts - employees here have no login and no role. Staff accounts live on the Staff page.",
+    "bulkImport": {
+      "title": "Bulk import",
+      "description": "Upload a CSV with name, department, and (optionally) email columns.",
+      "downloadTemplate": "Download template",
+      "csvFileLabel": "Employee CSV file",
+      "readyToImport_one": "{{count}} employee ready to import, {{missing}} without contact info.",
+      "readyToImport_other": "{{count}} employees ready to import, {{missing}} without contact info.",
+      "lineError": "Line {{line}}: {{message}}",
+      "andMore_one": "and {{count}} more",
+      "andMore_other": "and {{count}} more",
+      "importCount_one": "Import {{count}}",
+      "importCount_other": "Import {{count}}"
+    },
+    "rosterCount_one": "{{count}} on the roster",
+    "rosterCount_other": "{{count}} on the roster",
+    "rosterCountMissing_one": "{{count}} on the roster - {{missing}} without contact info",
+    "rosterCountMissing_other": "{{count}} on the roster - {{missing}} without contact info",
+    "empty": {
+      "title": "No employees yet",
+      "description": "Add the people who should receive Pulse Checks, or import them from a CSV."
+    },
+    "noDepartment": "No department",
+    "emailForLabel": "Email for {{name}}",
+    "addEmail": "Add email",
+    "deliverable": "Deliverable",
+    "awaitingContactInfo": "Awaiting contact info",
+    "remove": "Remove"
+  },
+  "routingRulesPage": {
+    "ruleSaved": "Rule saved. Cases submitted from now on route to that handler automatically.",
+    "aDepartment": "a department",
+    "aCaseHandler": "a Case Handler",
+    "description": "Each rule maps a case category and department to the Case Handler it should be assigned to. New cases are routed automatically the moment they are submitted.",
+    "needsAttention": {
+      "title": "Needs attention",
+      "casesWaiting_one": "{{count}} case waiting because no rule covered it",
+      "casesWaiting_other": "{{count}} cases waiting because no rule covered it",
+      "body": "Configure the missing rule so future cases in that bucket route on their own, or assign this case to a handler now. Saving a rule does not place cases already waiting here. Nothing on this page shows what a report says - only where it should go."
+    },
+    "configureRule": "Configure rule",
+    "notSetUp": {
+      "title": "Routing is not set up yet",
+      "body": "You need {{missing}} before a rule can be saved. Unrouted cases fall back to manual assignment."
+    },
+    "addRule": {
+      "title": "Add a rule",
+      "description": "An existing category and department pair is overwritten rather than duplicated."
+    },
+    "category": "Category",
+    "noDepartmentsYet": "No departments yet",
+    "unspecifiedOption": "Unspecified",
+    "assignTo": "Assign to",
+    "selectCaseHandler": "Select a Case Handler",
+    "saveRule": "Save rule",
+    "unspecifiedHint": "Unspecified: reports where the reporter did not say which department the involved person works in.",
+    "activeRules": {
+      "title": "Active rules",
+      "configuredCount_one": "{{count}} configured",
+      "configuredCount_other": "{{count}} configured",
+      "empty": {
+        "title": "No routing rules yet",
+        "description": "Without a matching rule, an incoming case is flagged for manual assignment instead of going straight to a handler."
+      }
+    },
+    "remove": "Remove"
+  },
+  "adminBenchmarkPage": {
+    "optedIn": "Opted in",
+    "notOptedIn": "Not opted in",
+    "optInSuccess": "Opted in. Your published cells will populate at the next monthly recompute - the first one may run within a few minutes.",
+    "withdrawSuccess": "Withdrawn. Your data will be removed from published figures at the next monthly recomputation.",
+    "intro": "The cross-company benchmark pool lets you see whether the shape of your closed cases is typical for your industry and headcount band, or an outlier. It is aggregate statistics only - never raw case data, never your company's identity, and cells below the anonymity thresholds are not published at all.",
+    "participation": {
+      "title": "Your participation",
+      "description": "Reading the pool requires contributing to it. A pool that can be read without contributing collapses into a one-way intelligence product, so both directions of participation are tied together."
+    },
+    "contributingAs": "Contributing as <strong>{{industry}}</strong> in size band <strong>{{band}}</strong>.",
+    "incompleteCellWarning": "Your industry or employee count no longer places your company inside a valid cell. Opt out and back in with an updated employee count to resume contributing and reading.",
+    "sharedData": {
+      "title": "What is and is not shared",
+      "description": "Read this before opting in or out. The acknowledgement below records that you have."
+    },
+    "withdrawCard": {
+      "title": "Withdraw",
+      "description": "Withdrawing takes effect at the next monthly recompute. Your contribution is removed completely - the pool is computed from scratch, not accumulated, so withdrawal is honest.",
+      "button": "Withdraw from the benchmark pool",
+      "body": "After withdrawal your dashboard will no longer show benchmark comparisons, because reading requires contributing. You can opt back in at any time."
+    },
+    "optInCard": {
+      "title": "Opt in",
+      "description": "Declare your industry and current employee count, acknowledge what is shared, and opt in.",
+      "button": "Opt in",
+      "loading": "Opting in",
+      "hint": "Pick an industry, enter your headcount, and tick the acknowledgement.",
+      "industryLabel": "Industry",
+      "industryPlaceholder": "Choose an industry…",
+      "employeeCountLabel": "Employee count",
+      "employeeCountHint": "Bands: {{bands}} employees.",
+      "acknowledgement": "I have read the description above of what is and is not shared, and I understand that withdrawing removes our data from published figures at the next monthly recomputation."
+    },
+    "withdrawModal": {
+      "title": "Withdraw from the benchmark pool?",
+      "body": "Your data is removed from all published figures at the next monthly recomputation. After withdrawal your dashboard will no longer show benchmark comparisons, because reading requires contributing.",
+      "confirm": "Withdraw",
+      "loading": "Withdrawing"
+    },
+    "disclosure": {
+      "leaves": {
+        "title": "What leaves this company's boundary",
+        "category": "The report category",
+        "scores": "Questionnaire scores, aggregated",
+        "tier": "The reporter's tier (anonymous or confidential)",
+        "action": "The action taken to close the case",
+        "closedDate": "The month the case was closed",
+        "industryBand": "Your declared industry and size band"
+      },
+      "never": {
+        "title": "What never leaves this company's boundary",
+        "narrative": "The report narrative or any free text",
+        "names": "Any names, of reporters or of people named in a report",
+        "identity": "The reporter's identity or contact information",
+        "caseId": "The case ID or any identifier that could be traced back to a specific case",
+        "deptNames": "Department names",
+        "companyIdentity": "Your company's identity - published figures never say which companies contributed"
+      },
+      "withdraw": {
+        "title": "Withdrawing",
+        "body": "Withdrawing removes your company's contribution from the pool completely at the next monthly recomputation - the pool is recomputed from scratch each time, not accumulated, so nothing from your company lingers in a published figure after you leave."
+      }
+    }
+  },
+  "pulseQuestionsPage": {
+    "typeLabels": {
+      "scale": "1-5 scale",
+      "freeText": "Free text"
+    },
+    "coreQuestions": {
+      "title": "Standard questions",
+      "description": "Every company asks these four, in this order, unchanged. They cannot be edited, reordered, or removed.",
+      "whyFixedTitle": "Why these are fixed",
+      "whyFixedBody": "The wellbeing trend on an individual response, and the department averages your managers see, are calculated from these four answers and nothing else. Comparing this month against last month only means something if the question was identical both times. If the wording could change, a “declining” trend might just be a reworded question, and a department average might be averaging answers to two different questions - with no way to tell afterwards which had happened. Questions you add below appear in the survey and in what your HR Coordinator reads, but they never feed those numbers, which is exactly what makes them safe to change whenever you like."
+    },
+    "intro": "What everyone on your roster is asked at each check-in. Four standard questions are fixed for every company; you can add up to {{max}} of your own.",
+    "neverPublished": {
+      "title": "Nothing published yet",
+      "body": "Check-ins are not sent until a questionnaire is published, so nobody is being asked anything right now. Press Publish below to send the standard questions - with or without any of your own."
+    },
+    "addedQuestions": {
+      "title": "Your added questions",
+      "description": "Optional, and yours to change. These appear in the survey and in what your HR Coordinator reads, but never affect the wellbeing trend or any department average."
+    },
+    "saveDraft": "Save draft",
+    "saving": "Saving",
+    "publish": "Publish",
+    "publishing": "Publishing",
+    "unsavedChanges": "Unsaved changes - save before publishing.",
+    "savedNotPublished": "Saved, but not yet sent to anyone. Publish to make it live.",
+    "publishToStart": "Publish to start sending check-ins.",
+    "liveUpToDate": "Live and up to date.",
+    "doNotAskWarning": {
+      "title": "Do not ask people to name other individuals",
+      "body": "A question that asks who someone's problem is with turns a wellness check into an informal reporting channel - without any of the protections the case system provides: no anonymity, no confidential handling, no investigation process, no retaliation follow-up. Answers here are shown to your HR Coordinator attributed to the employee who wrote them, by name. Keep these questions about how work feels, and let the reporting system handle reports."
+    },
+    "usedCount": "{{count}} of {{max}} used",
+    "addQuestion": "Add a question",
+    "noAddedQuestions": "No added questions. The four standard questions are asked on their own.",
+    "addedQuestionLabel": "Added question {{index}}",
+    "remove": "Remove",
+    "questionLabel": "Question",
+    "questionPlaceholder": "e.g. How clear were your priorities this week?",
+    "charactersCount": "{{length}} / {{max}} characters",
+    "answerType": "Answer type",
+    "everyQuestionNeedsText": "Every added question needs some text.",
+    "removalNotice": "Removing a question stops it being asked from the next publish onwards. Answers already given to it are kept, and your HR Coordinator can still read them with the question they were answering - old responses are never rewritten.",
+    "preview": {
+      "title": "Preview",
+      "description": "The check-in exactly as employees receive it. This shows what is published and live, not your draft."
+    },
+    "sendTestButton": "Email me a test check-in",
+    "sending": "Sending",
+    "sendTestHint": "Sends a real check-in link to your own staff email address, and nowhere else. The response it records is marked as a test and never reaches an average or a trend.",
+    "versionBadge": "Version {{version}}",
+    "publishedOn": "published {{date}}.",
+    "draftSaved": "Draft saved. Nothing has changed for employees yet - press Publish to send it.",
+    "publishedNotice": "Published version {{version}}. Check-ins sent from now on use it; links already in someone's inbox keep the questions they were sent with.",
+    "testSentNotice": "A test check-in is on its way to {{email}}. It behaves exactly like a real one, and the response it records is excluded from every average and every trend.",
+    "publishModal": {
+      "title": "Publish this questionnaire?",
+      "intro": "Publishing does four things, and they are worth reading before you press it:",
+      "bullet1": "It becomes what <strong>everyone on your roster</strong> is asked at every check-in from now on.",
+      "bullet2": "It is saved as a permanent version. Old responses keep pointing at the version they answered, so nothing already collected changes meaning.",
+      "bullet3": "Check-in links already sitting in someone's inbox keep the questions they were sent with - they are not switched over mid-flight.",
+      "bullet4": "Your name and the time are recorded against it. This is a change to what your whole workforce is asked, so it has an author."
+    }
+  },
+  "retentionPage": {
+    "durationDays_one": "{{days}} days (~{{years}} year)",
+    "durationDays_other": "{{days}} days (~{{years}} years)",
+    "unknownDate": "unknown",
+    "tierPreview": {
+      "nothingToDelete": "Nothing would be deleted on the next run.",
+      "recordsWouldBeDeleted_one": "record would be deleted, spanning {{oldest}} to {{newest}}",
+      "recordsWouldBeDeleted_other": "records would be deleted, spanning {{oldest}} to {{newest}}",
+      "truncatedNote": " (count is a floor - more match than were scanned)"
+    },
+    "savedNotice": "Retention settings saved.",
+    "holdPlacedNotice": "Legal hold placed on case {{caseId}}.",
+    "holdReleasedNotice": "Legal hold released on case {{caseId}}. It is now eligible for the next retention sweep.",
+    "summary": "Closed cases are permanently deleted {{caseDuration}} after closure. Reporter identities are deleted after {{identityDuration}}. This cannot be undone.",
+    "intro": "How long this company keeps case data before it is permanently deleted, and which cases are currently frozen against deletion by a legal hold. Deletion here is hard deletion - there is no soft-delete flag, no archive, and no recovery window.",
+    "windowsCard": { "title": "Retention windows" },
+    "fields": {
+      "identityRetentionDays": {
+        "label": "Reporter identity & contact data",
+        "description": "reporterIdentity, contactEmail, and push subscriptions - purged on this clock once a case is closed. Once an investigation is closed there is almost never a lawful basis to keep knowing who filed it."
+      },
+      "caseRetentionDays": {
+        "label": "Case content",
+        "description": "The case narrative, messages, questionnaire answers, and evidence files - hard-deleted this many days after the case CLOSES, never from when it was created."
+      },
+      "pulseResponseRetentionDays": {
+        "label": "Pulse Check responses",
+        "description": "Individual Pulse Check answers. The aggregated, k-anonymised summaries survive this window - only the individual responses that fed them are deleted."
+      },
+      "auditLogRetentionDays": {
+        "label": "Audit logs",
+        "description": "identityAccessAuditLog, triageAccessLog, staffIntakeAuditLog and evidenceAccessLog. These run on their own clock and outlive the case they describe - a log proving who decrypted an identity is worthless if it is destroyed on the same schedule as the thing it protects."
+      }
+    },
+    "floor": "Floor: {{days}} days",
+    "maximum": ", maximum {{days}} days{{constraint}}",
+    "constrainedBy_one": " (constrained by your {{jurisdictions}} jurisdiction)",
+    "constrainedBy_other": " (constrained by your {{jurisdictions}} jurisdictions)",
+    "noCeiling": " (no ceiling)",
+    "clampedWarning": {
+      "title": "A stored value now exceeds your jurisdiction's ceiling",
+      "item": "{{label}}: currently stored as {{stored}} days, but will be clamped to {{clampedTo}} days on the next retention run. This happens automatically - saving new values below will not retroactively change what happened to any data already purged."
+    },
+    "shorteningWarning": {
+      "title": "This shortens at least one window",
+      "body": "Run a preview below before saving - a shortened window deletes more, sooner, and this cannot be undone once the next sweep runs."
+    },
+    "saving": "Saving",
+    "saveButton": "Save retention settings",
+    "previewFirstHint": "Preview this exact change before saving.",
+    "previewCard": {
+      "title": "Preview next sweep",
+      "description": "A dry run against the values above - shows what would be permanently deleted the next time the retention sweep runs. Deletes nothing.",
+      "refresh": "Refresh preview",
+      "run": "Run preview",
+      "hint": "Run a preview to see counts before saving.",
+      "stale": "These results are for a previously entered set of values, not the ones currently in the form. Run the preview again to see the current values."
+    },
+    "checking": "Checking",
+    "tiers": {
+      "identity": "Tier 1 - reporter identity & contact data",
+      "caseContent": "Tier 2 - case content (permanent case deletion)",
+      "pulseResponses": "Pulse Check responses"
+    },
+    "legalHolds": {
+      "title": "Legal holds",
+      "description": "A case on legal hold is skipped by every retention sweep, including the identity-purge tier - litigation freezes identity data too. Restricted to Company Admin and Super Admin.",
+      "placeHold": "Place a hold",
+      "caseIdLabel": "Case ID",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Why this case must be frozen against deletion (min. 10 characters).",
+      "placingHold": "Placing hold",
+      "placeButton": "Place legal hold",
+      "empty": "No cases currently on legal hold",
+      "setBy": "Set {{date}} by {{uid}}",
+      "unknownUid": "unknown",
+      "releaseReasonLabel": "Reason for releasing this hold",
+      "releasing": "Releasing",
+      "confirmRelease": "Confirm release",
+      "releaseButton": "Release hold"
+    }
+  },
+  "overviewPage": {
+    "sentiment": {
+      "noData": "no data",
+      "needsAttention": "needs attention",
+      "mixed": "mixed",
+      "healthy": "healthy"
+    },
+    "downloadQr": "Download QR",
+    "generatingQr": "Generating…",
+    "copied": "Copied",
+    "copyLink": "Copy link",
+    "reportingLinks": {
+      "title": "Reporting links",
+      "noSlugBody": "This company doesn't have a reporting link yet. Generating one creates the public address employees use to file confidential reports - it can only be created once, and stays the same afterwards.",
+      "generating": "Generating",
+      "generateButton": "Generate reporting link",
+      "postBody": "Print or post the QR below to invite reports - it's the only one meant for a poster. It requires no login and no name.",
+      "fileReport": {
+        "heading": "File a report",
+        "description": "Opens the confidential intake form for your company. Anyone with this link can file - no login, no name required.",
+        "qrAlt": "QR code linking to the confidential reporting form for this company"
+      }
+    },
+    "intro": "Aggregate case activity, staffing, and wellbeing signals for your company. Case content itself is never shown to this role - only counts.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing",
+    "noCrisisContact": {
+      "title": "No crisis contact configured",
+      "body": "Reports flagged with crisis language currently have no recipient - the notification is generated but reaches no one. Set a named crisis contact on the <link>Settings</link> page."
+    },
+    "reportingLinksHeading": "Reporting links",
+    "reportingLinksHint": "Share these QR codes or links so employees can file confidential reports - and find their way back to one they already filed.",
+    "caseOverviewHeading": "Case overview",
+    "caseOverviewHint": "Counts only, updated as cases move through their lifecycle.",
+    "noActivity": {
+      "title": "No case activity yet",
+      "description": "Once the first report is submitted, open, closed, and overdue counts appear here."
+    },
+    "stats": {
+      "openCases": "Open cases",
+      "closedCases": "Closed cases",
+      "overdueDeadlines": "Overdue deadlines",
+      "approachingDeadlines": "Approaching deadlines",
+      "approachingDeadlinesHint": "Due within 48 hours",
+      "activeStaff": "Active staff",
+      "caseHandlers": "Case handlers",
+      "routingRules": "Routing rules",
+      "routingRulesHint": "Category and department mappings"
+    },
+    "byPriority": {
+      "title": "Open cases by priority",
+      "empty": "No open cases."
+    },
+    "byCategory": {
+      "title": "Cases by category",
+      "empty": "No cases yet."
+    },
+    "staffRoutingHeading": "Staff & routing",
+    "staffRoutingHint": "Who is available to take cases, and how they get assigned.",
+    "byHandler": {
+      "title": "Open cases by handler",
+      "empty": {
+        "title": "No open cases assigned",
+        "description": "Assigned workload per handler shows up here as cases come in."
+      }
+    },
+    "pulseSentimentHeading": "Pulse check sentiment",
+    "pulseSentimentHint": "Department and period averages - never an individual response.",
+    "pulseEmpty": {
+      "title": "Not enough responses yet to show a summary",
+      "description": "Department sentiment averages appear once enough people in a department have responded. Below that minimum, no average is shown, so it can never stand in for one person's answer."
+    },
+    "unspecifiedDepartment": "Unspecified department",
+    "avgSentimentAcross_one": "avg. sentiment across {{count}} response",
+    "avgSentimentAcross_other": "avg. sentiment across {{count}} responses"
+  },
+  "staffPage": {
+    "cannotSuspendLastAdmin": "Cannot suspend the last active Company Admin",
+    "cannotMoveLastAdmin": "Cannot move the last active Company Admin off that role",
+    "chooseARole": "Choose a fixed role or a custom role",
+    "inviteStaff": "Invite staff",
+    "tabs": {
+      "roster": "Team members",
+      "roles": "Custom roles"
+    },
+    "description": "Everyone with access to your Rectifia workspace. Suspending a member revokes their sign-in without removing their history.",
+    "teamMembers": "Team members",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "empty": {
+      "title": "No staff yet",
+      "description": "Invite HR coordinators, case handlers, and managers so cases can be routed and worked."
+    },
+    "customRole": "Custom role",
+    "suspended": "Suspended",
+    "active": "Active",
+    "editDepartments": "Edit departments",
+    "changeRole": "Change role",
+    "reactivate": "Reactivate",
+    "suspend": "Suspend",
+    "remove": "Remove",
+    "pulseScope": "Pulse scope:",
+    "noDepartmentsAssigned": "No departments assigned - this manager sees no pulse results",
+    "noDepartmentsConfigured": "No departments are configured. Add departments on the Departments page first.",
+    "saving": "Saving",
+    "saveDepartments": "Save departments",
+    "fixedRole": "Fixed role",
+    "none": "None",
+    "customRoleLabel": "Custom role",
+    "chooseOneRoleHint": "Choose exactly one - a fixed role or a custom role, not both. Changing this member's role signs them out immediately; they will need to sign in again for it to take effect.",
+    "saveRole": "Save role",
+    "removing": "Removing",
+    "removeConfirm": {
+      "body": "Remove <strong>{{name}}</strong>? This permanently deletes their account and sign-in - it cannot be undone. If you only need to revoke their access temporarily, use <strong>Suspend</strong> instead; a suspended member can be reactivated later without losing anything.",
+      "button": "Remove permanently"
+    }
+  },
+  "settingsPage": {
+    "neverSent": "Never sent",
+    "currentlyInTimeZone": "Currently {{time}} in {{timeZone}}",
+    "saving": "Saving",
+    "sending": "Sending",
+    "unsavedChanges": "Unsaved changes",
+    "intro": "Company-wide settings: who is notified when a report is flagged as a crisis, how often Pulse Checks go out, and which jurisdictions drive compliance deadlines.",
+    "notices": {
+      "pulseOff": "Pulse checks turned off.",
+      "cadenceSet": "Pulse-check cadence set to {{cadence}}.",
+      "noInvitesQueued": "No invites were queued - there is no one active on the roster.",
+      "queuedFor_one": "Queued a pulse check for {{count}} employee. Delivery goes out shortly.",
+      "queuedFor_other": "Queued a pulse check for {{count}} employees. Delivery goes out shortly.",
+      "jurisdictionsUpdated": "Jurisdictions updated. This applies to cases created from now on.",
+      "timeZoneSet": "Time zone set to {{timeZone}}.",
+      "followUpOff": "Follow-ups turned off for future closed cases.",
+      "followUpSaved": "Follow-up cadence saved. This applies to cases closed from now on.",
+      "crisisContactSaved": "Crisis contact saved. Crisis-flagged reports will now notify this person directly."
+    },
+    "cadenceLabels": {
+      "off": "Off - do not send",
+      "weekly": "Weekly",
+      "biweekly": "Every two weeks",
+      "monthly": "Monthly"
+    },
+    "jurisdictionLabels": {
+      "EU": "European Union",
+      "UK": "United Kingdom",
+      "US": "United States",
+      "AU": "Australia",
+      "JP": "Japan",
+      "LK": "Sri Lanka"
+    },
+    "crisisContact": {
+      "title": "Crisis contact",
+      "description": "The one person notified directly when a report is flagged with crisis language. These reports bypass normal case routing entirely and reach this person out of band, so it should be a named individual who can act immediately - not a shared inbox or a distribution list.",
+      "saveButton": "Save crisis contact",
+      "noneSet": {
+        "title": "No crisis contact set",
+        "body": "Until this is set, reports flagged with crisis language have no one to notify. Add a named contact below."
+      },
+      "nameLabel": "Contact name",
+      "namePlaceholder": "e.g. Dr. Jordan Lee, EAP counsellor",
+      "emailLabel": "Email",
+      "phoneLabel": "Phone",
+      "hint": "A name is required, plus at least one way to reach them - an email, a phone number, or both. This can be an external provider such as an Employee Assistance Programme; they do not need a login on this platform."
+    },
+    "pulseCadence": {
+      "title": "Pulse Check cadence",
+      "description": "How often a pulse-check invite is queued for everyone on the roster.",
+      "selectLabel": "Send Pulse Checks",
+      "activeRoster": "Active roster",
+      "activeRosterHint": "People a send would reach",
+      "awaitingContact": "Awaiting contact info",
+      "awaitingContactHint": "On the roster but with no email",
+      "lastSent": "Last sent",
+      "awaitingContactNotice_one": "{{count}} roster member has no email on file, so their invite waits until an address is added. Add one on the <link>Employees</link> page.",
+      "awaitingContactNotice_other": "{{count}} roster members have no email on file, so their invite waits until an address is added. Add one on the <link>Employees</link> page.",
+      "noRoster": {
+        "title": "No one on the roster",
+        "body": "This cadence will send to nobody until you add employees. Add them on the <link>Employees</link> page."
+      },
+      "sendNowButton": "Send check-in now",
+      "setCadenceHint": "Set a cadence above before sending a check-in on demand.",
+      "addEmployeesHint": "Add employees before sending a check-in.",
+      "sendNowHint": "Queues a check-in for everyone active right now, outside the schedule."
+    },
+    "sendNowModal": {
+      "title": "Send a pulse check now?",
+      "body_one": "This queues a check-in for <strong>{{count}} active employee</strong> right away, regardless of the cadence schedule. Any outstanding pulse-check links are superseded - an employee still holding an older link will be sent a fresh one instead.",
+      "body_other": "This queues a check-in for <strong>{{count}} active employees</strong> right away, regardless of the cadence schedule. Any outstanding pulse-check links are superseded - an employee still holding an older link will be sent a fresh one instead.",
+      "awaitingContactNotice_one": "{{count}} of them has no email on file and will wait for an address before delivery.",
+      "awaitingContactNotice_other": "{{count}} of them have no email on file and will wait for an address before delivery.",
+      "confirm": "Send now"
+    },
+    "jurisdictions": {
+      "title": "Jurisdictions",
+      "description": "The jurisdictions this company operates in. Compliance deadlines follow the strictest one selected.",
+      "saveButton": "Save jurisdictions",
+      "deprecated": "{{label}} - deprecated, can be removed, cannot be re-added",
+      "atLeastOneRequired": "At least one jurisdiction is required.",
+      "strictestNotice": "Default compliance timeline follows <strong>{{jurisdiction}}</strong>, the strictest of the selected jurisdictions.",
+      "changeNotice": "Changing jurisdictions affects deadline computation for <strong>future cases only</strong>. Deadlines are set when a case is created and are not recomputed for cases that already exist."
+    },
+    "timeZone": {
+      "title": "Time zone",
+      "enterHint": "Enter an IANA time zone identifier, e.g. \"Europe/London\".",
+      "decidesHint": "This decides the local hour deadline escalations and pulse-check invitations go out at, not when compliance deadlines themselves fall due.",
+      "invalid": "Not a recognised time zone. Use an IANA identifier such as \"America/New_York\".",
+      "saveButton": "Save time zone"
+    },
+    "followUp": {
+      "title": "Retaliation follow-up check-ins",
+      "description": "After a case closes, reporters get neutral check-ins asking whether anything has changed. This applies to all categories by default - retaliation can follow any report.",
+      "saveButton": "Save follow-up settings",
+      "daysLabel": "Days after closure to check in",
+      "noneWillSend": "No check-ins will be sent.",
+      "checkInsSummary_one": "{{count}} check-in at day {{days}} after a case closes.",
+      "checkInsSummary_other": "{{count}} check-ins at day {{days}} after a case closes.",
+      "categoriesLegend": "Categories to follow up",
+      "categoriesHint": "All on by default. Untick a category to stop scheduling check-ins for cases closed in it.",
+      "neutralNotice": "Check-ins are neutral and optional for the reporter. A reporter can always answer that nothing has changed, or ignore them entirely - there is no chasing. Changes here apply to cases closed from now on."
+    }
+  },
+  "complianceCountdown": {
+    "overdue": "Overdue",
+    "daysHoursLeft": "{{days}}d {{hours}}h left",
+    "hoursLeft": "{{hours}}h left",
+    "due": "Due {{date}}",
+    "acknowledgment": "Acknowledgment",
+    "sent": "Sent",
+    "feedbackToReporter": "Feedback to reporter",
+    "given": "Given",
+    "ruleApplied": "Rule applied: {{rule}}"
+  },
+  "followUpStatus": {
+    "meta": {
+      "scheduled": { "label": "Scheduled", "hint": "Awaiting the first check-in" },
+      "sent": { "label": "Awaiting reply", "hint": "A check-in was posted" },
+      "answeredNoChange": { "label": "Nothing changed", "hint": "Reporter answered: nothing has changed" },
+      "answeredConcern": { "label": "Concern reported", "hint": "Reporter indicated something happened" },
+      "declined": { "label": "Declined / opted out", "hint": "Reporter chose not to answer" },
+      "noResponse": {
+        "label": "Unknown - no response",
+        "hint": "Reporter did not return. This is not evidence that nothing happened."
+      }
+    },
+    "title": "Retaliation follow-ups",
+    "description": "Post-closure check-ins with reporters. Metadata only - the reporter's answer stays with the handler of any case they choose to file.",
+    "empty": {
+      "title": "No follow-ups yet",
+      "description": "Follow-ups are scheduled automatically when a case closes."
+    },
+    "concernNotice_one": "<strong>{{count}}</strong> reporter indicated something happened after their case closed. If they chose to file, it is a new, separate case in the queue with its own handler.",
+    "concernNotice_other": "<strong>{{count}}</strong> reporters indicated something happened after their case closed. If they chose to file, it is a new, separate case in the queue with its own handler.",
+    "noResponseFootnote": "“Unknown - no response” means the reporter did not return, which is the expected case for an anonymous reporter. It is not a sign that nothing happened."
+  },
+  "policyUpload": {
+    "progress": {
+      "requesting": "Preparing upload…",
+      "uploading": "Uploading…",
+      "processing": "Extracting and tagging the document…",
+      "working": "Working…"
+    },
+    "couldNotProcess": "The document could not be processed.",
+    "titleLabel": "Document title",
+    "titlePlaceholder": "e.g. Harassment & Bullying Policy",
+    "titleHint": "Re-uploading a document with the same title creates a new version and archives the previous one.",
+    "dropZoneAriaLabel": "Choose or drop a policy document",
+    "dropHint": "Drop a document here, or click to choose",
+    "fileTypesHint": "PDF, DOCX, TXT or Markdown, up to 10MB",
+    "processingFailed": {
+      "title": "This document could not be processed",
+      "body": "The document was saved but has no usable text, so it will not ground any cases. You can delete it and try a different file."
+    },
+    "uploadButton": "Upload policy"
+  },
+  "patternService": {
+    "signalTypeLabel": {
+      "same_category": "Same category",
+      "cross_category": "Across categories"
+    },
+    "describeSignal_one": "{{count}} case in this department and role tier in the last {{windowDays}} days.",
+    "describeSignal_other": "{{count}} cases in this department and role tier in the last {{windowDays}} days.",
+    "describeSignal_crossCategory_one": "{{count}} case across different categories in this department and role tier in the last {{windowDays}} days.",
+    "describeSignal_crossCategory_other": "{{count}} cases across different categories in this department and role tier in the last {{windowDays}} days.",
+    "caseCountCaveat": "This counts cases, not people. Reports are anonymous, so one person filing several times and several people filing once look identical here.",
+    "crossCategoryCaveat": "These cases are of different kinds. That is weaker than a cluster of the same kind of report and should not be read as repeated conduct."
+  },
+  "patternSignals": {
+    "title": "Pattern signals",
+    "description": "Repeat reports grouped by department and role tier over the last {{windowDays}} days. Recomputed daily.",
+    "empty": {
+      "title": "No pattern signals",
+      "description": "No department and role tier reached the reporting threshold in the last {{windowDays}} days."
+    },
+    "dateRange": "First {{first}}, most recent {{last}}.",
+    "suppressionNotice": {
+      "title": "Not enough people in this group to report safely",
+      "body_one": "{{count}} group reached the threshold but was withheld: fewer than {{minPopulation}} employees match the department and role tier. In a group that small, a department and a role tier identify a person, so the signal is not shown at all rather than shown less precisely.",
+      "body_other": "{{count}} groups reached the threshold but were withheld: fewer than {{minPopulation}} employees match the department and role tier. In a group that small, a department and a role tier identify a person, so the signal is not shown at all rather than shown less precisely.",
+      "body_missingDirectory_one": "{{count}} group reached the threshold but was withheld: fewer than {{minPopulation}} employees match the department and role tier, or the employee directory has no entry for that department. In a group that small, a department and a role tier identify a person, so the signal is not shown at all rather than shown less precisely.",
+      "body_missingDirectory_other": "{{count}} groups reached the threshold but were withheld: fewer than {{minPopulation}} employees match the department and role tier, or the employee directory has no entry for that department. In a group that small, a department and a role tier identify a person, so the signal is not shown at all rather than shown less precisely.",
+      "footnote_one": "Which group deliberately is not named here - naming it would be the same disclosure.",
+      "footnote_other": "Which groups deliberately are not named here - naming them would be the same disclosure."
+    }
+  },
+  "burnoutTrendSignals": {
+    "title": "Burnout trend signals",
+    "description": "Burnout reports grouped by the reporter's own department over the last {{windowDays}} days. Recomputed daily. This is department-level report volume, not a per-person cluster.",
+    "empty": {
+      "title": "No burnout trend signals",
+      "description": "No department reached the reporting threshold in the last {{windowDays}} days."
+    },
+    "describeSignal_one": "{{count}} burnout report from this department in the last {{windowDays}} days.",
+    "describeSignal_other": "{{count}} burnout reports from this department in the last {{windowDays}} days.",
+    "rateBadge": "{{rate}} company average",
+    "dateRange": "First {{first}}, most recent {{last}}.",
+    "suppressionNotice": {
+      "title": "Not enough people in this department to report safely",
+      "body_one": "{{count}} department reached the reporting threshold but was withheld: fewer than {{minPopulation}} employees work in it. In a team that small, a department identifies who is in it, so the signal is not shown at all.",
+      "body_other": "{{count}} departments reached the reporting threshold but were withheld: fewer than {{minPopulation}} employees work in them. In a team that small, a department identifies who is in it, so the signal is not shown at all."
+    },
+    "whatThisIsNot": "This shows elevated burnout report volume for a department, not a conclusion about working conditions, management, or any individual.",
+    "informationalOnly": "Informational only. It does not suggest a finding or an action, and it is never joined to any other pattern signal or case."
+  },
+  "relatedPatternNotice": {
+    "title": "Part of a pattern signal - {{signalType}}",
+    "line": "{{department}} / {{roleTier}}: {{description}}",
+    "dateRange": "First {{first}}, most recent {{last}}. This case is one of them.",
+    "informationalOnly": "Informational only. It does not suggest a finding or an action on this case, and the other cases behind this count are not yours to read."
+  },
+  "actionLabels": {
+    "no_action": "No action",
+    "coaching": "Coaching",
+    "verbal_warning": "Verbal warning",
+    "written_warning": "Written warning",
+    "performance_improvement_plan": "Performance improvement plan",
+    "suspension": "Suspension",
+    "demotion": "Demotion",
+    "termination": "Termination"
+  },
+  "departmentTierLabels": {
+    "junior": "Junior",
+    "senior": "Senior",
+    "manager": "Manager",
+    "unspecified": "Unspecified"
+  },
+  "consistencyInsights": {
+    "noRankedActions": "No ranked actions recorded for this segment yet.",
+    "severityBand": "Severity band",
+    "insufficientData": "Insufficient data",
+    "insufficientDataBody_one": "{{count}} closed case on file for this category - not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a new or low-volume category, not an error.",
+    "insufficientDataBody_other": "{{count}} closed cases on file for this category - not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a new or low-volume category, not an error.",
+    "closedCasesOnFile_one": "{{count}} closed case on file",
+    "closedCasesOnFile_other": "{{count}} closed cases on file",
+    "consistent": "Consistent",
+    "flaggedHarsher": "Flagged harsher",
+    "flaggedLenient": "Flagged lenient",
+    "noDepartmentTier": "No department tier within this category reached the reporting threshold on its own, even though the category total did.",
+    "tierCases": "{{tier}} ({{count}} cases)",
+    "typicalAction": "Typical action:",
+    "title": "Consistency Engine",
+    "loadingDescription": "Company-wide pattern across closed cases.",
+    "description": "Where this company's own historical outcomes sit, per category and seniority tier. Aggregate only - no single case's score or action is shown.",
+    "empty": {
+      "title": "No consistency data yet",
+      "description": "Nothing has been computed for this company yet. Check back after the next daily analytics run."
+    }
+  },
+  "benchmarkComparison": {
+    "insufficientData": "Insufficient data in your segment",
+    "insufficientDataBody": "This cell has not reached the minimum of 5 contributing companies and 25 cases required before any figure is published. This is common and normal, not an error - the pool grows as more companies opt in.",
+    "companiesAndCases": "{{companies}} companies · {{cases}} cases",
+    "severityMedian": "Severity (median)",
+    "percentiles": "(p25 {{p25}} · p75 {{p75}})",
+    "evidenceMedian": "Evidence (median)",
+    "daysToCloseMedian": "Days to close (median)",
+    "daysUnit": "days",
+    "casesPer1000": "Cases / 1,000 / year",
+    "typicalAction": "Typical action taken",
+    "title": "Industry benchmark",
+    "description": "How this company's closed cases compare to the wider pool for your industry and size band. Aggregate statistics only - no other company is named, no case is exposed, and cells below the anonymity thresholds are not published at all.",
+    "notOptedIn": {
+      "title": "Not opted in",
+      "body": "The cross-company benchmark pool is opt-in. Your Company Admin can enable it on the company Benchmark page. Reading the pool requires contributing to it - a pool that can be read without contributing collapses into a one-way intelligence product."
+    },
+    "incomplete": {
+      "title": "Cell coordinates missing",
+      "body": "Your opt-in record's industry or employee count no longer places this company inside a valid cell. Ask your Company Admin to re-opt-in with the current headcount."
+    },
+    "showingSegment": "Showing <strong>{{industry}}</strong> in size band <strong>{{sizeBand}}</strong>.",
+    "noCells": {
+      "title": "No cells for your segment yet",
+      "description": "No category cell has reached the reporting thresholds for your industry and size band. This is common and normal - the pool grows as more companies opt in."
+    },
+    "roundingFootnote": "Cells publish only when at least 5 companies and 25 cases contribute; below either threshold nothing is published at all, so an \"insufficient data\" row is not an error. Every published figure is rounded - medians, percentages to the nearest 5 - because unrounded values over small populations leak more than they inform."
+  },
+  "billingQuote": {
+    "tierLabels": {
+      "starter": "Starter",
+      "growth": "Growth",
+      "scale": "Scale",
+      "enterprise": "Enterprise"
+    },
+    "employeesAtRate_one": "{{count}} employee @ {{rate}}",
+    "employeesAtRate_other": "{{count}} employees @ {{rate}}",
+    "employeesCount_one": "{{count}} employee",
+    "employeesCount_other": "{{count}} employees",
+    "noHeadcount": {
+      "title": "No billable headcount yet",
+      "body": "Add employees to your roster on the Employees page to see a billing quote."
+    },
+    "enterWholeNumber": "Enter a whole number of employees",
+    "currentTier": "Current tier",
+    "currentMonthlyPrice": "Current monthly price",
+    "perMonth": "/mo",
+    "manualReview": {
+      "title": "Flagged for manual sales review",
+      "body": "At this headcount, pricing above 5,000 employees is reviewed by the Rectifia sales team rather than fully automated. The estimate below is shown for transparency but is not a final quote."
+    },
+    "activeEmployees": "Active employees",
+    "effectiveRate": "Effective rate per employee",
+    "effectiveRateHint": "Blended: monthly price ÷ active employees",
+    "priceBreakdown": {
+      "title": "Price breakdown",
+      "description": "How your current monthly price was built."
+    },
+    "pulseAddOn": {
+      "title": "Pulse Check add-on",
+      "description": "Billed separately from your core plan, at a flat per-employee rate."
+    },
+    "whatIfCard": {
+      "title": "What if we grow?",
+      "description": "See your projected price at a future headcount before it happens - no cliffs, no surprise invoice.",
+      "projectedHeadcountLabel": "Projected headcount",
+      "projectedTier": "Projected tier:",
+      "manualReviewNotice": "This projection is above the 5,000-employee threshold where pricing moves to manual sales review - treat this figure as an estimate, not a locked-in price.",
+      "footnote": "This projection is calculated instantly in your browser for planning purposes. Your actual bill is always recalculated from your real roster at invoicing time."
+    }
+  },
+  "staffInvite": {
+    "roleHints": {
+      "companyAdmin": "Settings, staff, and routing. Never sees case content.",
+      "hrCoordinator": "Company-wide case oversight and reassignment.",
+      "caseHandler": "Investigates the cases assigned to them.",
+      "manager": "Aggregate team wellbeing only.",
+      "pulseCheckReviewer": "Individual pulse check responses."
+    },
+    "chooseCustomRole": "Choose a custom role, or create one on the Custom roles page first.",
+    "inviteSent": "Invite sent to {{email}}",
+    "title": "Invite a team member",
+    "description": "They receive a link to set their own password - no password is handled here.",
+    "workEmail": "Work email",
+    "roleType": "Role type",
+    "roleTypeHint": "A fixed role, or a custom role built on the Custom roles page.",
+    "fixedRole": "Fixed role",
+    "customRole": "Custom role",
+    "role": "Role",
+    "noCustomRoles": "No custom roles exist yet. Create one on the Custom roles page before inviting someone into it.",
+    "customRoleHint": "Case Handler and HR Coordinator can never appear here - they aren't composable.",
+    "departmentsLegend": "Departments",
+    "departmentsHint": "A manager only sees aggregate pulse results for the departments assigned here. Names must match the department as it appears on employee records.",
+    "noDepartments": "No departments are configured yet. Add departments on the Departments page before inviting a manager, or invite them now and assign departments from the staff list later.",
+    "sending": "Sending invite",
+    "sendInvite": "Send invite"
+  },
+  "permissionModules": {
+    "departments": {
+      "label": "Departments",
+      "description": "Create, rename, and manage the company department list."
+    },
+    "staffManagement": {
+      "label": "Staff management",
+      "description": "View the staff roster and suspend or reactivate accounts."
+    },
+    "routingRules": {
+      "label": "Routing rules",
+      "description": "Configure which Case Handler a category/department pairing routes to."
+    },
+    "policyManagement": {
+      "label": "Policy management",
+      "description": "Upload, archive, and restore the company's written policy documents."
+    },
+    "retentionSettings": {
+      "label": "Data retention settings",
+      "description": "Configure how long identities, cases, and pulse responses are retained."
+    },
+    "billingView": {
+      "label": "Billing (view only)",
+      "description": "View the current subscription tier and billing quote."
+    },
+    "complianceConfig": {
+      "label": "Compliance configuration",
+      "description": "Configure the jurisdictions the company reports and complies under."
+    },
+    "pulseAggregateView": {
+      "label": "Pulse Check aggregate view",
+      "description": "View department-level Pulse Check aggregate results. Never individual responses."
+    },
+    "designatedHandlers": {
+      "label": "Designated handlers (JP)",
+      "description": "Designate or revoke a Case Handler's 従事者 status under Japan's Whistleblower Protection Act, and view the register."
+    }
+  },
+  "roleBuilder": {
+    "newCustomRole": "New custom role",
+    "description": "Build named roles from a fixed set of permission modules. Case Handler and HR Coordinator are not composable - they are not offered here and cannot be built from these modules.",
+    "editCustomRole": "Edit custom role",
+    "roleNameLabel": "Role name",
+    "roleNamePlaceholder": "e.g. Billing Coordinator",
+    "permissionModulesLegend": "Permission modules",
+    "saving": "Saving",
+    "saveChanges": "Save changes",
+    "createRole": "Create role",
+    "empty": {
+      "title": "No custom roles yet",
+      "description": "Create a named role from the permission modules above to assign to staff who aren't Case Handlers or HR Coordinators."
+    },
+    "customRolesTitle": "Custom roles",
+    "roleCount_one": "{{count}} role",
+    "roleCount_other": "{{count}} roles",
+    "edit": "Edit",
+    "deleting": "Deleting",
+    "delete": "Delete"
+  },
+  "caseTriageModal": {
+    "couldNotOpen": "Could not open this case",
+    "couldNotAssign": "Could not assign this case",
+    "uncategorized": "Uncategorized",
+    "caseAriaLabel": "Case {{caseId}}",
+    "instructions": "Read this report to decide who should handle it. It is not yours to investigate.",
+    "closeAriaLabel": "Close",
+    "open": "open",
+    "department": "Department",
+    "unspecified": "unspecified",
+    "severity": "Severity",
+    "evidence": "Evidence",
+    "submitted": "Submitted",
+    "acknowledgmentDue": "Acknowledgment due",
+    "feedbackDue": "Feedback due",
+    "waitingBecause": "Waiting because: {{reason}}",
+    "whatWasReported": "What was reported",
+    "whatWasReportedHint": "The reporter's questionnaire answers. The message thread stays with the handler you assign.",
+    "noAnswers": "No questionnaire answers on this case.",
+    "assignTo": "Assign to",
+    "assignCaseAriaLabel": "Assign case {{caseId}}",
+    "noHandlersYet": "No Case Handlers yet",
+    "selectHandler": "Select a Case Handler",
+    "assigning": "Assigning",
+    "assign": "Assign"
+  },
+  "analyticsDashboard": {
+    "noSegment": "No segment reached the reporting threshold in this range.",
+    "noData": "no data",
+    "insufficientForDistribution": "Insufficient cases this period to show a distribution.",
+    "severityScore": "Severity score",
+    "evidenceScore": "Evidence score",
+    "intro": "Trends and Consistency Engine insights, aggregated from case metadata only. No case narrative, questionnaire response, or message ever reaches this dashboard.",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing",
+    "compiling": "Compiling",
+    "exportReport": "Export compliance report",
+    "reportReady": {
+      "title": "Report ready",
+      "body": "Covers {{start}} to {{end}} ({{pages}} pages). <link>Download PDF</link> - link expires in 15 minutes."
+    },
+    "empty": {
+      "title": "No analytics yet",
+      "description": "Nothing has been computed for this company yet. Check back after the next daily analytics run."
+    },
+    "totalCaseVolume": "Total case volume",
+    "trailing12Months": "Trailing 12 months",
+    "avgTimeToResolution": "Avg. time to resolution",
+    "daysValue": "{{days}}d",
+    "acknowledgedWithinWindow": "Acknowledged within window",
+    "resolvedWithinWindow": "Resolved within window",
+    "byCategory": {
+      "title": "Case volume by category",
+      "description": "Summed across the trailing window. Categories below the reporting threshold are omitted."
+    },
+    "byDepartment": {
+      "title": "Case volume by department",
+      "description": "Summed across the trailing window. Departments below the reporting threshold are omitted."
+    },
+    "avgResolutionTime": {
+      "title": "Average time to resolution",
+      "description": "Days from case creation to closure, by month."
+    },
+    "complianceHitRate": {
+      "title": "Compliance-deadline hit rate",
+      "description": "Share of cases acknowledged and resolved within the applicable jurisdiction's window, by month."
+    },
+    "acknowledgedInWindow": "Acknowledged in window",
+    "resolvedInWindow": "Resolved in window",
+    "distribution": {
+      "title": "Severity & evidence score distribution",
+      "description": "Latest period. Aggregate buckets only - never a single case's exact score."
+    },
+    "insufficientData": "Insufficient data"
+  },
+  "caseStatus": {
+    "open": "open",
+    "assigned": "assigned",
+    "needs_manual_assignment": "needs manual assignment",
+    "closed": "closed",
+    "active": "active",
+    "revoked": "revoked",
+    "expired": "expired"
+  },
+  "priorityLabels": {
+    "high": "high",
+    "medium": "medium",
+    "low": "low"
+  },
+  "assignmentLabels": {
+    "assigned": "assigned",
+    "unassigned": "unassigned"
+  },
+  "casesTable": {
+    "sortByDirection": "Sort by {{label}}, {{direction}}",
+    "sortBy": "Sort by {{label}}",
+    "ascending": "ascending",
+    "descending": "descending",
+    "headers": {
+      "category": "Category",
+      "priority": "Priority",
+      "status": "Status",
+      "severity": "Severity",
+      "evidence": "Evidence",
+      "assignedHandler": "Assigned handler",
+      "nextDeadline": "Next deadline",
+      "triage": "Triage",
+      "reassign": "Reassign"
+    },
+    "uncategorized": "Uncategorized",
+    "open": "open",
+    "unassigned": "Unassigned",
+    "title": "Cases",
+    "matchCount_one": "{{matched}} of {{total}} case match",
+    "matchCount_other": "{{matched}} of {{total}} cases match",
+    "caseCount_one": "{{count}} case",
+    "caseCount_other": "{{count}} cases",
+    "exportCsv": "Export CSV",
+    "empty": {
+      "title": "No cases here yet",
+      "description": "Submitted reports appear here the moment they are routed."
+    },
+    "filters": {
+      "category": "Category",
+      "allCategories": "All categories",
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "priority": "Priority",
+      "allPriorities": "All priorities",
+      "assignment": "Assignment",
+      "all": "All"
+    },
+    "clearFilters": "Clear filters",
+    "noMatch": {
+      "title": "No cases match these filters",
+      "description": "Adjust or clear the filters above to see more."
+    },
+    "view": "View",
+    "reassignAriaLabel": "Reassign case {{caseId}}",
+    "reassigning": "Reassigning...",
+    "reassignTo": "Reassign to...",
+    "showingRange": "Showing {{from}}–{{to}} of {{total}}",
+    "previous": "Previous",
+    "pageOf": "Page {{page}} of {{total}}",
+    "next": "Next"
+  },
+  "caseDetailView": {
+    "saving": "Saving",
+    "consistencyStatus": {
+      "insufficient_data": "insufficient data",
+      "consistent": "consistent",
+      "unrankable": "unrankable",
+      "flagged": "flagged"
+    },
+    "consistencyFlags": {
+      "empty": {
+        "title": "No consistency check yet",
+        "description": "A check runs automatically once an action is proposed on this case."
+      },
+      "similarCasesConsidered_one": "{{count}} similar case considered.",
+      "similarCasesConsidered_other": "{{count}} similar cases considered."
+    },
+    "flagReviewed": {
+      "title": "Consistency flag reviewed",
+      "reviewerNote": "Reviewer note: {{note}}"
+    },
+    "flagDirection": {
+      "harsher": "harsher",
+      "lenient": "lenient"
+    },
+    "flagBanner": {
+      "title": "Consistency flag - proposed action is {{direction}} than typical",
+      "body": "This is informational only. It does not suggest an action or stop you from proposing or closing this case - the decision remains yours. Add a note to record that you have seen and considered it.",
+      "reviewNoteLabel": "Review note",
+      "reviewNotePlaceholder": "Note why the proposed action is appropriate despite the flag.",
+      "markReviewed": "Mark reviewed"
+    },
+    "identity": {
+      "noFieldsStored": "No identity fields were stored.",
+      "fields": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "jobTitle": "Job title",
+        "notes": "Notes"
+      },
+      "title": "Reporter identity",
+      "confidentialIntro": "This is a confidential-tier report.",
+      "onFileHint": "Reporter identity details are on file and can be revealed with a logged reason.",
+      "nothingToReveal": "The reporter self-submitted and provided no identity details, so there is nothing to reveal.",
+      "revealButton": "Reveal reporter identity",
+      "showStatusButton": "Show identity status",
+      "noneOnFile": {
+        "title": "No identity on file",
+        "body": "This reporter filed confidentially through the web form and chose not to provide any identifying details. Nothing was stored, so there is nothing to reveal here - the case thread is the only channel back to them."
+      },
+      "hide": "Hide",
+      "revealed": {
+        "title": "Identity revealed - this access has been logged",
+        "body": "Your identity, this case, and your reason are recorded in the access log. This is shown for this session only and is not stored here; leaving and returning will require a fresh reason."
+      },
+      "hideIdentity": "Hide identity",
+      "onFileList": "On file for this reporter: {{fields}}.",
+      "onFileGeneric": "Reporter identity details are on file.",
+      "revealWarning": {
+        "title": "Revealing identity is logged and attributable",
+        "body": "Revealing a confidential reporter's identity is a deliberate act. Before you proceed, know that your identity, this case, the time, and the reason you type below are written to the access log. Only do this when you have a documented reason to."
+      },
+      "reasonLabel": "Reason for revealing this identity",
+      "reasonPlaceholder": "Record why this reporter's identity needs to be revealed (min. 10 characters).",
+      "revealing": "Revealing",
+      "revealIdentityButton": "Reveal identity"
+    },
+    "actionForm": {
+      "caseClosed": "Case closed",
+      "finalAction": "Final action: {{action}}",
+      "notRecorded": "not recorded",
+      "categoryLabel": "Category of action",
+      "effectiveDateLabel": "Effective date",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "What is being done, and on what basis.",
+      "updateProposed": "Update proposed action",
+      "propose": "Propose action",
+      "proposedAction": "Proposed action:",
+      "checkComplete": "Consistency check complete - this case can be closed.",
+      "checkWaiting": "Waiting for the consistency check to finish against this proposal before the case can be closed.",
+      "closing": "Closing",
+      "markClosed": "Mark case closed",
+      "legalHold": {
+        "title": "Under legal hold",
+        "body": "Under legal hold - reason: {{reason}}. Set by {{setByUid}} on {{setAt}}. Only a Company Admin or Super Admin can lift this."
+      }
+    }
+  },
+  "policyReferences": {
+    "policyDocument": "Policy document",
+    "title": "Policy references",
+    "description": "The clauses from your company's own policy that were used as reference context for this case.",
+    "empty": {
+      "title": "No policy grounding on this case",
+      "description": "No company policy was available for this category when the case was scored, so it was handled without policy context."
+    },
+    "version": "Version {{version}}",
+    "opening": "Opening",
+    "openSource": "Open source",
+    "unlabelledSection": "Unlabelled section",
+    "footnote": "Policy context informs the questions asked and the evidence sought. It does not determine the outcome - every determination on this case is yours."
+  },
+  "evidenceInventory": {
+    "manualLogEntry": "Manual log entry",
+    "aiAssistant": "AI assistant",
+    "caseHandler": "Case Handler",
+    "reporter": "Reporter"
+  },
+  "caseEvidencePanel": {
+    "opening": "Opening",
+    "open": "Open",
+    "couldNotOpen": "Could not open this file.",
+    "title": "Evidence",
+    "fileCount_one": "{{count}} file attached across this case's thread.",
+    "fileCount_other": "{{count}} files attached across this case's thread.",
+    "empty": "No evidence has been attached to this case yet.",
+    "headers": {
+      "file": "File",
+      "type": "Type",
+      "size": "Size",
+      "uploaded": "Uploaded",
+      "suppliedBy": "Supplied by",
+      "thread": "Thread",
+      "open": "Open"
+    },
+    "viewInThread": "View in thread"
+  },
+  "caseReport": {
+    "author": {
+      "investigatorLog": "Investigator log",
+      "system": "System",
+      "aiAssistant": "AI assistant",
+      "caseHandler": "Case Handler",
+      "reporter": "Reporter"
+    },
+    "submittedByOn": "submitted by {{by}} on {{date}}",
+    "openingEllipsis": "Opening…",
+    "open": "Open",
+    "couldNotOpen": "Could not open this file.",
+    "title": "Case report",
+    "summary": {
+      "title": "Case summary",
+      "category": "Category",
+      "status": "Status",
+      "created": "Created",
+      "closed": "Closed",
+      "severityScore": "Severity score",
+      "evidenceScore": "Evidence score"
+    },
+    "timeline": {
+      "title": "Message timeline",
+      "empty": "No messages."
+    },
+    "evidence": {
+      "title": "Evidence",
+      "empty": "No attachments."
+    },
+    "manualLog": {
+      "title": "Investigator manual log",
+      "empty": "No manual log entries."
+    },
+    "consistencyCheck": {
+      "title": "Consistency check",
+      "empty": "No consistency check has run for this case.",
+      "status": "Status",
+      "flag": "Flag",
+      "none": "None",
+      "typicalAction": "Typical action",
+      "resolutionNotes": "Resolution notes"
+    },
+    "policyInEffect": {
+      "title": "Policy in effect",
+      "empty": "No company policy was in effect for this case's category when it was created."
+    },
+    "finalAction": {
+      "title": "Final action taken",
+      "action": "Action",
+      "notYetDecided": "Not yet decided",
+      "effectiveDate": "Effective date",
+      "notes": "Notes"
+    },
+    "complianceLog": {
+      "title": "Compliance deadline log",
+      "ruleApplied": "Rule applied",
+      "acknowledgmentDue": "Acknowledgment due",
+      "acknowledgmentSent": "Acknowledgment sent",
+      "feedbackDue": "Feedback due",
+      "feedbackGiven": "Feedback given"
+    },
+    "externalShares": {
+      "title": "External shares",
+      "description": "Who this case was shared with outside the organisation - who saw this case is part of the case history.",
+      "empty": "No external shares were ever created for this case.",
+      "unknownOrganisation": "Unknown organisation",
+      "summaryLine": "{{recipient}} · {{scope}} scope · created {{created}} · expires {{expires}}",
+      "accessCount_one": "{{count}} access",
+      "accessCount_other": "{{count}} accesses",
+      "lastAccessed": ", last {{date}}",
+      "revokedReason": " · revoked: {{reason}}"
+    },
+    "restrictedIdentity": {
+      "title": "Restricted - reporter identity",
+      "description": "Confidential tier. Visible only to roles authorized to see reporter identity.",
+      "status": "Status",
+      "detailsOnFile": "Details on file",
+      "access": "Access",
+      "identifiedThemselves": "Identified themselves",
+      "identifiedThemselvesValue": "{{date}} ({{by}}) - {{note}}",
+      "notAuthorized": "You are not authorized to view reporter identity for this case."
+    }
+  },
+  "investigationChecklist": {
+    "types": {
+      "interviewQuestion": "Interview question",
+      "documentRequest": "Document to request",
+      "contradictionFlag": "Contradiction / gap"
+    },
+    "generating": "Generating",
+    "regenerate": "Regenerate",
+    "generate": "Generate",
+    "title": "Investigation checklist",
+    "description": "AI-suggested next steps from the category, answers, and thread so far. A planning aid, not a required workflow.",
+    "empty": {
+      "title": "No checklist yet",
+      "description": "Generate one to get suggested interview questions, documents to request, and gaps to chase."
+    },
+    "markAsDone": "Mark \"{{item}}\" as done",
+    "editItem": "Edit item",
+    "save": "Save",
+    "edit": "Edit",
+    "unignore": "Unignore",
+    "ignore": "Ignore"
+  },
+  "deletionRequestPanel": {
+    "recently": "recently",
+    "title": "This reporter has requested deletion of this case",
+    "body": "Requested {{date}}. Approving permanently and immediately deletes this case's content - the narrative, messages, questionnaire answers, and any evidence files. This cannot be undone. Declining leaves the case exactly as it is.",
+    "onHold": "This case is under legal hold. It cannot be approved for deletion until the hold is released.",
+    "reviewToApprove": "Review to approve",
+    "reviewToDecline": "Review to decline",
+    "approveReasonLabel": "Reason for approving deletion",
+    "declineReasonLabel": "Reason for declining deletion",
+    "approveReasonPlaceholder": "Record why this case qualifies for erasure (min. 10 characters).",
+    "declineReasonPlaceholder": "Record why this case must be retained despite the request (min. 10 characters).",
+    "continue": "Continue",
+    "confirmModal": {
+      "title": "Permanently delete this case?",
+      "body": "This will immediately and irreversibly delete the case narrative, messages, questionnaire answers and evidence for case {{caseId}}. There is no undo.",
+      "confirm": "Yes, permanently delete"
+    },
+    "deleting": "Deleting",
+    "back": "Back",
+    "saving": "Saving",
+    "declineRequest": "Decline request"
+  },
+  "shareCasePanel": {
+    "noEvidence": "No evidence has been attached to this case yet.",
+    "unknownType": "unknown type",
+    "fileMeta": "{{type}} · {{size}} · from {{supplier}} · {{date}}",
+    "maxSharesTitle": "{{max}} active shares already exist",
+    "maxSharesBody": "More than {{max}} active shares on one case is not a legal consultation, it is distribution. Revoke one below before creating another.",
+    "deterrentNotice": {
+      "title": "This deters leaks; it cannot prevent them",
+      "body": "The recipient's name and organisation are watermarked into every panel of the shared view and re-rendered live, so a screenshot carries attribution. That is a deterrent, not a guarantee - only share with someone you would trust with a printed copy."
+    },
+    "recipientName": "Recipient name",
+    "recipientEmail": "Recipient email",
+    "invalidEmail": "Enter a valid email address",
+    "recipientOrganisation": "Recipient organisation",
+    "recipientOrganisationPlaceholder": "e.g. Outside employment counsel, XYZ LLP",
+    "purposeLabel": "Purpose",
+    "purposePlaceholder": "Why this case is being shared (min. {{min}} characters). This is a legal disclosure, not a formality.",
+    "purposeError": "At least {{min}} characters required",
+    "scopeLabel": "Scope",
+    "expiresInDays": "Expires in (days)",
+    "expiresHint": "Maximum {{max}} days. No renewal or extension - an expired share is recreated deliberately or not at all.",
+    "evidenceToInclude": "Evidence files to include",
+    "evidenceToIncludeHint": "Nothing is selected by default. This list is frozen the moment the share is created - a file attached to the case afterwards, even one that looks like it should belong here, never becomes visible through this link.",
+    "anonymousEvidenceAck": "This is an anonymous-tier case - the reporter's identity is not on record anywhere in it. I have reviewed each file selected below and confirm none of them can identify the reporter: no name, signature, handwriting, email address, embedded file metadata, or photo that could do what the case record itself was built not to. A screenshot or document can carry a name the case record never did.",
+    "defaultEvidenceAck": "I have reviewed each file selected below and confirm it does not disclose the reporter's identity or anything beyond what this share's stated purpose requires.",
+    "creating": "Creating",
+    "createShareButton": "Create share and email link",
+    "shareCreated": {
+      "title": "Share created",
+      "body": "An email with the access link was sent to the recipient.",
+      "deliveryFailed": "An email with the access link was sent to the recipient - delivery failed, contact them directly."
+    },
+    "createdExpiresAccess_one": "Created {{created}} · expires {{expires}} · {{accessCount}} access",
+    "createdExpiresAccess_other": "Created {{created}} · expires {{expires}} · {{accessCount}} accesses",
+    "lastAccessed": ", last {{date}}",
+    "confidentialityAccepted": "Confidentiality undertaking accepted by \"{{name}}\" on {{date}}",
+    "revokedOn": "Revoked {{date}}",
+    "revokedReasonSuffix": " - {{reason}}",
+    "revoke": "Revoke",
+    "revokeReasonLabel": "Reason for revoking (optional)",
+    "revoking": "Revoking",
+    "confirmRevoke": "Confirm revoke",
+    "shareCardTitle": "Share this case with an external advisor",
+    "sharesCardTitle": "Shares",
+    "sharesCardDescription": "Active and past external shares for this case.",
+    "noShares": "No external shares yet"
+  },
+  "handlerDashboard": {
+    "openCasesAssigned_one": "{{count}} open case assigned to you.",
+    "openCasesAssigned_other": "{{count}} open cases assigned to you.",
+    "refreshing": "Refreshing",
+    "refresh": "Refresh",
+    "empty": {
+      "title": "No cases assigned to you",
+      "description": "New cases arrive here automatically when a routing rule sends one your way."
+    },
+    "sortBy": "Sort by",
+    "sortOptions": {
+      "default": "Triage order (default)",
+      "deadline": "Nearest deadline",
+      "recent": "Most recently assigned"
+    },
+    "uncategorized": "Uncategorized",
+    "assignedAt": " · assigned {{date}}",
+    "crisisFlagged": "Crisis flagged",
+    "highPriority": "High priority"
+  },
+  "reportExportButton": {
+    "generatingPdf": "Generating PDF…",
+    "exportAsPdf": "Export as PDF",
+    "identityPanel": {
+      "title": "Include reporter identity?",
+      "description": "Confidential tier only. Decrypts and prints the reporter's identity in the PDF's appendix, and is logged the same as any other identity access.",
+      "checkboxLabel": "Include reporter identity in this export",
+      "reasonLabel": "Reason",
+      "reasonHint": "Documented legal reason, at least {{min}} characters. Recorded in the identity access audit log."
+    },
+    "generatePdf": "Generate PDF",
+    "history": {
+      "title": "Export history",
+      "description": "Every time this case's report has been rendered to PDF.",
+      "loading": "Loading…",
+      "empty": "This report has not been exported yet.",
+      "you": "You",
+      "identityIncluded": "Identity included",
+      "pagesAndSize": "{{pages}} pages · {{size}}"
+    }
+  },
+  "legal": {
+    "backToHome": "Back to Rectifia",
+    "lastUpdated": "Last updated {{date}}",
+    "version": "Version {{version}}",
+    "privacyTitle": "Privacy Policy",
+    "termsTitle": "Terms of Use"
   }
 }

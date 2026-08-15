@@ -56,16 +56,25 @@ async function logPrivilegedAction(firestore, { uid, companyId, role, action, ou
 const HANDLER_ROLES = ['caseHandler']
 
 // Roles that may read a *still unassigned* case in order to place it.
-// Company Admin is deliberately absent for the same reason it is absent from
-// HANDLER_ROLES: triage means reading full questionnaire content on a case
-// this company may not even be allowed to see (conflict of interest), and
-// that is exactly the read Company Admin must never get. HR Coordinator
-// retains this because it also holds the reassign power (see REASSIGN_ROLES
-// in functions/src/intake/routeCase.js) - triage is reading enough of the
-// case to exercise that power responsibly, not a new one. A case with no
-// eligible non-conflicted assignee surfaces to Super Admin's
-// manual-assignment queue instead of falling back to Company Admin.
-const TRIAGE_ROLES = ['hrCoordinator']
+// HR Coordinator gets this unrestricted (any case in TRIAGE_STATUSES,
+// getCaseForTriage.js) because it also holds the reassign power (see
+// REASSIGN_ROLES in functions/src/intake/routeCase.js) - triage is reading
+// enough of the case to exercise that power responsibly, not a new one.
+//
+// Company Admin is included too, but deliberately narrower: this role has
+// zero case-content access as a general matter - a conflict-of-interest
+// control, because Company Admin is often the person most likely to have a
+// conflict with a case - and this is the one carved-out exception, matching
+// what firestore.rules' caseMetadata read already lets it see and what
+// CasesPage.jsx's UI already exposes (the module 2 role design's "one case
+// derived read"). getCaseForTriage.js enforces the narrower scope itself
+// (status == 'needs_manual_assignment' AND routingReason == 'no_routing_rule'
+// only - never 'open', never conflict_of_interest) rather than here, since
+// this file only checks role membership, not a specific case's fields. A
+// case with no eligible non-conflicted assignee, or with no routing rule
+// gap for Company Admin to fix, surfaces to Super Admin's manual-assignment
+// queue instead.
+const TRIAGE_ROLES = ['hrCoordinator', 'companyAdmin']
 
 // Roles that may file a case on behalf of a reporter
 // (functions/src/intake/createCaseOnBehalf.js). These are the two roles that

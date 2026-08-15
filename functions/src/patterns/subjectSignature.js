@@ -15,6 +15,7 @@ const SUBJECT_FIELDS = {
   toxicManagement: { department: 'toxic_manager_department', role: 'toxic_manager_role' },
   harassment: { department: 'subject_department', role: 'subject_role' },
   retaliation: { department: 'subject_department', role: 'subject_role' },
+  discrimination: { department: 'subject_department', role: 'subject_role' },
 }
 
 // Department is free text on every questionnaire, so "Engineering", " eng "
@@ -90,4 +91,5 @@ module.exports = {
   signatureHash,
   departmentTierHash,
   normalizeDepartment,
+  answerFor,
 }

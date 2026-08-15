@@ -4,12 +4,14 @@ import { auth, firestore, functions } from './firebase'
 
 const COMPANIES_COLLECTION = 'companies'
 
-// Mirrors functions/src/retention/retentionPolicy.js exactly. Duplicated
-// rather than imported (that is server-only Cloud Functions code) purely so
-// this form can show and enforce the same floors/ceilings/defaults before a
-// save is even attempted; firestore.rules enforces the real floor on every
-// write, so a drift here could only make the form stricter than the server,
-// never looser.
+// Mirrors functions/src/retention/retentionPolicy.js exactly - both the
+// constant values AND the resolution order below, which must stay in sync
+// too, not just the numbers. Duplicated rather than imported (that is
+// server-only Cloud Functions code) purely so this form can show and
+// enforce the same floors/ceilings/defaults before a save is even
+// attempted; firestore.rules enforces the real floor on every write, so a
+// drift here could only make the form stricter than the server, never
+// looser.
 export const RETENTION_DEFAULTS = {
   identityRetentionDays: 365,
   caseRetentionDays: 2555,
@@ -29,6 +31,58 @@ export const RETENTION_CEILINGS = {
   caseRetentionDays: 3650,
   pulseResponseRetentionDays: 1825,
   auditLogRetentionDays: null,
+}
+
+// Mirrors functions/src/retention/retentionPolicy.js's JURISDICTION_RETENTION
+// exactly - see that file for the derivation of each override. Engineering
+// defaults pending employment-law review, not legal advice.
+export const JURISDICTION_RETENTION = {
+  EU: {
+    caseRetentionDays: 1825,
+    identityRetentionDays: 180,
+    caseRetentionCeiling: 2555,
+  },
+  JP: {
+    caseRetentionDays: 1825,
+    caseRetentionCeiling: 3650,
+  },
+  AU: {
+    caseRetentionDays: 2555,
+    caseRetentionCeiling: 3650,
+  },
+}
+
+function jurisdictionCeilingKey(key) {
+  return key.replace(/Days$/, 'Ceiling')
+}
+
+// Mirrors resolveJurisdictionRetention() in
+// functions/src/retention/retentionPolicy.js exactly: folds a company's
+// jurisdictions into one set of per-key defaults and ceilings, strictest
+// wins - the shortest default and the shortest ceiling among the company's
+// matching jurisdictions, per key.
+export function resolveJurisdictionRetention(jurisdictions = []) {
+  const basis = (jurisdictions || []).filter((code) => JURISDICTION_RETENTION[code])
+  const defaults = { ...RETENTION_DEFAULTS }
+  const ceilings = { ...RETENTION_CEILINGS }
+
+  for (const field of RETENTION_FIELDS) {
+    const { key } = field
+    const ceilingKey = jurisdictionCeilingKey(key)
+    for (const code of basis) {
+      const entry = JURISDICTION_RETENTION[code]
+      if (typeof entry[key] === 'number' && entry[key] < defaults[key]) {
+        defaults[key] = entry[key]
+      }
+      if (typeof entry[ceilingKey] === 'number') {
+        if (typeof ceilings[key] !== 'number' || entry[ceilingKey] < ceilings[key]) {
+          ceilings[key] = entry[ceilingKey]
+        }
+      }
+    }
+  }
+
+  return { defaults, ceilings, basis }
 }
 
 export const RETENTION_FIELDS = [
@@ -64,31 +118,47 @@ function requireUid() {
   return uid
 }
 
-// Applies a company's overrides on top of the defaults and clamps to
-// floor/ceiling - the same function signature and behaviour as
-// resolveRetentionPolicy() server-side, so what this page shows as "current"
-// always matches what the next sweep would actually use, even for a company
-// whose stored config predates a floor change.
+// Applies a company's jurisdictions and its own overrides on top of the
+// defaults and clamps to floor/ceiling - the same function signature and
+// behaviour as resolveRetentionPolicy() server-side, so what this page shows
+// as "current" always matches what the next sweep would actually use, even
+// for a company whose stored config predates a floor change or a
+// newly-added jurisdiction.
+//
+// Resolution order, strictest-wins, mirroring the server exactly:
+//   1. Start from the global RETENTION_DEFAULTS/RETENTION_CEILINGS.
+//   2. Fold in the company's jurisdictions (resolveJurisdictionRetention).
+//   3. Apply the company's own stored `retention` overrides on top.
+//   4. Clamp against the global RETENTION_FLOORS (unchanged) and the
+//      jurisdiction-resolved ceiling from step 2.
 export function resolveRetentionPolicy(company) {
   const stored = company?.retention ?? {}
+  const { defaults, ceilings, basis } = resolveJurisdictionRetention(company?.jurisdictions)
+
   const resolved = {}
+  const resolvedCeilings = {}
   for (const field of RETENTION_FIELDS) {
     const { key } = field
     const candidate = stored[key]
-    const base = Number.isInteger(candidate) && candidate > 0 ? candidate : RETENTION_DEFAULTS[key]
+    const base = Number.isInteger(candidate) && candidate > 0 ? candidate : defaults[key]
     const floor = RETENTION_FLOORS[key]
-    const ceiling = RETENTION_CEILINGS[key]
+    const ceiling = ceilings[key]
     let clamped = base
     if (clamped < floor) clamped = floor
     if (typeof ceiling === 'number' && clamped > ceiling) clamped = ceiling
     resolved[key] = clamped
+    resolvedCeilings[key] = ceiling
   }
-  return resolved
+  return { ...resolved, resolvedCeilings, jurisdictionBasis: basis }
 }
 
-export function retentionFieldError(key, value) {
+// `ceilingOverride` lets a caller pass the jurisdiction-resolved ceiling
+// (resolveRetentionPolicy(company).resolvedCeilings[key]) instead of the
+// global one, so a company in EU sees an error at 2,555 days, not 3,650.
+// Falls back to the global RETENTION_CEILINGS when omitted.
+export function retentionFieldError(key, value, ceilingOverride) {
   const floor = RETENTION_FLOORS[key]
-  const ceiling = RETENTION_CEILINGS[key]
+  const ceiling = ceilingOverride !== undefined ? ceilingOverride : RETENTION_CEILINGS[key]
   if (!Number.isInteger(value) || value <= 0) {
     return 'Enter a whole number of days'
   }

@@ -106,6 +106,12 @@ const limits = {
   // enough to cover a normal viewing session (initial load, an accidental
   // refresh) without tripping on legitimate use.
   getSharedCase: limit('getSharedCase', 'RATE_LIMIT_GET_SHARED_CASE', 20),
+  // The evidence-opening counterpart of getSharedCase
+  // (functions/src/sharing/accessSharedEvidence.js), same token, same
+  // defence-in-depth posture. Scoped a little tighter than getSharedCase
+  // itself since a normal viewing session opens a handful of files, not a
+  // handful of page loads.
+  accessSharedEvidence: limit('accessSharedEvidence', 'RATE_LIMIT_ACCESS_SHARED_EVIDENCE', 20),
 }
 
 // Resolves a configured limit to a usable number. Anything that is not a

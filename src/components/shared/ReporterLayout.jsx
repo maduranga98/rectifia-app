@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
 import CrisisResources from './CrisisResources'
 import Icon from '../ui/Icon'
 import Logo from '../ui/Logo'
+import LanguageSwitcher from './LanguageSwitcher'
 
 // A reporter who already filed can only get back to their case through
 // /case, and until this lived in the chrome the only links to it sat on two
@@ -41,13 +43,14 @@ function ReporterLayout({
   footerNote,
   unsavedWarning,
 }) {
+  const { t } = useTranslation()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   // A persistent, low-key way to reach support resources from every
   // reporter-facing screen - no trigger has to fire, and nothing has to be
   // answered first. It floats over the page as a dismissible panel; it is
-  // never a modal that has to be dismissed, and opening it is not recorded
-  // anywhere.
+  // never a modal that has to be dismissed. Whoever renders it stays in full
+  // control of their screen.
   const [showSupport, setShowSupport] = useState(false)
   const supportPanelRef = useRef(null)
   const supportToggleRef = useRef(null)
@@ -94,27 +97,36 @@ function ReporterLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="relative border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4">
-          <Logo size="md" />
-          <div className="flex items-center gap-3">
+        {/* Two deliberate rows, not one row that wraps when it runs out of
+            space - a header that only "works" by accident of overflow reads
+            as broken even when nothing technically clips. The brand row
+            carries the confidentiality promise as part of the wordmark
+            (Logo's subtitle) rather than as a separate item competing for
+            space; the action row is just the two things a reporter might
+            actually reach for mid-report. Both rows use the same
+            space-between shape at every width, so nothing reflows or
+            reorders as the viewport narrows - only the row heights (via
+            wrapping text) ever change. */}
+        <div className="mx-auto flex max-w-3xl flex-col gap-2.5 px-5 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <Logo size="md" subtitle={t('reporterLayout.confidential')} />
+            <LanguageSwitcher className="shrink-0" />
+          </div>
+          <div className="flex items-center justify-between gap-3">
             <button
               ref={supportToggleRef}
               type="button"
               onClick={() => setShowSupport((open) => !open)}
-              className="min-h-11 px-1 text-xs text-muted underline hover:text-charcoal"
+              className="min-h-9 text-xs text-muted underline hover:text-charcoal"
               aria-expanded={showSupport}
             >
-              Need support now?
+              {t('reporterLayout.needSupport')}
             </button>
             {!isTrackingRoute(pathname) && (
-              <Button size="sm" icon="search" className="min-h-11" onClick={trackExistingCase}>
-                Track an existing case
+              <Button size="sm" icon="search" className="min-h-9 shrink-0" onClick={trackExistingCase}>
+                {t('reporterLayout.trackExisting')}
               </Button>
             )}
-            <span className="flex items-center gap-1.5 text-xs text-muted">
-              <Icon name="shield" className="h-3.5 w-3.5" />
-              Confidential
-            </span>
           </div>
         </div>
         {/* Floats over the page, anchored below the chrome, instead of
@@ -124,7 +136,12 @@ function ReporterLayout({
             positioned overlay it covers nothing the reporter needs and never
             blocks them from what they were doing; it stays dismissible via
             outside click or Escape. The layout never knows a jurisdiction, so
-            every regional route plus the international fallback is offered. */}
+            every regional route plus the international fallback is offered.
+            The explicit button below exists alongside outside-click/Escape,
+            not instead of them - a reporter who opened this from a form they
+            were filling in needs a visible, unambiguous way back to it,
+            not just an implicit one that depends on knowing to click outside
+            the panel or press a key. */}
         {showSupport && (
           <div
             ref={supportPanelRef}
@@ -132,6 +149,16 @@ function ReporterLayout({
           >
             <div className="mx-auto w-full max-w-3xl px-5 py-4">
               <CrisisResources />
+              <Button
+                className="mt-4"
+                icon="back"
+                onClick={() => {
+                  setShowSupport(false)
+                  supportToggleRef.current?.focus()
+                }}
+              >
+                {t('reporterLayout.backToForm')}
+              </Button>
             </div>
           </div>
         )}
@@ -146,12 +173,16 @@ function ReporterLayout({
                 skimming under stress. */}
             <div className="flex items-baseline justify-between gap-2 text-xs">
               <span className="font-medium text-charcoal">
-                Step {currentStep + 1} of {steps.length}: {steps[currentStep]}
+                {t('reporterLayout.stepLabel', {
+                  current: currentStep + 1,
+                  total: steps.length,
+                  name: steps[currentStep],
+                })}
               </span>
               <span className="shrink-0 text-muted">
                 {currentStep >= steps.length - 1
-                  ? 'Last step'
-                  : `${steps.length - currentStep - 1} to go`}
+                  ? t('reporterLayout.lastStep')
+                  : t('reporterLayout.stepsToGo', { count: steps.length - currentStep - 1 })}
               </span>
             </div>
             <ol className="flex items-center gap-2">
@@ -221,7 +252,7 @@ function ReporterLayout({
               rel="noopener noreferrer"
               className="underline hover:text-charcoal"
             >
-              Privacy policy <span className="text-muted">(opens in a new tab)</span>
+              {t('reporterLayout.privacyPolicy')} <span className="text-muted">({t('common.opensNewTab')})</span>
             </Link>
             <Link
               to="/terms"
@@ -229,7 +260,7 @@ function ReporterLayout({
               rel="noopener noreferrer"
               className="underline hover:text-charcoal"
             >
-              Terms of use <span className="text-muted">(opens in a new tab)</span>
+              {t('reporterLayout.termsOfUse')} <span className="text-muted">({t('common.opensNewTab')})</span>
             </Link>
           </nav>
         </div>

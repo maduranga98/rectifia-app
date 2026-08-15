@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Icon from '../ui/Icon'
 import Logo from '../ui/Logo'
+import LanguageSwitcher from './LanguageSwitcher'
 
 // The signed-in chrome: a navy rail carrying the brand and the navigation,
 // and a light content column beside it.
@@ -68,10 +70,11 @@ function groupBySection(items) {
 }
 
 function NavItems({ items, activeId, onSelect, onNavigate }) {
+  const { t } = useTranslation()
   const groups = groupBySection(items)
 
   return (
-    <nav className="flex flex-col gap-4" aria-label="Main">
+    <nav className="flex flex-col gap-4" aria-label={t('appShell.mainNav')}>
       {groups.map((group, index) => (
         <div key={group.section ?? `ungrouped-${index}`} className="flex flex-col gap-0.5">
           {group.section && (
@@ -95,6 +98,7 @@ function NavItems({ items, activeId, onSelect, onNavigate }) {
 }
 
 function SidebarBody({ scopeLabel, navItems, activeId, onSelect, onNavigate, userEmail, roleLabel, onSignOut }) {
+  const { t } = useTranslation()
   return (
     <div className="flex h-full flex-col bg-navy-900">
       <div className="flex items-center gap-2.5 border-b border-white/8 px-4 py-4">
@@ -113,6 +117,9 @@ function SidebarBody({ scopeLabel, navItems, activeId, onSelect, onNavigate, use
       </div>
 
       <div className="border-t border-white/8 p-3">
+        <div className="mb-2 flex justify-center">
+          <LanguageSwitcher />
+        </div>
         {userEmail && (
           <div className="mb-2 flex items-center gap-2.5 rounded-lg px-2 py-2">
             <span
@@ -134,7 +141,7 @@ function SidebarBody({ scopeLabel, navItems, activeId, onSelect, onNavigate, use
             className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-navy-200 transition-colors hover:bg-white/8 hover:text-white"
           >
             <Icon name="signOut" />
-            Sign out
+            {t('appShell.signOut')}
           </button>
         )}
       </div>
@@ -155,6 +162,7 @@ function AppShell({
   headerActions,
   children,
 }) {
+  const { t } = useTranslation()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   // Esc closes the mobile drawer - it covers the whole viewport, so leaving
@@ -191,7 +199,7 @@ function AppShell({
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
             type="button"
-            aria-label="Close navigation"
+            aria-label={t('appShell.closeNavigation')}
             onClick={() => setDrawerOpen(false)}
             className="absolute inset-0 bg-navy-900/60 backdrop-blur-[2px]"
           />
@@ -205,7 +213,7 @@ function AppShell({
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              aria-label="Open navigation"
+              aria-label={t('appShell.openNavigation')}
               className="btn btn-secondary -ml-1 px-2 py-2 lg:hidden"
             >
               <Icon name="menu" className="h-5 w-5" />

@@ -35,6 +35,12 @@ Severity should weigh: the concreteness and severity of the adverse action (term
 
 Evidence should weigh: whether a clear causal link is drawn between the protected activity and the adverse treatment (timing, explicit statements, a documented change in treatment), versus a retaliation claim based only on suspicion or coincidence.`,
 
+  discrimination: `Category: Discrimination - being treated unfairly because of a protected characteristic such as race, gender, age, or disability.
+
+Severity should weigh: the concreteness of the adverse action (an employment decision - hiring, promotion, pay, termination - is far more severe than an offhand comment), whether a pattern is shown across time or across a group of similarly-situated people, and the power/decision-making authority of the person involved.
+
+Evidence should weigh: whether a comparator is identified, whether documentation is described, and whether the account distinguishes the adverse treatment from a legitimate, non-discriminatory explanation the reporter is aware of and addresses.`,
+
   burnout: `Category: Burnout - sustained work-related exhaustion that is affecting the reporter's health.
 
 Severity should weigh: the duration and intensity of the exhaustion described, whether it has produced concrete health effects (sleep, physical symptoms, mental health) rather than general tiredness, and whether the reporter describes an inability to recover (e.g. exhaustion that persists through time off).

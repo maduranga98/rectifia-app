@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getEvidenceDownloadUrl } from '../../services/caseThreadService'
 import { generateReport } from '../../services/reportService'
 import Alert from '../ui/Alert'
@@ -25,12 +26,12 @@ const AUTHOR_TONE = {
   reporter: 'tone-neutral',
 }
 
-function messageAuthorLabel(message) {
-  if (message.type === 'manual_log') return 'Investigator log'
-  if (message.sender === 'system') return 'System'
-  if (message.sender === 'ai') return 'AI assistant'
-  if (message.sender === 'investigator') return 'Case Handler'
-  return 'Reporter'
+function messageAuthorLabel(t, message) {
+  if (message.type === 'manual_log') return t('caseReport.author.investigatorLog')
+  if (message.sender === 'system') return t('caseReport.author.system')
+  if (message.sender === 'ai') return t('caseReport.author.aiAssistant')
+  if (message.sender === 'investigator') return t('caseReport.author.caseHandler')
+  return t('caseReport.author.reporter')
 }
 
 // Label/value pairs. A two-column dl at every call site was the single most
@@ -61,6 +62,7 @@ function DetailList({ items }) {
 // The caller here is an authenticated handler, so no passcode is passed - the
 // callable authorizes on the Firebase Auth identity and the case assignment.
 function EvidenceRow({ caseId, item }) {
+  const { t } = useTranslation()
   const [opening, setOpening] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -85,7 +87,7 @@ function EvidenceRow({ caseId, item }) {
     <li className="flex flex-wrap items-baseline gap-x-2">
       <span className="font-medium text-charcoal">{item.label ?? item.fileName}</span>
       <span className="text-xs text-muted">
-        submitted by {item.postedBy} on {formatTimestamp(item.postedAt)}
+        {t('caseReport.submittedByOn', { by: item.postedBy, date: formatTimestamp(item.postedAt) })}
       </span>
       {item.fileName && (
         <button
@@ -94,10 +96,10 @@ function EvidenceRow({ caseId, item }) {
           disabled={opening}
           className="text-xs text-navy underline disabled:no-underline disabled:opacity-60 print:hidden"
         >
-          {opening ? 'Opening…' : 'Open'}
+          {opening ? t('caseReport.openingEllipsis') : t('caseReport.open')}
         </button>
       )}
-      {failed && <span className="text-xs text-critical">Could not open this file.</span>}
+      {failed && <span className="text-xs text-critical">{t('caseReport.couldNotOpen')}</span>}
     </li>
   )
 }
@@ -113,6 +115,7 @@ function EvidenceRow({ caseId, item }) {
 // auth) - the caller of this component is responsible for only passing
 // canViewReporterIdentity=true for a viewer actually authorized to see it.
 function CaseReport({ caseId, canViewReporterIdentity = false }) {
+  const { t } = useTranslation()
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -150,7 +153,7 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
             <Logo size="sm" showWordmark={false} />
           </span>
           <div>
-            <h2 className="text-xl font-semibold text-charcoal">Case report</h2>
+            <h2 className="text-xl font-semibold text-charcoal">{t('caseReport.title')}</h2>
             <p className="text-sm text-muted">{report.caseId}</p>
           </div>
         </div>
@@ -162,29 +165,29 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         canIncludeIdentity={canViewReporterIdentity}
       />
 
-      <Card title="Case summary">
+      <Card title={t('caseReport.summary.title')}>
         <DetailList
           items={[
-            ['Category', humanize(report.summary.category)],
-            ['Status', humanize(report.summary.status)],
-            ['Created', formatTimestamp(report.summary.createdAt)],
-            ['Closed', formatTimestamp(report.summary.closedAt)],
-            ['Severity score', report.summary.severityScore],
-            ['Evidence score', report.summary.evidenceScore],
+            [t('caseReport.summary.category'), report.summary.category ? t(`categories.${report.summary.category}.label`, { defaultValue: humanize(report.summary.category) }) : humanize(report.summary.category)],
+            [t('caseReport.summary.status'), t(`caseStatus.${report.summary.status}`, { defaultValue: humanize(report.summary.status) })],
+            [t('caseReport.summary.created'), formatTimestamp(report.summary.createdAt)],
+            [t('caseReport.summary.closed'), formatTimestamp(report.summary.closedAt)],
+            [t('caseReport.summary.severityScore'), report.summary.severityScore],
+            [t('caseReport.summary.evidenceScore'), report.summary.evidenceScore],
           ]}
         />
       </Card>
 
-      <Card title="Message timeline" padded={report.timeline.length > 0}>
+      <Card title={t('caseReport.timeline.title')} padded={report.timeline.length > 0}>
         {report.timeline.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-muted">No messages.</p>
+          <p className="px-5 py-4 text-sm text-muted">{t('caseReport.timeline.empty')}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line-soft">
             {report.timeline.map((message) => (
               <li key={message.id} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex items-center justify-between gap-3">
                   <Badge tone={AUTHOR_TONE[message.type === 'manual_log' ? 'manual_log' : message.sender] ?? 'tone-neutral'}>
-                    {messageAuthorLabel(message)}
+                    {messageAuthorLabel(t, message)}
                   </Badge>
                   <span className="text-xs text-muted">{formatTimestamp(message.timestamp)}</span>
                 </div>
@@ -195,9 +198,9 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         )}
       </Card>
 
-      <Card title="Evidence">
+      <Card title={t('caseReport.evidence.title')}>
         {report.evidence.length === 0 ? (
-          <p className="text-sm text-muted">No attachments.</p>
+          <p className="text-sm text-muted">{t('caseReport.evidence.empty')}</p>
         ) : (
           <ul className="flex flex-col gap-2 text-sm">
             {report.evidence.map((item) => (
@@ -207,9 +210,9 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         )}
       </Card>
 
-      <Card title="Investigator manual log">
+      <Card title={t('caseReport.manualLog.title')}>
         {report.manualLogEntries.length === 0 ? (
-          <p className="text-sm text-muted">No manual log entries.</p>
+          <p className="text-sm text-muted">{t('caseReport.manualLog.empty')}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {report.manualLogEntries.map((entry) => (
@@ -222,33 +225,31 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         )}
       </Card>
 
-      <Card title="Consistency check">
+      <Card title={t('caseReport.consistencyCheck.title')}>
         {!report.consistencyCheck ? (
-          <p className="text-sm text-muted">No consistency check has run for this case.</p>
+          <p className="text-sm text-muted">{t('caseReport.consistencyCheck.empty')}</p>
         ) : (
           <DetailList
             items={[
-              ['Status', humanize(report.consistencyCheck.status)],
-              ['Flag', report.consistencyCheck.flag?.message ?? 'None'],
-              ['Typical action', humanize(report.consistencyCheck.typicalAction)],
-              ['Resolution notes', report.consistencyCheck.resolutionNotes],
+              [t('caseReport.consistencyCheck.status'), t(`caseDetailView.consistencyStatus.${report.consistencyCheck.status}`, { defaultValue: humanize(report.consistencyCheck.status) })],
+              [t('caseReport.consistencyCheck.flag'), report.consistencyCheck.flag?.message ?? t('caseReport.consistencyCheck.none')],
+              [t('caseReport.consistencyCheck.typicalAction'), report.consistencyCheck.typicalAction ? t(`actionLabels.${report.consistencyCheck.typicalAction}`, { defaultValue: humanize(report.consistencyCheck.typicalAction) }) : humanize(report.consistencyCheck.typicalAction)],
+              [t('caseReport.consistencyCheck.resolutionNotes'), report.consistencyCheck.resolutionNotes],
             ]}
           />
         )}
       </Card>
 
-      <Card title="Policy in effect" padded={(report.policyInEffect?.length ?? 0) > 0}>
+      <Card title={t('caseReport.policyInEffect.title')} padded={(report.policyInEffect?.length ?? 0) > 0}>
         {!report.policyInEffect || report.policyInEffect.length === 0 ? (
-          <p className="text-sm text-muted">
-            No company policy was in effect for this case's category when it was created.
-          </p>
+          <p className="text-sm text-muted">{t('caseReport.policyInEffect.empty')}</p>
         ) : (
           <ul className="divide-y divide-line-soft">
             {report.policyInEffect.map((policy) => (
               <li key={policy.policyId} className="flex items-center justify-between gap-3 px-5 py-3">
-                <span className="text-sm text-charcoal">{policy.title ?? 'Policy document'}</span>
+                <span className="text-sm text-charcoal">{policy.title ?? t('policyReferences.policyDocument')}</span>
                 {policy.version != null && (
-                  <span className="text-xs text-muted">Version {policy.version}</span>
+                  <span className="text-xs text-muted">{t('policyReferences.version', { version: policy.version })}</span>
                 )}
               </li>
             ))}
@@ -256,45 +257,48 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
         )}
       </Card>
 
-      <Card title="Final action taken">
+      <Card title={t('caseReport.finalAction.title')}>
         <DetailList
           items={[
             [
-              'Action',
-              humanize(report.finalAction.actionTaken ?? report.finalAction.proposedAction) ??
-                'Not yet decided',
+              t('caseReport.finalAction.action'),
+              report.finalAction.actionTaken ?? report.finalAction.proposedAction
+                ? t(`actionLabels.${report.finalAction.actionTaken ?? report.finalAction.proposedAction}`, {
+                    defaultValue: humanize(report.finalAction.actionTaken ?? report.finalAction.proposedAction),
+                  })
+                : t('caseReport.finalAction.notYetDecided'),
             ],
-            ['Effective date', formatTimestamp(report.finalAction.actionEffectiveDate)],
-            ['Notes', report.finalAction.actionNotes],
+            [t('caseReport.finalAction.effectiveDate'), formatTimestamp(report.finalAction.actionEffectiveDate)],
+            [t('caseReport.finalAction.notes'), report.finalAction.actionNotes],
           ]}
         />
       </Card>
 
-      <Card title="Compliance deadline log">
+      <Card title={t('caseReport.complianceLog.title')}>
         <DetailList
           items={[
-            ['Rule applied', report.complianceDeadlineLog.complianceRuleApplied],
-            ['Acknowledgment due', formatTimestamp(report.complianceDeadlineLog.acknowledgmentDueAt)],
-            ['Acknowledgment sent', formatTimestamp(report.complianceDeadlineLog.acknowledgmentSentAt)],
-            ['Feedback due', formatTimestamp(report.complianceDeadlineLog.feedbackDueAt)],
-            ['Feedback given', formatTimestamp(report.complianceDeadlineLog.feedbackGivenAt)],
+            [t('caseReport.complianceLog.ruleApplied'), report.complianceDeadlineLog.complianceRuleApplied],
+            [t('caseReport.complianceLog.acknowledgmentDue'), formatTimestamp(report.complianceDeadlineLog.acknowledgmentDueAt)],
+            [t('caseReport.complianceLog.acknowledgmentSent'), formatTimestamp(report.complianceDeadlineLog.acknowledgmentSentAt)],
+            [t('caseReport.complianceLog.feedbackDue'), formatTimestamp(report.complianceDeadlineLog.feedbackDueAt)],
+            [t('caseReport.complianceLog.feedbackGiven'), formatTimestamp(report.complianceDeadlineLog.feedbackGivenAt)],
           ]}
         />
       </Card>
 
       <Card
-        title="External shares"
-        description="Who this case was shared with outside the organisation - who saw this case is part of the case history."
+        title={t('caseReport.externalShares.title')}
+        description={t('caseReport.externalShares.description')}
       >
         {!report.externalShares || report.externalShares.length === 0 ? (
-          <p className="text-sm text-muted">No external shares were ever created for this case.</p>
+          <p className="text-sm text-muted">{t('caseReport.externalShares.empty')}</p>
         ) : (
           <ul className="flex flex-col divide-y divide-line-soft">
             {report.externalShares.map((share, index) => (
               <li key={index} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm font-medium text-charcoal">
-                    {share.recipientOrganisation ?? 'Unknown organisation'}
+                    {share.recipientOrganisation ?? t('caseReport.externalShares.unknownOrganisation')}
                   </span>
                   <Badge
                     tone={
@@ -310,14 +314,18 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
                   </Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">
-                  {share.recipientName} · {share.scope} scope · created {formatTimestamp(share.createdAt)} · expires{' '}
-                  {formatTimestamp(share.expiresAt)}
+                  {t('caseReport.externalShares.summaryLine', {
+                    recipient: share.recipientName,
+                    scope: share.scope,
+                    created: formatTimestamp(share.createdAt),
+                    expires: formatTimestamp(share.expiresAt),
+                  })}
                 </p>
                 <p className="mt-1 text-sm text-charcoal">{share.purpose}</p>
                 <p className="mt-1 text-xs text-muted">
-                  {share.accessCount ?? 0} access(es)
-                  {share.lastAccessedAt ? `, last ${formatTimestamp(share.lastAccessedAt)}` : ''}
-                  {share.status === 'revoked' && share.revokedReason ? ` · revoked: ${share.revokedReason}` : ''}
+                  {t('caseReport.externalShares.accessCount', { count: share.accessCount ?? 0 })}
+                  {share.lastAccessedAt ? t('caseReport.externalShares.lastAccessed', { date: formatTimestamp(share.lastAccessedAt) }) : ''}
+                  {share.status === 'revoked' && share.revokedReason ? t('caseReport.externalShares.revokedReason', { reason: share.revokedReason }) : ''}
                 </p>
               </li>
             ))}
@@ -327,16 +335,16 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
 
       {report.restrictedReporterIdentity && (
         <Card
-          title="Restricted - reporter identity"
-          description="Confidential tier. Visible only to roles authorized to see reporter identity."
+          title={t('caseReport.restrictedIdentity.title')}
+          description={t('caseReport.restrictedIdentity.description')}
           className="border-critical/40"
         >
           {canViewReporterIdentity ? (
             <DetailList
               items={[
-                ['Status', report.restrictedReporterIdentity.status],
-                ['Details on file', report.restrictedReporterIdentity.detailsOnFile],
-                ['Access', report.restrictedReporterIdentity.access],
+                [t('caseReport.restrictedIdentity.status'), report.restrictedReporterIdentity.status],
+                [t('caseReport.restrictedIdentity.detailsOnFile'), report.restrictedReporterIdentity.detailsOnFile],
+                [t('caseReport.restrictedIdentity.access'), report.restrictedReporterIdentity.access],
                 // Present only when the case CHANGED tier mid-investigation -
                 // i.e. the reporter filed anonymously and later chose to
                 // identify themselves. A case that was confidential from its
@@ -346,19 +354,19 @@ function CaseReport({ caseId, canViewReporterIdentity = false }) {
                 ...(report.restrictedReporterIdentity.tierChanged
                   ? [
                       [
-                        'Identified themselves',
-                        `${formatTimestamp(report.restrictedReporterIdentity.tierChanged.at)} (${
-                          report.restrictedReporterIdentity.tierChanged.by
-                        }) - ${report.restrictedReporterIdentity.tierChanged.note}`,
+                        t('caseReport.restrictedIdentity.identifiedThemselves'),
+                        t('caseReport.restrictedIdentity.identifiedThemselvesValue', {
+                          date: formatTimestamp(report.restrictedReporterIdentity.tierChanged.at),
+                          by: report.restrictedReporterIdentity.tierChanged.by,
+                          note: report.restrictedReporterIdentity.tierChanged.note,
+                        }),
                       ],
                     ]
                   : []),
               ].filter(([, value]) => value)}
             />
           ) : (
-            <Alert variant="error">
-              You are not authorized to view reporter identity for this case.
-            </Alert>
+            <Alert variant="error">{t('caseReport.restrictedIdentity.notAuthorized')}</Alert>
           )}
         </Card>
       )}

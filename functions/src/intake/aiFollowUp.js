@@ -65,7 +65,6 @@ async function generateFollowUp({ apiKey, category, evidenceScore, reasoning, tr
     // what to conclude, and the reporter never sees policy content itself.
     system: `${FOLLOW_UP_SYSTEM_PROMPT}${formatPolicyContext(policyContext)}`,
     output_config: {
-      effort: 'low',
       format: { type: 'json_schema', schema: FOLLOW_UP_SCHEMA },
     },
     messages: [

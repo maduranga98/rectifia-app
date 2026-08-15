@@ -1,3 +1,5 @@
+import { regionFromTimeZone } from '../utils/regionFromTimeZone'
+
 // Static, hand-maintained crisis support resources, keyed by jurisdiction,
 // with an always-available international fallback.
 //
@@ -13,7 +15,10 @@
 // services on a reporter's behalf.
 //
 // Each entry: { name, contact, hours, jurisdiction, notes }
-//   jurisdiction: one of 'EU' | 'UK' | 'US' | 'LK', or 'INTL' for the fallback.
+//   jurisdiction: one of 'EU' | 'UK' | 'US' | 'AU' | 'JP' | 'LK', or 'INTL'
+//   for the fallback. LK is deprecated for new company selection
+//   (companyService.js SELECTABLE_JURISDICTIONS) but its entries stay here
+//   for companies still configured with it.
 //
 // If you are updating a number, verify it against the service's own website
 // first. When in doubt, prefer removing an entry over shipping one you cannot
@@ -43,7 +48,7 @@ export const INTERNATIONAL_RESOURCES = [
 ]
 
 // Jurisdiction-matched resources. Keyed by the codes used in
-// companies.jurisdictions ('EU' | 'UK' | 'US' | 'LK').
+// companies.jurisdictions ('EU' | 'UK' | 'US' | 'AU' | 'JP' | 'LK').
 export const CRISIS_RESOURCES = {
   UK: [
     {
@@ -102,6 +107,45 @@ export const CRISIS_RESOURCES = {
         'The single emergency number across the EU, for when someone is in danger right now.',
     },
   ],
+  AU: [
+    {
+      name: 'Lifeline Australia',
+      contact: 'Call 13 11 14',
+      hours: 'Every day, 24 hours',
+      jurisdiction: 'AU',
+      notes: 'Free and confidential crisis support. You can also text 0477 13 11 14 or chat online at lifeline.org.au.',
+    },
+    {
+      name: 'Beyond Blue',
+      contact: 'Call 1300 22 4636',
+      hours: 'Every day, 24 hours',
+      jurisdiction: 'AU',
+      notes: 'Free and confidential support for anxiety, depression, and general mental health. Webchat also available at beyondblue.org.au.',
+    },
+    {
+      name: '13YARN',
+      contact: 'Call 13 92 76',
+      hours: 'Every day, 24 hours',
+      jurisdiction: 'AU',
+      notes: 'A crisis support line run by Aboriginal and Torres Strait Islander Crisis Supporters, for Aboriginal and Torres Strait Islander people.',
+    },
+  ],
+  JP: [
+    {
+      name: 'Yorisoi Hotline (よりそいホットライン)',
+      contact: 'Call 0120-279-338',
+      hours: 'Every day, 24 hours (free to call)',
+      jurisdiction: 'JP',
+      notes: 'A free, toll-free consultation line covering a wide range of concerns including suicidal thoughts. Press 2 after the Japanese guidance for foreign-language support.',
+    },
+    {
+      name: 'TELL Lifeline',
+      contact: 'Call 03-5774-0992 (or toll-free 0800-300-8355)',
+      hours: 'Hours vary - check telljp.com/tell-hours for current hours',
+      jurisdiction: 'JP',
+      notes: 'English-language confidential support for the international community in Japan. Online chat also available on some days - check telljp.com.',
+    },
+  ],
   LK: [
     {
       name: 'Sri Lanka Sumithrayo',
@@ -127,27 +171,73 @@ export const CRISIS_RESOURCES = {
   ],
 }
 
-// Resolves a set of jurisdiction codes to the resources to show. The
-// international fallback is ALWAYS included, and always alongside any
-// jurisdiction-specific entries rather than instead of them. Unknown codes are
-// ignored. When no jurisdictions are known (for example on the anonymous
-// reporter flow, where the client never learns the company's jurisdictions),
-// every regional list is offered so a reporter anywhere can find a route to
-// local help.
-export function resolveResources(jurisdictions) {
-  const codes =
-    Array.isArray(jurisdictions) && jurisdictions.length > 0
-      ? jurisdictions
-      : Object.keys(CRISIS_RESOURCES)
+// Display labels for the "other countries" grouping only - not used for
+// matching or storage, just so the four regional "Emergency services"
+// entries read as attributed to different countries instead of looking like
+// duplicates of each other.
+const REGION_LABELS = {
+  UK: 'United Kingdom',
+  US: 'United States',
+  EU: 'Europe',
+  AU: 'Australia',
+  JP: 'Japan',
+  LK: 'Sri Lanka',
+}
 
+function groupByRegion(codes) {
+  return codes
+    .map((code) => ({ jurisdiction: code, label: REGION_LABELS[code] ?? code, entries: CRISIS_RESOURCES[code] ?? [] }))
+    .filter((group) => group.entries.length > 0)
+}
+
+function dedupe(codes) {
   const seen = new Set()
-  const regional = []
+  const result = []
   for (const code of codes) {
     if (seen.has(code)) continue
     seen.add(code)
-    const entries = CRISIS_RESOURCES[code]
-    if (entries) regional.push(...entries)
+    result.push(code)
+  }
+  return result
+}
+
+// Resolves a set of jurisdiction codes to the resources to show, split into
+// `primary` (shown expanded) and `other` (every remaining region, grouped by
+// jurisdiction for a collapsed "other countries" expander). The international
+// fallback is ALWAYS included in `primary`, alongside any jurisdiction-
+// specific entries rather than instead of them. Unknown codes are ignored.
+//
+// An explicit `jurisdictions` argument always takes precedence. Absent one,
+// the browser's own time zone (see utils/regionFromTimeZone.js - nothing
+// transmitted, nothing stored) supplies a single best-guess region for
+// `primary`; every other region still remains reachable in `other`. If
+// neither resolves anything (unset jurisdictions and an unrecognised or
+// unavailable time zone), `primary` is the international fallback alone and
+// `other` lists every region - a reporter anywhere can still find local help.
+export function resolveResources(jurisdictions) {
+  const allCodes = Object.keys(CRISIS_RESOURCES)
+
+  if (Array.isArray(jurisdictions) && jurisdictions.length > 0) {
+    const codes = dedupe(jurisdictions)
+    const regional = codes.flatMap((code) => CRISIS_RESOURCES[code] ?? [])
+    const remaining = allCodes.filter((code) => !codes.includes(code))
+    return {
+      primary: [...regional, ...INTERNATIONAL_RESOURCES],
+      other: groupByRegion(remaining),
+    }
   }
 
-  return [...regional, ...INTERNATIONAL_RESOURCES]
+  const region = regionFromTimeZone()
+  if (region && CRISIS_RESOURCES[region]) {
+    const remaining = allCodes.filter((code) => code !== region)
+    return {
+      primary: [...CRISIS_RESOURCES[region], ...INTERNATIONAL_RESOURCES],
+      other: groupByRegion(remaining),
+    }
+  }
+
+  return {
+    primary: [...INTERNATIONAL_RESOURCES],
+    other: groupByRegion(allCodes),
+  }
 }

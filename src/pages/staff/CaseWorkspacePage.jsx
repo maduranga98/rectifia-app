@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { getAssignedCase } from '../../services/handlerService'
 import { useFeatureFlag } from '../../hooks/useFeatureFlag'
 import {
@@ -11,6 +12,7 @@ import {
 } from '../../components/investigation/CaseDetailView'
 import ComplianceCountdown from '../../components/dashboard/ComplianceCountdown'
 import CaseThread from '../../components/intake/CaseThread'
+import CaseEvidencePanel from '../../components/investigation/CaseEvidencePanel'
 import CaseReport from '../../components/investigation/CaseReport'
 import InvestigationChecklist from '../../components/investigation/InvestigationChecklist'
 import RelatedPatternNotice from '../../components/investigation/RelatedPatternNotice'
@@ -50,23 +52,27 @@ function hasUnreviewedFlag(caseData) {
 // only. `badge(caseData)` returns null, { dot: true }, or { count }.
 // `flag` mirrors Dashboard.jsx / Admin.jsx's convention: a tab (and its
 // route below) is hidden when the named per-company feature flag is off.
+// `labelKey` is a caseWorkspace.tabs.* translation key, resolved with `t()`
+// where TABS is consumed below.
 const TABS = [
-  { path: 'thread', label: 'Thread', badge: (c) => (c.unreadReporterCount ? { count: c.unreadReporterCount } : null) },
-  { path: 'questionnaire', label: 'Questionnaire' },
-  { path: 'checklist', label: 'Checklist' },
-  { path: 'consistency', label: 'Consistency', badge: (c) => (hasUnreviewedFlag(c) ? { dot: true } : null) },
-  { path: 'policy', label: 'Policy references' },
-  { path: 'compliance', label: 'Compliance', badge: (c) => (hasPendingDeadline(c) ? { dot: true } : null) },
-  { path: 'patterns', label: 'Patterns', flag: 'patternDetection' },
-  { path: 'identity', label: 'Identity', confidentialOnly: true },
-  { path: 'share', label: 'External share', flag: 'externalShareLinks' },
-  { path: 'action', label: 'Action & report' },
+  { path: 'thread', labelKey: 'caseWorkspace.tabs.thread', badge: (c) => (c.unreadReporterCount ? { count: c.unreadReporterCount } : null) },
+  { path: 'questionnaire', labelKey: 'caseWorkspace.tabs.questionnaire' },
+  { path: 'evidence', labelKey: 'caseWorkspace.tabs.evidence' },
+  { path: 'checklist', labelKey: 'caseWorkspace.tabs.checklist' },
+  { path: 'consistency', labelKey: 'caseWorkspace.tabs.consistency', badge: (c) => (hasUnreviewedFlag(c) ? { dot: true } : null) },
+  { path: 'policy', labelKey: 'caseWorkspace.tabs.policy' },
+  { path: 'compliance', labelKey: 'caseWorkspace.tabs.compliance', badge: (c) => (hasPendingDeadline(c) ? { dot: true } : null) },
+  { path: 'patterns', labelKey: 'caseWorkspace.tabs.patterns', flag: 'patternDetection' },
+  { path: 'identity', labelKey: 'caseWorkspace.tabs.identity', confidentialOnly: true },
+  { path: 'share', labelKey: 'caseWorkspace.tabs.share', flag: 'externalShareLinks' },
+  { path: 'action', labelKey: 'caseWorkspace.tabs.action' },
 ]
 
 // A closed case has a compiled report. CaseReport is a self-contained,
 // read-only view; the Action & report tab toggles between the action form and
 // it, the same way the old stacked view did.
 function ActionReportPanel({ caseData, caseId, onChanged }) {
+  const { t } = useTranslation()
   const [showReport, setShowReport] = useState(false)
   const closed = caseData.status === 'closed'
 
@@ -74,7 +80,7 @@ function ActionReportPanel({ caseData, caseId, onChanged }) {
     return (
       <div className="flex flex-col gap-5">
         <Button variant="secondary" icon="back" className="self-start print:hidden" onClick={() => setShowReport(false)}>
-          Back to case
+          {t('caseWorkspace.actionReport.backToCase')}
         </Button>
         <CaseReport caseId={caseId} />
       </div>
@@ -83,12 +89,12 @@ function ActionReportPanel({ caseData, caseId, onChanged }) {
 
   return (
     <Card
-      title={closed ? 'Case outcome' : 'Take action'}
-      description={closed ? undefined : 'Proposing an action starts the consistency check.'}
+      title={closed ? t('caseWorkspace.actionReport.caseOutcome') : t('caseWorkspace.actionReport.takeAction')}
+      description={closed ? undefined : t('caseWorkspace.actionReport.takeActionDescription')}
       actions={
         closed ? (
           <Button variant="primary" icon="document" onClick={() => setShowReport(true)}>
-            View report
+            {t('caseWorkspace.actionReport.viewReport')}
           </Button>
         ) : undefined
       }
@@ -99,9 +105,15 @@ function ActionReportPanel({ caseData, caseId, onChanged }) {
 }
 
 function TabBadge({ badge }) {
+  const { t } = useTranslation()
   if (!badge) return null
   if (badge.dot) {
-    return <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-critical" aria-label="needs attention" />
+    return (
+      <span
+        className="ml-1.5 inline-block h-2 w-2 rounded-full bg-critical"
+        aria-label={t('caseWorkspace.needsAttention')}
+      />
+    )
   }
   return (
     <span className="ml-1.5 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-critical px-1.5 text-xs font-semibold text-white">
@@ -118,6 +130,7 @@ function TabBadge({ badge }) {
 // goes through getAssignedCase(), which firestore.rules only permits when this
 // case is assigned to the signed-in handler.
 function CaseWorkspacePage() {
+  const { t } = useTranslation()
   const { caseId } = useParams()
   const navigate = useNavigate()
   const [caseData, setCaseData] = useState(null)
@@ -161,15 +174,17 @@ function CaseWorkspacePage() {
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="secondary" icon="back" className="self-start" onClick={() => navigate('/dashboard/my-cases')}>
-          Back to my cases
+          {t('caseWorkspace.backToMyCases')}
         </Button>
-        <h2 className="text-xl font-semibold text-charcoal">Case {caseData.caseId ?? caseData.id}</h2>
+        <h2 className="text-xl font-semibold text-charcoal">
+          {t('caseWorkspace.caseHeading', { caseId: caseData.caseId ?? caseData.id })}
+        </h2>
         <Badge tone={closed ? 'tone-low' : 'tone-info'} dot>
-          {humanize(caseData.status) ?? 'open'}
+          {humanize(caseData.status) ?? t('caseWorkspace.open')}
         </Badge>
         {caseData.priority === 'high' && (
           <Badge tone="tone-high" dot>
-            High priority
+            {t('caseWorkspace.highPriority')}
           </Badge>
         )}
         {caseData.category && <span className="text-sm text-muted">{humanize(caseData.category)}</span>}
@@ -194,7 +209,7 @@ function CaseWorkspacePage() {
               }`
             }
           >
-            {tab.label}
+            {t(tab.labelKey)}
             <TabBadge badge={tab.badge?.(caseData)} />
           </NavLink>
         ))}
@@ -205,7 +220,7 @@ function CaseWorkspacePage() {
         <Route
           path="thread"
           element={
-            <Card title="Case thread" description="Messages between the reporter and you.">
+            <Card title={t('caseWorkspace.routes.thread.title')} description={t('caseWorkspace.routes.thread.description')}>
               <CaseThread caseId={caseId} mode="investigator" />
             </Card>
           }
@@ -213,16 +228,17 @@ function CaseWorkspacePage() {
         <Route
           path="questionnaire"
           element={
-            <Card title="Questionnaire answers">
+            <Card title={t('caseWorkspace.routes.questionnaire.title')}>
               <QuestionnaireAnswers caseData={caseData} />
             </Card>
           }
         />
+        <Route path="evidence" element={<CaseEvidencePanel caseId={caseId} />} />
         <Route path="checklist" element={<InvestigationChecklist caseId={caseId} />} />
         <Route
           path="consistency"
           element={
-            <Card title="Consistency check" padded={Boolean(caseData.consistencyCheck)}>
+            <Card title={t('caseWorkspace.routes.consistency.title')} padded={Boolean(caseData.consistencyCheck)}>
               <ConsistencyFlags caseData={caseData} />
             </Card>
           }
@@ -231,7 +247,7 @@ function CaseWorkspacePage() {
         <Route
           path="compliance"
           element={
-            <Card title="Compliance deadlines">
+            <Card title={t('caseWorkspace.routes.compliance.title')}>
               <ComplianceCountdown caseData={caseData} />
             </Card>
           }
@@ -243,8 +259,8 @@ function CaseWorkspacePage() {
               <Navigate to={`${basePath}/thread`} replace />
             ) : (
               <Card
-                title="Related patterns"
-                description="Whether this case sits inside an active company-wide pattern signal."
+                title={t('caseWorkspace.routes.patterns.title')}
+                description={t('caseWorkspace.routes.patterns.description')}
               >
                 <RelatedPatternNotice caseId={caseId} />
               </Card>

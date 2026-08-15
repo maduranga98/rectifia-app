@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createDepartment, getCompany, updateCompanyDepartments } from '../../services/companyService'
 import { listStaff } from '../../services/routingService'
 import { listEmployees } from '../../services/employeeService'
@@ -13,6 +14,7 @@ import { SkeletonList } from '../../components/ui/Loading'
 // (Module 3's schema - {id, name, headUserId}), not a subcollection, so
 // every edit here rewrites the whole array via updateCompanyDepartments.
 function DepartmentsPage({ companyId }) {
+  const { t } = useTranslation()
   const [company, setCompany] = useState(null)
   const [staff, setStaff] = useState([])
   const [employees, setEmployees] = useState([])
@@ -108,34 +110,29 @@ function DepartmentsPage({ companyId }) {
   const addForm = (
     <form onSubmit={handleAddDepartment} className="flex flex-col gap-2 sm:flex-row">
       <input
-        aria-label="New department name"
-        placeholder="e.g. Engineering"
+        aria-label={t('departmentsPage.newDepartmentName')}
+        placeholder={t('departmentsPage.newDepartmentPlaceholder')}
         value={newDeptName}
         onChange={(e) => setNewDeptName(e.target.value)}
         className="field sm:max-w-xs"
       />
       <Button type="submit" variant="primary" icon="plus" disabled={!newDeptName.trim() || saving}>
-        Add department
+        {t('departmentsPage.addDepartment')}
       </Button>
     </form>
   )
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        Departments organise your staff and feed the routing rules that assign incoming cases.
-        Each one can have a department head.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('departmentsPage.description')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
 
       {unlistedDepartments.length > 0 && (
-        <Alert variant="warning" title="Some employee departments aren't in this list">
-          These department names appear on employee records but not in your departments above:{' '}
-          <span className="font-medium">{unlistedDepartments.join(', ')}</span>. Pulse summaries and
-          manager scoping use the exact name as it appears on employees, so add a matching
-          department (or correct the employee records) to route and scope them. Nothing is changed
-          automatically.
+        <Alert variant="warning" title={t('departmentsPage.unlisted.title')}>
+          {t('departmentsPage.unlisted.body1')}{' '}
+          <span className="font-medium">{unlistedDepartments.join(', ')}</span>.{' '}
+          {t('departmentsPage.unlisted.body2')}
         </Alert>
       )}
 
@@ -143,16 +140,16 @@ function DepartmentsPage({ companyId }) {
         <SkeletonList rows={3} />
       ) : (
         <Card
-          title="Departments"
-          description={`${departments.length} configured`}
+          title={t('adminNav.departments')}
+          description={t('departmentsPage.configuredCount', { count: departments.length })}
           padded={false}
           footer={departments.length > 0 ? addForm : undefined}
         >
           {departments.length === 0 ? (
             <EmptyState
               icon="departments"
-              title="No departments yet"
-              description="Add your first department to start organising staff and routing cases."
+              title={t('departmentsPage.empty.title')}
+              description={t('departmentsPage.empty.description')}
               action={addForm}
             />
           ) : (
@@ -170,20 +167,20 @@ function DepartmentsPage({ companyId }) {
                   </span>
 
                   <input
-                    aria-label={`Department name for ${dept.name}`}
+                    aria-label={t('departmentsPage.departmentNameLabel', { name: dept.name })}
                     defaultValue={dept.name}
                     onBlur={(e) => e.target.value !== dept.name && handleRenameDepartment(dept.id, e.target.value)}
                     className="field w-full font-medium sm:w-56"
                   />
 
                   <label className="flex items-center gap-2 text-xs text-muted">
-                    <span className="whitespace-nowrap">Head</span>
+                    <span className="whitespace-nowrap">{t('departmentsPage.head')}</span>
                     <select
                       value={dept.headUserId ?? ''}
                       onChange={(e) => handleSetHead(dept.id, e.target.value)}
                       className="field w-full sm:w-56"
                     >
-                      <option value="">Not assigned</option>
+                      <option value="">{t('departmentsPage.notAssigned')}</option>
                       {staff.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.email ?? s.id}
@@ -199,7 +196,7 @@ function DepartmentsPage({ companyId }) {
                     onClick={() => handleDeleteDepartment(dept.id)}
                     disabled={saving}
                   >
-                    Delete
+                    {t('departmentsPage.delete')}
                   </Button>
                 </li>
               ))}

@@ -2,15 +2,21 @@ const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { recomputeCompanyStats } = require('../company/computeCompanyStats')
+const { shouldRunForCompany } = require('../utils/companySchedule')
 
 if (!admin.apps.length) {
   admin.initializeApp()
 }
 
+const COMPANIES_COLLECTION = 'companies'
 const CASES_COLLECTION = 'cases'
 const NOTIFICATIONS_COLLECTION = 'notifications'
 const CLOSED_STATUS = 'closed'
 const ESCALATION_WINDOW_MS = 48 * 60 * 60 * 1000
+
+// Local morning, not overnight - an escalation that lands at 8am local reads
+// as "start your day with this" instead of arriving while nobody's watching.
+const TARGET_LOCAL_HOUR = 8
 
 // Each check pairs the deadline field (set by scheduleDeadlines.js) with the
 // field that marks it as already actioned. acknowledgmentSentAt is set the
@@ -45,19 +51,18 @@ async function escalateIfNeeded(firestore, { caseId, companyId, assignedHandlerI
   })
 }
 
-// Runs daily. Walks every open case and, for each tracked deadline not yet
-// actioned, escalates to the HR Coordinator dashboard once that deadline is
-// within 48 hours away or already passed.
-exports.checkOverdueDeadlines = onSchedule('every day 00:00', async () => {
-  const firestore = admin.firestore()
-  const openCasesSnapshot = await firestore.collection(CASES_COLLECTION).where('status', '!=', CLOSED_STATUS).get()
-
-  const now = Date.now()
-  const windowEnd = now + ESCALATION_WINDOW_MS
-  const companyIds = new Set()
+// Deadline arithmetic (acknowledgmentDueAt/feedbackDueAt) is untouched by any
+// of this - those stay absolute UTC timestamps computed from reportedAt by
+// scheduleDeadlines.js. This module only changes when the sweep notices a
+// deadline has arrived, never what the deadline itself is.
+async function sweepCompany(firestore, companyId, now, windowEnd) {
+  const openCasesSnapshot = await firestore
+    .collection(CASES_COLLECTION)
+    .where('companyId', '==', companyId)
+    .where('status', '!=', CLOSED_STATUS)
+    .get()
 
   for (const doc of openCasesSnapshot.docs) {
-    companyIds.add(doc.data().companyId)
     const caseData = doc.data()
 
     for (const check of DEADLINE_CHECKS) {
@@ -70,9 +75,10 @@ exports.checkOverdueDeadlines = onSchedule('every day 00:00', async () => {
       if (!withinEscalationWindow) continue
 
       try {
+        // eslint-disable-next-line no-await-in-loop
         await escalateIfNeeded(firestore, {
           caseId: doc.id,
-          companyId: caseData.companyId,
+          companyId,
           assignedHandlerId: caseData.assignedHandlerId,
           type: check.type,
           dueAt,
@@ -86,12 +92,47 @@ exports.checkOverdueDeadlines = onSchedule('every day 00:00', async () => {
       }
     }
   }
+}
+
+// Runs hourly; each iteration gates per company on TARGET_LOCAL_HOUR (see
+// companySchedule.js) so a company only gets swept once, at its own local
+// morning, not once per UTC day for the whole platform. The gate is the
+// first thing checked for every company - before any case query - so a
+// company whose local hour doesn't match costs one company-doc read and
+// nothing else, even though this now runs 24x as often as the old daily
+// schedule did.
+//
+// The escalation dedupe id (caseId_type_dueAt, see escalateIfNeeded) is what
+// keeps this idempotent under hourly execution: a case still sitting in the
+// window on the next matching hour - or the next day, if the company's local
+// morning only comes around once every 24 runs - re-evaluates the same
+// dueAt and finds the same doc already written, so it never escalates twice
+// for the same deadline.
+exports.checkOverdueDeadlines = onSchedule('every 1 hours', async () => {
+  const firestore = admin.firestore()
+  const companiesSnapshot = await firestore.collection(COMPANIES_COLLECTION).get()
+
+  const now = new Date()
+  const windowEnd = now.getTime() + ESCALATION_WINDOW_MS
+  const sweptCompanyIds = []
+
+  for (const companyDoc of companiesSnapshot.docs) {
+    if (!shouldRunForCompany(companyDoc.data(), TARGET_LOCAL_HOUR, now)) continue
+    sweptCompanyIds.push(companyDoc.id)
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await sweepCompany(firestore, companyDoc.id, now, windowEnd)
+    } catch (err) {
+      logger.error('checkOverdueDeadlines: company sweep failed', { companyId: companyDoc.id, error: err.message })
+    }
+  }
 
   // Refreshes the Company Admin overview rollup's overdue/approaching counts
-  // for every company with an open case, since those counts drift out of date
-  // with the passage of time alone - not just on a caseMetadata write, which
-  // is the only other thing that triggers a recompute.
-  for (const companyId of companyIds) {
+  // for every company actually swept this hour, since those counts drift out
+  // of date with the passage of time alone - not just on a caseMetadata
+  // write, which is the only other thing that triggers a recompute.
+  for (const companyId of sweptCompanyIds) {
+    // eslint-disable-next-line no-await-in-loop
     await recomputeCompanyStats(firestore, companyId).catch((err) => {
       logger.error('checkOverdueDeadlines: stats recompute failed', { companyId, error: err.message })
     })

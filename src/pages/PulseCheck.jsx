@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import ReporterLayout from '../components/shared/ReporterLayout'
 import PulseSurveyForm from '../components/pulse-check/PulseSurveyForm'
 import { validatePulseInvite } from '../services/pulseCheckService'
@@ -16,49 +17,26 @@ import EmptyState from '../components/ui/EmptyState'
 // thing the client sends the server is inviteId + token, and the server reads
 // everything else off the invite document. That is why the URL carries neither.
 
-// Distinct, plain-language copy per validation outcome. 'used' is intentionally
-// reassuring rather than an error: an employee who clicks their link twice must
-// be told their earlier response was recorded, not left thinking it failed.
-const INVALID_STATES = {
-  used: {
-    icon: 'check',
-    title: 'Your response has already been recorded',
-    description:
-      "This check-in was already completed - there is nothing more to do. Thank you; your earlier response was saved.",
-  },
-  expired: {
-    icon: 'clock',
-    title: 'This check-in link has expired',
-    description:
-      'Pulse-check links are open only for a limited time. A new one will arrive with the next check-in - no action is needed from you now.',
-  },
-  invalid: {
-    icon: 'alert',
-    title: "This check-in link isn't valid",
-    description:
-      "The link may be incomplete or mistyped. Please open the most recent link from your invitation email exactly as it was sent.",
-  },
-  // Deliberately does NOT tell the employee to re-open the link from their
-  // email: that is the one action guaranteed to fail while this invite is over
-  // its attempt budget, and sending them round that loop is what made the old
-  // shared 'invalid' copy actively misleading here.
-  rate_limited: {
-    icon: 'alert',
-    title: 'Too many attempts on this link',
-    description:
-      'This check-in link has been opened too many times and is no longer accepting attempts. A new link will arrive with your next check-in - no action is needed from you now.',
-  },
-  // Ours, not theirs, and probably transient - so it must not read as a dead
-  // link. Never carries the underlying code; that goes to the console only.
-  error: {
-    icon: 'alert',
-    title: "We couldn't open your check-in",
-    description:
-      'Something went wrong on our side while loading this check-in. Please try again in a few minutes - your link is fine.',
-  },
+// Distinct, plain-language copy per validation outcome, resolved via
+// translation keys pulseCheck.invalidStates.<key>.{title,description}.
+// 'used' is intentionally reassuring rather than an error: an employee who
+// clicks their link twice must be told their earlier response was recorded,
+// not left thinking it failed. 'rate_limited' deliberately does NOT tell the
+// employee to re-open the link from their email: that is the one action
+// guaranteed to fail while this invite is over its attempt budget, and
+// sending them round that loop is what made the old shared 'invalid' copy
+// actively misleading here. 'error' is ours, not theirs, and probably
+// transient - so it must not read as a dead link. Never carries the
+// underlying code; that goes to the console only.
+const INVALID_STATE_ICONS = {
+  used: 'check',
+  expired: 'clock',
+  invalid: 'alert',
+  rate_limited: 'alert',
+  error: 'alert',
 }
 
-// Maps a callable failure onto one of the INVALID_STATES keys. Firebase's
+// Maps a callable failure onto one of the INVALID_STATE_ICONS keys. Firebase's
 // callable client reports its status as either 'resource-exhausted' or
 // 'functions/resource-exhausted' depending on how the error surfaces, so the
 // prefix is stripped before matching.
@@ -73,6 +51,7 @@ function statusForError(err) {
 }
 
 function PulseCheck() {
+  const { t } = useTranslation()
   const { inviteId } = useParams()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('t')
@@ -104,7 +83,7 @@ function PulseCheck() {
         } else {
           // Coarse reason from the server; anything unrecognised is treated as
           // an invalid link rather than guessed at.
-          setStatus(INVALID_STATES[result.reason] ? result.reason : 'invalid')
+          setStatus(INVALID_STATE_ICONS[result.reason] ? result.reason : 'invalid')
         }
       } catch (err) {
         // A bare catch here made this the single hardest failure in the app to
@@ -125,20 +104,23 @@ function PulseCheck() {
 
   if (status === 'loading') {
     return (
-      <ReporterLayout title="Wellness check-in">
+      <ReporterLayout title={t('pulseCheck.title')}>
         <Card padded={false} className="mx-auto max-w-lg">
-          <EmptyState icon="pulse" title="Checking your link…" description="One moment." />
+          <EmptyState icon="pulse" title={t('pulseCheck.checkingLink')} description={t('common.loadingShort')} />
         </Card>
       </ReporterLayout>
     )
   }
 
   if (status !== 'valid') {
-    const copy = INVALID_STATES[status]
     return (
-      <ReporterLayout title="Wellness check-in">
+      <ReporterLayout title={t('pulseCheck.title')}>
         <Card padded={false} className="mx-auto max-w-lg">
-          <EmptyState icon={copy.icon} title={copy.title} description={copy.description} />
+          <EmptyState
+            icon={INVALID_STATE_ICONS[status]}
+            title={t(`pulseCheck.invalidStates.${status}.title`)}
+            description={t(`pulseCheck.invalidStates.${status}.description`)}
+          />
         </Card>
       </ReporterLayout>
     )
@@ -146,11 +128,11 @@ function PulseCheck() {
 
   return (
     <ReporterLayout
-      title="Wellness check-in"
+      title={t('pulseCheck.title')}
       description={
         invite?.companyName
-          ? `This check-in is for ${invite.companyName}.`
-          : 'A short, confidential check-in from your organization.'
+          ? t('pulseCheck.descriptionForCompany', { company: invite.companyName })
+          : t('pulseCheck.descriptionGeneric')
       }
     >
       <PulseSurveyForm

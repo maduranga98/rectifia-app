@@ -82,9 +82,16 @@ service cloud.firestore {
     // external EAP provider or counsellor with no login - so writing it grants
     // no case-content access and stays inside this same field allowlist rather
     // than widening the company doc to a blanket admin-writable document.
+    // timeZone is an IANA identifier string (Settings page) that
+    // functions/src/utils/companySchedule.js reads to pick the local hour
+    // for the checkOverdueDeadlines and schedulePulseChecks sweeps - company
+    // config, not case content, validated client-side by
+    // src/services/companyService.js's isValidTimeZone() before this write
+    // is even attempted, same "client validates, this allowlist is the real
+    // gate" pattern as every other field here.
     function companyAdminEditableFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact', 'retention']);
+        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact', 'retention', 'timeZone']);
     }
 
     // A custom-role holder's write to the company doc is scoped BOTH by which
@@ -147,7 +154,7 @@ service cloud.firestore {
       let flags = request.resource.data.featureFlags;
       return flags is map
         && flags.keys().hasOnly(['pulseCheck', 'benchmarkPool', 'aiFollowUp',
-            'externalShareLinks', 'patternDetection', 'policyGrounding'])
+            'externalShareLinks', 'patternDetection', 'burnoutTrendDetection', 'policyGrounding'])
         && flags.values().hasOnly([true, false]);
     }
     // Super Admin only, full stop - this is the enforcement layer behind
@@ -361,6 +368,23 @@ service cloud.firestore {
       allow read: if isCompanyStaff(companyId);
       allow write: if false;
     }
+    // The JP designated-handler (従事者) register. Metadata only - who is
+    // designated, by whom, when, and whether they've acknowledged the
+    // confidentiality obligation; never case content, case IDs, or case
+    // counts. Readable by any staff of the company: a designated handler
+    // needs to see their own status to acknowledge it, and
+    // DesignatedHandlersPage.jsx needs to list the register for Company
+    // Admin / a designatedHandlers-permitted role to manage. All writes -
+    // designate, revoke, acknowledge - go exclusively through
+    // functions/src/compliance/designatedHandlers.js with the Admin SDK,
+    // same pattern as customRoles above: a designation must be tied to a
+    // logged actor (designatedByUid/revokedByUid) and an acknowledgment must
+    // be provably the handler's own act, neither of which a rules predicate
+    // alone can guarantee against a direct client write.
+    match /companies/{companyId}/designatedHandlers/{staffUid} {
+      allow read: if isCompanyStaff(companyId);
+      allow write: if false;
+    }
     // Staff docs are created only by inviteStaff.js (Admin SDK), never by a
     // direct client write - that's the boundary that stops someone minting
     // their own companyAdmin/hrCoordinator staff record. A Company Admin can
@@ -516,10 +540,12 @@ service cloud.firestore {
     // a path to the platform's or the company's whole case table, and both are
     // still metadata only.
     //
-    // - Company Admin: their own company's cases stuck on 'no_routing_rule',
-    //   the one reason they can actually fix (RoutingRulesPage's "Needs
-    //   attention" section). This is their second case-derived read after the
-    //   aggregate stats rollup, and it stops at ids and routing metadata.
+    // - Company Admin: their own company's cases stuck on 'no_routing_rule'
+    //   or 'handler_not_designated' - the two reasons they can actually fix
+    //   (RoutingRulesPage's "Needs attention" section; the JP-only
+    //   designation gap is fixed on DesignatedHandlersPage instead). This is
+    //   their second case-derived read after the aggregate stats rollup, and
+    //   it stops at ids and routing metadata.
     // - Super Admin: 'conflict_of_interest' and 'missing_company_id' only.
     //   Conflict-of-interest cases are excluded from the Company Admin clause
     //   above on purpose - the company's own admins are exactly who the
@@ -529,7 +555,8 @@ service cloud.firestore {
       allow read: if isHrCoordinator(resource.data.companyId)
         || (isCompanyAdmin(resource.data.companyId)
           && resource.data.status == 'needs_manual_assignment'
-          && resource.data.routingReason == 'no_routing_rule')
+          && (resource.data.routingReason == 'no_routing_rule'
+            || resource.data.routingReason == 'handler_not_designated'))
         || (isSuperAdmin()
           && resource.data.status == 'needs_manual_assignment'
           && (resource.data.routingReason == 'conflict_of_interest'
@@ -579,6 +606,32 @@ service cloud.firestore {
     // "no pattern" apart from "a pattern that cannot be shown safely" instead
     // of being shown silence.
     match /patternSignalSummaries/{companyId} {
+      allow read: if isHrCoordinator(companyId);
+      allow write: if false;
+    }
+
+    // Department-level burnout report volume (functions/src/patterns/
+    // detectBurnoutTrends.js) - a structurally different, weaker signal than
+    // patternSignals above and deliberately its own collection so the two can
+    // never be queried or displayed as if they carried the same weight.
+    // Burnout has no accused party, so there is no per-person clustering
+    // here and no caseIds/handlerIds field to match a Case Handler against -
+    // that is why this collection has no handler-scoped read path at all,
+    // unlike patternSignals. HR Coordinator only; Manager and Company Admin
+    // get no path here, matching patternSignals' boundary and deliberately
+    // not defaulting open to Manager even though Manager already sees Pulse
+    // aggregate sentiment - department burnout volume is a more sensitive
+    // signal than that and any widening is a decision for later, not a side
+    // effect of adding this collection.
+    match /burnoutTrendSignals/{signalId} {
+      allow read: if isHrCoordinator(resource.data.companyId);
+      allow write: if false;
+    }
+
+    // Per-company run summary for burnoutTrendSignals, doc id == companyId.
+    // Same "counts and thresholds only, names no department" shape as
+    // patternSignalSummaries above and for the same reason.
+    match /burnoutTrendSummaries/{companyId} {
       allow read: if isHrCoordinator(companyId);
       allow write: if false;
     }

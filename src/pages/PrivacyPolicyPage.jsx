@@ -1,13 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import Logo from '../components/ui/Logo'
 import Alert from '../components/ui/Alert'
-import {
-  policyVersion,
-  isDraft,
-  lastUpdated,
-  draftNotice,
-  sections,
-} from '../content/legal/privacyPolicy'
+import { policyVersion, isDraft, lastUpdated, getPrivacyPolicyContent } from '../content/legal/privacyPolicy'
 
 // A section's body is an array of items - a string is a paragraph, an array
 // of strings is a bullet list. Kept this simple (rather than a richer schema)
@@ -41,7 +36,16 @@ function SectionBody({ body }) {
 // flow in particular (a reporter mid-report, a visitor who followed a staff
 // login link, a Manager reading it cold all land here the same way), so it
 // gets its own minimal chrome instead of borrowing one flow's.
+//
+// The legal body text (sections, draftNotice - src/content/legal/
+// privacyPolicy.js) is a plain-language translation of the same draft
+// English copy, not an independent legal translation - see that file's
+// header comment. Both language versions need the same counsel review
+// before `isDraft` is flipped.
 function PrivacyPolicyPage() {
+  const { t, i18n } = useTranslation()
+  const { draftNotice, sections } = getPrivacyPolicyContent(i18n.language)
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-surface">
@@ -50,7 +54,7 @@ function PrivacyPolicyPage() {
             <Logo size="md" />
           </Link>
           <Link to="/" className="text-xs text-muted underline hover:text-charcoal">
-            Back to Rectifia
+            {t('legal.backToHome')}
           </Link>
         </div>
       </header>
@@ -70,9 +74,9 @@ function PrivacyPolicyPage() {
         )}
 
         <div>
-          <h1 className="text-2xl font-semibold text-charcoal sm:text-3xl">Privacy Policy</h1>
+          <h1 className="text-2xl font-semibold text-charcoal sm:text-3xl">{t('legal.privacyTitle')}</h1>
           <p className="mt-2 text-xs text-muted">
-            Version {policyVersion} · Last updated {lastUpdated}
+            {t('legal.version', { version: policyVersion })} · {t('legal.lastUpdated', { date: lastUpdated })}
           </p>
         </div>
 
@@ -88,9 +92,9 @@ function PrivacyPolicyPage() {
 
       <footer className="border-t border-line px-5 py-5">
         <div className="mx-auto flex max-w-3xl items-center justify-between text-xs text-muted">
-          <span>Rectifia</span>
+          <span>{t('app.name')}</span>
           <Link to="/terms" className="underline hover:text-charcoal">
-            Terms of use
+            {t('reporterLayout.termsOfUse')}
           </Link>
         </div>
       </footer>

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
-  CASE_COUNT_CAVEAT,
-  CROSS_CATEGORY_CAVEAT,
-  SIGNAL_TYPE_LABEL,
   SIGNAL_TYPE_TONE,
+  caseCountCaveat,
+  crossCategoryCaveat,
   describeSignal,
   formatSignalDate,
   getPatternSignalSummary,
   listCompanyPatternSignals,
+  signalTypeLabel,
 } from '../../services/patternService'
 import Alert from '../ui/Alert'
 import Badge from '../ui/Badge'
@@ -36,22 +37,19 @@ function sortSignals(signals) {
 // means "no pattern" or "a pattern that cannot be reported safely", and the
 // difference matters to what they do next.
 function SuppressionNotice({ summary }) {
+  const { t } = useTranslation()
   if (!summary || !summary.suppressedCount) return null
 
-  const groupWord = summary.suppressedCount === 1 ? 'group' : 'groups'
   return (
-    <Alert variant="info" title="Not enough people in this group to report safely">
+    <Alert variant="info" title={t('patternSignals.suppressionNotice.title')}>
       <p>
-        {summary.suppressedCount} {groupWord} reached the threshold but {summary.suppressedCount === 1 ? 'was' : 'were'}{' '}
-        withheld: fewer than {summary.minPopulation} employees match the department and role tier
-        {summary.suppressedByMissingDirectory > 0 && ', or the employee directory has no entry for that department'}.
-        In a group that small, a department and a role tier identify a person, so the signal is not
-        shown at all rather than shown less precisely.
+        {t('patternSignals.suppressionNotice.body', {
+          count: summary.suppressedCount,
+          minPopulation: summary.minPopulation,
+          context: summary.suppressedByMissingDirectory > 0 ? 'missingDirectory' : undefined,
+        })}
       </p>
-      <p className="mt-1.5 text-xs">
-        Which {groupWord} deliberately {summary.suppressedCount === 1 ? 'is' : 'are'} not named here -
-        naming {summary.suppressedCount === 1 ? 'it' : 'them'} would be the same disclosure.
-      </p>
+      <p className="mt-1.5 text-xs">{t('patternSignals.suppressionNotice.footnote', { count: summary.suppressedCount })}</p>
     </Alert>
   )
 }
@@ -64,6 +62,7 @@ function SuppressionNotice({ summary }) {
 // renders them, and reading one would not grant this role access to the case
 // anyway.
 function PatternSignals({ companyId }) {
+  const { t } = useTranslation()
   const [signals, setSignals] = useState([])
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -94,8 +93,8 @@ function PatternSignals({ companyId }) {
 
   return (
     <Card
-      title="Pattern signals"
-      description={`Repeat reports grouped by department and role tier over the last ${windowDays} days. Recomputed daily.`}
+      title={t('patternSignals.title')}
+      description={t('patternSignals.description', { windowDays })}
     >
       <div className="flex flex-col gap-4">
         {error && <Alert variant="error">{error}</Alert>}
@@ -108,8 +107,8 @@ function PatternSignals({ companyId }) {
               <EmptyState
                 compact
                 icon="search"
-                title="No pattern signals"
-                description={`No department and role tier reached the reporting threshold in the last ${windowDays} days.`}
+                title={t('patternSignals.empty.title')}
+                description={t('patternSignals.empty.description', { windowDays })}
               />
             ) : (
               <ul className="flex flex-col divide-y divide-line-soft">
@@ -121,7 +120,7 @@ function PatternSignals({ companyId }) {
                       </span>
                       <Badge tone="tone-neutral">{humanize(signal.roleTier)}</Badge>
                       <Badge tone={SIGNAL_TYPE_TONE[signal.signalType] ?? 'tone-neutral'} dot>
-                        {SIGNAL_TYPE_LABEL[signal.signalType] ?? humanize(signal.signalType)}
+                        {signalTypeLabel(signal.signalType) ?? humanize(signal.signalType)}
                       </Badge>
                       {signal.category && (
                         <span className="text-xs text-muted">{humanize(signal.category)}</span>
@@ -131,12 +130,14 @@ function PatternSignals({ companyId }) {
                     <p className="text-sm text-charcoal">{describeSignal(signal)}</p>
 
                     <p className="text-xs text-muted">
-                      First {formatSignalDate(signal.firstReportedAt)}, most recent{' '}
-                      {formatSignalDate(signal.lastReportedAt)}.
+                      {t('patternSignals.dateRange', {
+                        first: formatSignalDate(signal.firstReportedAt),
+                        last: formatSignalDate(signal.lastReportedAt),
+                      })}
                     </p>
 
                     {signal.signalType === 'cross_category' && (
-                      <p className="text-xs text-muted">{CROSS_CATEGORY_CAVEAT}</p>
+                      <p className="text-xs text-muted">{crossCategoryCaveat()}</p>
                     )}
                   </li>
                 ))}
@@ -149,7 +150,7 @@ function PatternSignals({ companyId }) {
                 assumes four cases means four people will over-read every row
                 here, and anonymous reporting makes that assumption
                 unverifiable in principle. */}
-            <p className="text-xs text-muted">{CASE_COUNT_CAVEAT}</p>
+            <p className="text-xs text-muted">{caseCountCaveat()}</p>
           </>
         )}
       </div>

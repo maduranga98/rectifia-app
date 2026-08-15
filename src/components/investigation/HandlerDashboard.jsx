@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { listAssignedCases } from '../../services/handlerService'
 import { deadlineDisplay, nextDeadlineMs, toMillis } from '../../utils/caseDeadlines'
 import Alert from '../ui/Alert'
@@ -23,11 +24,7 @@ const PRIORITY_RANK = { high: 0, medium: 1, low: 2 }
 // The sort control's options. 'default' is the triage order below; the other
 // two are single-key orderings a handler can switch to. All three are applied
 // client-side over the already-fetched list - no Firestore orderBy, no index.
-const SORT_OPTIONS = [
-  { value: 'default', label: 'Triage order (default)' },
-  { value: 'deadline', label: 'Nearest deadline' },
-  { value: 'recent', label: 'Most recently assigned' },
-]
+const SORT_OPTION_VALUES = ['default', 'deadline', 'recent']
 
 function formatTimestamp(value) {
   const ms = toMillis(value)
@@ -95,6 +92,7 @@ function sortForHandler(cases, sortKey) {
 // rejects any case document whose assignedHandlerId doesn't match it, so
 // this list can never include another handler's cases even read-only.
 function HandlerDashboard({ onSelectCase }) {
+  const { t } = useTranslation()
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -131,14 +129,12 @@ function HandlerDashboard({ onSelectCase }) {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
-          {openCount} open case{openCount === 1 ? '' : 's'} assigned to you.
-        </p>
+        <p className="text-sm text-muted">{t('handlerDashboard.openCasesAssigned', { count: openCount })}</p>
         {/* Filing a report on someone's behalf is now a nav entry
             (/dashboard/intake) rather than a button here, so it is reachable
             from every page rather than only this one. */}
-        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
-          Refresh
+        <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel={t('handlerDashboard.refreshing')}>
+          {t('handlerDashboard.refresh')}
         </Button>
       </div>
 
@@ -150,8 +146,8 @@ function HandlerDashboard({ onSelectCase }) {
         <Card padded={false}>
           <EmptyState
             icon="cases"
-            title="No cases assigned to you"
-            description="New cases arrive here automatically when a routing rule sends one your way."
+            title={t('handlerDashboard.empty.title')}
+            description={t('handlerDashboard.empty.description')}
           />
         </Card>
       ) : (
@@ -161,14 +157,14 @@ function HandlerDashboard({ onSelectCase }) {
               queue is their own assignments and short by construction). */}
           <div className="flex items-center justify-end">
             <Select
-              label="Sort by"
+              label={t('handlerDashboard.sortBy')}
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value)}
               className="w-56 py-1.5 text-sm"
             >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              {SORT_OPTION_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {t(`handlerDashboard.sortOptions.${value}`)}
                 </option>
               ))}
             </Select>
@@ -212,20 +208,22 @@ function HandlerDashboard({ onSelectCase }) {
                       {c.caseId ?? c.id}
                     </span>
                     <span className="block truncate text-xs text-muted">
-                      {(c.category ?? 'Uncategorized').replace(/_/g, ' ')}
-                      {assignedAt && ` · assigned ${assignedAt}`}
+                      {c.category
+                        ? t(`categories.${c.category}.label`, { defaultValue: c.category.replace(/_/g, ' ') })
+                        : t('handlerDashboard.uncategorized')}
+                      {assignedAt && t('handlerDashboard.assignedAt', { date: assignedAt })}
                     </span>
                   </span>
 
                   <span className="flex shrink-0 items-center gap-2">
                     {isCrisis && (
                       <Badge tone="tone-critical" icon="alert">
-                        Crisis flagged
+                        {t('handlerDashboard.crisisFlagged')}
                       </Badge>
                     )}
                     {c.priority === 'high' && !isCrisis && (
                       <Badge tone="tone-high" dot>
-                        High priority
+                        {t('handlerDashboard.highPriority')}
                       </Badge>
                     )}
                     <span className="hidden items-center gap-1 text-xs text-muted sm:flex">
@@ -233,7 +231,7 @@ function HandlerDashboard({ onSelectCase }) {
                       <Badge tone={deadline.tone}>{deadline.label}</Badge>
                     </span>
                     <Badge tone={STATUS_TONE[c.status] ?? STATUS_TONE.open}>
-                      {(c.status ?? 'open').replace(/_/g, ' ')}
+                      {t(`caseStatus.${c.status ?? 'open'}`, { defaultValue: (c.status ?? 'open').replace(/_/g, ' ') })}
                     </Badge>
                     <Icon name="chevronRight" className="h-4 w-4 text-subtle" />
                   </span>

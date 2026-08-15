@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   addManualLogEntry,
   getCaseThread,
@@ -6,6 +7,7 @@ import {
   getEvidenceDownloadUrl,
   sendInvestigatorMessage,
   sendReporterMessage,
+  translateMessage,
   uploadCaseEvidence,
 } from '../../services/caseThreadService'
 import Alert from '../ui/Alert'
@@ -23,18 +25,18 @@ function formatTimestamp(ms) {
   return new Date(ms).toLocaleString()
 }
 
-function messageAuthorLabel(message) {
-  if (message.type === 'manual_log') return 'Investigator log'
-  if (message.sender === 'ai') return 'AI assistant'
-  if (message.sender === 'investigator') return 'Case Handler'
+function messageAuthorLabel(message, t) {
+  if (message.type === 'manual_log') return t('caseThread.authors.investigatorLog')
+  if (message.sender === 'ai') return t('caseThread.authors.aiAssistant')
+  if (message.sender === 'investigator') return t('caseThread.authors.caseHandler')
   // Written only server-side, and only by
   // functions/src/intake/identityTransition.js: a note that the reporter
   // identified themselves, or added or removed a contact address. It carries
   // no identity content, and both the reporter and the handler see the same
   // text - the change is meant to be legible in the timeline, which is
   // different from being explained to one side.
-  if (message.sender === 'system') return 'Case record'
-  return 'Reporter'
+  if (message.sender === 'system') return t('caseThread.authors.caseRecord')
+  return t('caseThread.authors.reporter')
 }
 
 // Bubble treatment per author. "Mine" (whoever is reading) sits on the
@@ -68,6 +70,7 @@ function formatSize(bytes) {
 // signed URL only exists after an await, and a popup blocker will stop an
 // async window.open that is no longer attributable to the click.
 function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
+  const { t } = useTranslation()
   const [opening, setOpening] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -108,10 +111,64 @@ function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
         <Icon name="document" className="h-3.5 w-3.5" />
         {attachment.label}
         {size && <span className="opacity-70">({size})</span>}
-        {opening && <span className="opacity-70">opening…</span>}
+        {opening && <span className="opacity-70">{t('caseThread.opening')}</span>}
       </button>
-      {failed && <span className="block text-xs opacity-80">Could not open this file.</span>}
+      {failed && <span className="block text-xs opacity-80">{t('caseThread.openFailed')}</span>}
     </>
+  )
+}
+
+// Case Handler side only - see CaseThread's render below, which never
+// mounts this in mode === 'reporter'. Investigator-facing, on-demand, one
+// message at a time: clicking it calls translateMessage for the UI's
+// current language and renders the result beneath the original text, which
+// is never replaced or hidden. If the server already has a translation for
+// this language (message.translations[targetLang], passed down as
+// `existing` via serializeMessage), it renders immediately with no call.
+function MessageTranslation({ caseId, messageId, targetLang, existing, tone }) {
+  const { t } = useTranslation()
+  const [translation, setTranslation] = useState(existing ?? null)
+  const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    setTranslation(existing ?? null)
+  }, [existing])
+
+  async function handleTranslate() {
+    setLoading(true)
+    setFailed(false)
+    try {
+      const result = await translateMessage(caseId, messageId, targetLang)
+      setTranslation(result)
+    } catch {
+      setFailed(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (translation) {
+    return (
+      <div className={`mt-2 border-t border-dashed pt-2 ${tone}`}>
+        <p className="text-[11px] italic opacity-70">{t('caseThread.translate.resultLabel')}</p>
+        <p className="mt-0.5 whitespace-pre-wrap text-sm italic opacity-80">{translation.text}</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-1.5">
+      <button
+        type="button"
+        onClick={handleTranslate}
+        disabled={loading}
+        className={`text-xs underline disabled:no-underline disabled:opacity-60 ${tone}`}
+      >
+        {loading ? t('caseThread.translate.loading') : t('caseThread.translate.action')}
+      </button>
+      {failed && <span className="ml-2 text-xs opacity-80">{t('caseThread.translate.failed')}</span>}
+    </div>
   )
 }
 
@@ -126,6 +183,7 @@ function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
 // carry its own <h2> and page padding, which meant it could only ever be
 // dropped onto a page by itself.
 function CaseThread({ caseId, mode, passcode }) {
+  const { t, i18n } = useTranslation()
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [pendingFile, setPendingFile] = useState(null)
@@ -145,6 +203,12 @@ function CaseThread({ caseId, mode, passcode }) {
   // has to fire and nothing has to be answered. Toggling this open is not
   // recorded anywhere.
   const [showResources, setShowResources] = useState(false)
+  // scoreCase.js's server-side crisisFlag, read every time the thread loads.
+  // It works in every language the reporter might have written in, unlike
+  // the client-only check that gates the toggle above - when it's true the
+  // panel is shown automatically, identically to the manual toggle, with
+  // nothing on screen indicating which trigger fired it.
+  const [serverCrisisFlag, setServerCrisisFlag] = useState(false)
   const pollRef = useRef(null)
 
   const refresh = useCallback(async () => {
@@ -153,13 +217,17 @@ function CaseThread({ caseId, mode, passcode }) {
     // reporter callable anyway just trades a clear error for its generic
     // 'invalid-argument' one.
     if (mode === 'reporter' && !passcode) {
-      setLoadError('A passcode is required to load this case.')
+      setLoadError(t('caseThread.errors.passcodeRequired'))
       return
     }
     try {
-      const fetched =
-        mode === 'investigator' ? await getCaseThreadForHandler(caseId) : await getCaseThread(caseId, passcode)
-      setMessages(fetched)
+      if (mode === 'investigator') {
+        setMessages(await getCaseThreadForHandler(caseId))
+      } else {
+        const { messages: fetched, crisisFlag } = await getCaseThread(caseId, passcode)
+        setMessages(fetched)
+        setServerCrisisFlag(crisisFlag)
+      }
       setLoadError(null)
     } catch (err) {
       // Stop polling rather than let a failed fetch keep re-firing itself -
@@ -172,7 +240,7 @@ function CaseThread({ caseId, mode, passcode }) {
       }
       setLoadError(err.message)
     }
-  }, [caseId, mode, passcode])
+  }, [caseId, mode, passcode, t])
 
   useEffect(() => {
     refresh()
@@ -248,7 +316,7 @@ function CaseThread({ caseId, mode, passcode }) {
               size="sm"
               onClick={() => setRetryToken((token) => token + 1)}
             >
-              Retry
+              {t('common.retry')}
             </Button>
           </div>
         </Alert>
@@ -259,8 +327,8 @@ function CaseThread({ caseId, mode, passcode }) {
           <EmptyState
             compact
             icon="mail"
-            title="No messages yet"
-            description="Anything sent here is added to the case record permanently."
+            title={t('caseThread.noMessages.title')}
+            description={t('caseThread.noMessages.description')}
           />
         )}
 
@@ -292,7 +360,8 @@ function CaseThread({ caseId, mode, passcode }) {
           return (
             <div
               key={message.id}
-              className={`flex flex-col gap-1 ${mine ? 'items-end' : 'items-start'}`}
+              id={`message-${message.id}`}
+              className={`flex flex-col gap-1 scroll-mt-4 ${mine ? 'items-end' : 'items-start'}`}
             >
               <div className={`max-w-[85%] rounded-xl px-3.5 py-2.5 ${bubbleClasses(message, mine)}`}>
                 <div
@@ -300,7 +369,7 @@ function CaseThread({ caseId, mode, passcode }) {
                     mine ? 'text-navy-200' : 'text-muted'
                   }`}
                 >
-                  <span className="font-medium">{messageAuthorLabel(message)}</span>
+                  <span className="font-medium">{messageAuthorLabel(message, t)}</span>
                   <span>{formatTimestamp(message.timestamp)}</span>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-sm">{message.text}</p>
@@ -320,6 +389,21 @@ function CaseThread({ caseId, mode, passcode }) {
                     ))}
                   </ul>
                 )}
+
+                {/* Case Handler side only - no reporter-facing counterpart. Hidden
+                    for a system record and a manual log entry, neither of which is
+                    a reporter's own words to translate. */}
+                {mode === 'investigator' &&
+                  message.sender !== 'system' &&
+                  message.type !== 'manual_log' && (
+                    <MessageTranslation
+                      caseId={caseId}
+                      messageId={message.id}
+                      targetLang={i18n.language}
+                      existing={message.translations?.[i18n.language]}
+                      tone={mine ? 'border-navy-200 text-white' : 'border-line text-charcoal'}
+                    />
+                  )}
               </div>
             </div>
           )
@@ -330,18 +414,18 @@ function CaseThread({ caseId, mode, passcode }) {
 
       <form onSubmit={handleSend} className="flex flex-col gap-2 border-t border-line-soft pt-4">
         <textarea
-          aria-label="Message"
+          aria-label={t('caseThread.messageLabel')}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           rows={3}
-          placeholder="Type a message..."
+          placeholder={t('caseThread.messagePlaceholder')}
           className="field resize-y"
         />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex cursor-pointer items-center gap-2 text-xs text-muted">
             <span className="btn btn-secondary px-2.5 py-1.5 text-xs">
               <Icon name="plus" className="h-3.5 w-3.5" />
-              Attach file
+              {t('caseThread.attachFile')}
             </span>
             <input
               type="file"
@@ -356,10 +440,10 @@ function CaseThread({ caseId, mode, passcode }) {
             variant="primary"
             className="ml-auto"
             loading={sending}
-            loadingLabel="Sending"
+            loadingLabel={t('caseThread.sending')}
             disabled={!draft.trim() && !pendingFile}
           >
-            Send
+            {t('caseThread.send')}
           </Button>
         </div>
       </form>
@@ -380,9 +464,9 @@ function CaseThread({ caseId, mode, passcode }) {
             aria-expanded={showResources}
           >
             <Icon name="shield" className="h-3.5 w-3.5" />
-            Need support now?
+            {t('reporterLayout.needSupport')}
           </button>
-          {showResources && (
+          {(showResources || serverCrisisFlag) && (
             <div className="mt-3">
               {/* The reporter's tab holds no jurisdiction, so every regional
                   route plus the international fallback is offered. */}
@@ -402,16 +486,16 @@ function CaseThread({ caseId, mode, passcode }) {
               onClick={() => setShowLogForm(true)}
               className="text-gold-600"
             >
-              Add manual log entry
+              {t('caseThread.manualLog.add')}
             </Button>
           ) : (
             <form onSubmit={handleAddLog} className="flex flex-col gap-2">
               <textarea
-                aria-label="Manual log entry"
+                aria-label={t('caseThread.manualLog.label')}
                 value={logDraft}
                 onChange={(e) => setLogDraft(e.target.value)}
                 rows={2}
-                placeholder="e.g. Called witness X, summary: ..."
+                placeholder={t('caseThread.manualLog.placeholder')}
                 className="field border-gold-200"
               />
               <div className="flex gap-2">
@@ -420,13 +504,13 @@ function CaseThread({ caseId, mode, passcode }) {
                   variant="accent"
                   size="sm"
                   loading={sending}
-                  loadingLabel="Saving"
+                  loadingLabel={t('contactChannelPanel.form.saving')}
                   disabled={!logDraft.trim()}
                 >
-                  Save log entry
+                  {t('caseThread.manualLog.save')}
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setShowLogForm(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </form>

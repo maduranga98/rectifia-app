@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../services/i18n'
 import { getCaseForTriage } from '../../services/triageService'
 import { listCaseHandlers, reassignCase } from '../../services/routingService'
 import { auth } from '../../services/firebase'
@@ -50,6 +52,7 @@ function formatDate(ms) {
 // triage modal" would mean two places to keep the conflict-of-interest and
 // company-match guards in step.
 function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
+  const { t } = useTranslation()
   const [triageCase, setTriageCase] = useState(null)
   const [handlers, setHandlers] = useState([])
   const [handlerId, setHandlerId] = useState('')
@@ -68,7 +71,7 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
         setHandlers(handlerRows)
       })
       .catch((err) => {
-        if (!cancelled) setError(err.message || 'Could not open this case')
+        if (!cancelled) setError(err.message || i18n.t('caseTriageModal.couldNotOpen'))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -99,15 +102,16 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
       onAssigned?.(caseId)
       close()
     } catch (err) {
-      setError(err.message || 'Could not assign this case')
+      setError(err.message || t('caseTriageModal.couldNotAssign'))
       setAssigning(false)
     }
   }
 
-  const categoryLabel =
-    CATEGORIES.find((c) => c.id === triageCase?.category)?.label ??
-    humanize(triageCase?.category) ??
-    'Uncategorized'
+  const categoryLabel = triageCase?.category
+    ? t(`categories.${triageCase.category}.label`, {
+        defaultValue: CATEGORIES.find((c) => c.id === triageCase.category)?.label ?? humanize(triageCase.category),
+      })
+    : t('caseTriageModal.uncategorized')
 
   return (
     <div
@@ -119,20 +123,18 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={`Case ${caseId}`}
+        aria-label={t('caseTriageModal.caseAriaLabel', { caseId })}
         className="card my-auto w-full max-w-2xl overflow-hidden"
       >
         <header className="flex items-start justify-between gap-3 border-b border-line-soft px-5 py-4">
           <div className="min-w-0">
             <p className="font-mono text-sm font-semibold text-charcoal">{caseId}</p>
-            <p className="mt-0.5 text-xs text-muted">
-              Read this report to decide who should handle it. It is not yours to investigate.
-            </p>
+            <p className="mt-0.5 text-xs text-muted">{t('caseTriageModal.instructions')}</p>
           </div>
           <button
             type="button"
             onClick={close}
-            aria-label="Close"
+            aria-label={t('caseTriageModal.closeAriaLabel')}
             className="btn btn-ghost shrink-0 px-2 py-1"
           >
             <Icon name="close" />
@@ -154,42 +156,42 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
                       {triageCase.priority}
                     </Badge>
                   )}
-                  <Badge tone="tone-neutral">{humanize(triageCase.status) ?? 'open'}</Badge>
+                  <Badge tone="tone-neutral">{humanize(triageCase.status) ?? t('caseTriageModal.open')}</Badge>
                 </div>
 
                 <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line-soft pt-4 text-sm sm:grid-cols-3">
                   <div>
-                    <dt className="text-xs text-muted">Department</dt>
+                    <dt className="text-xs text-muted">{t('caseTriageModal.department')}</dt>
                     <dd className="mt-0.5 font-medium text-charcoal">
-                      {humanize(triageCase.department) ?? 'unspecified'}
+                      {humanize(triageCase.department) ?? t('caseTriageModal.unspecified')}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted">Severity</dt>
+                    <dt className="text-xs text-muted">{t('caseTriageModal.severity')}</dt>
                     <dd className="mt-0.5 font-medium tabular-nums text-charcoal">
                       {triageCase.severityScore ?? '-'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted">Evidence</dt>
+                    <dt className="text-xs text-muted">{t('caseTriageModal.evidence')}</dt>
                     <dd className="mt-0.5 font-medium tabular-nums text-charcoal">
                       {triageCase.evidenceScore ?? '-'}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted">Submitted</dt>
+                    <dt className="text-xs text-muted">{t('caseTriageModal.submitted')}</dt>
                     <dd className="mt-0.5 font-medium text-charcoal">
                       {formatDate(triageCase.createdAt)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted">Acknowledgment due</dt>
+                    <dt className="text-xs text-muted">{t('caseTriageModal.acknowledgmentDue')}</dt>
                     <dd className="mt-0.5 font-medium text-charcoal">
                       {formatDate(triageCase.acknowledgmentDueAt)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-xs text-muted">Feedback due</dt>
+                    <dt className="text-xs text-muted">{t('caseTriageModal.feedbackDue')}</dt>
                     <dd className="mt-0.5 font-medium text-charcoal">
                       {formatDate(triageCase.feedbackDueAt)}
                     </dd>
@@ -198,18 +200,15 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
 
                 {triageCase.routingReason && (
                   <p className="mt-3 text-xs text-muted">
-                    Waiting because: {humanize(triageCase.routingReason)}
+                    {t('caseTriageModal.waitingBecause', { reason: humanize(triageCase.routingReason) })}
                   </p>
                 )}
 
                 <section className="mt-5 border-t border-line-soft pt-4">
-                  <h4 className="text-sm font-semibold text-charcoal">What was reported</h4>
-                  <p className="mt-1 text-xs text-muted">
-                    The reporter&apos;s questionnaire answers. The message thread stays with the
-                    handler you assign.
-                  </p>
+                  <h4 className="text-sm font-semibold text-charcoal">{t('caseTriageModal.whatWasReported')}</h4>
+                  <p className="mt-1 text-xs text-muted">{t('caseTriageModal.whatWasReportedHint')}</p>
                   {triageCase.answers.length === 0 ? (
-                    <p className="mt-3 text-sm text-muted">No questionnaire answers on this case.</p>
+                    <p className="mt-3 text-sm text-muted">{t('caseTriageModal.noAnswers')}</p>
                   ) : (
                     <dl className="mt-3 flex flex-col gap-3">
                       {triageCase.answers.map((answer) => (
@@ -230,16 +229,16 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
 
         <footer className="flex flex-wrap items-end justify-between gap-3 border-t border-line-soft bg-navy-50/50 px-5 py-3">
           <label className="flex flex-col gap-1 text-xs text-muted">
-            Assign to
+            {t('caseTriageModal.assignTo')}
             <select
-              aria-label={`Assign case ${caseId}`}
+              aria-label={t('caseTriageModal.assignCaseAriaLabel', { caseId })}
               className="field w-56 py-1 text-xs"
               value={handlerId}
               disabled={loading || assigning || handlers.length === 0}
               onChange={(e) => setHandlerId(e.target.value)}
             >
               <option value="" disabled>
-                {handlers.length === 0 ? 'No Case Handlers yet' : 'Select a Case Handler'}
+                {handlers.length === 0 ? t('caseTriageModal.noHandlersYet') : t('caseTriageModal.selectHandler')}
               </option>
               {handlers.map((h) => (
                 <option key={h.id} value={h.id}>
@@ -251,7 +250,7 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
 
           <div className="flex items-center gap-2">
             <Button onClick={close} disabled={assigning}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="primary"
@@ -259,9 +258,9 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
               onClick={handleAssign}
               disabled={!handlerId || loading}
               loading={assigning}
-              loadingLabel="Assigning"
+              loadingLabel={t('caseTriageModal.assigning')}
             >
-              Assign
+              {t('caseTriageModal.assign')}
             </Button>
           </div>
         </footer>

@@ -19,14 +19,21 @@ const {
   removeContactEmail,
 } = require('./src/intake/identityTransition')
 const { aiFollowUp } = require('./src/intake/aiFollowUp')
+const { translateMessage } = require('./src/intake/translateMessage')
 const { generateChecklist, updateChecklistItem } = require('./src/intake/generateChecklist')
 const { storeReferenceCase } = require('./src/consistency/storeReferenceCase')
 const { checkConsistency } = require('./src/consistency/checkConsistency')
 const { detectPatterns } = require('./src/patterns/detectPatterns')
+const { detectBurnoutTrends } = require('./src/patterns/detectBurnoutTrends')
 const { generateReport } = require('./src/intake/generateReport')
 const { exportReportPdf } = require('./src/reports/exportReportPdf')
 const { scheduleDeadlines } = require('./src/compliance/scheduleDeadlines')
 const { checkOverdueDeadlines } = require('./src/compliance/checkOverdueDeadlines')
+const {
+  designateHandler,
+  revokeHandlerDesignation,
+  acknowledgeConfidentiality,
+} = require('./src/compliance/designatedHandlers')
 const { proposeAction, closeCase, reviewConsistencyFlag } = require('./src/investigation/caseActions')
 const { getCaseForTriage } = require('./src/investigation/getCaseForTriage')
 const { revealIdentity } = require('./src/investigation/revealIdentity')
@@ -68,6 +75,7 @@ const {
   restorePolicyDocument,
   deletePolicyDocument,
 } = require('./src/policy/managePolicyDocument')
+const { backfillPolicyTags } = require('./src/policy/backfillPolicyTags')
 const { applyRetention } = require('./src/retention/applyRetention')
 const { setLegalHold, releaseLegalHold, listLegalHolds } = require('./src/retention/legalHold')
 const {
@@ -91,6 +99,7 @@ const { backupVerification, attestRestoreTest } = require('./src/security/backup
 const { getSecurityDashboard } = require('./src/security/securityDashboard')
 const { createExternalShare, listCaseShares } = require('./src/sharing/createShare')
 const { getSharedCase } = require('./src/sharing/accessShare')
+const { accessSharedEvidence } = require('./src/sharing/accessSharedEvidence')
 const { revokeExternalShare } = require('./src/sharing/revokeShare')
 const { expireShares } = require('./src/sharing/expireShares')
 const { aggregateCaseAnalytics } = require('./src/analytics/aggregateCaseAnalytics')
@@ -115,11 +124,13 @@ exports.removeContactEmail = removeContactEmail
 exports.requestEvidenceUploadUrl = requestEvidenceUploadUrl
 exports.requestEvidenceDownloadUrl = requestEvidenceDownloadUrl
 exports.aiFollowUp = aiFollowUp
+exports.translateMessage = translateMessage
 exports.generateChecklist = generateChecklist
 exports.updateChecklistItem = updateChecklistItem
 exports.storeReferenceCase = storeReferenceCase
 exports.checkConsistency = checkConsistency
 exports.detectPatterns = detectPatterns
+exports.detectBurnoutTrends = detectBurnoutTrends
 exports.generateReport = generateReport
 // Module 24: server-side PDF export of the same compiled report, rendered
 // inside the Function (pdfkit, no headless browser) and handed back only as
@@ -127,6 +138,12 @@ exports.generateReport = generateReport
 exports.exportReportPdf = exportReportPdf
 exports.scheduleDeadlines = scheduleDeadlines
 exports.checkOverdueDeadlines = checkOverdueDeadlines
+// JP's designated-handler (従事者) register. Metadata only - see
+// functions/src/compliance/designatedHandlers.js for the field shape and the
+// self-acknowledgment rule.
+exports.designateHandler = designateHandler
+exports.revokeHandlerDesignation = revokeHandlerDesignation
+exports.acknowledgeConfidentiality = acknowledgeConfidentiality
 exports.proposeAction = proposeAction
 exports.closeCase = closeCase
 exports.reviewConsistencyFlag = reviewConsistencyFlag
@@ -179,6 +196,7 @@ exports.tagPolicyChunks = tagPolicyChunks
 exports.archivePolicyDocument = archivePolicyDocument
 exports.restorePolicyDocument = restorePolicyDocument
 exports.deletePolicyDocument = deletePolicyDocument
+exports.backfillPolicyTags = backfillPolicyTags
 // Module 23: Data Retention, Deletion & Legal Hold. applyRetention is the
 // daily scheduled sweep; the rest are onCall - legal holds and the
 // reporter-initiated erasure request are both human-decided actions on a
@@ -239,6 +257,10 @@ exports.getSecurityDashboard = getSecurityDashboard
 exports.createExternalShare = createExternalShare
 exports.listCaseShares = listCaseShares
 exports.getSharedCase = getSharedCase
+// Evidence-opening counterpart of getSharedCase - see the module comment in
+// accessSharedEvidence.js for why it is its own callable rather than a
+// parameter on getSharedCase.
+exports.accessSharedEvidence = accessSharedEvidence
 exports.revokeExternalShare = revokeExternalShare
 exports.expireShares = expireShares
 // Module 28: Analytics & Reporting Dashboard. aggregateCaseAnalytics is the

@@ -3,6 +3,7 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { createPulseInvite, PULSE_INVITES_COLLECTION } = require('./pulseInvites')
 const { resolveFlag } = require('../utils/featureFlags')
+const { shouldRunForCompany } = require('../utils/companySchedule')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -11,6 +12,11 @@ if (!admin.apps.length) {
 const COMPANIES_COLLECTION = 'companies'
 const EMPLOYEES_SUBCOLLECTION = 'employees'
 const NOTIFICATIONS_COLLECTION = 'notifications'
+
+// Local morning, not the middle of the night - a wellness-survey invitation
+// arriving at 3am local is the single most obviously wrong thing about a
+// fixed-UTC schedule.
+const TARGET_LOCAL_HOUR = 9
 
 // Cadence is a company setting (companies/{companyId}.pulseCheckCadence),
 // configured by the Company Admin panel alongside jurisdictions/departments.
@@ -174,8 +180,13 @@ async function queuePulseInvitesForCompany(firestore, companyDoc, cadenceDays) {
   return { queued }
 }
 
-// Runs daily; for each company whose configured cadence has elapsed since
-// its last send, queues a pulse-check invite notification per employee.
+// Runs hourly; for each company whose local time is TARGET_LOCAL_HOUR AND
+// whose configured cadence has elapsed since its last send, queues a
+// pulse-check invite notification per employee. The local-hour gate (see
+// companySchedule.js) is checked first, before any other per-company work -
+// a company outside its target hour costs one company-doc read and nothing
+// else, even at 24x the invocation rate of the old daily schedule.
+//
 // The audience is companies/{companyId}/employees - the Company Admin's
 // pulse-check roster (src/pages/company-admin/EmployeesPage.jsx), NOT the
 // staff subcollection: staff are login-having accounts with roles, employees
@@ -184,12 +195,14 @@ async function queuePulseInvitesForCompany(firestore, companyDoc, cadenceDays) {
 // roster because no employee directory existed. Actual delivery (email/push)
 // is left to the notifications module, same "queue metadata, deliver
 // elsewhere" pattern as checkOverdueDeadlines.js.
-exports.schedulePulseChecks = onSchedule('every day 01:00', async () => {
+exports.schedulePulseChecks = onSchedule('every 1 hours', async () => {
   const firestore = admin.firestore()
   const companiesSnapshot = await firestore.collection(COMPANIES_COLLECTION).get()
+  const now = new Date()
 
   for (const companyDoc of companiesSnapshot.docs) {
     const company = companyDoc.data()
+    if (!shouldRunForCompany(company, TARGET_LOCAL_HOUR, now)) continue
     // A company with Pulse Check turned off is skipped before any of the
     // cadence bookkeeping below - "off" must stop new invites from being
     // queued, not merely hide the roster/questions nav in the admin panel.

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import { ROLES, ROLE_LABELS } from '../constants/roles'
@@ -20,6 +21,8 @@ import PulseTrendsPage from './staff/PulseTrendsPage'
 import BenchmarkPage from './staff/BenchmarkPage'
 import StaffIntake from './StaffIntake'
 import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
+import DesignatedHandlersPage from './company-admin/DesignatedHandlersPage'
+import HelpSupportPage from './shared/HelpSupportPage'
 
 // Which nav each staff role gets. This replaces the old VIEWS_BY_ROLE state
 // switch: every capability now has its own nav entry and its own URL, so a
@@ -39,29 +42,43 @@ import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
 // flags to the matching <Route>, so a direct URL hit is redirected the same
 // way an unentitled role's URL already is - hiding the nav link alone would
 // leave the route itself reachable by anyone who still had it bookmarked.
+// `labelKey` is a dashboardNav.* translation key rather than a literal label -
+// AppShell renders whatever `label` a caller hands it, so the labels are
+// resolved with `t()` when navItems is built below, not stored here.
 const NAV_BY_ROLE = {
   [ROLES.HR_COORDINATOR]: [
-    { to: '/dashboard/overview', label: 'Overview', icon: 'overview' },
-    { to: '/dashboard/cases', label: 'All cases', icon: 'cases' },
-    { to: '/dashboard/triage', label: 'Awaiting triage', icon: 'inbox' },
-    { to: '/dashboard/patterns', label: 'Patterns', icon: 'sparkle', flag: 'patternDetection' },
-    { to: '/dashboard/follow-ups', label: 'Follow-ups', icon: 'clock' },
-    { to: '/dashboard/pulse-responses', label: 'Pulse checks', icon: 'pulse', flag: 'pulseCheck' },
-    { to: '/dashboard/trends', label: 'Trends', icon: 'overview', flag: 'pulseCheck' },
-    { to: '/dashboard/benchmark', label: 'Benchmark', icon: 'overview', flag: 'benchmarkPool' },
-    { to: '/dashboard/analytics', label: 'Analytics', icon: 'sparkle' },
-    { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
+    { to: '/dashboard/overview', labelKey: 'dashboardNav.overview', icon: 'overview' },
+    { to: '/dashboard/cases', labelKey: 'dashboardNav.allCases', icon: 'cases' },
+    { to: '/dashboard/triage', labelKey: 'dashboardNav.awaitingTriage', icon: 'inbox' },
+    { to: '/dashboard/patterns', labelKey: 'dashboardNav.patterns', icon: 'sparkle', flag: 'patternDetection' },
+    { to: '/dashboard/follow-ups', labelKey: 'dashboardNav.followUps', icon: 'clock' },
+    { to: '/dashboard/pulse-responses', labelKey: 'dashboardNav.pulseChecks', icon: 'pulse', flag: 'pulseCheck' },
+    { to: '/dashboard/trends', labelKey: 'dashboardNav.trends', icon: 'overview', flag: 'pulseCheck' },
+    { to: '/dashboard/benchmark', labelKey: 'dashboardNav.benchmark', icon: 'overview', flag: 'benchmarkPool' },
+    { to: '/dashboard/analytics', labelKey: 'dashboardNav.analytics', icon: 'sparkle' },
+    { to: '/dashboard/intake', labelKey: 'dashboardNav.fileAReport', icon: 'plus' },
+    { to: '/dashboard/help', labelKey: 'dashboardNav.help', icon: 'help' },
   ],
   [ROLES.CASE_HANDLER]: [
-    { to: '/dashboard/my-cases', label: 'My cases', icon: 'cases' },
-    { to: '/dashboard/analytics', label: 'Analytics', icon: 'sparkle' },
-    { to: '/dashboard/intake', label: 'File a report', icon: 'plus' },
+    { to: '/dashboard/my-cases', labelKey: 'dashboardNav.myCases', icon: 'cases' },
+    { to: '/dashboard/analytics', labelKey: 'dashboardNav.analytics', icon: 'sparkle' },
+    { to: '/dashboard/intake', labelKey: 'dashboardNav.fileAReport', icon: 'plus' },
+    // Self-service view of JP's designated-handler register - see
+    // DesignatedHandlersPage.jsx. Always shown: a Case Handler may hold a
+    // designation (or need to acknowledge one) regardless of whether their
+    // company currently has JP configured.
+    { to: '/dashboard/designation', labelKey: 'dashboardNav.myDesignation', icon: 'shield' },
+    { to: '/dashboard/help', labelKey: 'dashboardNav.help', icon: 'help' },
   ],
   [ROLES.PULSE_CHECK_REVIEWER]: [
-    { to: '/dashboard/pulse-responses', label: 'Pulse responses', icon: 'pulse', flag: 'pulseCheck' },
-    { to: '/dashboard/trends', label: 'Trends', icon: 'overview', flag: 'pulseCheck' },
+    { to: '/dashboard/pulse-responses', labelKey: 'dashboardNav.pulseResponses', icon: 'pulse', flag: 'pulseCheck' },
+    { to: '/dashboard/trends', labelKey: 'dashboardNav.trends', icon: 'overview', flag: 'pulseCheck' },
+    { to: '/dashboard/help', labelKey: 'dashboardNav.help', icon: 'help' },
   ],
-  [ROLES.MANAGER]: [{ to: '/dashboard/wellness', label: 'Team wellness', icon: 'pulse', flag: 'pulseCheck' }],
+  [ROLES.MANAGER]: [
+    { to: '/dashboard/wellness', labelKey: 'dashboardNav.teamWellness', icon: 'pulse', flag: 'pulseCheck' },
+    { to: '/dashboard/help', labelKey: 'dashboardNav.help', icon: 'help' },
+  ],
 }
 
 function filterNavByFlags(navItems, flags) {
@@ -75,10 +92,10 @@ function indexPathFor(navItems) {
   return navItems.find((item) => item.to.startsWith('/dashboard/'))?.to ?? '/dashboard'
 }
 
-function titleFor(pathname, navItems) {
-  if (/^\/dashboard\/cases\/[^/]+/.test(pathname)) return 'Case workspace'
+function titleFor(pathname, navItems, t) {
+  if (/^\/dashboard\/cases\/[^/]+/.test(pathname)) return t('dashboardNav.caseWorkspace')
   const match = navItems.find((item) => pathname.startsWith(item.to))
-  return match?.label ?? 'Dashboard'
+  return match?.label ?? t('dashboardNav.dashboard')
 }
 
 // The nested route table for each role - the presentation counterpart of what
@@ -92,6 +109,7 @@ function titleFor(pathname, navItems) {
 // UX, not the enforcement: the callable behind each of these pages checks
 // the same flag server-side (see functions/src/utils/featureFlags.js).
 function DashboardRoutes({ role, companyId, departments, companyCases, flags }) {
+  const { t } = useTranslation()
   const navItems = filterNavByFlags(NAV_BY_ROLE[role] ?? [], flags)
   const index = indexPathFor(navItems)
   const toIndex = <Navigate to={index} replace />
@@ -105,8 +123,8 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
     return (
       <Card padded={false} className="mx-auto max-w-2xl">
         <EmptyState
-          title="This feature is currently disabled"
-          description="Ask a Super Admin to enable it for your company."
+          title={t('dashboardNav.featureDisabled.title')}
+          description={t('dashboardNav.featureDisabled.description')}
         />
       </Card>
     )
@@ -132,6 +150,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
         <Route path="benchmark" element={gated('benchmarkPool', <BenchmarkPage companyId={companyId} />)} />
         <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} canExport />} />
         <Route path="intake" element={<StaffIntake />} />
+        <Route path="help" element={<HelpSupportPage role={role} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -151,6 +170,8 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
             reserved for the two board/audit-facing roles. */}
         <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} />} />
         <Route path="intake" element={<StaffIntake />} />
+        <Route path="designation" element={<DesignatedHandlersPage companyId={companyId} />} />
+        <Route path="help" element={<HelpSupportPage role={role} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -168,6 +189,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
           path="trends"
           element={gated('pulseCheck', <PulseTrendsPage companyId={companyId} role={role} />)}
         />
+        <Route path="help" element={<HelpSupportPage role={role} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -184,6 +206,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
             <PulseTrendsPage companyId={companyId} role={role} departments={departments} />
           )}
         />
+        <Route path="help" element={<HelpSupportPage role={role} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -192,8 +215,10 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
   return (
     <Card padded={false} className="mx-auto max-w-2xl">
       <EmptyState
-        title="Nothing to show yet"
-        description={`No dashboard is configured for the ${ROLE_LABELS[role] ?? role} role yet.`}
+        title={t('dashboardNav.nothingToShow.title')}
+        description={t('dashboardNav.nothingToShow.description', {
+          role: t(`roles.${role}`, { defaultValue: ROLE_LABELS[role] ?? role }),
+        })}
       />
     </Card>
   )
@@ -205,6 +230,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
 // handler is working now lives at its own route, so there is no selectedCaseId
 // or activeView held here at all.
 function Dashboard() {
+  const { t } = useTranslation()
   const { user, role, customRoleId, permissions, companyId, departments } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -246,7 +272,11 @@ function Dashboard() {
     patternDetection: patternDetectionEnabled,
   }
 
-  const navItems = filterNavByFlags(NAV_BY_ROLE[role] ?? [], flags)
+  const navItems = filterNavByFlags(NAV_BY_ROLE[role] ?? [], flags).map((item) => ({
+    ...item,
+    label: t(item.labelKey),
+  }))
+  const roleLabel = role ? t(`roles.${role}`, { defaultValue: ROLE_LABELS[role] ?? role }) : t('roles.staff')
 
   async function handleSignOut() {
     await signOutUser()
@@ -261,23 +291,21 @@ function Dashboard() {
       // sending the user to ask for a re-issued invite that wouldn't help.
       if (customRoleId) {
         return (
-          <Alert variant="error" title="No permissions assigned">
-            This role has no permissions assigned yet. Ask your Company Admin to add permissions
-            to the role.
+          <Alert variant="error" title={t('dashboardNav.noPermissions.title')}>
+            {t('dashboardNav.noPermissions.body')}
           </Alert>
         )
       }
       return (
-        <Alert variant="error" title="No role assigned">
-          This account has no role assigned yet, so there is nothing to show. Ask your Company
-          Admin to re-issue the invite.
+        <Alert variant="error" title={t('dashboardNav.noRole.title')}>
+          {t('dashboardNav.noRole.body')}
         </Alert>
       )
     }
     if (!companyId) {
       return (
-        <Alert variant="error" title="Account not linked to a company">
-          This account is not linked to a company. Ask your Company Admin to re-issue the invite.
+        <Alert variant="error" title={t('dashboardNav.notLinked.title')}>
+          {t('dashboardNav.notLinked.body')}
         </Alert>
       )
     }
@@ -294,13 +322,13 @@ function Dashboard() {
 
   return (
     <AppShell
-      scopeLabel={role ? ROLE_LABELS[role] ?? role : 'Staff'}
+      scopeLabel={roleLabel}
       navItems={navItems}
       userEmail={user?.email}
-      roleLabel={role ? ROLE_LABELS[role] ?? role : 'Staff'}
+      roleLabel={roleLabel}
       onSignOut={handleSignOut}
-      eyebrow="Dashboard"
-      title={titleFor(location.pathname, navItems)}
+      eyebrow={t('dashboardNav.eyebrow')}
+      title={titleFor(location.pathname, navItems, t)}
     >
       {renderBody()}
     </AppShell>

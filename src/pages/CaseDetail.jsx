@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import ReporterLayout from '../components/shared/ReporterLayout'
 import CaseAccess from '../components/intake/CaseAccess'
 import CaseThread from '../components/intake/CaseThread'
@@ -23,6 +24,7 @@ import Icon from '../components/ui/Icon'
 // Reachable with or without a :caseId in the URL: a link from a submission
 // carries it, a reporter arriving cold at /case types it in.
 function CaseDetail() {
+  const { t } = useTranslation()
   const { caseId: caseIdFromUrl } = useParams()
   const [grantedCase, setGrantedCase] = useState(null)
   const [passcode, setPasscode] = useState(null)
@@ -30,9 +32,9 @@ function CaseDetail() {
   if (!grantedCase) {
     return (
       <ReporterLayout
-        title="Access your case"
-        description="No account needed. Enter the Case ID and passcode you were given when you submitted your report."
-        footerNote="Lost your Case ID or passcode? They cannot be recovered - neither is stored in a readable form. You would need to submit a new report."
+        title={t('caseDetail.access.title')}
+        description={t('caseDetail.access.description')}
+        footerNote={t('caseDetail.access.footerNote')}
       >
         <div className="max-w-md">
           <CaseAccess
@@ -59,8 +61,8 @@ function CaseDetail() {
 
   return (
     <ReporterLayout
-      title={`Case ${caseNumber}`}
-      description="Messages here go to the handler assigned to your case. Everything is kept on the case record."
+      title={t('caseDetail.thread.title', { caseNumber })}
+      description={t('caseDetail.thread.description')}
     >
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center gap-2">
@@ -72,7 +74,7 @@ function CaseDetail() {
           )}
         </div>
 
-        <Card title="Case thread">
+        <Card title={t('caseDetail.thread.cardTitle')}>
           <CaseThread caseId={caseNumber} mode="reporter" passcode={passcode} />
         </Card>
 
@@ -105,8 +107,7 @@ function CaseDetail() {
         {isOpen && hasStoredIdentity && (
           <div className="flex items-center gap-2 rounded-lg border border-line bg-surface p-4 text-sm text-muted">
             <Icon name="shield" className="h-4 w-4 text-muted" />
-            Your details are on file, held encrypted. Reading them requires an authorised, logged
-            reveal by the handler assigned to your case.
+            {t('caseDetail.identityOnFile')}
           </div>
         )}
 

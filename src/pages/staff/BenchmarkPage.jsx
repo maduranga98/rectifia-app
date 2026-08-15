@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import BenchmarkComparison from '../../components/dashboard/BenchmarkComparison'
 
 // The HR Coordinator's view of Module 25's benchmark pool. Given a page of
@@ -6,12 +7,10 @@ import BenchmarkComparison from '../../components/dashboard/BenchmarkComparison'
 // squeezing that into an overview grid buries either the numbers or the
 // context that makes them safe to read.
 function BenchmarkPage({ companyId }) {
+  const { t } = useTranslation()
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
-      <p className="max-w-2xl text-sm text-muted">
-        How this company's closed cases compare to the wider pool for your industry and size
-        band. Aggregate statistics only, and only for cells that clear the anonymity thresholds.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('staffBenchmarkPage.description')}</p>
       <BenchmarkComparison companyId={companyId} />
     </div>
   )

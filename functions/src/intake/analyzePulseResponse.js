@@ -237,7 +237,6 @@ async function analyzeWithClaude(answers, questionSet, history) {
       'Prior responses are shown with the wording that was in front of the employee at the time. If a ' +
       'note says the wording changed, do not read the change in wording as a change in mood.',
     output_config: {
-      effort: 'medium',
       format: { type: 'json_schema', schema: ANALYSIS_OUTPUT_SCHEMA },
     },
     messages: [

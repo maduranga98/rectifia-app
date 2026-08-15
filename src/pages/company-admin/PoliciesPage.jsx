@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   POLICY_CATEGORIES,
   archivePolicy,
@@ -22,8 +23,6 @@ const STATUS_TONE = {
   failed: 'tone-critical',
 }
 
-const CATEGORY_LABEL = Object.fromEntries(POLICY_CATEGORIES.map((c) => [c.id, c.label]))
-
 function formatDate(value) {
   const millis = value?.toMillis?.() ?? (typeof value === 'number' ? value : null)
   if (!millis) return '-'
@@ -36,6 +35,7 @@ function formatDate(value) {
 // this role uploads and manages the written rules that ground the AI, but never
 // sees a case, a score, or which clauses any case matched.
 function PoliciesPage({ companyId }) {
+  const { t } = useTranslation()
   const [policies, setPolicies] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -71,7 +71,7 @@ function PoliciesPage({ companyId }) {
   }
 
   async function handleDelete(policy) {
-    if (!window.confirm(`Delete "${policy.title}" (v${policy.version})? This removes the file and cannot be undone.`)) {
+    if (!window.confirm(t('policiesPage.confirmDelete', { title: policy.title, version: policy.version }))) {
       return
     }
     await runAction(policy.id, deletePolicy)
@@ -96,47 +96,48 @@ function PoliciesPage({ companyId }) {
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
-      <p className="max-w-2xl text-sm text-muted">
-        Upload your organisation's own policy documents. Their text is extracted and used as
-        reference context when the system reasons about a case, so the questions asked and the
-        evidence sought reflect the procedure your own rules require. Policy never decides an
-        outcome, and reporters never see it.
-      </p>
+      <p className="max-w-2xl text-sm text-muted">{t('policiesPage.description')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <Card title="Category coverage" description="Which case categories your active policies can ground.">
+      <Card title={t('policiesPage.coverage.title')} description={t('policiesPage.coverage.description')}>
         <div className="flex flex-wrap gap-2">
           {POLICY_CATEGORIES.map((category) => {
             const covered = coveredCategories.has(category.id)
             return (
               <Badge key={category.id} tone={covered ? 'tone-low' : 'tone-neutral'} dot>
-                {category.label}: {covered ? 'covered' : 'no policy'}
+                {t(`categories.${category.id}.label`)}:{' '}
+                {covered ? t('policiesPage.coverage.covered') : t('policiesPage.coverage.noPolicy')}
               </Badge>
             )
           })}
         </div>
         {uncovered.length > 0 && (
           <p className="mt-3 text-xs text-muted">
-            Nothing to draw on for: {uncovered.map((c) => c.label).join(', ')}. Cases in these
-            categories are handled exactly as they are today, without policy grounding.
+            {t('policiesPage.coverage.nothingFor', {
+              categories: uncovered.map((c) => t(`categories.${c.id}.label`)).join(', '),
+            })}
           </p>
         )}
       </Card>
 
-      <Card title="Upload a policy document">
+      <Card title={t('policiesPage.uploadTitle')}>
         <PolicyUpload companyId={companyId} onUploaded={refresh} />
       </Card>
 
       {loading && policies.length === 0 ? (
         <SkeletonList rows={3} />
       ) : (
-        <Card title="Policy documents" description={`${policies.length} uploaded`} padded={false}>
+        <Card
+          title={t('policiesPage.documents.title')}
+          description={t('policiesPage.documents.uploadedCount', { count: policies.length })}
+          padded={false}
+        >
           {policies.length === 0 ? (
             <EmptyState
               icon="document"
-              title="No policy documents yet"
-              description="Upload your first policy above to start grounding case handling in your own written rules."
+              title={t('policiesPage.documents.empty.title')}
+              description={t('policiesPage.documents.empty.description')}
             />
           ) : (
             <ul className="divide-y divide-line-soft">
@@ -145,15 +146,15 @@ function PoliciesPage({ companyId }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-charcoal">{policy.title}</span>
                     <Badge tone={STATUS_TONE[policy.status] ?? 'tone-neutral'} dot>
-                      {policy.status}
+                      {t(`policiesPage.status.${policy.status}`, { defaultValue: policy.status })}
                     </Badge>
                     <span className="text-xs text-muted">v{policy.version}</span>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                     <span>{policy.fileName}</span>
-                    <span>{policy.chunkCount} chunk{policy.chunkCount === 1 ? '' : 's'}</span>
-                    <span>Uploaded {formatDate(policy.uploadedAt)}</span>
+                    <span>{t('policiesPage.chunkCount', { count: policy.chunkCount })}</span>
+                    <span>{t('policiesPage.uploaded', { date: formatDate(policy.uploadedAt) })}</span>
                   </div>
 
                   {policy.status === 'failed' && policy.errorMessage && (
@@ -167,7 +168,7 @@ function PoliciesPage({ companyId }) {
                           key={category}
                           className="rounded-full bg-navy-50 px-2 py-0.5 text-xs text-navy"
                         >
-                          {CATEGORY_LABEL[category] ?? category}
+                          {t(`categories.${category}.label`, { defaultValue: category })}
                         </span>
                       ))}
                     </div>
@@ -176,7 +177,7 @@ function PoliciesPage({ companyId }) {
                   <div className="flex flex-wrap gap-2">
                     {(policy.status === 'active' || policy.status === 'archived') && (
                       <Button variant="secondary" size="sm" icon="document" onClick={() => handleOpen(policy.id)}>
-                        Open
+                        {t('policiesPage.open')}
                       </Button>
                     )}
                     {policy.status === 'active' && (
@@ -186,7 +187,7 @@ function PoliciesPage({ companyId }) {
                         disabled={busyId === policy.id}
                         onClick={() => runAction(policy.id, archivePolicy)}
                       >
-                        Archive
+                        {t('policiesPage.archive')}
                       </Button>
                     )}
                     {policy.status === 'archived' && (
@@ -196,7 +197,7 @@ function PoliciesPage({ companyId }) {
                         disabled={busyId === policy.id}
                         onClick={() => runAction(policy.id, restorePolicy)}
                       >
-                        Restore
+                        {t('policiesPage.restore')}
                       </Button>
                     )}
                     <Button
@@ -205,7 +206,7 @@ function PoliciesPage({ companyId }) {
                       disabled={busyId === policy.id}
                       onClick={() => handleDelete(policy)}
                     >
-                      Delete
+                      {t('departmentsPage.delete')}
                     </Button>
                   </div>
                 </li>

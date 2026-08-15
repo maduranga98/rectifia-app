@@ -1,46 +1,26 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import ReporterLayout from '../components/shared/ReporterLayout'
 import CategorySelect from '../components/intake/CategorySelect'
 import DataHandlingNotice from '../components/intake/DataHandlingNotice'
 import QuestionnaireForm from '../components/intake/QuestionnaireForm'
 import CrisisResources from '../components/shared/CrisisResources'
 import CaseNotificationOptIn from '../components/intake/CaseNotificationOptIn'
+import { uploadStagedEvidence, StagedEvidenceStatus } from '../components/intake/CaseCredentialsHandoff'
 import { CATEGORIES } from '../data/categories'
 import { resolveCompanySlug, submitCase } from '../services/caseAccessService'
+import { downloadSimplePdf, RECTIFIA_BRAND_COLOR } from '../utils/simplePdf'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
 
-const STEPS = ['Category', 'Details', 'Your choice', 'Submit']
-
-// The two tiers in the words the reporter is actually asked them in. This is
-// the reporter's own decision and the last thing they are asked before the
-// report is filed, deliberately: a choice this consequential should not be
-// buried at the top of a form nobody has started filling in yet, and by this
-// point they know what they are about to hand over.
-//
-// The same copy is shown to staff taking a report by phone (see TIERS in
-// src/services/staffIntakeService.js), because a reporter's answer only means
-// anything if it was the same question. The anonymity trade-off is stated
-// plainly rather than sold - "some investigations are harder to complete" is
-// true, and a reporter who finds that out afterwards was misled.
-const REPORTER_TIERS = [
-  {
-    value: 'anonymous',
-    label: 'Stay anonymous',
-    summary: 'Nobody can ever identify you.',
-    detail:
-      'No name, email, or phone number is recorded anywhere on this report - not encrypted, not stored blank, simply never collected. Nobody at your employer, nobody at Rectifia, and nobody with a court order can look you up afterwards. You can still read replies and answer questions using your Case ID and passcode. Be aware that some investigations are harder to complete this way, and a few cannot be resolved at all, because the investigator has no way to come back to you for the detail they need.',
-  },
-  {
-    value: 'confidential',
-    label: 'Be identifiable to the investigator only',
-    summary: 'Only the person assigned to your case sees who you are.',
-    detail:
-      "Choosing this records your choice - it does not collect anything yet. You are not asked for your details on this screen. When you open your case, you'll be able to give the investigator your name, email, phone, or whatever you're willing to share; it is encrypted the moment you submit it, and never appears on any dashboard, in any report, or to anyone else at your employer. The investigator can come back to you with follow-up questions once you do, which usually makes a case easier to resolve. Nothing requires you to do this by a deadline, and leaving it blank is a choice you can make too.",
-  },
-]
+// The tier values stay stable identifiers; label/summary/detail are resolved
+// from translations at render time (see REPORTER_TIER_VALUES usage below),
+// since the same copy is shown to staff taking a report by phone (see TIERS
+// in src/services/staffIntakeService.js) and needs to be the same question
+// regardless of language.
+const REPORTER_TIER_VALUES = ['anonymous', 'confidential']
 
 // The anonymous reporter's intake flow. The report is company-scoped: the
 // :companySlug in the URL is resolved to a company (server-side, via the
@@ -52,6 +32,8 @@ const REPORTER_TIERS = [
 // company a case lands in. submitCase returns the Case ID + one-time passcode
 // the reporter needs to track it later.
 function Submit() {
+  const { t } = useTranslation()
+  const STEPS = [t('submit.steps.category'), t('submit.steps.details'), t('submit.steps.yourChoice'), t('submit.steps.submit')]
   const { companySlug } = useParams()
   const [category, setCategory] = useState(null)
   // Null until the reporter ticks the data-handling notice at category
@@ -68,6 +50,11 @@ function Submit() {
   const [filing, setFiling] = useState(false)
   const [fileError, setFileError] = useState(null)
   const [completed, setCompleted] = useState(null)
+  // The staged evidence's upload outcome, kicked off only after `completed`
+  // is already set - see handleFile below. Both start empty/false and never
+  // gate anything on this screen; they exist purely to report what happened.
+  const [evidenceUploading, setEvidenceUploading] = useState(false)
+  const [evidenceResults, setEvidenceResults] = useState([])
   // Sticky: once the in-browser crisis check has tripped, support resources
   // stay offered for the rest of this session, including on the confirmation
   // screen if the report was filed under that condition. This lives only in
@@ -114,8 +101,13 @@ function Submit() {
     setFiling(true)
     setFileError(null)
     try {
+      // `files` never goes near submitCase - it's browser File objects, not
+      // serialisable case data, and the case document must not carry
+      // filenames or attachment metadata (that belongs on a message). It is
+      // pulled off pending here and used only after the case exists.
+      const { files, ...caseSubmission } = pending
       const { caseId, passcode } = await submitCase({
-        ...pending,
+        ...caseSubmission,
         companySlug,
         tier: chosenTier,
         // Guaranteed non-null here: step 0's Continue button is gated on it
@@ -123,7 +115,18 @@ function Submit() {
         // category selection to this step without it.
         dataHandlingAcknowledgment: acknowledgment,
       })
+      // The credentials are committed to state before anything about
+      // evidence runs - see the module-level constraint this screen exists
+      // to honour: an upload failure must never cost the reporter their
+      // Case ID and passcode, which this screen shows exactly once.
       setCompleted({ caseId, passcode, responseCount: pending.responses.length })
+      if (files?.length > 0) {
+        setEvidenceUploading(true)
+        uploadStagedEvidence(caseId, passcode, files).then((results) => {
+          setEvidenceResults(results)
+          setEvidenceUploading(false)
+        })
+      }
     } catch (err) {
       // Stay on the tier step with the answers intact - they exist only in
       // this tab, and nothing has been filed yet.
@@ -137,8 +140,8 @@ function Submit() {
   // flashing the category screen for a link that may turn out to be invalid.
   if (!resolveError && company === null) {
     return (
-      <ReporterLayout title="Loading…" description="Checking your reporting link.">
-        <div className="card p-6 text-sm text-muted">One moment…</div>
+      <ReporterLayout title={t('submit.loading.title')} description={t('submit.loading.description')}>
+        <div className="card p-6 text-sm text-muted">{t('submit.loading.oneMoment')}</div>
       </ReporterLayout>
     )
   }
@@ -149,19 +152,18 @@ function Submit() {
   if (resolveError || !company?.found) {
     return (
       <ReporterLayout
-        title="This reporting link isn't valid"
-        description="We couldn't find the company for this link."
+        title={t('submit.invalidLink.title')}
+        description={t('submit.invalidLink.description')}
       >
-        <Alert variant="error" title="Reporting link not recognised">
-          The link you followed doesn't point to a company that accepts reports through Rectifia.
-          Double-check the address, or ask whoever shared it for a current one.
+        <Alert variant="error" title={t('submit.invalidLink.alertTitle')}>
+          {t('submit.invalidLink.alertBody')}
           {resolveError && (
-            <p className="mt-2 text-xs">If this keeps happening, the reporting service may be temporarily unavailable.</p>
+            <p className="mt-2 text-xs">{t('submit.invalidLink.tempUnavailable')}</p>
           )}
         </Alert>
         <div className="mt-4">
           <Link to="/case" className="btn btn-secondary">
-            Track an existing case
+            {t('reporterLayout.trackExisting')}
           </Link>
         </div>
       </ReporterLayout>
@@ -169,7 +171,9 @@ function Submit() {
   }
 
   const step = completed ? 3 : pending ? 2 : category ? 1 : 0
-  const categoryLabel = CATEGORIES.find((c) => c.id === category)?.label
+  const categoryLabel = CATEGORIES.some((c) => c.id === category)
+    ? t(`categories.${category}.label`)
+    : undefined
 
   // The tracking address for this specific case, shown as text the reporter
   // can write down or bookmark. The Case ID in the path pre-fills the access
@@ -196,25 +200,54 @@ function Submit() {
     }
   }
 
+  // Same three values as the screen itself, saved somewhere a reporter can
+  // find again after closing the tab. Same privacy constraint as
+  // CaseCredentialsHandoff's downloadDetails(): no company name, no report
+  // category, and a filename that doesn't announce what the file is to
+  // anything indexing a Downloads folder.
+  function downloadCredentialsPdf() {
+    if (!completed) return
+    downloadSimplePdf(
+      [
+        // Rectifia's own wordmark, not the reporting company's - same
+        // privacy constraint as the rest of this document, see the comment
+        // above this function.
+        { text: 'RECTIFIA', bold: true, color: RECTIFIA_BRAND_COLOR },
+        { rule: true, color: RECTIFIA_BRAND_COLOR },
+        '',
+        { text: t('submit.pdf.heading'), bold: true },
+        '',
+        t('submit.filed.caseId') + `: ${completed.caseId}`,
+        t('submit.filed.passcode') + `: ${completed.passcode}`,
+        trackingUrl ? t('submit.pdf.trackLine', { url: trackingUrl }) : null,
+        '',
+        t('submit.pdf.keepPrivate1'),
+        t('submit.pdf.keepPrivate2'),
+      ].filter((line) => line !== null),
+      'personal-notes.pdf'
+    )
+  }
+
   const COPY = [
     {
-      title: "What's this report about?",
-      description: `${
-        company.companyName ? `Reporting to ${company.companyName}. ` : ''
-      }Choose the category that best fits your situation. The questions that follow are tailored to it.`,
+      title: t('submit.steps0.titleGeneric'),
+      description: company.companyName
+        ? t('submit.steps0.descriptionWithCompany', { company: company.companyName })
+        : t('submit.steps0.descriptionNoCompany'),
     },
     {
-      title: 'Tell us what happened',
-      description: `${categoryLabel ?? 'Your report'} - answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.`,
+      title: t('submit.steps1.title'),
+      description: t('submit.steps1.description', {
+        category: categoryLabel ?? t('submit.steps1.defaultCategory'),
+      }),
     },
     {
-      title: 'One last choice - how should we record you?',
-      description:
-        'Your answers are ready to file. Nothing has been submitted yet. This last question is yours alone to answer, and it cannot be changed afterwards.',
+      title: t('submit.steps2.title'),
+      description: t('submit.steps2.description'),
     },
     {
-      title: 'Report filed',
-      description: 'Your report has been submitted. Save your Case ID and passcode below.',
+      title: t('submit.steps3.title'),
+      description: t('submit.steps3.description'),
     },
   ][step]
 
@@ -231,12 +264,12 @@ function Submit() {
       // them away.
       unsavedWarning={
         step === 1 || step === 2
-          ? 'Leaving now discards the answers you have entered - this report has not been submitted yet and nothing is saved. Continue to case tracking?'
+          ? t('submit.unsavedWarning.answers')
           : step === 3
-            ? 'Have you saved your Case ID and passcode? They are shown only on this screen and cannot be recovered afterwards. Continue to case tracking?'
+            ? t('submit.unsavedWarning.credentials')
             : undefined
       }
-      footerNote="Rectifia does not record your name, email, or IP address with this report unless you choose to include it in an answer."
+      footerNote={t('submit.footerNote')}
     >
       {step === 0 && (
         <CategorySelect onSelect={setCategory} canContinue={Boolean(acknowledgment)}>
@@ -247,7 +280,7 @@ function Submit() {
       {step === 1 && (
         <div className="flex flex-col gap-5">
           <Button icon="back" onClick={() => setCategory(null)} className="self-start">
-            Change category
+            {t('submit.steps1.changeCategory')}
           </Button>
           <div className="card p-6">
             <QuestionnaireForm
@@ -255,17 +288,20 @@ function Submit() {
               departments={company.departments ?? []}
               onSubmit={handleQuestionnaireSubmit}
               onCrisisResourcesTrigger={() => setCrisisTriggered(true)}
+              allowEvidenceStaging
+              // Appears directly under the field that tripped the in-browser
+              // check, inside the same card, above the evidence step and the
+              // Continue button - never below the form as a whole, where it
+              // reads as page footer and gets skipped. Nothing about this
+              // panel blocks, gates, or interrupts the submission; the
+              // reporter carries on exactly as they were. The anonymous
+              // reporting flow never learns the company's jurisdictions, so
+              // no set is passed - resolveResources falls back to a
+              // timezone-derived best guess plus every other region tucked
+              // in the collapsed "other countries" expander.
+              crisisSlot={crisisTriggered && <CrisisResources />}
             />
           </div>
-
-          {/* Appears the moment the in-browser check trips, alongside the form
-              the reporter is still filling in - never over it. Nothing about
-              this panel blocks, gates, or interrupts the submission; the
-              reporter carries on exactly as they were. The anonymous reporting
-              flow never learns the company's jurisdictions, so no set is passed
-              and every regional route plus the international fallback is
-              offered - the reporter may be anywhere. */}
-          {crisisTriggered && <CrisisResources />}
         </div>
       )}
 
@@ -276,16 +312,16 @@ function Submit() {
       {step === 2 && (
         <div className="flex flex-col gap-5">
           <Button icon="back" onClick={() => setPending(null)} className="self-start">
-            Back to your answers
+            {t('submit.steps2.backToAnswers')}
           </Button>
 
           <fieldset className="flex flex-col gap-2.5">
-            <legend className="sr-only">How you want to be recorded</legend>
-            {REPORTER_TIERS.map((option) => {
-              const checked = tier === option.value
+            <legend className="sr-only">{t('submit.steps2.title')}</legend>
+            {REPORTER_TIER_VALUES.map((value) => {
+              const checked = tier === value
               return (
                 <label
-                  key={option.value}
+                  key={value}
                   className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${
                     checked
                       ? 'border-navy bg-navy-50 shadow-[var(--shadow-card)]'
@@ -295,9 +331,9 @@ function Submit() {
                   <input
                     type="radio"
                     name="reporter-tier"
-                    value={option.value}
+                    value={value}
                     checked={checked}
-                    onChange={() => setTier(option.value)}
+                    onChange={() => setTier(value)}
                     className="sr-only"
                   />
                   <span
@@ -309,10 +345,14 @@ function Submit() {
                     {checked && <Icon name="check" className="h-3 w-3" strokeWidth={3} />}
                   </span>
                   <span className="min-w-0">
-                    <span className="block font-medium text-charcoal">{option.label}</span>
-                    <span className="mt-0.5 block text-sm text-charcoal">{option.summary}</span>
+                    <span className="block font-medium text-charcoal">
+                      {t(`submit.tiers.${value}.label`)}
+                    </span>
+                    <span className="mt-0.5 block text-sm text-charcoal">
+                      {t(`submit.tiers.${value}.summary`)}
+                    </span>
                     <span className="mt-1 block text-sm leading-relaxed text-muted">
-                      {option.detail}
+                      {t(`submit.tiers.${value}.detail`)}
                     </span>
                   </span>
                 </label>
@@ -328,14 +368,12 @@ function Submit() {
               size="lg"
               disabled={!tier}
               loading={filing}
-              loadingLabel="Filing your report"
+              loadingLabel={t('submit.steps2.filingYourReport')}
               onClick={() => handleFile(tier)}
             >
-              File my report
+              {t('submit.steps2.fileReport')}
             </Button>
-            <span className="text-xs text-muted">
-              Your Case ID and passcode are shown once, on the next screen.
-            </span>
+            <span className="text-xs text-muted">{t('submit.steps2.credentialsShownOnce')}</span>
           </div>
         </div>
       )}
@@ -346,29 +384,27 @@ function Submit() {
           re-issued or emailed later. It is worth the space it takes. */}
       {step === 3 && (
         <div className="flex flex-col gap-4">
-          <Alert variant="success" title="Your report has been filed">
-            {completed.responseCount} answer
-            {completed.responseCount === 1 ? '' : 's'} recorded for {categoryLabel}. Save the
-            details below before you close this page.
+          <Alert variant="success" title={t('submit.filed.alertTitle')}>
+            {t('submit.filed.summary', { count: completed.responseCount, category: categoryLabel })}
           </Alert>
 
           <div className="card p-6">
             <dl className="flex flex-col gap-4">
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Case ID</dt>
+                <dt className="text-xs uppercase tracking-wide text-muted">{t('submit.filed.caseId')}</dt>
                 <dd className="mt-1 select-all font-mono text-lg font-semibold text-charcoal">
                   {completed.caseId}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-muted">Passcode</dt>
+                <dt className="text-xs uppercase tracking-wide text-muted">{t('submit.filed.passcode')}</dt>
                 <dd className="mt-1 select-all font-mono text-lg font-semibold text-charcoal">
                   {completed.passcode}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs uppercase tracking-wide text-muted">
-                  Where to check on your case
+                  {t('submit.filed.whereToCheck')}
                 </dt>
                 <dd className="mt-1 flex flex-col gap-2">
                   {/* Spelled out rather than hidden behind a link label: a
@@ -379,32 +415,28 @@ function Submit() {
                   </code>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button icon="document" onClick={copyTrackingUrl}>
-                      {copied ? 'Copied' : 'Copy link'}
+                      {copied ? t('submit.filed.copied') : t('submit.filed.copyLink')}
+                    </Button>
+                    <Button icon="document" onClick={downloadCredentialsPdf}>
+                      {t('submit.filed.downloadPdf')}
                     </Button>
                     {copyFailed && (
-                      <span className="text-xs text-muted">
-                        Couldn&apos;t copy automatically - select the link above and copy it.
-                      </span>
+                      <span className="text-xs text-muted">{t('submit.filed.copyFailedNote')}</span>
                     )}
                   </div>
-                  <p className="text-xs text-muted">
-                    The link opens the tracking form with your Case ID filled in. It does not
-                    contain your passcode - you will still be asked for it.
-                  </p>
+                  <p className="text-xs text-muted">{t('submit.filed.linkExplanation')}</p>
                 </dd>
               </div>
             </dl>
           </div>
 
-          <Alert variant="warning" title="Your passcode cannot be recovered">
-            It is stored only as a hash, so no one - not Rectifia, not your employer, not the
-            handler on your case - can look it up, reset it, or send it to you. There is no
-            account and no email address attached to this report to recover it to.{' '}
-            <strong className="font-semibold">
-              If you lose the Case ID or passcode, you permanently lose access to this case
-            </strong>{' '}
-            and its messages, and filing a new report is the only way to be heard again.
+          <Alert variant="warning" title={t('submit.filed.passcodeWarningTitle')}>
+            {t('submit.filed.passcodeWarningBody1')}{' '}
+            <strong className="font-semibold">{t('submit.filed.passcodeWarningStrong')}</strong>{' '}
+            {t('submit.filed.passcodeWarningBody2')}
           </Alert>
+
+          <StagedEvidenceStatus uploading={evidenceUploading} results={evidenceResults} />
 
           {/* Optional and non-blocking: the reporter has already completed
               submission by the time they reach this screen, so ignoring this
@@ -412,14 +444,11 @@ function Submit() {
           <CaseNotificationOptIn caseId={completed.caseId} passcode={completed.passcode} />
 
           <div className="card p-6">
-            <h2 className="text-sm font-semibold text-charcoal">Before you leave this page</h2>
+            <h2 className="text-sm font-semibold text-charcoal">{t('submit.filed.beforeYouLeave.title')}</h2>
             <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed text-muted">
-              <li>Bookmark the link above, or screenshot this screen.</li>
-              <li>
-                Write the passcode somewhere only you can reach - a screenshot on a work device
-                may not be private.
-              </li>
-              <li>Come back any time to read replies from your handler and answer them.</li>
+              <li>{t('submit.filed.beforeYouLeave.bookmark')}</li>
+              <li>{t('submit.filed.beforeYouLeave.writePasscode')}</li>
+              <li>{t('submit.filed.beforeYouLeave.comeBack')}</li>
             </ul>
             <div className="mt-4">
               <Button
@@ -433,9 +462,11 @@ function Submit() {
                   setCopied(false)
                   setCopyFailed(false)
                   setCrisisTriggered(false)
+                  setEvidenceUploading(false)
+                  setEvidenceResults([])
                 }}
               >
-                File another report
+                {t('submit.filed.fileAnother')}
               </Button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { upgradeToConfidential } from '../../services/identityTransitionService'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
@@ -44,49 +45,18 @@ import { Input, Textarea } from '../ui/Field'
 // CaseDetail.jsx, which chooses the mode from whether the case started
 // anonymous or confidential.
 
-// A checkbox is a click, and a click is easy to make without reading. Typing
-// the phrase takes long enough to be a decision. It is deliberately short and
-// unambiguous, in plain words rather than an ominous formula, because the
-// friction is meant to be attention, not intimidation. Upgrade mode only -
-// provide mode has no comparable decision left to confirm.
-const CONFIRM_PHRASE = 'IDENTIFY ME'
-
 const EMPTY_IDENTITY = { name: '', email: '', phone: '', jobTitle: '', notes: '' }
 
-const COPY = {
-  upgrade: {
-    collapsedTitle: 'Your report is anonymous',
-    collapsedBody:
-      'Nobody working on this case knows who you are, and nothing here will ask you to change that. If you would rather the investigator could contact you directly, you can choose to tell them who you are.',
-    collapsedCta: 'Read what that would mean',
-    expandedTitle: 'Telling the investigator who you are',
-    whatChanges:
-      'The handler assigned to your case will be able to see the details you give below. They are encrypted when stored, the handler has to give a written reason to decrypt them, and every time anyone looks it is recorded.',
-    submitLabel: 'Tell the investigator who I am',
-    cancelLabel: 'Stay anonymous',
-    doneTitle: 'Your details are on the case',
-    doneBody:
-      'The handler assigned to your case can now find out who you are. Nobody else can, and nobody was told to ask you for this.',
-  },
-  provide: {
-    collapsedTitle: 'You chose to be identifiable to the investigator',
-    collapsedBody:
-      "When you filed this report, you chose to let the investigator know who you are. That choice was recorded, but no details were collected yet - you can add them whenever you're ready, there's no deadline.",
-    collapsedCta: 'Add your details',
-    expandedTitle: 'Give the investigator your details',
-    whatChanges:
-      'The handler assigned to your case will be able to see the details you give below. They are encrypted when stored, the handler has to give a written reason to decrypt them, and every time anyone looks it is recorded.',
-    submitLabel: 'Give the investigator my details',
-    cancelLabel: 'Not right now',
-    doneTitle: 'Your details are on the case',
-    doneBody:
-      'The handler assigned to your case can now find out who you are. Nobody else can, and nobody was told to ask you for this.',
-  },
-}
-
 function IdentityPanel({ caseId, passcode, mode = 'upgrade', onSaved, className = '' }) {
-  const copy = COPY[mode] ?? COPY.upgrade
+  const { t } = useTranslation()
   const isUpgrade = mode !== 'provide'
+  const copyKey = isUpgrade ? 'upgrade' : 'provide'
+  // A checkbox is a click, and a click is easy to make without reading.
+  // Typing the phrase takes long enough to be a decision. It is deliberately
+  // short and unambiguous, in plain words rather than an ominous formula,
+  // because the friction is meant to be attention, not intimidation. Upgrade
+  // mode only - provide mode has no comparable decision left to confirm.
+  const confirmPhrase = t('identityPanel.confirmPhrase')
 
   const [expanded, setExpanded] = useState(false)
   const [identity, setIdentity] = useState(EMPTY_IDENTITY)
@@ -97,7 +67,7 @@ function IdentityPanel({ caseId, passcode, mode = 'upgrade', onSaved, className 
   const set = (field) => (event) => setIdentity((prev) => ({ ...prev, [field]: event.target.value }))
 
   const hasDetail = Object.values(identity).some((value) => value.trim().length > 0)
-  const confirmed = isUpgrade ? confirmation.trim().toUpperCase() === CONFIRM_PHRASE : true
+  const confirmed = isUpgrade ? confirmation.trim().toUpperCase() === confirmPhrase.toUpperCase() : true
   const canSubmit = hasDetail && confirmed && status !== 'working'
 
   function resetForm() {
@@ -132,8 +102,8 @@ function IdentityPanel({ caseId, passcode, mode = 'upgrade', onSaved, className 
   if (status === 'done') {
     return (
       <div className={wrapper}>
-        <Alert variant="success" title={copy.doneTitle}>
-          {copy.doneBody}
+        <Alert variant="success" title={t(`identityPanel.${copyKey}.doneTitle`)}>
+          {t(`identityPanel.${copyKey}.doneBody`)}
         </Alert>
       </div>
     )
@@ -144,12 +114,12 @@ function IdentityPanel({ caseId, passcode, mode = 'upgrade', onSaved, className 
       <div className={wrapper}>
         <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
           <Icon name="shield" className="h-4 w-4 text-muted" />
-          {copy.collapsedTitle}
+          {t(`identityPanel.${copyKey}.collapsedTitle`)}
         </p>
-        <p className="text-sm text-muted">{copy.collapsedBody}</p>
+        <p className="text-sm text-muted">{t(`identityPanel.${copyKey}.collapsedBody`)}</p>
         <div>
           <Button variant="secondary" size="sm" onClick={() => setExpanded(true)}>
-            {copy.collapsedCta}
+            {t(`identityPanel.${copyKey}.collapsedCta`)}
           </Button>
         </div>
       </div>
@@ -160,72 +130,54 @@ function IdentityPanel({ caseId, passcode, mode = 'upgrade', onSaved, className 
     <div className={wrapper}>
       <p className="flex items-center gap-2 text-sm font-medium text-charcoal">
         <Icon name="shield" className="h-4 w-4 text-muted" />
-        {copy.expandedTitle}
+        {t(`identityPanel.${copyKey}.expandedTitle`)}
       </p>
 
       {/* Stated in full before a single field exists on screen. */}
       <div className="flex flex-col gap-2 rounded-lg border border-navy-200 bg-navy-50 p-3 text-sm text-charcoal">
-        <p className="font-medium">What this means</p>
-        <p>{copy.whatChanges}</p>
+        <p className="font-medium">{t('identityPanel.whatThisMeans.title')}</p>
+        <p>{t(`identityPanel.${copyKey}.whatChanges`)}</p>
 
-        <p className="mt-1 font-medium">What does not change</p>
+        <p className="mt-1 font-medium">{t('identityPanel.whatDoesNotChange.title')}</p>
         <ul className="list-disc pl-5">
-          <li>The person your report is about never sees your name, or that you gave one.</li>
-          <li>The HR Coordinator who oversees the case queue never sees it.</li>
-          <li>Your Company Admin never sees it.</li>
-          <li>
-            Nothing you have already written in this case changes, and no message is sent to anyone
-            asking about it.
-          </li>
+          <li>{t('identityPanel.whatDoesNotChange.subjectNeverSees')}</li>
+          <li>{t('identityPanel.whatDoesNotChange.hrNeverSees')}</li>
+          <li>{t('identityPanel.whatDoesNotChange.adminNeverSees')}</li>
+          <li>{t('identityPanel.whatDoesNotChange.nothingElseChanges')}</li>
         </ul>
 
         {isUpgrade ? (
           <>
-            <p className="mt-1 font-medium">This cannot be undone</p>
-            <p>
-              Once your details are stored they stay part of this case&apos;s record until it ends. We
-              are not offering an undo button, because it could not mean what it says: removing your
-              details from a live investigation would destroy part of its record, and leaving them in
-              place while telling you they were gone would not be true.
-            </p>
-            <p>
-              You are under no obligation to do this. Your case is worked the same way either way, and
-              if you would rather stay anonymous, close this and carry on.
-            </p>
+            <p className="mt-1 font-medium">{t('identityPanel.cannotBeUndone.title')}</p>
+            <p>{t('identityPanel.cannotBeUndone.body1')}</p>
+            <p>{t('identityPanel.cannotBeUndone.body2')}</p>
           </>
         ) : (
-          <p className="mt-1">
-            This is the choice you already made when you filed your report - this is just where you
-            follow through on it, whenever you want. Leaving this closed for now keeps your case
-            exactly as it is.
-          </p>
+          <p className="mt-1">{t('identityPanel.provide.alreadyChosenNote')}</p>
         )}
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <p className="text-xs text-muted">
-          Give as much or as little as you want - one detail is enough. Anything you leave blank is
-          simply not stored.
-        </p>
+        <p className="text-xs text-muted">{t('identityPanel.giveAsMuchAsYouWant')}</p>
 
-        <Input label="Your name" value={identity.name} onChange={set('name')} autoComplete="off" />
+        <Input label={t('identityPanel.fields.name')} value={identity.name} onChange={set('name')} autoComplete="off" />
         <Input
-          label="Email address"
+          label={t('identityPanel.fields.email')}
           type="email"
           value={identity.email}
           onChange={set('email')}
           autoComplete="off"
-          hint="For the investigator to reach you directly. This is separate from update notifications, which never contain case details."
+          hint={t('identityPanel.fields.emailHint')}
         />
-        <Input label="Phone" value={identity.phone} onChange={set('phone')} autoComplete="off" />
+        <Input label={t('identityPanel.fields.phone')} value={identity.phone} onChange={set('phone')} autoComplete="off" />
         <Input
-          label="Job title"
+          label={t('identityPanel.fields.jobTitle')}
           value={identity.jobTitle}
           onChange={set('jobTitle')}
           autoComplete="off"
         />
         <Textarea
-          label="Anything else you want them to know"
+          label={t('identityPanel.fields.notes')}
           value={identity.notes}
           onChange={set('notes')}
           rows={2}
@@ -233,12 +185,12 @@ function IdentityPanel({ caseId, passcode, mode = 'upgrade', onSaved, className 
 
         {isUpgrade && (
           <Input
-            label={`Type ${CONFIRM_PHRASE} to confirm`}
+            label={t('identityPanel.fields.confirmLabel', { phrase: confirmPhrase })}
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
             autoComplete="off"
             className="font-mono tracking-wide"
-            hint="Typed out in full, so this is never something that happens on a stray click."
+            hint={t('identityPanel.fields.confirmHint')}
           />
         )}
 
@@ -250,12 +202,12 @@ function IdentityPanel({ caseId, passcode, mode = 'upgrade', onSaved, className 
             variant="primary"
             disabled={!canSubmit}
             loading={status === 'working'}
-            loadingLabel="Saving"
+            loadingLabel={t('contactChannelPanel.form.saving')}
           >
-            {copy.submitLabel}
+            {t(`identityPanel.${copyKey}.submitLabel`)}
           </Button>
           <Button variant="ghost" onClick={resetForm}>
-            {copy.cancelLabel}
+            {t(`identityPanel.${copyKey}.cancelLabel`)}
           </Button>
         </div>
       </form>

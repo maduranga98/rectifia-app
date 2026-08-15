@@ -40,6 +40,10 @@ const CRISIS_PHRASES = [
 // ordinary reporting.
 export function textIndicatesCrisis(text) {
   if (typeof text !== 'string' || !text) return false
-  const normalized = text.toLowerCase()
+  // iOS, macOS, and pasted Word text default to a curly apostrophe (U+2019,
+  // sometimes U+02BC) rather than the straight ASCII one the phrase list
+  // uses - normalise both to "'" before matching so "don't want to live"
+  // still matches regardless of which apostrophe the reporter's device typed.
+  const normalized = text.toLowerCase().replace(/[’ʼ]/g, "'")
   return CRISIS_PHRASES.some((phrase) => normalized.includes(phrase))
 }
