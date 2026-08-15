@@ -23,6 +23,7 @@ import RetentionPage from './company-admin/RetentionPage'
 import BenchmarkPage from './company-admin/BenchmarkPage'
 import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
 import PulseTrendsPage from './staff/PulseTrendsPage'
+import HelpSupportPage from './shared/HelpSupportPage'
 
 // Company Admin's whole surface: the shell's navigation plus the overview
 // and four settings sub-pages it routes to. CompanyAdminPanel used to hold
@@ -172,6 +173,10 @@ const NAV_ITEMS = [
     permission: 'pulseAggregateView',
     sectionKey: 'adminNav.sections.account',
   },
+  // Company Admin only, same as every other unpermissioned item above - a
+  // custom-role holder's Help & Support needs are covered by whichever
+  // permissioned pages they hold, not by a page of its own.
+  { to: '/admin/help', labelKey: 'adminNav.help', icon: 'help', sectionKey: 'adminNav.sections.account' },
 ]
 
 function filterNavByFlags(navItems, flags) {
@@ -205,6 +210,7 @@ const PAGE_TITLE_KEYS = {
   retention: 'adminNav.pageTitles.retention',
   benchmark: 'adminNav.pageTitles.benchmark',
   wellness: 'adminNav.pageTitles.wellness',
+  help: 'adminNav.pageTitles.help',
 }
 
 // The first /admin page an account is entitled to - where the index route
@@ -348,6 +354,7 @@ function Admin() {
               permission: 'pulseAggregateView',
             })}
           />
+          <Route path="help" element={gated(<HelpSupportPage role={ROLES.COMPANY_ADMIN} />)} />
           <Route path="*" element={toIndex} />
         </Routes>
       ) : (

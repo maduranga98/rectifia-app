@@ -22,6 +22,7 @@ import BenchmarkPage from './staff/BenchmarkPage'
 import StaffIntake from './StaffIntake'
 import AnalyticsDashboard from '../components/dashboard/AnalyticsDashboard'
 import DesignatedHandlersPage from './company-admin/DesignatedHandlersPage'
+import HelpSupportPage from './shared/HelpSupportPage'
 
 // Which nav each staff role gets. This replaces the old VIEWS_BY_ROLE state
 // switch: every capability now has its own nav entry and its own URL, so a
@@ -56,6 +57,7 @@ const NAV_BY_ROLE = {
     { to: '/dashboard/benchmark', labelKey: 'dashboardNav.benchmark', icon: 'overview', flag: 'benchmarkPool' },
     { to: '/dashboard/analytics', labelKey: 'dashboardNav.analytics', icon: 'sparkle' },
     { to: '/dashboard/intake', labelKey: 'dashboardNav.fileAReport', icon: 'plus' },
+    { to: '/dashboard/help', labelKey: 'dashboardNav.help', icon: 'help' },
   ],
   [ROLES.CASE_HANDLER]: [
     { to: '/dashboard/my-cases', labelKey: 'dashboardNav.myCases', icon: 'cases' },
@@ -66,13 +68,16 @@ const NAV_BY_ROLE = {
     // designation (or need to acknowledge one) regardless of whether their
     // company currently has JP configured.
     { to: '/dashboard/designation', labelKey: 'dashboardNav.myDesignation', icon: 'shield' },
+    { to: '/dashboard/help', labelKey: 'dashboardNav.help', icon: 'help' },
   ],
   [ROLES.PULSE_CHECK_REVIEWER]: [
     { to: '/dashboard/pulse-responses', labelKey: 'dashboardNav.pulseResponses', icon: 'pulse', flag: 'pulseCheck' },
     { to: '/dashboard/trends', labelKey: 'dashboardNav.trends', icon: 'overview', flag: 'pulseCheck' },
+    { to: '/dashboard/help', labelKey: 'dashboardNav.help', icon: 'help' },
   ],
   [ROLES.MANAGER]: [
     { to: '/dashboard/wellness', labelKey: 'dashboardNav.teamWellness', icon: 'pulse', flag: 'pulseCheck' },
+    { to: '/dashboard/help', labelKey: 'dashboardNav.help', icon: 'help' },
   ],
 }
 
@@ -145,6 +150,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
         <Route path="benchmark" element={gated('benchmarkPool', <BenchmarkPage companyId={companyId} />)} />
         <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} canExport />} />
         <Route path="intake" element={<StaffIntake />} />
+        <Route path="help" element={<HelpSupportPage role={role} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -165,6 +171,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
         <Route path="analytics" element={<AnalyticsDashboard companyId={companyId} />} />
         <Route path="intake" element={<StaffIntake />} />
         <Route path="designation" element={<DesignatedHandlersPage companyId={companyId} />} />
+        <Route path="help" element={<HelpSupportPage role={role} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -182,6 +189,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
           path="trends"
           element={gated('pulseCheck', <PulseTrendsPage companyId={companyId} role={role} />)}
         />
+        <Route path="help" element={<HelpSupportPage role={role} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )
@@ -198,6 +206,7 @@ function DashboardRoutes({ role, companyId, departments, companyCases, flags }) 
             <PulseTrendsPage companyId={companyId} role={role} departments={departments} />
           )}
         />
+        <Route path="help" element={<HelpSupportPage role={role} />} />
         <Route path="*" element={toIndex} />
       </Routes>
     )

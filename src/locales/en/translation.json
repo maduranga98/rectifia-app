@@ -1007,6 +1007,7 @@
     "myDesignation": "My designation",
     "pulseResponses": "Pulse responses",
     "teamWellness": "Team wellness",
+    "help": "Help & Support",
     "caseWorkspace": "Case workspace",
     "dashboard": "Dashboard",
     "eyebrow": "Dashboard",
@@ -1047,6 +1048,7 @@
     "billing": "Billing",
     "settings": "Settings",
     "teamWellness": "Team wellness",
+    "help": "Help & Support",
     "sections": {
       "cases": "Cases",
       "organization": "Organization",
@@ -1068,11 +1070,160 @@
       "settings": "Company settings",
       "retention": "Data retention & deletion",
       "benchmark": "Cross-company benchmark pool",
-      "wellness": "Team wellness"
+      "wellness": "Team wellness",
+      "help": "Help & Support"
     },
     "companyAdministration": "Company administration",
     "eyebrow": "Company dashboard",
     "notLinkedBody": "This account ({{email}}) is not linked to a company, so there is nothing to administer. Ask Lumora to re-issue the account."
+  },
+  "helpSupport": {
+    "faqTitle": "Frequently asked questions",
+    "escalationTitle": "Still need help?",
+    "roles": {
+      "companyAdmin": {
+        "intro": "Guidance for administering your company's Rectifia workspace — staff, routing, policies, and account settings.",
+        "faqs": [
+          {
+            "question": "How do I invite a new staff member?",
+            "answer": "Go to Staff, then Invite staff. Enter their email and choose a role — one of the built-in roles or a custom role you've assembled in Staff → Roles. They'll receive an email to set up their account."
+          },
+          {
+            "question": "What's the difference between a fixed role and a custom role?",
+            "answer": "Fixed roles (HR Coordinator, Case Handler, Manager, Pulse Check Reviewer) each come with a built-in set of pages. A custom role is a mix of individual permissions you assemble yourself in Staff → Roles, for when your organization's structure doesn't map cleanly onto those."
+          },
+          {
+            "question": "How does routing decide who gets a new case?",
+            "answer": "Routing rules match an incoming report to a department or handler. A report that doesn't match any rule lands under Cases → Needs attention for you to place manually."
+          },
+          {
+            "question": "What are Designated handlers, and when do I need them?",
+            "answer": "A Japan-specific compliance register of staff formally designated to receive reports. It's optional until you add Japan to your configured jurisdictions in Settings, but you can start designating people ahead of time."
+          },
+          {
+            "question": "Can I turn on Pulse Checks or the benchmark pool later?",
+            "answer": "Yes — both are optional features. Pulse Checks controls the check-in cadence and unlocks the related pages; the benchmark pool is an opt-in that shares anonymized, floored aggregates with other opted-in companies. Contact Lumora if you don't see the toggle for either."
+          },
+          {
+            "question": "Where do I control how long case data is kept?",
+            "answer": "Data retention, under Policy & compliance, controls how long closed case data is kept before deletion."
+          }
+        ],
+        "escalation": "For billing or platform-level issues, reach out to Lumora through your account representative. For questions about your organization's own policies, check with your leadership — Rectifia helps you enforce those policies, but doesn't set them."
+      },
+      "hrCoordinator": {
+        "intro": "How to triage, route, and follow up on reports across your company.",
+        "faqs": [
+          {
+            "question": "What shows up under Awaiting triage?",
+            "answer": "Newly submitted reports that haven't been routed yet. Opening one lets you review it and assign it to the right handler or department."
+          },
+          {
+            "question": "What is Patterns, and how does it work?",
+            "answer": "When your Company Admin has it enabled, Patterns highlights reports that may be related — same department, similar allegations, or a recurring name — so related cases aren't investigated in isolation. It's a signal to review, not a verdict."
+          },
+          {
+            "question": "How do Follow-ups work?",
+            "answer": "A case with an outstanding action gets a reminder on the interval your Company Admin configured in Settings. The Follow-ups page lists everything due or overdue."
+          },
+          {
+            "question": "What do Pulse responses and Trends show me?",
+            "answer": "Individual and aggregated answers from your company's pulse check cycle, if it's enabled. Aggregates only appear once enough responses exist, to protect anonymity."
+          },
+          {
+            "question": "Can I file a report on behalf of someone else?",
+            "answer": "Yes — File a report opens the same intake flow reporters use, useful for a phoned-in or in-person report."
+          },
+          {
+            "question": "What does the benchmark pool show me?",
+            "answer": "If your company has opted in to the cross-company benchmark pool, you can compare your anonymized case metrics against the aggregate of other opted-in companies."
+          }
+        ],
+        "escalation": "For access issues or to change what you can see, contact your Company Admin. For a technical problem with the platform itself, ask them to reach Lumora on your behalf."
+      },
+      "caseHandler": {
+        "intro": "Working a case from assignment through to resolution.",
+        "faqs": [
+          {
+            "question": "How do I know when a case is assigned to me?",
+            "answer": "It appears under My cases. Opening it takes you to the case workspace, with tabs for the message thread, questionnaire, evidence, and more."
+          },
+          {
+            "question": "How do I message a reporter without knowing who they are?",
+            "answer": "The Thread tab lets you send and receive messages through the case. Reporters stay anonymous unless they choose to reveal their identity, which appears on the Identity tab."
+          },
+          {
+            "question": "What does \"on legal hold\" mean for a case?",
+            "answer": "A legal hold freezes the case against further action or closure — you can still review it, but proposing an action or closing the report is blocked until the hold is lifted. A warning appears on the Action & report tab."
+          },
+          {
+            "question": "Can I translate a message that isn't in my language?",
+            "answer": "Yes — an on-demand translate option is available on individual thread messages."
+          },
+          {
+            "question": "What are the Consistency and Policy references tabs for?",
+            "answer": "Consistency flags contradictions across a reporter's answers and messages that may be worth following up on. Policy references links the report to the specific company policies it may concern."
+          },
+          {
+            "question": "What is My designation?",
+            "answer": "A self-service view of your Japan designated-handler status, if your company has that register configured. It's visible whether or not Japan is currently one of your company's jurisdictions."
+          }
+        ],
+        "escalation": "For questions about how a specific case should be handled, check with your HR Coordinator or Company Admin. For account access problems, contact your Company Admin."
+      },
+      "manager": {
+        "intro": "A read-only view of your team's wellbeing, aggregated from pulse check responses.",
+        "faqs": [
+          {
+            "question": "What does Team wellness show?",
+            "answer": "Aggregated pulse check results for your team's department, never individual responses."
+          },
+          {
+            "question": "Why don't I see a score for a small team?",
+            "answer": "Aggregates are hidden until enough responses exist to protect anonymity, so a very small team may not reach that threshold in some cycles."
+          },
+          {
+            "question": "How often does this update?",
+            "answer": "On whatever cadence your Company Admin set for pulse checks — weekly, biweekly, or monthly."
+          },
+          {
+            "question": "I'm concerned about a low score — what should I do?",
+            "answer": "This data doesn't identify individuals or specific concerns. Raise what you're seeing with HR or your Company Admin, who can look at it alongside anything reported through the case system."
+          },
+          {
+            "question": "Can I see who submitted a pulse response?",
+            "answer": "No — that visibility isn't exposed to Managers, by design."
+          }
+        ],
+        "escalation": "For access issues, contact your Company Admin. If you're worried about a specific employee, that's better raised directly with HR than through this dashboard."
+      },
+      "pulseCheckReviewer": {
+        "intro": "Reviewing pulse check responses and trends across your company.",
+        "faqs": [
+          {
+            "question": "What's the difference between Pulse responses and Trends?",
+            "answer": "Pulse responses shows individual submitted answers as they come in. Trends aggregates them over time, so you see direction rather than a single cycle's snapshot."
+          },
+          {
+            "question": "Why is a section of Trends empty?",
+            "answer": "Aggregates only display once enough responses exist for that period, to protect anonymity — a quiet cycle or a small group may not clear that threshold."
+          },
+          {
+            "question": "Who decides how often pulse checks go out?",
+            "answer": "Your Company Admin sets the cadence in Settings. You review what comes back, but the schedule itself isn't something you configure."
+          },
+          {
+            "question": "Can I identify who submitted a specific response?",
+            "answer": "No — pulse check responses are handled to protect respondent anonymity, and this role doesn't have that visibility."
+          },
+          {
+            "question": "What should I do if a response raises a serious concern?",
+            "answer": "Pulse checks are a wellbeing signal, not a report. If something needs formal follow-up, direct the person to file a report so it enters the case system."
+          }
+        ],
+        "escalation": "For access issues or questions about how pulse checks are configured, contact your Company Admin."
+      }
+    }
   },
   "caseWorkspace": {
     "tabs": {
