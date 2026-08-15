@@ -22,12 +22,12 @@ import { Input, Select, Textarea } from '../ui/Field'
 import { SkeletonList } from '../ui/Loading'
 
 function formatDate(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 function formatSize(bytes) {
-  if (!bytes && bytes !== 0) return '—'
+  if (!bytes && bytes !== 0) return '-'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`

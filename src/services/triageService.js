@@ -34,10 +34,10 @@ function labelForOption(question, value) {
 
 function displayAnswer(question, response) {
   const { value } = response
-  if (value === null || value === undefined || value === '') return '—'
+  if (value === null || value === undefined || value === '') return '-'
 
   if (Array.isArray(value)) {
-    return value.length === 0 ? '—' : value.map((v) => labelForOption(question, v)).join(', ')
+    return value.length === 0 ? '-' : value.map((v) => labelForOption(question, v)).join(', ')
   }
 
   if (response.type === 'scale' || question?.type === 'scale') {

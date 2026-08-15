@@ -30,7 +30,7 @@ export function nextDeadlineMs(caseRow) {
 // A deadline is either past, inside the escalation window, or comfortable -
 // and the cell should say which without the reader doing date arithmetic.
 export function deadlineDisplay(deadlineMs, now) {
-  if (deadlineMs === null) return { label: '—', tone: 'tone-neutral' }
+  if (deadlineMs === null) return { label: '-', tone: 'tone-neutral' }
   const msRemaining = deadlineMs - now
   if (msRemaining <= 0) return { label: 'Overdue', tone: 'tone-critical' }
   const days = Math.ceil(msRemaining / DAY_MS)

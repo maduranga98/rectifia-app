@@ -21,7 +21,7 @@ import { SkeletonList } from '../../components/ui/Loading'
 
 function formatDate(value) {
   const ms = value?.toMillis?.() ?? (typeof value === 'number' ? value : null)
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 

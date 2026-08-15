@@ -1,4 +1,4 @@
-// Module 25 — Cross-Company Benchmark Pool.
+// Module 25 - Cross-Company Benchmark Pool.
 //
 // The pool exists so a company with no history of its own can still see whether
 // its handling of a case is typical, and so a company with a long history can

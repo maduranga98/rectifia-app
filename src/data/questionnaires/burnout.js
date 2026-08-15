@@ -70,7 +70,7 @@ const burnoutQuestions = [
   },
   {
     id: 'reporter_department',
-    text: 'What department do you work in? (Optional — helps us spot company-wide trends, never shown to anyone individually.)',
+    text: 'What department do you work in? (Optional - helps us spot company-wide trends, never shown to anyone individually.)',
     type: 'select',
     options: null,
     // Resolved at render time from companies/{companyId}.departments, same

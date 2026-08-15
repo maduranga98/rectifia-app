@@ -32,7 +32,7 @@ function ReporterErrorFallback() {
         <h1 className="mt-3 text-lg font-semibold text-charcoal">Something went wrong on our end</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           {caseId
-            ? 'This screen hit a problem loading, but your report was not lost — it is saved under the Case ID below.'
+            ? 'This screen hit a problem loading, but your report was not lost - it is saved under the Case ID below.'
             : 'This screen hit a problem loading. If you had already submitted a report, it was not lost.'}
         </p>
 

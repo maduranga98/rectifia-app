@@ -10,7 +10,7 @@ import { SkeletonList } from '../ui/Loading'
 import ReportExportButton from './ReportExportButton'
 
 function formatTimestamp(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleString()
 }
 
@@ -44,7 +44,7 @@ function DetailList({ items }) {
         <Fragment key={label}>
           <div className="flex flex-col gap-0.5">
             <dt className="text-xs font-medium uppercase tracking-[0.04em] text-muted">{label}</dt>
-            <dd className="text-sm text-charcoal">{value ?? '—'}</dd>
+            <dd className="text-sm text-charcoal">{value ?? '-'}</dd>
           </div>
         </Fragment>
       ))}

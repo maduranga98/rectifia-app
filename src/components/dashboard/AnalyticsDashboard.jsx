@@ -18,7 +18,7 @@ import { SkeletonStats, SkeletonList } from '../ui/Loading'
 const SCORE_BUCKET_ORDER = ['0-20', '21-40', '41-60', '61-80', '81-100']
 
 function formatPercent(value) {
-  return value == null ? '—' : `${value}%`
+  return value == null ? '-' : `${value}%`
 }
 
 function sumField(periods, field) {
@@ -255,7 +255,7 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
             <StatTile
               label={t('analyticsDashboard.avgTimeToResolution')}
               hint={latestPeriod?.period}
-              value={latestPeriod?.avgResolutionDays == null ? '—' : t('analyticsDashboard.daysValue', { days: latestPeriod.avgResolutionDays })}
+              value={latestPeriod?.avgResolutionDays == null ? '-' : t('analyticsDashboard.daysValue', { days: latestPeriod.avgResolutionDays })}
               tone="tone-neutral"
               icon="clock"
             />

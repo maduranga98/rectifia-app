@@ -32,7 +32,7 @@ export const INTERNATIONAL_RESOURCES = [
   {
     name: 'Find A Helpline',
     contact: 'findahelpline.com',
-    hours: 'Directory — available any time',
+    hours: 'Directory - available any time',
     jurisdiction: 'INTL',
     notes:
       'A free directory of verified support lines in over 130 countries. Choose your country to find a local service you can call, text, or chat with.',
@@ -40,7 +40,7 @@ export const INTERNATIONAL_RESOURCES = [
   {
     name: 'Befrienders Worldwide',
     contact: 'befrienders.org',
-    hours: 'Directory — available any time',
+    hours: 'Directory - available any time',
     jurisdiction: 'INTL',
     notes:
       'A worldwide network of emotional-support centres. The site lists local centres by country.',
@@ -141,16 +141,16 @@ export const CRISIS_RESOURCES = {
     {
       name: 'TELL Lifeline',
       contact: 'Call 03-5774-0992 (or toll-free 0800-300-8355)',
-      hours: 'Hours vary — check telljp.com/tell-hours for current hours',
+      hours: 'Hours vary - check telljp.com/tell-hours for current hours',
       jurisdiction: 'JP',
-      notes: 'English-language confidential support for the international community in Japan. Online chat also available on some days — check telljp.com.',
+      notes: 'English-language confidential support for the international community in Japan. Online chat also available on some days - check telljp.com.',
     },
   ],
   LK: [
     {
       name: 'Sri Lanka Sumithrayo',
       contact: 'Call +94 11 2 692 535',
-      hours: 'Hours vary — check sumithrayo.lk',
+      hours: 'Hours vary - check sumithrayo.lk',
       jurisdiction: 'LK',
       notes: 'Confidential emotional support. Also reachable at +94 11 2 682 535.',
     },

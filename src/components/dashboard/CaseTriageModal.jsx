@@ -25,7 +25,7 @@ function humanize(value) {
 // functions/src/investigation/getCaseForTriage.js), not Firestore
 // Timestamps - there is no .toMillis() to call on these.
 function formatDate(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
@@ -169,13 +169,13 @@ function CaseTriageModal({ caseId, companyId, onClose, onAssigned }) {
                   <div>
                     <dt className="text-xs text-muted">{t('caseTriageModal.severity')}</dt>
                     <dd className="mt-0.5 font-medium tabular-nums text-charcoal">
-                      {triageCase.severityScore ?? '—'}
+                      {triageCase.severityScore ?? '-'}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted">{t('caseTriageModal.evidence')}</dt>
                     <dd className="mt-0.5 font-medium tabular-nums text-charcoal">
-                      {triageCase.evidenceScore ?? '—'}
+                      {triageCase.evidenceScore ?? '-'}
                     </dd>
                   </div>
                   <div>

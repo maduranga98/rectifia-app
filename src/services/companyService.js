@@ -135,7 +135,7 @@ export function createDepartment({ name, headUserId = null }) {
 }
 
 // Returns the jurisdiction whose compliance rules are the strictest among
-// those selected. Does not compute or store any deadline itself — that
+// those selected. Does not compute or store any deadline itself - that
 // belongs to module 11.
 export function getStrictestJurisdiction(jurisdictions = []) {
   return (
@@ -191,7 +191,7 @@ export async function createCompany({
     // ever writing `undefined`.
     timeZone: DEFAULT_TIMEZONE_BY_JURISDICTION[jurisdictions[0]] ?? null,
     // The Super Admin overview reads these three; seeding them at creation
-    // is what stops a brand new company rendering as "Unknown"/"—" there.
+    // is what stops a brand new company rendering as "Unknown"/"-" there.
     billingStatus: 'active',
     currentPeriodCaseCount: 0,
     createdAt: serverTimestamp(),

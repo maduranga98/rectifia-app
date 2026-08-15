@@ -98,7 +98,7 @@ async function getPolicyContext(companyId, category) {
       const text = typeof chunk.text === 'string' ? chunk.text : ''
       if (!text) continue
       const heading = headingLabel(chunk.headingPath)
-      const label = `[${policy.title} (v${policy.version})${heading ? ` — ${heading}` : ''}]`
+      const label = `[${policy.title} (v${policy.version})${heading ? ` - ${heading}` : ''}]`
       const block = `${label}\n${text}`
 
       // Stop before overflowing the cap. A single chunk that alone exceeds the

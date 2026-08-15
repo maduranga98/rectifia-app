@@ -163,7 +163,7 @@ function SuperAdminDashboardPage() {
           <StatTile
             label="Needs manual assignment"
             hint="Conflicts of interest and cases with no company"
-            value={manualAssignmentCount ?? '—'}
+            value={manualAssignmentCount ?? '-'}
             tone={manualAssignmentCount > 0 ? 'tone-high' : 'tone-low'}
             icon="routing"
           />
@@ -210,13 +210,13 @@ function SuperAdminDashboardPage() {
                   <div>
                     <dt className="text-xs text-muted">Jurisdictions</dt>
                     <dd className="mt-0.5 font-medium text-charcoal">
-                      {company.jurisdictions?.join(', ') || '—'}
+                      {company.jurisdictions?.join(', ') || '-'}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted">Cases this period</dt>
                     <dd className="mt-0.5 font-medium tabular-nums text-charcoal">
-                      {company.currentPeriodCaseCount ?? '—'}
+                      {company.currentPeriodCaseCount ?? '-'}
                     </dd>
                   </div>
                 </dl>

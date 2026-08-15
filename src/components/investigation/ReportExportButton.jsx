@@ -10,13 +10,13 @@ import { Textarea } from '../ui/Field'
 
 function formatTimestamp(value) {
   const ms = typeof value?.toMillis === 'function' ? value.toMillis() : value
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleString()
 }
 
 function formatBytes(bytes) {
   const size = Number(bytes)
-  if (!Number.isFinite(size) || size < 0) return '—'
+  if (!Number.isFinite(size) || size < 0) return '-'
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
@@ -197,7 +197,7 @@ function ReportExportButton({ caseId, hasRestrictedIdentity = false, canIncludeI
                 </div>
                 <span className="text-xs text-muted">
                   {t('reportExportButton.history.pagesAndSize', {
-                    pages: entry.pageCount ?? '—',
+                    pages: entry.pageCount ?? '-',
                     size: formatBytes(entry.sizeBytes),
                   })}
                 </span>

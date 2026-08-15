@@ -180,7 +180,7 @@ function BenchmarkPage({ companyId }) {
                 i18nKey="adminBenchmarkPage.contributingAs"
                 values={{
                   industry: INDUSTRY_LABELS[status.industry] ?? status.industry,
-                  band: status.sizeBand ?? '—',
+                  band: status.sizeBand ?? '-',
                 }}
                 components={{ strong: <strong className="text-charcoal" /> }}
               />

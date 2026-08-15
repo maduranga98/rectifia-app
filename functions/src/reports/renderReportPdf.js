@@ -4,7 +4,7 @@ const PDFDocument = require('pdfkit')
 // company setting or a caller-supplied field, and it is stamped on every
 // page (cover and footer both), not just the first one, so a page separated
 // from the rest of the bundle still announces what it is.
-const CLASSIFICATION_BANNER = 'CONFIDENTIAL — INTERNAL INVESTIGATION RECORD'
+const CLASSIFICATION_BANNER = 'CONFIDENTIAL - INTERNAL INVESTIGATION RECORD'
 
 // pdfkit's Base-14 fonts ("Helvetica", "Helvetica-Bold", ...) are not read
 // from the host OS - they are standard PDF fonts whose metrics are part of
@@ -51,14 +51,14 @@ function humanizeFieldName(key) {
 // or what locale it defaults to. That determinism is part of what makes the
 // document reproducible evidence rather than a browser's best guess.
 function formatTimestamp(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   const iso = new Date(ms).toISOString()
   return `${iso.slice(0, 10)} ${iso.slice(11, 19)} UTC`
 }
 
 function formatBytes(bytes) {
   const size = Number(bytes)
-  if (!Number.isFinite(size) || size < 0) return '—'
+  if (!Number.isFinite(size) || size < 0) return '-'
   if (size < 1024) return `${size} B`
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
   return `${(size / (1024 * 1024)).toFixed(1)} MB`
@@ -105,7 +105,7 @@ function emptyState(doc, text) {
 // instead of PDFKit silently overflowing content past the page edge.
 function keyValue(doc, label, value, { font = FONT_REGULAR, color = COLORS.ink } = {}) {
   const width = contentWidth(doc)
-  const text = value === null || value === undefined || value === '' ? '—' : String(value)
+  const text = value === null || value === undefined || value === '' ? '-' : String(value)
 
   doc.font(FONT_BOLD).fontSize(8.5)
   const labelHeight = doc.heightOfString(label.toUpperCase(), { width })
@@ -151,7 +151,7 @@ function drawCoverPage(doc, { report, companyName, generatedAt, generatedByLabel
 
   rows.forEach(([label, value]) => {
     doc.font(FONT_BOLD).fontSize(9).fillColor(COLORS.muted).text(label, { width })
-    doc.font(FONT_REGULAR).fontSize(11).fillColor(COLORS.ink).text(value ?? '—', { width })
+    doc.font(FONT_REGULAR).fontSize(11).fillColor(COLORS.ink).text(value ?? '-', { width })
     doc.moveDown(0.55)
   })
 
@@ -176,7 +176,7 @@ function drawCoverPage(doc, { report, companyName, generatedAt, generatedByLabel
   // a PDF-bytes hash could never answer, since two renders of an unchanged
   // case differ in their generation timestamp alone.
   doc.font(FONT_BOLD).fontSize(9).fillColor(COLORS.muted).text('Report Content Hash (SHA-256)', { width })
-  doc.font(FONT_MONO).fontSize(9).fillColor(COLORS.ink).text(reportContentHash || '—', { width })
+  doc.font(FONT_MONO).fontSize(9).fillColor(COLORS.ink).text(reportContentHash || '-', { width })
   doc.moveDown(0.3)
   doc
     .font(FONT_ITALIC)
@@ -201,8 +201,8 @@ function drawSummarySection(doc, report) {
   // functions/src/intake/scoreCase.js for why: severity measures the conduct,
   // evidence measures how well-substantiated the account is, and collapsing
   // them would erase exactly the distinction a reader needs.
-  keyValue(doc, 'Severity Score', summary.severityScore ?? '—')
-  keyValue(doc, 'Evidence Score', summary.evidenceScore ?? '—')
+  keyValue(doc, 'Severity Score', summary.severityScore ?? '-')
+  keyValue(doc, 'Evidence Score', summary.evidenceScore ?? '-')
 }
 
 function drawQuestionnaireSection(doc, report) {
@@ -241,7 +241,7 @@ function drawMessage(doc, message) {
   let bodyText = message.text?.trim() || '(no text)'
   const attachmentCount = Array.isArray(message.attachments) ? message.attachments.length : 0
   if (attachmentCount > 0) {
-    bodyText += `\n[${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'} — see Section 4, Evidence Manifest]`
+    bodyText += `\n[${attachmentCount} attachment${attachmentCount === 1 ? '' : 's'} - see Section 4, Evidence Manifest]`
   }
 
   doc.font(FONT_BOLD).fontSize(8.5)
@@ -375,7 +375,7 @@ function drawExternalSharesSection(doc, report) {
     ensureRoom(doc, 60)
     keyValue(
       doc,
-      `Share ${index + 1} — ${share.recipientOrganisation ?? 'Unknown organisation'}`,
+      `Share ${index + 1} - ${share.recipientOrganisation ?? 'Unknown organisation'}`,
       `${humanize(share.status)}${share.scope ? ` · ${share.scope} scope` : ''}`
     )
     keyValue(doc, 'Recipient', share.recipientName)
@@ -388,7 +388,7 @@ function drawExternalSharesSection(doc, report) {
       `${share.accessCount ?? 0} access(es)${share.lastAccessedAt ? `, last ${formatTimestamp(share.lastAccessedAt)}` : ''}`
     )
     if (share.status === 'revoked') {
-      keyValue(doc, 'Revoked', `${formatTimestamp(share.revokedAt)}${share.revokedReason ? ` — ${share.revokedReason}` : ''}`)
+      keyValue(doc, 'Revoked', `${formatTimestamp(share.revokedAt)}${share.revokedReason ? ` - ${share.revokedReason}` : ''}`)
     }
     doc.moveDown(0.3)
   })
@@ -402,7 +402,7 @@ function drawPolicySection(doc, report) {
     return
   }
   policies.forEach((policy) => {
-    const line = `${policy.title ?? 'Policy document'}${policy.version != null ? ` — version ${policy.version}` : ''}`
+    const line = `${policy.title ?? 'Policy document'}${policy.version != null ? ` - version ${policy.version}` : ''}`
     ensureRoom(doc, 18)
     doc.font(FONT_REGULAR).fontSize(10).fillColor(COLORS.ink).text(line, { width: contentWidth(doc) })
     doc.moveDown(0.35)
@@ -416,7 +416,7 @@ function drawPolicySection(doc, report) {
 // and asked to include the decrypted identity; this function only lays out
 // whichever of those states it is handed.
 function drawIdentityAppendix(doc, appendix) {
-  sectionHeading(doc, 'Appendix — Reporter Identity')
+  sectionHeading(doc, 'Appendix - Reporter Identity')
   const width = contentWidth(doc)
   const kind = appendix?.kind ?? 'anonymous'
 
@@ -534,7 +534,7 @@ async function renderReportPdf({ report, companyName, generatedAt, generatedByLa
         },
         bufferPages: true,
         info: {
-          Title: `Case Report — ${report.caseId}`,
+          Title: `Case Report - ${report.caseId}`,
           Subject: CLASSIFICATION_BANNER,
           Author: companyName || 'Rectifia',
         },

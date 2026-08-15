@@ -8,7 +8,7 @@ import Button from '../components/ui/Button'
 import { Input } from '../components/ui/Field'
 
 function formatTimestamp(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
@@ -445,7 +445,7 @@ function SharedCaseView() {
                       </div>
                       <p className="text-xs text-muted">
                         {item.contentType ?? t('sharedCaseView.sections.evidence.unknownType')} ·{' '}
-                        {item.sizeBytes ? `${Math.round(item.sizeBytes / 1024)} KB` : '—'} ·{' '}
+                        {item.sizeBytes ? `${Math.round(item.sizeBytes / 1024)} KB` : '-'} ·{' '}
                         {formatTimestamp(item.uploadedAt)}
                       </p>
                       {item.shared && (

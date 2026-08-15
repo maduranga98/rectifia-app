@@ -11,12 +11,12 @@ import Icon from '../ui/Icon'
 import { SkeletonList } from '../ui/Loading'
 
 function formatTimestamp(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleString()
 }
 
 function formatSize(bytes) {
-  if (!bytes && bytes !== 0) return '—'
+  if (!bytes && bytes !== 0) return '-'
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
@@ -125,7 +125,7 @@ function CaseEvidencePanel({ caseId }) {
                       {file.label}
                     </span>
                   </td>
-                  <td className="text-muted">{file.contentType ?? '—'}</td>
+                  <td className="text-muted">{file.contentType ?? '-'}</td>
                   <td className="tabular-nums text-muted">{formatSize(file.sizeBytes)}</td>
                   <td className="text-muted">{formatTimestamp(file.uploadedAt)}</td>
                   <td className="text-muted">{file.supplier}</td>

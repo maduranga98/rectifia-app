@@ -25,7 +25,7 @@ const STATUS_TONE = {
 
 function formatDate(value) {
   const millis = value?.toMillis?.() ?? (typeof value === 'number' ? value : null)
-  if (!millis) return '—'
+  if (!millis) return '-'
   return new Date(millis).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 

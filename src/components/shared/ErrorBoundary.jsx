@@ -21,7 +21,7 @@ function DefaultFallback({ error, errorInfo, reset }) {
         </div>
         <h1 className="mt-3 text-lg font-semibold text-charcoal">Something went wrong</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          We're sorry — this page ran into a problem. Reloading usually fixes it.
+          We're sorry - this page ran into a problem. Reloading usually fixes it.
         </p>
 
         {import.meta.env.DEV && error && (

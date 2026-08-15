@@ -83,7 +83,7 @@ export function toMillis(value) {
 
 export function formatSignalDate(value) {
   const ms = toMillis(value)
-  if (ms === null) return '—'
+  if (ms === null) return '-'
   return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 

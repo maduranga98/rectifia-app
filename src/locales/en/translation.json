@@ -23,7 +23,7 @@
   "crisisResources": {
     "ariaLabel": "Support resources",
     "heading": "Support is available",
-    "intro": "If things feel like a lot right now, you can reach people who are there to help — any time, and separately from this report.",
+    "intro": "If things feel like a lot right now, you can reach people who are there to help - any time, and separately from this report.",
     "otherCountries": "Support in other countries",
     "disclaimer": "These are independent services, not part of Rectifia. Rectifia is not an emergency service and cannot contact any of them for you or send help on your behalf. Rectifia cannot see that you have opened this panel, and does not record it. If someone is in immediate danger, please use the emergency number for where you are."
   },
@@ -163,12 +163,12 @@
     },
     "steps1": {
       "title": "Tell us what happened",
-      "description": "{{category}} — answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.",
+      "description": "{{category}} - answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.",
       "defaultCategory": "Your report",
       "changeCategory": "Change category"
     },
     "steps2": {
-      "title": "One last choice — how should we record you?",
+      "title": "One last choice - how should we record you?",
       "description": "Your answers are ready to file. Nothing has been submitted yet. This last question is yours alone to answer, and it cannot be changed afterwards.",
       "backToAnswers": "Back to your answers",
       "fileReport": "File my report",
@@ -194,16 +194,16 @@
       "copyLink": "Copy link",
       "copied": "Copied",
       "downloadPdf": "Download as PDF",
-      "copyFailedNote": "Couldn't copy automatically — select the link above and copy it.",
-      "linkExplanation": "The link opens the tracking form with your Case ID filled in. It does not contain your passcode — you will still be asked for it.",
+      "copyFailedNote": "Couldn't copy automatically - select the link above and copy it.",
+      "linkExplanation": "The link opens the tracking form with your Case ID filled in. It does not contain your passcode - you will still be asked for it.",
       "passcodeWarningTitle": "Your passcode cannot be recovered",
-      "passcodeWarningBody1": "It is stored only as a hash, so no one — not Rectifia, not your employer, not the handler on your case — can look it up, reset it, or send it to you. There is no account and no email address attached to this report to recover it to.",
+      "passcodeWarningBody1": "It is stored only as a hash, so no one - not Rectifia, not your employer, not the handler on your case - can look it up, reset it, or send it to you. There is no account and no email address attached to this report to recover it to.",
       "passcodeWarningStrong": "If you lose the Case ID or passcode, you permanently lose access to this case",
       "passcodeWarningBody2": "and its messages, and filing a new report is the only way to be heard again.",
       "beforeYouLeave": {
         "title": "Before you leave this page",
         "bookmark": "Bookmark the link above, or screenshot this screen.",
-        "writePasscode": "Write the passcode somewhere only you can reach — a screenshot on a work device may not be private.",
+        "writePasscode": "Write the passcode somewhere only you can reach - a screenshot on a work device may not be private.",
         "comeBack": "Come back any time to read replies from your handler and answer them."
       },
       "fileAnother": "File another report"
@@ -285,7 +285,7 @@
       "title": "This link is no longer valid"
     },
     "banner": {
-      "title": "Confidential external share — {{company}}",
+      "title": "Confidential external share - {{company}}",
       "defaultOrganisation": "this organisation",
       "details": "Shared by {{sharedBy}} · scope: {{scope}} · access expires {{expires}}",
       "defaultHandler": "the assigned case handler",
@@ -367,9 +367,9 @@
   "dataHandlingNotice": {
     "title": "Before you continue",
     "points": {
-      "aiProcessing": "Your answers are processed by an AI system (Anthropic) that structures your report, scores its urgency and detail completeness, and suggests where it should be routed — it never determines whether policy was broken and never decides your case's outcome; that is always a person's call.",
+      "aiProcessing": "Your answers are processed by an AI system (Anthropic) that structures your report, scores its urgency and detail completeness, and suggests where it should be routed - it never determines whether policy was broken and never decides your case's outcome; that is always a person's call.",
       "tierChoice": "Choosing to stay anonymous later means no name, email, or phone number is ever collected; choosing to be confidential means only your assigned investigator can ever learn who you are, and only if you choose to tell them.",
-      "credentials": "You'll get a Case ID and a one-time passcode when you file — if you lose either, they cannot be recovered or reset."
+      "credentials": "You'll get a Case ID and a one-time passcode when you file - if you lose either, they cannot be recovered or reset."
     },
     "acknowledgment": "I understand how my report will be handled.",
     "readPolicy": "Read the full privacy policy",
@@ -704,7 +704,7 @@
         "text": "Tell us more about how you've been doing, in your own words."
       },
       "reporter_department": {
-        "text": "What department do you work in? (Optional — helps us spot company-wide trends, never shown to anyone individually.)"
+        "text": "What department do you work in? (Optional - helps us spot company-wide trends, never shown to anyone individually.)"
       }
     }
   },
@@ -756,21 +756,21 @@
   "contactChannelPanel": {
     "saved": {
       "title": "An email address is saved for updates",
-      "body": "When there is an update on your case we send a short, deliberately vague message to that address — it never mentions your case, this company, or what you reported. You still open your case here with your Case ID and passcode.",
+      "body": "When there is an update on your case we send a short, deliberately vague message to that address - it never mentions your case, this company, or what you reported. You still open your case here with your Case ID and passcode.",
       "removeNote": "Removing it deletes the address completely. Notifications stop; nothing else about your case changes."
     },
     "removing": "Removing",
     "removeAddress": "Remove this address",
     "offer": {
       "title": "Want to be emailed when there is an update?",
-      "body": "Optional. Without it, you check back here whenever you like — nothing is lost by leaving this alone.",
+      "body": "Optional. Without it, you check back here whenever you like - nothing is lost by leaving this alone.",
       "readMore": "Read what that would mean"
     },
     "form": {
       "title": "Adding an email address for updates",
       "whatThisCreates": {
         "title": "What this creates",
-        "body": "Saving an address creates a stored link between that address and this case. That link is exactly what “anonymous” otherwise guarantees does not exist. It is encrypted and nobody working on your case can read it — not your handler, not the HR Coordinator, not your Company Admin — but it exists, and you should decide knowing that rather than find out later."
+        "body": "Saving an address creates a stored link between that address and this case. That link is exactly what “anonymous” otherwise guarantees does not exist. It is encrypted and nobody working on your case can read it - not your handler, not the HR Coordinator, not your Company Admin - but it exists, and you should decide knowing that rather than find out later."
       },
       "throwaway": {
         "title": "A throwaway address is a fine choice",
@@ -778,7 +778,7 @@
       },
       "whatEmailsSay": {
         "title": "What the emails say",
-        "body": "As little as possible, on purpose. Something like “You have an update” and a link to our front page — never your Case ID, the category, the status, or anything about this company. Anyone glancing at your inbox learns nothing."
+        "body": "As little as possible, on purpose. Something like “You have an update” and a link to our front page - never your Case ID, the category, the status, or anything about this company. Anyone glancing at your inbox learns nothing."
       },
       "takeItBack": {
         "title": "You can take it back",
@@ -786,7 +786,7 @@
         "body2": "This does not change who can see your report or affect how your case is handled, and your case stays anonymous either way."
       },
       "emailAddress": "Email address",
-      "emailHint": "Keep hold of your Case ID and passcode either way — this address cannot be used to recover them.",
+      "emailHint": "Keep hold of your Case ID and passcode either way - this address cannot be used to recover them.",
       "saving": "Saving",
       "saveAddress": "Save this address",
       "noThanks": "No thanks"
@@ -807,7 +807,7 @@
       "body1": "Once your details are stored they stay part of this case's record until it ends. We are not offering an undo button, because it could not mean what it says: removing your details from a live investigation would destroy part of its record, and leaving them in place while telling you they were gone would not be true.",
       "body2": "You are under no obligation to do this. Your case is worked the same way either way, and if you would rather stay anonymous, close this and carry on."
     },
-    "giveAsMuchAsYouWant": "Give as much or as little as you want — one detail is enough. Anything you leave blank is simply not stored.",
+    "giveAsMuchAsYouWant": "Give as much or as little as you want - one detail is enough. Anything you leave blank is simply not stored.",
     "fields": {
       "name": "Your name",
       "email": "Email address",
@@ -874,7 +874,7 @@
       "action": "Translate",
       "loading": "Translating…",
       "failed": "Translation failed.",
-      "resultLabel": "Translated from detected language — original above"
+      "resultLabel": "Translated from detected language - original above"
     }
   },
   "followUpPrompt": {
@@ -916,7 +916,7 @@
     "submitAnswer": "Submit answer"
   },
   "caseNotificationOptIn": {
-    "noDetailsNote": "A notification never contains any detail about your case — no message text, no category, nothing that could identify the report. It only tells you there is an update to come back and read here.",
+    "noDetailsNote": "A notification never contains any detail about your case - no message text, no category, nothing that could identify the report. It only tells you there is an update to come back and read here.",
     "getNotified": "Get notified when there's a reply",
     "iosInstall": "On iPhone and iPad, notifications only work once this site is added to your Home Screen. Tap the Share button in Safari, choose <strong>Add to Home Screen</strong>, then open Rectifia from your home screen and come back to this page to turn them on.",
     "unsupported": {
@@ -925,13 +925,13 @@
     },
     "blocked": {
       "title": "Notifications are blocked for this site",
-      "body": "Your browser is set to block notifications here, so we can't turn them on from this page. To allow them, open this site's permissions — usually the icon at the left of the address bar, or Settings → Site settings → Notifications — set notifications to Allow, then reload this page."
+      "body": "Your browser is set to block notifications here, so we can't turn them on from this page. To allow them, open this site's permissions - usually the icon at the left of the address bar, or Settings → Site settings → Notifications - set notifications to Allow, then reload this page."
     },
     "subscribed": {
       "title": "You'll be notified of replies",
-      "body": "This device will get a notification when there's a reply on your case. It won't say anything about the case itself — just that there's an update to check.",
+      "body": "This device will get a notification when there's a reply on your case. It won't say anything about the case itself - just that there's an update to check.",
       "turnedOff": "Notifications are off for this device. Reopen this page any time to turn them back on.",
-      "sharedDeviceNote": "On a shared or work device, turn notifications off before you leave — otherwise the next person using this browser will see the update prompts."
+      "sharedDeviceNote": "On a shared or work device, turn notifications off before you leave - otherwise the next person using this browser will see the update prompts."
     },
     "turningOff": "Turning off",
     "turnOffThisDevice": "Turn off on this device",
@@ -952,29 +952,29 @@
     "keepPrivateOneLine": "Keep these somewhere private. They cannot be reissued - without them there is no way back into the case.",
     "caseFiled": {
       "title": "Case filed",
-      "body": "The report is now in the system and has been routed like any other case. The reporter has the same access to it as if they had filed it themselves — but only if you pass on the details below."
+      "body": "The report is now in the system and has been routed like any other case. The reporter has the same access to it as if they had filed it themselves - but only if you pass on the details below."
     },
     "backdateWarning": {
       "title": "This report was received some time ago",
-      "body": "Its compliance deadlines were calculated from the date you entered, not from today, so one or both may already have passed. That is the correct reading of the case — check the handler dashboard for what is now outstanding."
+      "body": "Its compliance deadlines were calculated from the date you entered, not from today, so one or both may already have passed. That is the correct reading of the case - check the handler dashboard for what is now outstanding."
     },
     "shownOnce": {
-      "title": "Shown once — these cannot be recovered",
+      "title": "Shown once - these cannot be recovered",
       "body1": "The passcode is stored only as a hash. Nobody can look it up, reset it, or send it on: not you, not a Company Admin, not Rectifia.",
       "strong": "If you leave this screen without giving the reporter these details, they permanently lose access to their own case",
-      "body2": "— they will not be able to read replies, answer the investigator's questions, or add anything they remember later."
+      "body2": "- they will not be able to read replies, answer the investigator's questions, or add anything they remember later."
     },
     "giveToReporter": "Give these to the reporter",
     "whereTheyCheck": "Where they check on it",
     "linkFillsIn": "The link fills in the Case ID. It does not contain the passcode, so on its own it opens nothing.",
     "copyAllDetails": "Copy all details",
     "downloadToDevice": "Download to this device",
-    "copyFailedNote": "Couldn't copy automatically — select the details above and copy them.",
-    "downloadTradeoff": "Saves a plain-text file to this device's usual downloads location. On a company-managed device, that file can be visible to IT, endpoint monitoring, or backup tools — including your employer's, if that's who this report is about.",
+    "copyFailedNote": "Couldn't copy automatically - select the details above and copy them.",
+    "downloadTradeoff": "Saves a plain-text file to this device's usual downloads location. On a company-managed device, that file can be visible to IT, endpoint monitoring, or backup tools - including your employer's, if that's who this report is about.",
     "beforeYouClose": {
       "title": "Before you close this",
       "handOver": "Hand the Case ID and passcode to the reporter now, by whatever route they asked you to use.",
-      "dontKeepCopy": "Don't keep a copy in your own notes, inbox, or a shared drive — a passcode sitting in a mailbox is a way into someone's case that outlives this conversation. If you use the download option above to hand these off, delete that file the same way once the reporter has the details, not just from your notes.",
+      "dontKeepCopy": "Don't keep a copy in your own notes, inbox, or a shared drive - a passcode sitting in a mailbox is a way into someone's case that outlives this conversation. If you use the download option above to hand these off, delete that file the same way once the reporter has the details, not just from your notes.",
       "identityEncrypted": "Their identity is encrypted and stored. It is not visible on any dashboard or in any case report, and reading it requires a Super Admin and a documented reason.",
       "canReplyAnytime": "The reporter can reply to the investigator and add information at any time using these details."
     },
@@ -1085,11 +1085,11 @@
     "escalationTitle": "Still need help?",
     "roles": {
       "companyAdmin": {
-        "intro": "Guidance for administering your company's Rectifia workspace — staff, routing, policies, and account settings.",
+        "intro": "Guidance for administering your company's Rectifia workspace - staff, routing, policies, and account settings.",
         "faqs": [
           {
             "question": "How do I invite a new staff member?",
-            "answer": "Go to Staff, then Invite staff. Enter their email and choose a role — one of the built-in roles or a custom role you've assembled in Staff → Roles. They'll receive an email to set up their account."
+            "answer": "Go to Staff, then Invite staff. Enter their email and choose a role - one of the built-in roles or a custom role you've assembled in Staff → Roles. They'll receive an email to set up their account."
           },
           {
             "question": "What's the difference between a fixed role and a custom role?",
@@ -1105,14 +1105,14 @@
           },
           {
             "question": "Can I turn on Pulse Checks or the benchmark pool later?",
-            "answer": "Yes — both are optional features. Pulse Checks controls the check-in cadence and unlocks the related pages; the benchmark pool is an opt-in that shares anonymized, floored aggregates with other opted-in companies. Contact Lumora if you don't see the toggle for either."
+            "answer": "Yes - both are optional features. Pulse Checks controls the check-in cadence and unlocks the related pages; the benchmark pool is an opt-in that shares anonymized, floored aggregates with other opted-in companies. Contact Lumora if you don't see the toggle for either."
           },
           {
             "question": "Where do I control how long case data is kept?",
             "answer": "Data retention, under Policy & compliance, controls how long closed case data is kept before deletion."
           }
         ],
-        "escalation": "For billing or platform-level issues, reach out to Lumora through your account representative. For questions about your organization's own policies, check with your leadership — Rectifia helps you enforce those policies, but doesn't set them."
+        "escalation": "For billing or platform-level issues, reach out to Lumora through your account representative. For questions about your organization's own policies, check with your leadership - Rectifia helps you enforce those policies, but doesn't set them."
       },
       "hrCoordinator": {
         "intro": "How to triage, route, and follow up on reports across your company.",
@@ -1123,7 +1123,7 @@
           },
           {
             "question": "What is Patterns, and how does it work?",
-            "answer": "When your Company Admin has it enabled, Patterns highlights reports that may be related — same department, similar allegations, or a recurring name — so related cases aren't investigated in isolation. It's a signal to review, not a verdict."
+            "answer": "When your Company Admin has it enabled, Patterns highlights reports that may be related - same department, similar allegations, or a recurring name - so related cases aren't investigated in isolation. It's a signal to review, not a verdict."
           },
           {
             "question": "How do Follow-ups work?",
@@ -1135,7 +1135,7 @@
           },
           {
             "question": "Can I file a report on behalf of someone else?",
-            "answer": "Yes — File a report opens the same intake flow reporters use, useful for a phoned-in or in-person report."
+            "answer": "Yes - File a report opens the same intake flow reporters use, useful for a phoned-in or in-person report."
           },
           {
             "question": "What does the benchmark pool show me?",
@@ -1157,11 +1157,11 @@
           },
           {
             "question": "What does \"on legal hold\" mean for a case?",
-            "answer": "A legal hold freezes the case against further action or closure — you can still review it, but proposing an action or closing the report is blocked until the hold is lifted. A warning appears on the Action & report tab."
+            "answer": "A legal hold freezes the case against further action or closure - you can still review it, but proposing an action or closing the report is blocked until the hold is lifted. A warning appears on the Action & report tab."
           },
           {
             "question": "Can I translate a message that isn't in my language?",
-            "answer": "Yes — an on-demand translate option is available on individual thread messages."
+            "answer": "Yes - an on-demand translate option is available on individual thread messages."
           },
           {
             "question": "What are the Consistency and Policy references tabs for?",
@@ -1187,15 +1187,15 @@
           },
           {
             "question": "How often does this update?",
-            "answer": "On whatever cadence your Company Admin set for pulse checks — weekly, biweekly, or monthly."
+            "answer": "On whatever cadence your Company Admin set for pulse checks - weekly, biweekly, or monthly."
           },
           {
-            "question": "I'm concerned about a low score — what should I do?",
+            "question": "I'm concerned about a low score - what should I do?",
             "answer": "This data doesn't identify individuals or specific concerns. Raise what you're seeing with HR or your Company Admin, who can look at it alongside anything reported through the case system."
           },
           {
             "question": "Can I see who submitted a pulse response?",
-            "answer": "No — that visibility isn't exposed to Managers, by design."
+            "answer": "No - that visibility isn't exposed to Managers, by design."
           }
         ],
         "escalation": "For access issues, contact your Company Admin. If you're worried about a specific employee, that's better raised directly with HR than through this dashboard."
@@ -1209,7 +1209,7 @@
           },
           {
             "question": "Why is a section of Trends empty?",
-            "answer": "Aggregates only display once enough responses exist for that period, to protect anonymity — a quiet cycle or a small group may not clear that threshold."
+            "answer": "Aggregates only display once enough responses exist for that period, to protect anonymity - a quiet cycle or a small group may not clear that threshold."
           },
           {
             "question": "Who decides how often pulse checks go out?",
@@ -1217,7 +1217,7 @@
           },
           {
             "question": "Can I identify who submitted a specific response?",
-            "answer": "No — pulse check responses are handled to protect respondent anonymity, and this role doesn't have that visibility."
+            "answer": "No - pulse check responses are handled to protect respondent anonymity, and this role doesn't have that visibility."
           },
           {
             "question": "What should I do if a response raises a serious concern?",
@@ -1296,10 +1296,10 @@
     "dueWithin48h": "Due within 48 hours"
   },
   "pulseResponsesPage": {
-    "description": "Individual pulse check responses with their AI sentiment summaries. Each answer is shown with the question that was asked at the time — not the current wording.",
+    "description": "Individual pulse check responses with their AI sentiment summaries. Each answer is shown with the question that was asked at the time - not the current wording.",
     "whatItAsks": {
       "title": "What the check-in asks",
-      "description": "The questionnaire as employees currently receive it. Read-only — changing it is a Company Admin action."
+      "description": "The questionnaire as employees currently receive it. Read-only - changing it is a Company Admin action."
     },
     "hidePreview": "Hide preview",
     "showCurrentCheckIn": "Show the current check-in"
@@ -1327,7 +1327,7 @@
     }
   },
   "adminCasesPage": {
-    "description": "Cases waiting to be placed because no routing rule covered them. Read the report to decide who should handle it, then assign it to a Case Handler. Content appears only while you have the case open — it stays with the handler once placed.",
+    "description": "Cases waiting to be placed because no routing rule covered them. Read the report to decide who should handle it, then assign it to a Case Handler. Content appears only while you have the case open - it stays with the handler once placed.",
     "awaitingAssignment": "Awaiting assignment",
     "casesWaiting_one": "{{count}} case waiting",
     "casesWaiting_other": "{{count}} cases waiting",
@@ -1521,9 +1521,9 @@
   "adminBenchmarkPage": {
     "optedIn": "Opted in",
     "notOptedIn": "Not opted in",
-    "optInSuccess": "Opted in. Your published cells will populate at the next monthly recompute — the first one may run within a few minutes.",
+    "optInSuccess": "Opted in. Your published cells will populate at the next monthly recompute - the first one may run within a few minutes.",
     "withdrawSuccess": "Withdrawn. Your data will be removed from published figures at the next monthly recomputation.",
-    "intro": "The cross-company benchmark pool lets you see whether the shape of your closed cases is typical for your industry and headcount band, or an outlier. It is aggregate statistics only — never raw case data, never your company's identity, and cells below the anonymity thresholds are not published at all.",
+    "intro": "The cross-company benchmark pool lets you see whether the shape of your closed cases is typical for your industry and headcount band, or an outlier. It is aggregate statistics only - never raw case data, never your company's identity, and cells below the anonymity thresholds are not published at all.",
     "participation": {
       "title": "Your participation",
       "description": "Reading the pool requires contributing to it. A pool that can be read without contributing collapses into a one-way intelligence product, so both directions of participation are tied together."
@@ -1536,7 +1536,7 @@
     },
     "withdrawCard": {
       "title": "Withdraw",
-      "description": "Withdrawing takes effect at the next monthly recompute. Your contribution is removed completely — the pool is computed from scratch, not accumulated, so withdrawal is honest.",
+      "description": "Withdrawing takes effect at the next monthly recompute. Your contribution is removed completely - the pool is computed from scratch, not accumulated, so withdrawal is honest.",
       "button": "Withdraw from the benchmark pool",
       "body": "After withdrawal your dashboard will no longer show benchmark comparisons, because reading requires contributing. You can opt back in at any time."
     },
@@ -1575,11 +1575,11 @@
         "identity": "The reporter's identity or contact information",
         "caseId": "The case ID or any identifier that could be traced back to a specific case",
         "deptNames": "Department names",
-        "companyIdentity": "Your company's identity — published figures never say which companies contributed"
+        "companyIdentity": "Your company's identity - published figures never say which companies contributed"
       },
       "withdraw": {
         "title": "Withdrawing",
-        "body": "Withdrawing removes your company's contribution from the pool completely at the next monthly recomputation — the pool is recomputed from scratch each time, not accumulated, so nothing from your company lingers in a published figure after you leave."
+        "body": "Withdrawing removes your company's contribution from the pool completely at the next monthly recomputation - the pool is recomputed from scratch each time, not accumulated, so nothing from your company lingers in a published figure after you leave."
       }
     }
   },
@@ -1592,12 +1592,12 @@
       "title": "Standard questions",
       "description": "Every company asks these four, in this order, unchanged. They cannot be edited, reordered, or removed.",
       "whyFixedTitle": "Why these are fixed",
-      "whyFixedBody": "The wellbeing trend on an individual response, and the department averages your managers see, are calculated from these four answers and nothing else. Comparing this month against last month only means something if the question was identical both times. If the wording could change, a “declining” trend might just be a reworded question, and a department average might be averaging answers to two different questions — with no way to tell afterwards which had happened. Questions you add below appear in the survey and in what your HR Coordinator reads, but they never feed those numbers, which is exactly what makes them safe to change whenever you like."
+      "whyFixedBody": "The wellbeing trend on an individual response, and the department averages your managers see, are calculated from these four answers and nothing else. Comparing this month against last month only means something if the question was identical both times. If the wording could change, a “declining” trend might just be a reworded question, and a department average might be averaging answers to two different questions - with no way to tell afterwards which had happened. Questions you add below appear in the survey and in what your HR Coordinator reads, but they never feed those numbers, which is exactly what makes them safe to change whenever you like."
     },
     "intro": "What everyone on your roster is asked at each check-in. Four standard questions are fixed for every company; you can add up to {{max}} of your own.",
     "neverPublished": {
       "title": "Nothing published yet",
-      "body": "Check-ins are not sent until a questionnaire is published, so nobody is being asked anything right now. Press Publish below to send the standard questions — with or without any of your own."
+      "body": "Check-ins are not sent until a questionnaire is published, so nobody is being asked anything right now. Press Publish below to send the standard questions - with or without any of your own."
     },
     "addedQuestions": {
       "title": "Your added questions",
@@ -1607,13 +1607,13 @@
     "saving": "Saving",
     "publish": "Publish",
     "publishing": "Publishing",
-    "unsavedChanges": "Unsaved changes — save before publishing.",
+    "unsavedChanges": "Unsaved changes - save before publishing.",
     "savedNotPublished": "Saved, but not yet sent to anyone. Publish to make it live.",
     "publishToStart": "Publish to start sending check-ins.",
     "liveUpToDate": "Live and up to date.",
     "doNotAskWarning": {
       "title": "Do not ask people to name other individuals",
-      "body": "A question that asks who someone's problem is with turns a wellness check into an informal reporting channel — without any of the protections the case system provides: no anonymity, no confidential handling, no investigation process, no retaliation follow-up. Answers here are shown to your HR Coordinator attributed to the employee who wrote them, by name. Keep these questions about how work feels, and let the reporting system handle reports."
+      "body": "A question that asks who someone's problem is with turns a wellness check into an informal reporting channel - without any of the protections the case system provides: no anonymity, no confidential handling, no investigation process, no retaliation follow-up. Answers here are shown to your HR Coordinator attributed to the employee who wrote them, by name. Keep these questions about how work feels, and let the reporting system handle reports."
     },
     "usedCount": "{{count}} of {{max}} used",
     "addQuestion": "Add a question",
@@ -1625,7 +1625,7 @@
     "charactersCount": "{{length}} / {{max}} characters",
     "answerType": "Answer type",
     "everyQuestionNeedsText": "Every added question needs some text.",
-    "removalNotice": "Removing a question stops it being asked from the next publish onwards. Answers already given to it are kept, and your HR Coordinator can still read them with the question they were answering — old responses are never rewritten.",
+    "removalNotice": "Removing a question stops it being asked from the next publish onwards. Answers already given to it are kept, and your HR Coordinator can still read them with the question they were answering - old responses are never rewritten.",
     "preview": {
       "title": "Preview",
       "description": "The check-in exactly as employees receive it. This shows what is published and live, not your draft."
@@ -1635,7 +1635,7 @@
     "sendTestHint": "Sends a real check-in link to your own staff email address, and nowhere else. The response it records is marked as a test and never reaches an average or a trend.",
     "versionBadge": "Version {{version}}",
     "publishedOn": "published {{date}}.",
-    "draftSaved": "Draft saved. Nothing has changed for employees yet — press Publish to send it.",
+    "draftSaved": "Draft saved. Nothing has changed for employees yet - press Publish to send it.",
     "publishedNotice": "Published version {{version}}. Check-ins sent from now on use it; links already in someone's inbox keep the questions they were sent with.",
     "testSentNotice": "A test check-in is on its way to {{email}}. It behaves exactly like a real one, and the response it records is excluded from every average and every trend.",
     "publishModal": {
@@ -1643,7 +1643,7 @@
       "intro": "Publishing does four things, and they are worth reading before you press it:",
       "bullet1": "It becomes what <strong>everyone on your roster</strong> is asked at every check-in from now on.",
       "bullet2": "It is saved as a permanent version. Old responses keep pointing at the version they answered, so nothing already collected changes meaning.",
-      "bullet3": "Check-in links already sitting in someone's inbox keep the questions they were sent with — they are not switched over mid-flight.",
+      "bullet3": "Check-in links already sitting in someone's inbox keep the questions they were sent with - they are not switched over mid-flight.",
       "bullet4": "Your name and the time are recorded against it. This is a change to what your whole workforce is asked, so it has an author."
     }
   },
@@ -1757,7 +1757,7 @@
     "refreshing": "Refreshing",
     "noCrisisContact": {
       "title": "No crisis contact configured",
-      "body": "Reports flagged with crisis language currently have no recipient — the notification is generated but reaches no one. Set a named crisis contact on the <link>Settings</link> page."
+      "body": "Reports flagged with crisis language currently have no recipient - the notification is generated but reaches no one. Set a named crisis contact on the <link>Settings</link> page."
     },
     "reportingLinksHeading": "Reporting links",
     "reportingLinksHint": "Share these QR codes or links so employees can file confidential reports - and find their way back to one they already filed.",
@@ -1856,7 +1856,7 @@
     "notices": {
       "pulseOff": "Pulse checks turned off.",
       "cadenceSet": "Pulse-check cadence set to {{cadence}}.",
-      "noInvitesQueued": "No invites were queued — there is no one active on the roster.",
+      "noInvitesQueued": "No invites were queued - there is no one active on the roster.",
       "queuedFor_one": "Queued a pulse check for {{count}} employee. Delivery goes out shortly.",
       "queuedFor_other": "Queued a pulse check for {{count}} employees. Delivery goes out shortly.",
       "jurisdictionsUpdated": "Jurisdictions updated. This applies to cases created from now on.",
@@ -1881,7 +1881,7 @@
     },
     "crisisContact": {
       "title": "Crisis contact",
-      "description": "The one person notified directly when a report is flagged with crisis language. These reports bypass normal case routing entirely and reach this person out of band, so it should be a named individual who can act immediately — not a shared inbox or a distribution list.",
+      "description": "The one person notified directly when a report is flagged with crisis language. These reports bypass normal case routing entirely and reach this person out of band, so it should be a named individual who can act immediately - not a shared inbox or a distribution list.",
       "saveButton": "Save crisis contact",
       "noneSet": {
         "title": "No crisis contact set",
@@ -1891,7 +1891,7 @@
       "namePlaceholder": "e.g. Dr. Jordan Lee, EAP counsellor",
       "emailLabel": "Email",
       "phoneLabel": "Phone",
-      "hint": "A name is required, plus at least one way to reach them — an email, a phone number, or both. This can be an external provider such as an Employee Assistance Programme; they do not need a login on this platform."
+      "hint": "A name is required, plus at least one way to reach them - an email, a phone number, or both. This can be an external provider such as an Employee Assistance Programme; they do not need a login on this platform."
     },
     "pulseCadence": {
       "title": "Pulse Check cadence",
@@ -1915,8 +1915,8 @@
     },
     "sendNowModal": {
       "title": "Send a pulse check now?",
-      "body_one": "This queues a check-in for <strong>{{count}} active employee</strong> right away, regardless of the cadence schedule. Any outstanding pulse-check links are superseded — an employee still holding an older link will be sent a fresh one instead.",
-      "body_other": "This queues a check-in for <strong>{{count}} active employees</strong> right away, regardless of the cadence schedule. Any outstanding pulse-check links are superseded — an employee still holding an older link will be sent a fresh one instead.",
+      "body_one": "This queues a check-in for <strong>{{count}} active employee</strong> right away, regardless of the cadence schedule. Any outstanding pulse-check links are superseded - an employee still holding an older link will be sent a fresh one instead.",
+      "body_other": "This queues a check-in for <strong>{{count}} active employees</strong> right away, regardless of the cadence schedule. Any outstanding pulse-check links are superseded - an employee still holding an older link will be sent a fresh one instead.",
       "awaitingContactNotice_one": "{{count}} of them has no email on file and will wait for an address before delivery.",
       "awaitingContactNotice_other": "{{count}} of them have no email on file and will wait for an address before delivery.",
       "confirm": "Send now"
@@ -1925,7 +1925,7 @@
       "title": "Jurisdictions",
       "description": "The jurisdictions this company operates in. Compliance deadlines follow the strictest one selected.",
       "saveButton": "Save jurisdictions",
-      "deprecated": "{{label}} — deprecated, can be removed, cannot be re-added",
+      "deprecated": "{{label}} - deprecated, can be removed, cannot be re-added",
       "atLeastOneRequired": "At least one jurisdiction is required.",
       "strictestNotice": "Default compliance timeline follows <strong>{{jurisdiction}}</strong>, the strictest of the selected jurisdictions.",
       "changeNotice": "Changing jurisdictions affects deadline computation for <strong>future cases only</strong>. Deadlines are set when a case is created and are not recomputed for cases that already exist."
@@ -1939,7 +1939,7 @@
     },
     "followUp": {
       "title": "Retaliation follow-up check-ins",
-      "description": "After a case closes, reporters get neutral check-ins asking whether anything has changed. This applies to all categories by default — retaliation can follow any report.",
+      "description": "After a case closes, reporters get neutral check-ins asking whether anything has changed. This applies to all categories by default - retaliation can follow any report.",
       "saveButton": "Save follow-up settings",
       "daysLabel": "Days after closure to check in",
       "noneWillSend": "No check-ins will be sent.",
@@ -1947,7 +1947,7 @@
       "checkInsSummary_other": "{{count}} check-ins at day {{days}} after a case closes.",
       "categoriesLegend": "Categories to follow up",
       "categoriesHint": "All on by default. Untick a category to stop scheduling check-ins for cases closed in it.",
-      "neutralNotice": "Check-ins are neutral and optional for the reporter. A reporter can always answer that nothing has changed, or ignore them entirely — there is no chasing. Changes here apply to cases closed from now on."
+      "neutralNotice": "Check-ins are neutral and optional for the reporter. A reporter can always answer that nothing has changed, or ignore them entirely - there is no chasing. Changes here apply to cases closed from now on."
     }
   },
   "complianceCountdown": {
@@ -1969,19 +1969,19 @@
       "answeredConcern": { "label": "Concern reported", "hint": "Reporter indicated something happened" },
       "declined": { "label": "Declined / opted out", "hint": "Reporter chose not to answer" },
       "noResponse": {
-        "label": "Unknown — no response",
+        "label": "Unknown - no response",
         "hint": "Reporter did not return. This is not evidence that nothing happened."
       }
     },
     "title": "Retaliation follow-ups",
-    "description": "Post-closure check-ins with reporters. Metadata only — the reporter's answer stays with the handler of any case they choose to file.",
+    "description": "Post-closure check-ins with reporters. Metadata only - the reporter's answer stays with the handler of any case they choose to file.",
     "empty": {
       "title": "No follow-ups yet",
       "description": "Follow-ups are scheduled automatically when a case closes."
     },
     "concernNotice_one": "<strong>{{count}}</strong> reporter indicated something happened after their case closed. If they chose to file, it is a new, separate case in the queue with its own handler.",
     "concernNotice_other": "<strong>{{count}}</strong> reporters indicated something happened after their case closed. If they chose to file, it is a new, separate case in the queue with its own handler.",
-    "noResponseFootnote": "“Unknown — no response” means the reporter did not return, which is the expected case for an anonymous reporter. It is not a sign that nothing happened."
+    "noResponseFootnote": "“Unknown - no response” means the reporter did not return, which is the expected case for an anonymous reporter. It is not a sign that nothing happened."
   },
   "policyUpload": {
     "progress": {
@@ -2078,8 +2078,8 @@
     "noRankedActions": "No ranked actions recorded for this segment yet.",
     "severityBand": "Severity band",
     "insufficientData": "Insufficient data",
-    "insufficientDataBody_one": "{{count}} closed case on file for this category — not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a new or low-volume category, not an error.",
-    "insufficientDataBody_other": "{{count}} closed cases on file for this category — not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a new or low-volume category, not an error.",
+    "insufficientDataBody_one": "{{count}} closed case on file for this category - not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a new or low-volume category, not an error.",
+    "insufficientDataBody_other": "{{count}} closed cases on file for this category - not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a new or low-volume category, not an error.",
     "closedCasesOnFile_one": "{{count}} closed case on file",
     "closedCasesOnFile_other": "{{count}} closed cases on file",
     "consistent": "Consistent",
@@ -2090,7 +2090,7 @@
     "typicalAction": "Typical action:",
     "title": "Consistency Engine",
     "loadingDescription": "Company-wide pattern across closed cases.",
-    "description": "Where this company's own historical outcomes sit, per category and seniority tier. Aggregate only — no single case's score or action is shown.",
+    "description": "Where this company's own historical outcomes sit, per category and seniority tier. Aggregate only - no single case's score or action is shown.",
     "empty": {
       "title": "No consistency data yet",
       "description": "Nothing has been computed for this company yet. Check back after the next daily analytics run."
@@ -2098,7 +2098,7 @@
   },
   "benchmarkComparison": {
     "insufficientData": "Insufficient data in your segment",
-    "insufficientDataBody": "This cell has not reached the minimum of 5 contributing companies and 25 cases required before any figure is published. This is common and normal, not an error — the pool grows as more companies opt in.",
+    "insufficientDataBody": "This cell has not reached the minimum of 5 contributing companies and 25 cases required before any figure is published. This is common and normal, not an error - the pool grows as more companies opt in.",
     "companiesAndCases": "{{companies}} companies · {{cases}} cases",
     "severityMedian": "Severity (median)",
     "percentiles": "(p25 {{p25}} · p75 {{p75}})",
@@ -2108,10 +2108,10 @@
     "casesPer1000": "Cases / 1,000 / year",
     "typicalAction": "Typical action taken",
     "title": "Industry benchmark",
-    "description": "How this company's closed cases compare to the wider pool for your industry and size band. Aggregate statistics only — no other company is named, no case is exposed, and cells below the anonymity thresholds are not published at all.",
+    "description": "How this company's closed cases compare to the wider pool for your industry and size band. Aggregate statistics only - no other company is named, no case is exposed, and cells below the anonymity thresholds are not published at all.",
     "notOptedIn": {
       "title": "Not opted in",
-      "body": "The cross-company benchmark pool is opt-in. Your Company Admin can enable it on the company Benchmark page. Reading the pool requires contributing to it — a pool that can be read without contributing collapses into a one-way intelligence product."
+      "body": "The cross-company benchmark pool is opt-in. Your Company Admin can enable it on the company Benchmark page. Reading the pool requires contributing to it - a pool that can be read without contributing collapses into a one-way intelligence product."
     },
     "incomplete": {
       "title": "Cell coordinates missing",
@@ -2120,9 +2120,9 @@
     "showingSegment": "Showing <strong>{{industry}}</strong> in size band <strong>{{sizeBand}}</strong>.",
     "noCells": {
       "title": "No cells for your segment yet",
-      "description": "No category cell has reached the reporting thresholds for your industry and size band. This is common and normal — the pool grows as more companies opt in."
+      "description": "No category cell has reached the reporting thresholds for your industry and size band. This is common and normal - the pool grows as more companies opt in."
     },
-    "roundingFootnote": "Cells publish only when at least 5 companies and 25 cases contribute; below either threshold nothing is published at all, so an \"insufficient data\" row is not an error. Every published figure is rounded — medians, percentages to the nearest 5 — because unrounded values over small populations leak more than they inform."
+    "roundingFootnote": "Cells publish only when at least 5 companies and 25 cases contribute; below either threshold nothing is published at all, so an \"insufficient data\" row is not an error. Every published figure is rounded - medians, percentages to the nearest 5 - because unrounded values over small populations leak more than they inform."
   },
   "billingQuote": {
     "tierLabels": {
@@ -2291,7 +2291,7 @@
     "exportReport": "Export compliance report",
     "reportReady": {
       "title": "Report ready",
-      "body": "Covers {{start}} to {{end}} ({{pages}} pages). <link>Download PDF</link> — link expires in 15 minutes."
+      "body": "Covers {{start}} to {{end}} ({{pages}} pages). <link>Download PDF</link> - link expires in 15 minutes."
     },
     "empty": {
       "title": "No analytics yet",
@@ -2323,7 +2323,7 @@
     "resolvedInWindow": "Resolved in window",
     "distribution": {
       "title": "Severity & evidence score distribution",
-      "description": "Latest period. Aggregate buckets only — never a single case's exact score."
+      "description": "Latest period. Aggregate buckets only - never a single case's exact score."
     },
     "insufficientData": "Insufficient data"
   },
@@ -2482,7 +2482,7 @@
       "markClosed": "Mark case closed",
       "legalHold": {
         "title": "Under legal hold",
-        "body": "Under legal hold — reason: {{reason}}. Set by {{setByUid}} on {{setAt}}. Only a Company Admin or Super Admin can lift this."
+        "body": "Under legal hold - reason: {{reason}}. Set by {{setByUid}} on {{setAt}}. Only a Company Admin or Super Admin can lift this."
       }
     }
   },
@@ -2498,7 +2498,7 @@
     "opening": "Opening",
     "openSource": "Open source",
     "unlabelledSection": "Unlabelled section",
-    "footnote": "Policy context informs the questions asked and the evidence sought. It does not determine the outcome — every determination on this case is yours."
+    "footnote": "Policy context informs the questions asked and the evidence sought. It does not determine the outcome - every determination on this case is yours."
   },
   "evidenceInventory": {
     "manualLogEntry": "Manual log entry",

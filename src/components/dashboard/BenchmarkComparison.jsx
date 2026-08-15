@@ -20,12 +20,12 @@ import { SkeletonList } from '../ui/Loading'
 // enough data in your segment" state below is common and normal, not an
 // error - a reader who sees empty cells needs to know that.
 function formatPercent(value) {
-  if (value == null) return '—'
+  if (value == null) return '-'
   return `${value}%`
 }
 
 function formatNumber(value, unit = '') {
-  if (value == null) return '—'
+  if (value == null) return '-'
   return unit ? `${value} ${unit}` : String(value)
 }
 
@@ -35,12 +35,12 @@ function formatNumber(value, unit = '') {
 // not the tail.
 function TopActions({ distribution }) {
   const { t } = useTranslation()
-  if (!distribution || typeof distribution !== 'object') return <span>—</span>
+  if (!distribution || typeof distribution !== 'object') return <span>-</span>
   const entries = Object.entries(distribution)
     .filter(([, share]) => typeof share === 'number' && share > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-  if (entries.length === 0) return <span>—</span>
+  if (entries.length === 0) return <span>-</span>
   return (
     <ul className="flex flex-col gap-1">
       {entries.map(([action, share]) => (

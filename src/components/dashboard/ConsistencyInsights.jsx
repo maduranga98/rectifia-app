@@ -133,7 +133,7 @@ function CategorySection({ category, summary }) {
                       ? t(`actionLabels.${dept.typicalAction}`, {
                           defaultValue: ACTION_LABEL_DEFAULTS[dept.typicalAction] ?? dept.typicalAction,
                         })
-                      : '—'}
+                      : '-'}
                   </span>
                 </span>
               </div>

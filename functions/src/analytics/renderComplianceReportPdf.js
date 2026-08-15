@@ -7,7 +7,7 @@ const PDFDocument = require('pdfkit')
 // medians and rates - so it carries a banner that says exactly that, which is
 // what makes it safe to hand to a board member or auditor without a second
 // review of who is allowed to see it.
-const CLASSIFICATION_BANNER = 'COMPANY CONFIDENTIAL — AGGREGATE STATISTICS ONLY, NO CASE-LEVEL DETAIL'
+const CLASSIFICATION_BANNER = 'COMPANY CONFIDENTIAL - AGGREGATE STATISTICS ONLY, NO CASE-LEVEL DETAIL'
 
 const FONT_REGULAR = 'Helvetica'
 const FONT_BOLD = 'Helvetica-Bold'
@@ -36,13 +36,13 @@ function humanize(value) {
 }
 
 function formatTimestamp(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   const iso = new Date(ms).toISOString()
   return `${iso.slice(0, 10)} ${iso.slice(11, 19)} UTC`
 }
 
 function formatPercent(value) {
-  return value == null ? '—' : `${value}%`
+  return value == null ? '-' : `${value}%`
 }
 
 function contentWidth(doc) {
@@ -77,7 +77,7 @@ function emptyState(doc, text) {
 
 function keyValue(doc, label, value) {
   const width = contentWidth(doc)
-  const text = value === null || value === undefined || value === '' ? '—' : String(value)
+  const text = value === null || value === undefined || value === '' ? '-' : String(value)
 
   doc.font(FONT_BOLD).fontSize(8.5)
   const labelHeight = doc.heightOfString(label.toUpperCase(), { width })
@@ -138,7 +138,7 @@ function drawCoverPage(doc, { report }) {
   ]
   rows.forEach(([label, value]) => {
     doc.font(FONT_BOLD).fontSize(9).fillColor(COLORS.muted).text(label, { width })
-    doc.font(FONT_REGULAR).fontSize(11).fillColor(COLORS.ink).text(value ?? '—', { width })
+    doc.font(FONT_REGULAR).fontSize(11).fillColor(COLORS.ink).text(value ?? '-', { width })
     doc.moveDown(0.55)
   })
 
@@ -211,12 +211,12 @@ function drawComplianceSection(doc, report) {
     const c = period.compliance
     tableRow(
       doc,
-      `${period.period} — acknowledged in window`,
+      `${period.period} - acknowledged in window`,
       c.acknowledgmentSampleSize > 0 ? `${formatPercent(c.acknowledgedWithinWindowRate)} (n=${c.acknowledgmentSampleSize})` : 'no data'
     )
     tableRow(
       doc,
-      `${period.period} — resolved in window`,
+      `${period.period} - resolved in window`,
       c.resolutionSampleSize > 0 ? `${formatPercent(c.resolvedWithinWindowRate)} (n=${c.resolutionSampleSize})` : 'no data'
     )
   })
@@ -229,7 +229,7 @@ function drawConsistencySection(doc, report) {
     .fontSize(8.5)
     .fillColor(COLORS.muted)
     .text(
-      'Whether this company’s own closed-case outcomes for similar cases have historically been harsher, more lenient, or consistent with each other. Computed only against this company’s own case history — no cross-company comparison.',
+      'Whether this company’s own closed-case outcomes for similar cases have historically been harsher, more lenient, or consistent with each other. Computed only against this company’s own case history - no cross-company comparison.',
       { width: contentWidth(doc) }
     )
   doc.moveDown(0.4)
@@ -245,7 +245,7 @@ function drawConsistencySection(doc, report) {
     doc.font(FONT_BOLD).fontSize(10).fillColor(COLORS.ink).text(humanize(category))
     doc.moveDown(0.2)
     if (summary.status === 'insufficient_data') {
-      emptyState(doc, `Insufficient data — fewer closed reference cases than the reporting minimum (${summary.referenceCaseCount} on file).`)
+      emptyState(doc, `Insufficient data - fewer closed reference cases than the reporting minimum (${summary.referenceCaseCount} on file).`)
       return
     }
     tableRow(doc, 'Reference cases on file', String(summary.referenceCaseCount))
@@ -288,7 +288,7 @@ async function renderComplianceReportPdf(report) {
         margins: { top: PAGE_MARGIN, bottom: PAGE_MARGIN + FOOTER_HEIGHT, left: PAGE_MARGIN, right: PAGE_MARGIN },
         bufferPages: true,
         info: {
-          Title: `${report.companyName || 'Rectifia'} — Compliance Summary (${report.range.startPeriod} to ${report.range.endPeriod})`,
+          Title: `${report.companyName || 'Rectifia'} - Compliance Summary (${report.range.startPeriod} to ${report.range.endPeriod})`,
           Subject: CLASSIFICATION_BANNER,
           Author: report.companyName || 'Rectifia',
         },

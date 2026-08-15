@@ -42,7 +42,7 @@ function humanize(value) {
 
 function formatDate(value) {
   const ms = typeof value?.toMillis === 'function' ? value.toMillis() : value
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
