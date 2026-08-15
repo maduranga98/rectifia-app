@@ -68,6 +68,23 @@ const burnoutQuestions = [
     triggersCrisisCheck: true,
     optional: true,
   },
+  {
+    id: 'reporter_department',
+    text: 'What department do you work in? (Optional — helps us spot company-wide trends, never shown to anyone individually.)',
+    type: 'select',
+    options: null,
+    // Resolved at render time from companies/{companyId}.departments, same
+    // pattern harassment.js's subject_department uses (see
+    // QuestionnaireForm.jsx). Unlike that field, this one describes the
+    // REPORTER, not a person the report is about - burnout has no subject
+    // party (functions/src/patterns/subjectSignature.js). It feeds a
+    // separate, weaker signal (functions/src/patterns/detectBurnoutTrends.js:
+    // department-level report volume) that must never be joined back to
+    // subjectDepartment/subjectSignatureHash.
+    dynamicOptions: 'companyDepartments',
+    severityWeight: null,
+    optional: true,
+  },
 ]
 
 export default burnoutQuestions

@@ -24,6 +24,7 @@ const { generateChecklist, updateChecklistItem } = require('./src/intake/generat
 const { storeReferenceCase } = require('./src/consistency/storeReferenceCase')
 const { checkConsistency } = require('./src/consistency/checkConsistency')
 const { detectPatterns } = require('./src/patterns/detectPatterns')
+const { detectBurnoutTrends } = require('./src/patterns/detectBurnoutTrends')
 const { generateReport } = require('./src/intake/generateReport')
 const { exportReportPdf } = require('./src/reports/exportReportPdf')
 const { scheduleDeadlines } = require('./src/compliance/scheduleDeadlines')
@@ -129,6 +130,7 @@ exports.updateChecklistItem = updateChecklistItem
 exports.storeReferenceCase = storeReferenceCase
 exports.checkConsistency = checkConsistency
 exports.detectPatterns = detectPatterns
+exports.detectBurnoutTrends = detectBurnoutTrends
 exports.generateReport = generateReport
 // Module 24: server-side PDF export of the same compiled report, rendered
 // inside the Function (pdfkit, no headless browser) and handed back only as

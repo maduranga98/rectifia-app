@@ -19,6 +19,7 @@ const FEATURE_FLAG_DEFAULTS = {
   aiFollowUp: { default: true, label: 'AI follow-up questions' },
   externalShareLinks: { default: false, label: 'External advisor share links' },
   patternDetection: { default: true, label: 'Pattern detection' },
+  burnoutTrendDetection: { default: false, label: 'Burnout trend signals' },
   policyGrounding: { default: true, label: 'Policy-grounded AI' },
 }
 
