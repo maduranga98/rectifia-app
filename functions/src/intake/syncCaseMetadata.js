@@ -1,7 +1,7 @@
 const { onDocumentWritten } = require('firebase-functions/v2/firestore')
 const admin = require('firebase-admin')
 const { normalizeTier } = require('./submitCase')
-const { deriveSubjectSignature, signatureHash } = require('../patterns/subjectSignature')
+const { deriveSubjectSignature, signatureHash, normalizeDepartment, answerFor } = require('../patterns/subjectSignature')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -97,6 +97,23 @@ function pickMetadata(data) {
     feedbackGivenAt: data.feedbackGivenAt ?? null,
     actionTaken: data.actionTaken ?? null,
     ...subjectSignatureFields(data),
+    ...reporterDepartmentField(data),
+  }
+}
+
+// burnout-only mirror of the reporter's own department, for
+// functions/src/patterns/detectBurnoutTrends.js. This is deliberately NOT
+// part of subjectSignatureFields() above: burnout has no subject party (see
+// subjectSignature.js's SUBJECT_FIELDS), and this describes the REPORTER,
+// not a person the report is about. Keeping it a separate field under a
+// separate name is what stops a future query from accidentally joining it
+// against subjectDepartment/subjectSignatureHash - department-level report
+// volume and per-person conduct clustering are structurally different
+// signals and must never merge into one collection or one grouping key.
+function reporterDepartmentField(data) {
+  if (data.category !== 'burnout') return {}
+  return {
+    reporterDepartment: normalizeDepartment(answerFor(data.responses, 'reporter_department')) || null,
   }
 }
 

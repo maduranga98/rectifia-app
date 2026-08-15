@@ -4,6 +4,8 @@ import i18n from './i18n'
 
 const PATTERN_SIGNALS_COLLECTION = 'patternSignals'
 const PATTERN_SUMMARIES_COLLECTION = 'patternSignalSummaries'
+const BURNOUT_TREND_SIGNALS_COLLECTION = 'burnoutTrendSignals'
+const BURNOUT_TREND_SUMMARIES_COLLECTION = 'burnoutTrendSummaries'
 
 function serialize(docSnapshot) {
   return { id: docSnapshot.id, ...docSnapshot.data() }
@@ -28,6 +30,28 @@ export async function listCompanyPatternSignals(companyId) {
 // re-creating the disclosure the suppression prevented.
 export async function getPatternSignalSummary(companyId) {
   const snapshot = await getDoc(doc(firestore, PATTERN_SUMMARIES_COLLECTION, companyId))
+  return snapshot.exists() ? serialize(snapshot) : null
+}
+
+// Company-wide burnout trend signals, for the HR Coordinator only - same
+// role boundary as listCompanyPatternSignals above, enforced the same way in
+// firestore.rules. There is deliberately no Case Handler-scoped variant like
+// listHandlerPatternSignals below: a burnout trend signal has no caseIds or
+// handlerIds field to match a handler's assignments against, because it
+// isn't derived from any handler's assigned cases - it is department-level
+// report volume, not a per-case cluster.
+export async function listCompanyBurnoutTrendSignals(companyId) {
+  const snapshot = await getDocs(
+    query(collection(firestore, BURNOUT_TREND_SIGNALS_COLLECTION), where('companyId', '==', companyId))
+  )
+  return snapshot.docs.map(serialize)
+}
+
+// The burnout trend run summary - counts and thresholds only, same
+// "distinguish no signal from a suppressed one" purpose as
+// getPatternSignalSummary below.
+export async function getBurnoutTrendSummary(companyId) {
+  const snapshot = await getDoc(doc(firestore, BURNOUT_TREND_SUMMARIES_COLLECTION, companyId))
   return snapshot.exists() ? serialize(snapshot) : null
 }
 

@@ -702,6 +702,9 @@
       },
       "burnout_details": {
         "text": "Tell us more about how you've been doing, in your own words."
+      },
+      "reporter_department": {
+        "text": "What department do you work in? (Optional — helps us spot company-wide trends, never shown to anyone individually.)"
       }
     }
   },
@@ -2029,6 +2032,25 @@
       "footnote_one": "Which group deliberately is not named here - naming it would be the same disclosure.",
       "footnote_other": "Which groups deliberately are not named here - naming them would be the same disclosure."
     }
+  },
+  "burnoutTrendSignals": {
+    "title": "Burnout trend signals",
+    "description": "Burnout reports grouped by the reporter's own department over the last {{windowDays}} days. Recomputed daily. This is department-level report volume, not a per-person cluster.",
+    "empty": {
+      "title": "No burnout trend signals",
+      "description": "No department reached the reporting threshold in the last {{windowDays}} days."
+    },
+    "describeSignal_one": "{{count}} burnout report from this department in the last {{windowDays}} days.",
+    "describeSignal_other": "{{count}} burnout reports from this department in the last {{windowDays}} days.",
+    "rateBadge": "{{rate}} company average",
+    "dateRange": "First {{first}}, most recent {{last}}.",
+    "suppressionNotice": {
+      "title": "Not enough people in this department to report safely",
+      "body_one": "{{count}} department reached the reporting threshold but was withheld: fewer than {{minPopulation}} employees work in it. In a team that small, a department identifies who is in it, so the signal is not shown at all.",
+      "body_other": "{{count}} departments reached the reporting threshold but were withheld: fewer than {{minPopulation}} employees work in them. In a team that small, a department identifies who is in it, so the signal is not shown at all."
+    },
+    "whatThisIsNot": "This shows elevated burnout report volume for a department, not a conclusion about working conditions, management, or any individual.",
+    "informationalOnly": "Informational only. It does not suggest a finding or an action, and it is never joined to any other pattern signal or case."
   },
   "relatedPatternNotice": {
     "title": "Part of a pattern signal - {{signalType}}",

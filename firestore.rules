@@ -154,7 +154,7 @@ service cloud.firestore {
       let flags = request.resource.data.featureFlags;
       return flags is map
         && flags.keys().hasOnly(['pulseCheck', 'benchmarkPool', 'aiFollowUp',
-            'externalShareLinks', 'patternDetection', 'policyGrounding'])
+            'externalShareLinks', 'patternDetection', 'burnoutTrendDetection', 'policyGrounding'])
         && flags.values().hasOnly([true, false]);
     }
     // Super Admin only, full stop - this is the enforcement layer behind
@@ -606,6 +606,32 @@ service cloud.firestore {
     // "no pattern" apart from "a pattern that cannot be shown safely" instead
     // of being shown silence.
     match /patternSignalSummaries/{companyId} {
+      allow read: if isHrCoordinator(companyId);
+      allow write: if false;
+    }
+
+    // Department-level burnout report volume (functions/src/patterns/
+    // detectBurnoutTrends.js) - a structurally different, weaker signal than
+    // patternSignals above and deliberately its own collection so the two can
+    // never be queried or displayed as if they carried the same weight.
+    // Burnout has no accused party, so there is no per-person clustering
+    // here and no caseIds/handlerIds field to match a Case Handler against -
+    // that is why this collection has no handler-scoped read path at all,
+    // unlike patternSignals. HR Coordinator only; Manager and Company Admin
+    // get no path here, matching patternSignals' boundary and deliberately
+    // not defaulting open to Manager even though Manager already sees Pulse
+    // aggregate sentiment - department burnout volume is a more sensitive
+    // signal than that and any widening is a decision for later, not a side
+    // effect of adding this collection.
+    match /burnoutTrendSignals/{signalId} {
+      allow read: if isHrCoordinator(resource.data.companyId);
+      allow write: if false;
+    }
+
+    // Per-company run summary for burnoutTrendSignals, doc id == companyId.
+    // Same "counts and thresholds only, names no department" shape as
+    // patternSignalSummaries above and for the same reason.
+    match /burnoutTrendSummaries/{companyId} {
       allow read: if isHrCoordinator(companyId);
       allow write: if false;
     }

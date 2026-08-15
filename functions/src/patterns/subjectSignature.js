@@ -91,4 +91,5 @@ module.exports = {
   signatureHash,
   departmentTierHash,
   normalizeDepartment,
+  answerFor,
 }

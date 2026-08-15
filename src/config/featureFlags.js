@@ -50,6 +50,12 @@ export const FEATURE_FLAGS = {
       'Subject-signature pattern signals surfaced across the case pool, so a cluster of reports about the same person is visible.',
     default: true,
   },
+  burnoutTrendDetection: {
+    label: 'Burnout trend signals',
+    description:
+      'Department-level burnout report volume surfaced to HR Coordinators, separate from and weaker than subject-based pattern detection - no accused party, no per-person clustering.',
+    default: false,
+  },
   policyGrounding: {
     label: 'Policy-grounded AI',
     description:
