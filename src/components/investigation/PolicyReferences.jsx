@@ -106,7 +106,7 @@ function PolicyReferences({ caseData }) {
           </ul>
           <p className="px-5 py-3 text-xs text-muted">
             Policy context informs the questions asked and the evidence sought. It does not
-            determine the outcome — every determination on this case is yours.
+            determine the outcome - every determination on this case is yours.
           </p>
         </div>
       )}

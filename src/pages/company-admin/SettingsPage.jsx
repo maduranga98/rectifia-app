@@ -195,7 +195,7 @@ function SettingsPage({ companyId }) {
       await refresh()
       setNotice(
         queued === 0
-          ? 'No invites were queued — there is no one active on the roster.'
+          ? 'No invites were queued - there is no one active on the roster.'
           : `Queued a pulse check for ${queued} employee${queued === 1 ? '' : 's'}. Delivery goes out shortly.`
       )
     } catch (err) {
@@ -311,7 +311,7 @@ function SettingsPage({ companyId }) {
 
       <Card
         title="Crisis contact"
-        description="The one person notified directly when a report is flagged with crisis language. These reports bypass normal case routing entirely and reach this person out of band, so it should be a named individual who can act immediately — not a shared inbox or a distribution list."
+        description="The one person notified directly when a report is flagged with crisis language. These reports bypass normal case routing entirely and reach this person out of band, so it should be a named individual who can act immediately - not a shared inbox or a distribution list."
         footer={
           <div className="flex items-center gap-3">
             <Button
@@ -373,7 +373,7 @@ function SettingsPage({ companyId }) {
           </div>
 
           <p className="text-xs text-muted">
-            A name is required, plus at least one way to reach them — an email, a phone number, or
+            A name is required, plus at least one way to reach them - an email, a phone number, or
             both. This can be an external provider such as an Employee Assistance Programme; they do
             not need a login on this platform.
           </p>
@@ -481,7 +481,7 @@ function SettingsPage({ companyId }) {
                 {rosterSize} active employee{rosterSize === 1 ? '' : 's'}
               </strong>{' '}
               right away, regardless of the cadence schedule. Any outstanding pulse-check links are
-              superseded — an employee still holding an older link will be sent a fresh one instead.
+              superseded - an employee still holding an older link will be sent a fresh one instead.
             </p>
             {awaitingContactCount > 0 && (
               <p className="mt-2 text-xs text-muted">
@@ -576,7 +576,7 @@ function SettingsPage({ companyId }) {
 
       <Card
         title="Retaliation follow-up check-ins"
-        description="After a case closes, reporters get neutral check-ins asking whether anything has changed. This applies to all categories by default — retaliation can follow any report."
+        description="After a case closes, reporters get neutral check-ins asking whether anything has changed. This applies to all categories by default - retaliation can follow any report."
         footer={
           <Button
             variant="primary"
@@ -641,7 +641,7 @@ function SettingsPage({ companyId }) {
 
           <Alert variant="info">
             Check-ins are neutral and optional for the reporter. A reporter can always answer that
-            nothing has changed, or ignore them entirely — there is no chasing. Changes here apply
+            nothing has changed, or ignore them entirely - there is no chasing. Changes here apply
             to cases closed from now on.
           </Alert>
         </div>

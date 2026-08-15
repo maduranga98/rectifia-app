@@ -41,7 +41,7 @@ function pushSupported() {
 function NoDetailsNote() {
   return (
     <p className="text-xs text-muted">
-      A notification never contains any detail about your case — no message text, no category,
+      A notification never contains any detail about your case - no message text, no category,
       nothing that could identify the report. It only tells you there is an update to come back
       and read here.
     </p>
@@ -169,8 +169,8 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
         </p>
         <p className="text-xs text-muted">
           Your browser is set to block notifications here, so we can&apos;t turn them on from this
-          page. To allow them, open this site&apos;s permissions — usually the icon at the left of
-          the address bar, or Settings → Site settings → Notifications — set notifications to Allow,
+          page. To allow them, open this site&apos;s permissions - usually the icon at the left of
+          the address bar, or Settings → Site settings → Notifications - set notifications to Allow,
           then reload this page.
         </p>
         <NoDetailsNote />
@@ -186,7 +186,7 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
       <div className={wrapper}>
         <Alert variant="success" title="You'll be notified of replies">
           This device will get a notification when there&apos;s a reply on your case. It won&apos;t
-          say anything about the case itself — just that there&apos;s an update to check.
+          say anything about the case itself - just that there&apos;s an update to check.
         </Alert>
         {disableStatus === 'done' ? (
           <Alert variant="info">
@@ -195,7 +195,7 @@ function CaseNotificationOptIn({ caseId, passcode, className = '' }) {
         ) : (
           <>
             <p className="text-xs text-muted">
-              On a shared or work device, turn notifications off before you leave — otherwise the
+              On a shared or work device, turn notifications off before you leave - otherwise the
               next person using this browser will see the update prompts.
             </p>
             {disableStatus === 'error' && disableError && (

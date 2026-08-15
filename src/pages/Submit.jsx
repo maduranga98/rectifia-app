@@ -205,10 +205,10 @@ function Submit() {
     },
     {
       title: 'Tell us what happened',
-      description: `${categoryLabel ?? 'Your report'} — answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.`,
+      description: `${categoryLabel ?? 'Your report'} - answer as much as you can. Everything here stays confidential and is only seen by the handler assigned to your case.`,
     },
     {
-      title: 'One last choice — how should we record you?',
+      title: 'One last choice - how should we record you?',
       description:
         'Your answers are ready to file. Nothing has been submitted yet. This last question is yours alone to answer, and it cannot be changed afterwards.',
     },
@@ -383,13 +383,13 @@ function Submit() {
                     </Button>
                     {copyFailed && (
                       <span className="text-xs text-muted">
-                        Couldn&apos;t copy automatically — select the link above and copy it.
+                        Couldn&apos;t copy automatically - select the link above and copy it.
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-muted">
                     The link opens the tracking form with your Case ID filled in. It does not
-                    contain your passcode — you will still be asked for it.
+                    contain your passcode - you will still be asked for it.
                   </p>
                 </dd>
               </div>
@@ -397,8 +397,8 @@ function Submit() {
           </div>
 
           <Alert variant="warning" title="Your passcode cannot be recovered">
-            It is stored only as a hash, so no one — not Rectifia, not your employer, not the
-            handler on your case — can look it up, reset it, or send it to you. There is no
+            It is stored only as a hash, so no one - not Rectifia, not your employer, not the
+            handler on your case - can look it up, reset it, or send it to you. There is no
             account and no email address attached to this report to recover it to.{' '}
             <strong className="font-semibold">
               If you lose the Case ID or passcode, you permanently lose access to this case
@@ -416,7 +416,7 @@ function Submit() {
             <ul className="mt-2 flex list-disc flex-col gap-1.5 pl-5 text-sm leading-relaxed text-muted">
               <li>Bookmark the link above, or screenshot this screen.</li>
               <li>
-                Write the passcode somewhere only you can reach — a screenshot on a work device
+                Write the passcode somewhere only you can reach - a screenshot on a work device
                 may not be private.
               </li>
               <li>Come back any time to read replies from your handler and answer them.</li>

@@ -344,7 +344,7 @@ function OverviewPage({ companyId }) {
           the initial fetch. */}
       {!firstLoad && company && !company.crisisContact && (
         <Alert variant="warning" title="No crisis contact configured">
-          Reports flagged with crisis language currently have no recipient — the notification is
+          Reports flagged with crisis language currently have no recipient - the notification is
           generated but reaches no one. Set a named crisis contact on the{' '}
           <Link to="/admin/settings" className="font-medium underline">
             Settings

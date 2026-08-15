@@ -40,12 +40,12 @@ function PulseResponsesPage({ companyId }) {
     <div className="mx-auto flex max-w-5xl flex-col gap-5">
       <p className="max-w-2xl text-sm text-muted">
         Individual pulse check responses with their AI sentiment summaries. Each answer is shown
-        with the question that was asked at the time — not the current wording.
+        with the question that was asked at the time - not the current wording.
       </p>
 
       <Card
         title="What the check-in asks"
-        description="The questionnaire as employees currently receive it. Read-only — changing it is a Company Admin action."
+        description="The questionnaire as employees currently receive it. Read-only - changing it is a Company Admin action."
       >
         <div className="flex flex-col gap-4">
           <Button variant="secondary" onClick={() => setShowPreview((v) => !v)}>

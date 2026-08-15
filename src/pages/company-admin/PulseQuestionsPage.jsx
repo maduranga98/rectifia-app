@@ -164,7 +164,7 @@ function PulseQuestionsPage({ companyId }) {
         draft.map((q) => ({ id: q.id, text: q.text.trim(), type: q.type }))
       )
       await refresh()
-      setNotice('Draft saved. Nothing has changed for employees yet — press Publish to send it.')
+      setNotice('Draft saved. Nothing has changed for employees yet - press Publish to send it.')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -247,7 +247,7 @@ function PulseQuestionsPage({ companyId }) {
       {neverPublished && (
         <Alert variant="warning" title="Nothing published yet">
           Check-ins are not sent until a questionnaire is published, so nobody is being asked
-          anything right now. Press Publish below to send the standard questions — with or without
+          anything right now. Press Publish below to send the standard questions - with or without
           any of your own.
         </Alert>
       )}
@@ -276,7 +276,7 @@ function PulseQuestionsPage({ companyId }) {
               Publish
             </Button>
             {unsavedEdits ? (
-              <span className="text-xs text-muted">Unsaved changes — save before publishing.</span>
+              <span className="text-xs text-muted">Unsaved changes - save before publishing.</span>
             ) : unpublishedChanges ? (
               <span className="text-xs text-medium">
                 Saved, but not yet sent to anyone. Publish to make it live.
@@ -297,7 +297,7 @@ function PulseQuestionsPage({ companyId }) {
               filter could catch. */}
           <Alert variant="warning" title="Do not ask people to name other individuals">
             A question that asks who someone&apos;s problem is with turns a wellness check into an
-            informal reporting channel — without any of the protections the case system provides:
+            informal reporting channel - without any of the protections the case system provides:
             no anonymity, no confidential handling, no investigation process, no retaliation
             follow-up. Answers here are shown to your HR Coordinator attributed to the employee who
             wrote them, by name. Keep these questions about how work feels, and let the reporting
@@ -381,7 +381,7 @@ function PulseQuestionsPage({ companyId }) {
             <Alert variant="info">
               Removing a question stops it being asked from the next publish onwards. Answers
               already given to it are kept, and your HR Coordinator can still read them with the
-              question they were answering — old responses are never rewritten.
+              question they were answering - old responses are never rewritten.
             </Alert>
           )}
         </div>
@@ -448,7 +448,7 @@ function PulseQuestionsPage({ companyId }) {
                 </li>
                 <li>
                   Check-in links already sitting in someone&apos;s inbox keep the questions they
-                  were sent with — they are not switched over mid-flight.
+                  were sent with - they are not switched over mid-flight.
                 </li>
                 <li>
                   Your name and the time are recorded against it. This is a change to what your

@@ -24,7 +24,7 @@ import Icon from '../ui/Icon'
 function CrisisResources({
   jurisdictions,
   heading = 'Support is available',
-  intro = 'If things feel like a lot right now, you can reach people who are there to help — any time, and separately from this report.',
+  intro = 'If things feel like a lot right now, you can reach people who are there to help - any time, and separately from this report.',
   className = '',
 }) {
   const resources = resolveResources(jurisdictions)

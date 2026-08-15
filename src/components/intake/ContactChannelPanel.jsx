@@ -83,7 +83,7 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
         </p>
         <p className="text-sm text-muted">
           When there is an update on your case we send a short, deliberately vague message to that
-          address — it never mentions your case, this company, or what you reported. You still open
+          address - it never mentions your case, this company, or what you reported. You still open
           your case here with your Case ID and passcode.
         </p>
         <p className="text-xs text-muted">
@@ -114,7 +114,7 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
           Want to be emailed when there is an update?
         </p>
         <p className="text-sm text-muted">
-          Optional. Without it, you check back here whenever you like — nothing is lost by leaving
+          Optional. Without it, you check back here whenever you like - nothing is lost by leaving
           this alone.
         </p>
         <div>
@@ -139,8 +139,8 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
         <p>
           Saving an address creates a stored link between that address and this case. That link is
           exactly what &ldquo;anonymous&rdquo; otherwise guarantees does not exist. It is encrypted
-          and nobody working on your case can read it — not your handler, not the HR Coordinator,
-          not your Company Admin — but it exists, and you should decide knowing that rather than
+          and nobody working on your case can read it - not your handler, not the HR Coordinator,
+          not your Company Admin - but it exists, and you should decide knowing that rather than
           find out later.
         </p>
 
@@ -154,7 +154,7 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
         <p className="mt-1 font-medium">What the emails say</p>
         <p>
           As little as possible, on purpose. Something like &ldquo;You have an update&rdquo; and a
-          link to our front page — never your Case ID, the category, the status, or anything about
+          link to our front page - never your Case ID, the category, the status, or anything about
           this company. Anyone glancing at your inbox learns nothing.
         </p>
 
@@ -176,7 +176,7 @@ function ContactChannelPanel({ caseId, passcode, hasContactEmail, onChanged, cla
           onChange={(e) => setEmail(e.target.value)}
           autoComplete="off"
           placeholder="you@example.com"
-          hint="Keep hold of your Case ID and passcode either way — this address cannot be used to recover them."
+          hint="Keep hold of your Case ID and passcode either way - this address cannot be used to recover them."
         />
 
         {status === 'error' && error && <Alert variant="error">{error}</Alert>}

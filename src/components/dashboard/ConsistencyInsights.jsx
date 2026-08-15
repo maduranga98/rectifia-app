@@ -79,7 +79,7 @@ function CategorySection({ category, summary }) {
         </div>
         <p className="text-xs text-muted">
           {summary?.referenceCaseCount ?? 0} closed case{summary?.referenceCaseCount === 1 ? '' : 's'} on file for this
-          category — not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a
+          category - not enough for the Consistency Engine to establish a reliable pattern yet. This is expected for a
           new or low-volume category, not an error.
         </p>
       </div>
@@ -126,7 +126,7 @@ function CategorySection({ category, summary }) {
                   {DEPARTMENT_TIER_LABELS[tier] ?? tier} ({dept.caseCount} cases)
                 </span>
                 <span className="text-muted">
-                  Typical action: <span className="text-charcoal">{ACTION_LABELS[dept.typicalAction] ?? dept.typicalAction ?? '—'}</span>
+                  Typical action: <span className="text-charcoal">{ACTION_LABELS[dept.typicalAction] ?? dept.typicalAction ?? '-'}</span>
                 </span>
               </div>
               <SeverityActionGrid severityActionCounts={dept.severityActionCounts} />
@@ -160,7 +160,7 @@ function ConsistencyInsights({ data, loading }) {
   return (
     <Card
       title="Consistency Engine"
-      description="Where this company's own historical outcomes sit, per category and seniority tier. Aggregate only — no single case's score or action is shown."
+      description="Where this company's own historical outcomes sit, per category and seniority tier. Aggregate only - no single case's score or action is shown."
     >
       {entries.length === 0 ? (
         <EmptyState

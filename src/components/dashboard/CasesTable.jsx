@@ -369,8 +369,8 @@ function CasesTable({
                             {humanize(c.status) ?? 'open'}
                           </Badge>
                         </td>
-                        <td className="tabular-nums text-muted">{c.severityScore ?? '—'}</td>
-                        <td className="tabular-nums text-muted">{c.evidenceScore ?? '—'}</td>
+                        <td className="tabular-nums text-muted">{c.severityScore ?? '-'}</td>
+                        <td className="tabular-nums text-muted">{c.evidenceScore ?? '-'}</td>
                         <td className="text-muted">
                           {handlerNameById.get(c.assignedHandlerId) ?? (
                             <span className="text-critical">Unassigned</span>

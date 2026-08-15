@@ -223,8 +223,8 @@ function ResponseAnswers({ response, questionSetsByVersion, coreFallback }) {
       })}
       <p className="text-[0.6875rem] text-subtle">
         {Number.isInteger(version)
-          ? `Questionnaire version ${version} — the wording this person actually saw.`
-          : 'Standard questions only — this response predates any published version.'}
+          ? `Questionnaire version ${version} - the wording this person actually saw.`
+          : 'Standard questions only - this response predates any published version.'}
       </p>
     </div>
   )

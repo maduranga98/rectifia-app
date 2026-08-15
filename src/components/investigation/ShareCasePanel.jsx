@@ -18,7 +18,7 @@ import { Input, Select, Textarea } from '../ui/Field'
 import { SkeletonList } from '../ui/Loading'
 
 function formatDate(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 

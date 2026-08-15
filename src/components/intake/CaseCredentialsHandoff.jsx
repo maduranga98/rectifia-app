@@ -75,28 +75,28 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
     <div className="flex flex-col gap-4">
       <Alert variant="success" title="Case filed">
         The report is now in the system and has been routed like any other case. The reporter
-        has the same access to it as if they had filed it themselves — but only if you pass on
+        has the same access to it as if they had filed it themselves - but only if you pass on
         the details below.
       </Alert>
 
       {backdateWarning && (
         <Alert variant="warning" title="This report was received some time ago">
           Its compliance deadlines were calculated from the date you entered, not from today, so
-          one or both may already have passed. That is the correct reading of the case — check
+          one or both may already have passed. That is the correct reading of the case - check
           the handler dashboard for what is now outstanding.
         </Alert>
       )}
 
       {/* Above the credentials, not below: by the time someone scrolls past a
           passcode they have already decided what to do with it. */}
-      <Alert variant="warning" title="Shown once — these cannot be recovered">
+      <Alert variant="warning" title="Shown once - these cannot be recovered">
         The passcode is stored only as a hash. Nobody can look it up, reset it, or send it on:
         not you, not a Company Admin, not Rectifia.{' '}
         <strong className="font-semibold">
           If you leave this screen without giving the reporter these details, they permanently
           lose access to their own case
         </strong>{' '}
-        — they will not be able to read replies, answer the investigator&apos;s questions, or
+        - they will not be able to read replies, answer the investigator&apos;s questions, or
         add anything they remember later.
       </Alert>
 
@@ -142,7 +142,7 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
           </Button>
           {copyFailed && (
             <span className="text-xs text-muted">
-              Couldn&apos;t copy automatically — select the details above and copy them.
+              Couldn&apos;t copy automatically - select the details above and copy them.
             </span>
           )}
         </div>
@@ -152,7 +152,7 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
         <p className="mt-2 text-xs leading-relaxed text-muted">
           Saves a plain-text file to this device&apos;s usual downloads location. On a
           company-managed device, that file can be visible to IT, endpoint monitoring, or backup
-          tools — including your employer&apos;s, if that&apos;s who this report is about.
+          tools - including your employer&apos;s, if that&apos;s who this report is about.
         </p>
       </Card>
 
@@ -163,7 +163,7 @@ function CaseCredentialsHandoff({ caseId, passcode, tier, backdateWarning, onDon
             to use.
           </li>
           <li>
-            Don&apos;t keep a copy in your own notes, inbox, or a shared drive — a passcode
+            Don&apos;t keep a copy in your own notes, inbox, or a shared drive - a passcode
             sitting in a mailbox is a way into someone&apos;s case that outlives this
             conversation. If you use the download option above to hand these off, delete that
             file the same way once the reporter has the details, not just from your notes.

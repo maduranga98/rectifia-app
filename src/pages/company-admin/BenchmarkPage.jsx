@@ -24,7 +24,7 @@ function SharedDataDisclosure() {
         <ul className="mt-1.5 list-disc space-y-1 pl-5">
           <li>The category of each closed case (harassment, toxic management, retaliation, burnout).</li>
           <li>The two numeric scores on each closed case (severity, evidence).</li>
-          <li>The coarse tier of the department the report was about (junior / senior / manager / unspecified) — never the department name.</li>
+          <li>The coarse tier of the department the report was about (junior / senior / manager / unspecified) - never the department name.</li>
           <li>The action category taken at closure (a fixed list, from "no action" to "termination").</li>
           <li>The date the case was closed.</li>
           <li>Your industry and your employee-count band.</li>
@@ -34,7 +34,7 @@ function SharedDataDisclosure() {
         <p className="font-semibold">What never leaves your company:</p>
         <ul className="mt-1.5 list-disc space-y-1 pl-5">
           <li>Any narrative, any questionnaire answer, any evidence file.</li>
-          <li>Any name — of a reporter, a witness, or anyone a report was about.</li>
+          <li>Any name - of a reporter, a witness, or anyone a report was about.</li>
           <li>Any identity, at any tier, in any form.</li>
           <li>Any Case ID.</li>
           <li>Any department name, any manager name, any job title.</li>
@@ -49,7 +49,7 @@ function SharedDataDisclosure() {
         <p className="font-semibold">What withdrawing does:</p>
         <p className="mt-1.5">
           Your data is removed from all published figures at the next monthly recomputation. The
-          pool is computed from scratch each run, not accumulated — your contribution does not
+          pool is computed from scratch each run, not accumulated - your contribution does not
           linger in a running total.
         </p>
       </div>
@@ -120,7 +120,7 @@ function BenchmarkPage({ companyId }) {
       setAcknowledged(false)
       await refresh()
       setNotice(
-        'Opted in. Your published cells will populate at the next monthly recompute — the first one may run within a few minutes.'
+        'Opted in. Your published cells will populate at the next monthly recompute - the first one may run within a few minutes.'
       )
     } catch (err) {
       setError(err.message)
@@ -174,7 +174,7 @@ function BenchmarkPage({ companyId }) {
       <p className="max-w-2xl text-sm text-muted">
         The cross-company benchmark pool lets you see whether the shape of your closed cases is
         typical for your industry and headcount band, or an outlier. It is aggregate statistics
-        only — never raw case data, never your company's identity, and cells below the anonymity
+        only - never raw case data, never your company's identity, and cells below the anonymity
         thresholds are not published at all.
       </p>
 
@@ -194,7 +194,7 @@ function BenchmarkPage({ companyId }) {
                 {INDUSTRY_LABELS[status.industry] ?? status.industry}
               </strong>{' '}
               in size band{' '}
-              <strong className="text-charcoal">{status.sizeBand ?? '—'}</strong>.
+              <strong className="text-charcoal">{status.sizeBand ?? '-'}</strong>.
             </span>
           )}
           {optedIn && status?.incomplete && (
@@ -217,7 +217,7 @@ function BenchmarkPage({ companyId }) {
       {optedIn ? (
         <Card
           title="Withdraw"
-          description="Withdrawing takes effect at the next monthly recompute. Your contribution is removed completely — the pool is computed from scratch, not accumulated, so withdrawal is honest."
+          description="Withdrawing takes effect at the next monthly recompute. Your contribution is removed completely - the pool is computed from scratch, not accumulated, so withdrawal is honest."
           footer={
             <div className="flex items-center gap-3">
               <Button

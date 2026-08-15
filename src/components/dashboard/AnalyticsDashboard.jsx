@@ -17,7 +17,7 @@ import { SkeletonStats, SkeletonList } from '../ui/Loading'
 const SCORE_BUCKET_ORDER = ['0-20', '21-40', '41-60', '61-80', '81-100']
 
 function formatPercent(value) {
-  return value == null ? '—' : `${value}%`
+  return value == null ? '-' : `${value}%`
 }
 
 function sumField(periods, field) {
@@ -222,7 +222,7 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
           <a href={exportResult.downloadUrl} target="_blank" rel="noreferrer" className="font-semibold underline">
             Download PDF
           </a>{' '}
-          — link expires in 15 minutes.
+          - link expires in 15 minutes.
         </Alert>
       )}
 
@@ -239,7 +239,7 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
             <StatTile
               label="Avg. time to resolution"
               hint={latestPeriod?.period}
-              value={latestPeriod?.avgResolutionDays == null ? '—' : `${latestPeriod.avgResolutionDays}d`}
+              value={latestPeriod?.avgResolutionDays == null ? '-' : `${latestPeriod.avgResolutionDays}d`}
               tone="tone-neutral"
               icon="clock"
             />
@@ -299,7 +299,7 @@ function AnalyticsDashboard({ companyId, canExport = false }) {
 
           <Card
             title="Severity & evidence score distribution"
-            description="Latest period. Aggregate buckets only — never a single case's exact score."
+            description="Latest period. Aggregate buckets only - never a single case's exact score."
             actions={
               latestPeriod?.distributionSuppressed ? (
                 <Badge tone="tone-neutral">Insufficient data</Badge>

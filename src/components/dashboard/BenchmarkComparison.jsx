@@ -19,12 +19,12 @@ import { SkeletonList } from '../ui/Loading'
 // enough data in your segment" state below is common and normal, not an
 // error - a reader who sees empty cells needs to know that.
 function formatPercent(value) {
-  if (value == null) return '—'
+  if (value == null) return '-'
   return `${value}%`
 }
 
 function formatNumber(value, unit = '') {
-  if (value == null) return '—'
+  if (value == null) return '-'
   return unit ? `${value} ${unit}` : String(value)
 }
 
@@ -33,12 +33,12 @@ function formatNumber(value, unit = '') {
 // mostly zeros and noise, and the reader is looking for "what is typical",
 // not the tail.
 function TopActions({ distribution }) {
-  if (!distribution || typeof distribution !== 'object') return <span>—</span>
+  if (!distribution || typeof distribution !== 'object') return <span>-</span>
   const entries = Object.entries(distribution)
     .filter(([, share]) => typeof share === 'number' && share > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-  if (entries.length === 0) return <span>—</span>
+  if (entries.length === 0) return <span>-</span>
   return (
     <ul className="flex flex-col gap-1">
       {entries.map(([action, share]) => (
@@ -63,7 +63,7 @@ function CellRow({ cell }) {
         </div>
         <p className="text-xs text-muted">
           This cell has not reached the minimum of 5 contributing companies and 25 cases required
-          before any figure is published. This is common and normal, not an error — the pool grows
+          before any figure is published. This is common and normal, not an error - the pool grows
           as more companies opt in.
         </p>
       </div>
@@ -143,7 +143,7 @@ function BenchmarkComparison({ companyId }) {
   return (
     <Card
       title="Industry benchmark"
-      description="How this company's closed cases compare to the wider pool for your industry and size band. Aggregate statistics only — no other company is named, no case is exposed, and cells below the anonymity thresholds are not published at all."
+      description="How this company's closed cases compare to the wider pool for your industry and size band. Aggregate statistics only - no other company is named, no case is exposed, and cells below the anonymity thresholds are not published at all."
     >
       <div className="flex flex-col gap-4">
         {error && <Alert variant="error">{error}</Alert>}
@@ -153,7 +153,7 @@ function BenchmarkComparison({ companyId }) {
         ) : !data?.optedIn ? (
           <Alert variant="info" title="Not opted in">
             The cross-company benchmark pool is opt-in. Your Company Admin can enable it on the
-            company Benchmark page. Reading the pool requires contributing to it — a pool that can
+            company Benchmark page. Reading the pool requires contributing to it - a pool that can
             be read without contributing collapses into a one-way intelligence product.
           </Alert>
         ) : data.incomplete ? (
@@ -175,7 +175,7 @@ function BenchmarkComparison({ companyId }) {
                 compact
                 icon="search"
                 title="No cells for your segment yet"
-                description="No category cell has reached the reporting thresholds for your industry and size band. This is common and normal — the pool grows as more companies opt in."
+                description="No category cell has reached the reporting thresholds for your industry and size band. This is common and normal - the pool grows as more companies opt in."
               />
             ) : (
               <ul className="flex flex-col divide-y divide-line-soft">
@@ -190,7 +190,7 @@ function BenchmarkComparison({ companyId }) {
             <p className="text-xs text-muted">
               Cells publish only when at least 5 companies and 25 cases contribute; below either
               threshold nothing is published at all, so an "insufficient data" row is not an
-              error. Every published figure is rounded — medians, percentages to the nearest 5 —
+              error. Every published figure is rounded - medians, percentages to the nearest 5 -
               because unrounded values over small populations leak more than they inform.
             </p>
           </>

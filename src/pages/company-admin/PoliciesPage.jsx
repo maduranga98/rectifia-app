@@ -26,7 +26,7 @@ const CATEGORY_LABEL = Object.fromEntries(POLICY_CATEGORIES.map((c) => [c.id, c.
 
 function formatDate(value) {
   const millis = value?.toMillis?.() ?? (typeof value === 'number' ? value : null)
-  if (!millis) return '—'
+  if (!millis) return '-'
   return new Date(millis).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 

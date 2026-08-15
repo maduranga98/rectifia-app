@@ -215,7 +215,7 @@ function StaffIntakeForm({ companyId }) {
           <Alert variant="info" title="You are filing on someone else's behalf">
             This creates a real case with a real Case ID and passcode, which you hand to the
             reporter afterwards. It is scored, routed, and given compliance deadlines exactly
-            like a report filed through the public form — the only difference recorded is that
+            like a report filed through the public form - the only difference recorded is that
             you typed it in.
           </Alert>
 
@@ -263,7 +263,7 @@ function StaffIntakeForm({ companyId }) {
 
             {intakeMethod === 'phone' && (
               <p className="mt-3 text-xs text-muted">
-                Type up what you were told. Rectifia does not record or transcribe calls — what
+                Type up what you were told. Rectifia does not record or transcribe calls - what
                 you write here is the record.
               </p>
             )}
@@ -280,7 +280,7 @@ function StaffIntakeForm({ companyId }) {
               value={reportedAtInput}
               max={toLocalInputValue(new Date(now))}
               onChange={(e) => setReportedAtInput(e.target.value)}
-              error={isFuture ? 'This is in the future — a report cannot arrive before now.' : null}
+              error={isFuture ? 'This is in the future - a report cannot arrive before now.' : null}
               hint={
                 isFuture
                   ? null
@@ -290,8 +290,8 @@ function StaffIntakeForm({ companyId }) {
 
             {isVeryOld && !isFuture && (
               <Alert variant="warning" className="mt-3" title={`Received ${backdatedDays} days ago`}>
-                That is well outside the usual window. The case will still be filed — this is a
-                warning, not a block — but its deadlines will be calculated from that date and
+                That is well outside the usual window. The case will still be filed - this is a
+                warning, not a block - but its deadlines will be calculated from that date and
                 may already have passed. Check the date is right before continuing.
               </Alert>
             )}
@@ -337,7 +337,7 @@ function StaffIntakeForm({ companyId }) {
           <Alert variant="info">
             Answer as the reporter described it, in their words where you can. Where they
             didn&apos;t say, choose the option that is true rather than the one that sounds
-            worst — these answers are scored, and a guess is scored as though it were told to
+            worst - these answers are scored, and a guess is scored as though it were told to
             you.
           </Alert>
 
@@ -414,7 +414,7 @@ function StaffIntakeForm({ companyId }) {
             {tier === 'anonymous' && (
               <Alert variant="info" className="mt-3" title="Nothing identifying will be stored">
                 Don&apos;t put the reporter&apos;s name into the answers on the previous step
-                either — anonymous means the case document holds no way back to them, and a name
+                either - anonymous means the case document holds no way back to them, and a name
                 typed into a free-text answer defeats that as completely as a name field would.
               </Alert>
             )}
@@ -454,7 +454,7 @@ function StaffIntakeForm({ companyId }) {
                 />
                 <Textarea
                   label="How and when to contact them"
-                  hint="Optional. Anything about reaching them safely — a preferred number, times to avoid, not to call their work line."
+                  hint="Optional. Anything about reaching them safely - a preferred number, times to avoid, not to call their work line."
                   rows={3}
                   value={identity.notes}
                   onChange={(e) => updateIdentity('notes', e.target.value)}
@@ -464,7 +464,7 @@ function StaffIntakeForm({ companyId }) {
               <Alert variant="warning" className="mt-4" title="Once stored, this is not casually readable">
                 These details are encrypted with a key this application cannot use. Reading them
                 back requires a Super Admin and a documented legal reason, and every attempt is
-                recorded — including yours, if you make one. Enter what an investigator needs to
+                recorded - including yours, if you make one. Enter what an investigator needs to
                 reach the reporter, and nothing more.
               </Alert>
             </Card>
@@ -484,9 +484,9 @@ function StaffIntakeForm({ companyId }) {
                 className="mt-0.5 h-4 w-4"
               />
               <span className="text-charcoal">
-                I explained both options to the reporter — including that anonymous means nobody
+                I explained both options to the reporter - including that anonymous means nobody
                 can ever identify them and that it can make some investigations harder to
-                complete — and the tier above is the one they chose.
+                complete - and the tier above is the one they chose.
               </span>
             </label>
             <p className="mt-2 text-xs text-muted">

@@ -29,21 +29,21 @@ export const sections = [
     heading: 'What Rectifia is',
     body: [
       'Rectifia is a workplace reporting and case-management platform. Your employer (referred to below as "the company") licenses it to operate its reporting channel; Rectifia provides the software and processes the resulting reports on the company’s behalf.',
-      'If you are a reporter using a /submit link, you are not creating an account and you are not a customer of Rectifia — these terms cover your use of the reporting and case-tracking pages themselves.',
+      'If you are a reporter using a /submit link, you are not creating an account and you are not a customer of Rectifia - these terms cover your use of the reporting and case-tracking pages themselves.',
     ],
   },
   {
     heading: 'Acceptance',
     body: [
-      'By filing a report or responding to a Pulse Check, you agree to these terms and to the handling described in the Privacy Policy. If you do not agree, do not file a report through this link — you can still raise your concern through whatever other channel the company offers.',
+      'By filing a report or responding to a Pulse Check, you agree to these terms and to the handling described in the Privacy Policy. If you do not agree, do not file a report through this link - you can still raise your concern through whatever other channel the company offers.',
     ],
   },
   {
     heading: 'No account, no guaranteed outcome',
     body: [
-      'There is no sign-up and no password to this reporting flow — your Case ID and one-time passcode are your only credential, described further below.',
+      'There is no sign-up and no password to this reporting flow - your Case ID and one-time passcode are your only credential, described further below.',
       'Filing a report does not guarantee any particular investigation outcome, timeline, or result. An AI system assists with scoring and routing your report, but it does not decide the outcome of your case; that is a human decision made by the handler assigned to it.',
-      'This service is not legal advice, and using it is not a substitute for a formal grievance procedure, regulatory complaint, or legal claim where one is required or available to you — you may need to pursue those separately, and nothing here extends or shortens any deadline that applies to them.',
+      'This service is not legal advice, and using it is not a substitute for a formal grievance procedure, regulatory complaint, or legal claim where one is required or available to you - you may need to pursue those separately, and nothing here extends or shortens any deadline that applies to them.',
     ],
   },
   {
@@ -56,7 +56,7 @@ export const sections = [
   {
     heading: 'Your Case ID and passcode',
     body: [
-      'Your Case ID and passcode are shown to you exactly once, at the moment you file. They are not sent to any email address, are not recoverable, and cannot be reset — the passcode is stored only as a one-way hash, and there is no account to prove ownership against. If you lose either one, you permanently lose access to that case and must file a new report to be heard again.',
+      'Your Case ID and passcode are shown to you exactly once, at the moment you file. They are not sent to any email address, are not recoverable, and cannot be reset - the passcode is stored only as a one-way hash, and there is no account to prove ownership against. If you lose either one, you permanently lose access to that case and must file a new report to be heard again.',
       'You are responsible for keeping your Case ID and passcode somewhere only you can reach.',
     ],
   },
@@ -69,7 +69,7 @@ export const sections = [
   {
     heading: 'Limitation of liability',
     body: [
-      'Placeholder — the specific limitation-of-liability language appropriate to this service and the jurisdictions it operates in is to be drafted by legal counsel before this page is published.',
+      'Placeholder - the specific limitation-of-liability language appropriate to this service and the jurisdictions it operates in is to be drafted by legal counsel before this page is published.',
     ],
   },
   {
@@ -81,7 +81,7 @@ export const sections = [
   {
     heading: 'Governing law and contact',
     body: [
-      'Placeholder — governing law/jurisdiction and a contact channel for questions about these terms are to be confirmed and stated here by legal before publication.',
+      'Placeholder - governing law/jurisdiction and a contact channel for questions about these terms are to be confirmed and stated here by legal before publication.',
     ],
   },
 ]

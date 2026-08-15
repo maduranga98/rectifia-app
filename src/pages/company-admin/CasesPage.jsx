@@ -18,7 +18,7 @@ const PRIORITY_TONE = {
 
 function formatDate(value) {
   const ms = value?.toMillis?.() ?? (typeof value === 'number' ? value : null)
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
@@ -97,7 +97,7 @@ function CasesPage({ companyId }) {
         <p className="max-w-2xl text-sm text-muted">
           Cases waiting to be placed because no routing rule covered them. Read the report to decide
           who should handle it, then assign it to a Case Handler. Content appears only while you have
-          the case open — it stays with the handler once placed.
+          the case open - it stays with the handler once placed.
         </p>
         <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel="Refreshing">
           Refresh

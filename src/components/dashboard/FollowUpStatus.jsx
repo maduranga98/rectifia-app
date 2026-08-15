@@ -31,7 +31,7 @@ const STATUS_META = {
     hint: 'Reporter chose not to answer',
   },
   [FOLLOW_UP_STATUS.NO_RESPONSE]: {
-    label: 'Unknown — no response',
+    label: 'Unknown - no response',
     tone: 'tone-neutral',
     hint: 'Reporter did not return. This is not evidence that nothing happened.',
   },
@@ -66,7 +66,7 @@ function FollowUpStatus({ cases = [] }) {
   return (
     <Card
       title="Retaliation follow-ups"
-      description="Post-closure check-ins with reporters. Metadata only — the reporter's answer stays with the handler of any case they choose to file."
+      description="Post-closure check-ins with reporters. Metadata only - the reporter's answer stays with the handler of any case they choose to file."
     >
       {total === 0 ? (
         <EmptyState
@@ -106,7 +106,7 @@ function FollowUpStatus({ cases = [] }) {
           </ul>
 
           <p className="text-xs text-subtle">
-            “Unknown — no response” means the reporter did not return, which is the expected case
+            “Unknown - no response” means the reporter did not return, which is the expected case
             for an anonymous reporter. It is not a sign that nothing happened.
           </p>
         </div>

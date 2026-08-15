@@ -42,7 +42,7 @@ function DataHandlingNotice({ acknowledgment, onChange }) {
       <ul className="flex flex-col gap-1.5 text-sm leading-relaxed text-muted">
         <li>
           Your answers are processed by an AI system (Anthropic) that structures your report,
-          scores its urgency and detail completeness, and suggests where it should be routed — it
+          scores its urgency and detail completeness, and suggests where it should be routed - it
           never determines whether policy was broken and never decides your case&apos;s outcome;
           that is always a person&apos;s call.
         </li>
@@ -52,7 +52,7 @@ function DataHandlingNotice({ acknowledgment, onChange }) {
           learn who you are, and only if you choose to tell them.
         </li>
         <li>
-          You&apos;ll get a Case ID and a one-time passcode when you file — if you lose either,
+          You&apos;ll get a Case ID and a one-time passcode when you file - if you lose either,
           they cannot be recovered or reset.
         </li>
       </ul>

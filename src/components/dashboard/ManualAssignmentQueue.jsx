@@ -221,19 +221,19 @@ function ManualAssignmentQueue({ companies = [], onCountChange }) {
                   <div>
                     <dt className="text-xs text-muted">Category</dt>
                     <dd className="mt-0.5 font-medium capitalize text-charcoal">
-                      {humanize(caseRow.category) ?? '—'}
+                      {humanize(caseRow.category) ?? '-'}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted">Department</dt>
                     <dd className="mt-0.5 font-medium text-charcoal">
-                      {humanize(caseRow.department) ?? '—'}
+                      {humanize(caseRow.department) ?? '-'}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted">Priority</dt>
                     <dd className="mt-0.5 font-medium capitalize text-charcoal">
-                      {caseRow.priority ?? '—'}
+                      {caseRow.priority ?? '-'}
                     </dd>
                   </div>
                 </dl>

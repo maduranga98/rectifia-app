@@ -204,7 +204,7 @@ function IdentityPanel({ caseId, passcode, mode = 'upgrade', onSaved, className 
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <p className="text-xs text-muted">
-          Give as much or as little as you want — one detail is enough. Anything you leave blank is
+          Give as much or as little as you want - one detail is enough. Anything you leave blank is
           simply not stored.
         </p>
 

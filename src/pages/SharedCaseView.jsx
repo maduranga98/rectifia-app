@@ -7,7 +7,7 @@ import Button from '../components/ui/Button'
 import { Input } from '../components/ui/Field'
 
 function formatTimestamp(ms) {
-  if (!ms) return '—'
+  if (!ms) return '-'
   return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
@@ -270,7 +270,7 @@ function SharedCaseView() {
                 Sticky so it stays visible while scrolling a long record. */}
             <div className="sticky top-3 z-40 rounded-xl border border-gold/50 bg-gold-50 px-4 py-3 shadow-sm">
               <p className="text-sm font-semibold text-charcoal">
-                Confidential external share — {data.companyName ?? 'this organisation'}
+                Confidential external share - {data.companyName ?? 'this organisation'}
               </p>
               <p className="mt-0.5 text-xs text-charcoal">
                 Shared by {data.sharedByEmail ?? 'the assigned case handler'} · scope:{' '}
@@ -370,7 +370,7 @@ function SharedCaseView() {
                     <li key={index} className="rounded-lg border border-line px-3 py-2">
                       <p className="font-medium text-charcoal">{item.fileName}</p>
                       <p className="text-xs text-muted">
-                        {item.contentType ?? 'unknown type'} · {item.sizeBytes ? `${Math.round(item.sizeBytes / 1024)} KB` : '—'}{' '}
+                        {item.contentType ?? 'unknown type'} · {item.sizeBytes ? `${Math.round(item.sizeBytes / 1024)} KB` : '-'}{' '}
                         · {formatTimestamp(item.uploadedAt)}
                       </p>
                     </li>
