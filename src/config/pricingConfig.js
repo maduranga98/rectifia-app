@@ -51,8 +51,45 @@ export const MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES = 5000
 // Priced and billed completely separately from the core monthly price above -
 // see calculateMonthlyPrice()'s doc comment in pricingCalculator.js for why
 // the two must never be merged into one function.
+//
+// This is the rate Stripe actually meters (createCheckoutSession.js,
+// togglePulseCheckAddOn.js, syncSubscriptionPricing.js) and stays untouched
+// by PULSE_CHECK_BANDS below - the two are separate pricing tracks for
+// separate purposes, see that constant's comment.
 export const PULSE_CHECK_ADD_ON = {
   ratePerEmployeePerMonth: 1,
+}
+
+// Pulse Check's own self-serve band pricing, for the Company Admin package-
+// selection UI (PackageSelector.jsx/PulseCheckToggle.jsx,
+// functions/src/billing/upgradeSubscription.js). This is a declared
+// entitlement tier a Company Admin selects against their self-reported
+// employeeCount - stored as companies/{companyId}.pulseCheckTier - and is
+// deliberately independent of PULSE_CHECK_ADD_ON's flat per-employee rate
+// above, which is what the existing Stripe subscription item actually
+// charges. Four bands, not three, and capped at 500 employees like Core's
+// PROGRESSIVE_THRESHOLD_EMPLOYEES - above that, Pulse Check follows the same
+// contact-sales path as Core rather than a published band price.
+export const PULSE_CHECK_BANDS = [
+  { tier: 'starter', label: 'Starter', minEmployees: 1, maxEmployees: 25, monthlyPrice: 10 },
+  { tier: 'growth', label: 'Growth', minEmployees: 26, maxEmployees: 100, monthlyPrice: 29 },
+  { tier: 'scale', label: 'Scale', minEmployees: 101, maxEmployees: 300, monthlyPrice: 69 },
+  { tier: 'business', label: 'Business', minEmployees: 301, maxEmployees: 500, monthlyPrice: 129 },
+]
+
+// Which PUBLISHED_BANDS entry `employeeCount` falls in, or null if it's
+// above the top published band (Scale tops out at 500 - anything higher is
+// the contact-sales/enterprise range). Used by the package-selection UI to
+// show "this is your matching Core band" without duplicating the range
+// logic pricingCalculator.js's calculateMonthlyPrice() already encodes.
+export function bandForEmployeeCount(employeeCount) {
+  return PUBLISHED_BANDS.find((band) => employeeCount >= band.minEmployees && employeeCount <= band.maxEmployees) ?? null
+}
+
+// The Pulse Check counterpart of bandForEmployeeCount() above, against
+// PULSE_CHECK_BANDS' own (different) range boundaries.
+export function pulseCheckBandForEmployeeCount(employeeCount) {
+  return PULSE_CHECK_BANDS.find((band) => employeeCount >= band.minEmployees && employeeCount <= band.maxEmployees) ?? null
 }
 
 // Ordered cheapest-to-most-expensive, matching the tiers produced by
