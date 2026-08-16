@@ -75,6 +75,19 @@ service cloud.firestore {
     // others it is company structure/config, not case content, so a Company
     // Admin may write it directly - but only through this allowlist, so a write
     // touching any other field still fails outright.
+    // employeeCount is the self-declared headcount the package-selection UI
+    // (PackageSelector.jsx) reads to show a company's matching Core/Pulse
+    // Check band - see functions/src/billing/upgradeSubscription.js's
+    // comment for why this is deliberately a different field from the real
+    // active-roster count countActiveEmployees() computes for the existing
+    // Stripe-metered subscription. A Company Admin may declare it directly
+    // (it grants no access, just a number this same admin's own package
+    // selections are validated against), but subscriptionTier,
+    // pulseCheckEnabled, pulseCheckTier, and the *UpdatedAt companions stay
+    // OUT of this allowlist on purpose - those are only ever written by
+    // upgradeSubscription.js (Admin SDK), never directly by the client, so
+    // that band validation against employeeCount can never be bypassed by a
+    // client writing the resulting tier straight onto the doc.
     // crisisContact is the { name, email, phone } record
     // functions/src/intake/routeCase.js notifies when a report is crisis-
     // flagged (Settings page). It is a contact record, not a staff account or
@@ -91,7 +104,7 @@ service cloud.firestore {
     // gate" pattern as every other field here.
     function companyAdminEditableFields() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact', 'retention', 'timeZone']);
+        .hasOnly(['pulseCheckCadence', 'jurisdictions', 'departments', 'followUpConfig', 'crisisContact', 'retention', 'timeZone', 'employeeCount']);
     }
 
     // A custom-role holder's write to the company doc is scoped BOTH by which
@@ -217,6 +230,30 @@ service cloud.firestore {
         && retentionFieldValid()
         && featureFlagsFieldValid();
       allow delete: if isSuperAdmin();
+    }
+
+    // Audit trail for every self-serve Core/Pulse Check band change
+    // (functions/src/billing/upgradeSubscription.js) - who, when, and the
+    // from/to tier. Written only by that callable's Admin SDK, never by a
+    // client, so a client write can never fabricate or erase an entry.
+    // Read-only for the company's own Company Admin (this is their record of
+    // their own plan-change history) and Super Admin.
+    match /companies/{companyId}/billingHistory/{entryId} {
+      allow read: if isSuperAdmin() || isCompanyAdmin(companyId);
+      allow write: if false;
+    }
+
+    // Internal record of an enterprise (500+ employee) "Contact sales"
+    // request (functions/src/billing/requestEnterpriseQuote.js), including
+    // the computed progressive-formula quote for Lumora's own sales
+    // follow-up. Never client-readable - even the requesting Company Admin
+    // does not read this back; the callable's own return value is a bare
+    // confirmation with no pricing figures, precisely so the formula and
+    // per-employee rates behind an enterprise quote are never exposed to a
+    // client. Written only by that callable's Admin SDK.
+    match /quoteRequests/{companyId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;
     }
 
     // Platform-level Super Admin allowlist, doc id == the account's Firebase

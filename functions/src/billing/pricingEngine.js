@@ -42,6 +42,23 @@ const PULSE_CHECK_ADD_ON = {
   ratePerEmployeePerMonth: 1,
 }
 
+// Server-side copy of src/config/pricingConfig.js's PULSE_CHECK_BANDS /
+// PUBLISHED_BANDS, for the same reason the rest of this file is a copy: this
+// is the authoritative side of the client/functions deploy boundary.
+// upgradeSubscription.js and requestEnterpriseQuote.js are the only callers -
+// see that constant's comment in pricingConfig.js for why this is a separate
+// pricing track from PULSE_CHECK_ADD_ON above.
+const PULSE_CHECK_BANDS = [
+  { tier: 'starter', label: 'Starter', minEmployees: 1, maxEmployees: 25, monthlyPrice: 10 },
+  { tier: 'growth', label: 'Growth', minEmployees: 26, maxEmployees: 100, monthlyPrice: 29 },
+  { tier: 'scale', label: 'Scale', minEmployees: 101, maxEmployees: 300, monthlyPrice: 69 },
+  { tier: 'business', label: 'Business', minEmployees: 301, maxEmployees: 500, monthlyPrice: 129 },
+]
+
+function pulseCheckBandForEmployeeCount(employeeCount) {
+  return PULSE_CHECK_BANDS.find((band) => employeeCount >= band.minEmployees && employeeCount <= band.maxEmployees) ?? null
+}
+
 const COMPANIES_COLLECTION = 'companies'
 const EMPLOYEES_SUBCOLLECTION = 'employees'
 
@@ -138,7 +155,12 @@ async function countActiveEmployees(firestore, companyId) {
 }
 
 module.exports = {
+  PROGRESSIVE_THRESHOLD_EMPLOYEES,
+  PUBLISHED_BANDS,
+  PULSE_CHECK_BANDS,
   MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
+  bandForEmployeeCount,
+  pulseCheckBandForEmployeeCount,
   calculateMonthlyPrice,
   calculatePulseCheckAddOnPrice,
   countActiveEmployees,

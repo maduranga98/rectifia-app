@@ -51,3 +51,36 @@ export async function openBillingPortal(companyId) {
   const result = await createBillingPortalSessionCallable({ companyId })
   return result.data
 }
+
+const upgradeSubscriptionCallable = httpsCallable(functions, 'upgradeSubscription')
+const requestEnterpriseQuoteCallable = httpsCallable(functions, 'requestEnterpriseQuote')
+
+// Package-selection UI (PackageSelector.jsx / PulseCheckToggle.jsx): a
+// self-declared entitlement track, entirely separate from the Stripe-driven
+// functions above - it never creates a charge or touches billingStatus. See
+// functions/src/billing/upgradeSubscription.js for the full reasoning.
+//
+// Instant, self-serve Core plan or Pulse Check band change for a company at
+// or below the 500-employee self-serve threshold - the server independently
+// re-validates that the selected band actually matches the company's
+// declared employeeCount before writing anything, so a client cannot select
+// a band its headcount doesn't qualify for.
+//
+// `target` is 'core' or 'pulseCheck'. For 'core', `tier` is required (one of
+// 'starter' | 'growth' | 'scale'). For 'pulseCheck', pass `tier` to turn the
+// add-on on at that band, or `enable: false` to turn it off (no tier needed
+// to disable). Returns { target, tier, enabled? }.
+export async function upgradeSubscription(companyId, { target, tier, enable } = {}) {
+  const result = await upgradeSubscriptionCallable({ companyId, target, tier, enable })
+  return result.data
+}
+
+// The "Contact sales" path for a company above the 500-employee self-serve
+// threshold. `target` is 'core' or 'pulseCheck'. Computes the real quote
+// server-side and files it for Lumora's own follow-up - the response here
+// is deliberately just a confirmation ({ requested: true, target }), never
+// a price, so no per-employee rate or formula reaches the client.
+export async function requestEnterpriseQuote(companyId, { target } = {}) {
+  const result = await requestEnterpriseQuoteCallable({ companyId, target })
+  return result.data
+}
