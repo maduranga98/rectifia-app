@@ -2181,21 +2181,25 @@
     }
   },
   "planFeatures": {
-    "title": "What's included in {{tier}}",
-    "description": "Features your plan unlocks today, and what a higher tier would add. Pulse Check is a separate paid add-on at any tier.",
-    "included": "Included",
-    "locked": "Locked",
-    "requiresTier": "Requires {{tier}}",
+    "title": "Plans & add-ons",
+    "description": "Every plan and what it includes. Your plan is automatic based on active headcount, not something you pick - Pulse Check is the one add-on you choose yourself, on top of any plan.",
+    "currentPlan": "Your plan",
+    "tierRange": "{{min}}-{{max}} employees",
+    "tierRangeOpenEnded": "{{min}}+ employees",
+    "startingAt": "From {{amount}}",
+    "plusPerEmployee": "+ {{rate}} per employee",
     "grantedException": "Enabled (special access)",
     "turnedOff": "Turned off",
     "addOn": "Add-on",
     "active": "Active",
     "notPurchased": "Not purchased",
+    "pulseCheckRate": "{{rate}} per employee / month",
     "addPulseCheck": "Add Pulse Check",
     "removePulseCheck": "Remove Pulse Check",
     "pulseCheckSaving": "Saving...",
     "setUpBillingFirst": "Set up billing above to add this",
-    "footnote": "Locked features can be unlocked by upgrading your plan. Enterprise includes every feature except the Pulse Check add-on, which is always billed separately."
+    "overridesTitle": "Overrides in effect for your company",
+    "footnote": "Your plan moves up automatically as active headcount grows - there's nothing to select. Enterprise (500+ employees) is quoted individually above 5,000 employees rather than shown as a flat price."
   },
   "staffInvite": {
     "roleHints": {

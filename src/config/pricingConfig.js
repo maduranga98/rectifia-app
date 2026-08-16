@@ -111,3 +111,44 @@ export function planIncludesFeature(tier, key) {
 export function lowestTierForFeature(key) {
   return PLAN_TIER_ORDER.find((tier) => planIncludesFeature(tier, key)) ?? null
 }
+
+// A plan comparison table's worth of display data - one entry per tier, with
+// a headcount range and either a flat monthlyPrice (the three PUBLISHED_
+// BANDS tiers) or a startingAt description built from PROGRESSIVE_PRICING
+// (enterprise has no single flat price - see calculateMonthlyPrice()).
+// Reshapes PUBLISHED_BANDS/PROGRESSIVE_PRICING rather than hardcoding a
+// second copy of any number, so this can never drift from what
+// calculateMonthlyPrice() would actually quote.
+//
+// This is what a pricing/billing page shows BEFORE a company necessarily has
+// any billable headcount yet (see BillingQuote.jsx: the "no billable
+// headcount" case still needs to show what the plans and the Pulse Check
+// add-on look like, not render nothing) - unlike a live quote, none of this
+// depends on the company's actual roster.
+export const PLAN_TIER_SUMMARIES = PLAN_TIER_ORDER.map((tier) => {
+  const band = PUBLISHED_BANDS.find((b) => b.tier === tier)
+  if (band) {
+    return {
+      tier,
+      label: band.label,
+      minEmployees: band.minEmployees,
+      maxEmployees: band.maxEmployees,
+      monthlyPrice: band.monthlyPrice,
+      startingAt: null,
+    }
+  }
+  return {
+    tier,
+    label: PROGRESSIVE_PRICING.label,
+    minEmployees: PUBLISHED_BANDS[PUBLISHED_BANDS.length - 1].maxEmployees + 1,
+    maxEmployees: null,
+    monthlyPrice: null,
+    // e.g. "From $250 + $1.10/employee" - the base fee plus the first (most
+    // expensive) marginal bracket, which is what the cheapest possible
+    // enterprise quote (the smallest qualifying headcount) actually is.
+    startingAt: {
+      baseFee: PROGRESSIVE_PRICING.baseFee,
+      ratePerEmployee: PROGRESSIVE_PRICING.brackets[0].ratePerEmployee,
+    },
+  }
+})

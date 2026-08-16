@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import {
   PLAN_FEATURES,
   PLAN_TIER_ORDER,
+  PLAN_TIER_SUMMARIES,
+  PUBLISHED_BANDS,
+  PROGRESSIVE_PRICING,
   planIncludesFeature,
   lowestTierForFeature,
 } from '../pricingConfig'
@@ -75,5 +78,34 @@ describe('lowestTierForFeature', () => {
 
   it('returns null for pulseCheck - no tier ever includes it', () => {
     expect(lowestTierForFeature('pulseCheck')).toBeNull()
+  })
+})
+
+describe('PLAN_TIER_SUMMARIES', () => {
+  it('has one entry per tier, in PLAN_TIER_ORDER order', () => {
+    expect(PLAN_TIER_SUMMARIES.map((s) => s.tier)).toEqual(PLAN_TIER_ORDER)
+  })
+
+  it('mirrors PUBLISHED_BANDS exactly for the three flat-price tiers', () => {
+    for (const band of PUBLISHED_BANDS) {
+      const summary = PLAN_TIER_SUMMARIES.find((s) => s.tier === band.tier)
+      expect(summary.monthlyPrice).toBe(band.monthlyPrice)
+      expect(summary.minEmployees).toBe(band.minEmployees)
+      expect(summary.maxEmployees).toBe(band.maxEmployees)
+      expect(summary.startingAt).toBeNull()
+    }
+  })
+
+  it('gives enterprise no flat price, an open-ended range starting just above scale, and a startingAt built from the base fee and first bracket rate', () => {
+    const enterprise = PLAN_TIER_SUMMARIES.find((s) => s.tier === 'enterprise')
+    const scaleBand = PUBLISHED_BANDS.find((b) => b.tier === 'scale')
+
+    expect(enterprise.monthlyPrice).toBeNull()
+    expect(enterprise.maxEmployees).toBeNull()
+    expect(enterprise.minEmployees).toBe(scaleBand.maxEmployees + 1)
+    expect(enterprise.startingAt).toEqual({
+      baseFee: PROGRESSIVE_PRICING.baseFee,
+      ratePerEmployee: PROGRESSIVE_PRICING.brackets[0].ratePerEmployee,
+    })
   })
 })

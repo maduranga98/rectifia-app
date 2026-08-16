@@ -98,15 +98,10 @@ function BillingQuote({ companyId }) {
     return <Alert variant="error">{error}</Alert>
   }
 
-  if (!current?.quote) {
-    return (
-      <Alert variant="info" title={t('billingQuote.noHeadcount.title')}>
-        {t('billingQuote.noHeadcount.body')}
-      </Alert>
-    )
-  }
-
-  const { employeeCount, quote, pulseCheckAddOnPrice } = current
+  const hasQuote = Boolean(current?.quote)
+  const employeeCount = current?.employeeCount ?? 0
+  const quote = current?.quote ?? null
+  const pulseCheckAddOnPrice = current?.pulseCheckAddOnPrice ?? null
 
   const projectedCount = Number.parseInt(projectedInput, 10)
   const hasValidProjection = Number.isFinite(projectedCount) && projectedCount >= 1
@@ -126,101 +121,114 @@ function BillingQuote({ companyId }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <Card padded={false} className="p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentTier')}</p>
-            <p className="mt-1 text-2xl font-semibold text-charcoal">
-              {TIER_LABELS[quote.tier] ?? quote.tier}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentMonthlyPrice')}</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-charcoal">
-              {formatCurrency(quote.monthlyPrice)}
-              <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {quote.needsManualReview && (
-        <Alert variant="warning" title={t('billingQuote.manualReview.title')}>
-          {t('billingQuote.manualReview.body')}
+      {!hasQuote && (
+        <Alert variant="info" title={t('billingQuote.noHeadcount.title')}>
+          {t('billingQuote.noHeadcount.body')}
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <StatTile
-          label={t('billingQuote.activeEmployees')}
-          value={employeeCount.toLocaleString()}
-          tone="tone-neutral"
-          icon="staff"
-        />
-        <StatTile
-          label={t('billingQuote.effectiveRate')}
-          value={formatCurrency(quote.effectiveRatePerEmployee)}
-          tone="tone-info"
-          icon="billing"
-          hint={t('billingQuote.effectiveRateHint')}
-        />
-      </div>
+      {hasQuote && (
+        <>
+          <Card padded={false} className="p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentTier')}</p>
+                <p className="mt-1 text-2xl font-semibold text-charcoal">
+                  {TIER_LABELS[quote.tier] ?? quote.tier}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentMonthlyPrice')}</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums text-charcoal">
+                  {formatCurrency(quote.monthlyPrice)}
+                  <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
+                </p>
+              </div>
+            </div>
+          </Card>
 
-      <Card title={t('billingQuote.priceBreakdown.title')} description={t('billingQuote.priceBreakdown.description')}>
-        <BreakdownReceipt breakdown={quote.breakdown} />
-      </Card>
+          {quote.needsManualReview && (
+            <Alert variant="warning" title={t('billingQuote.manualReview.title')}>
+              {t('billingQuote.manualReview.body')}
+            </Alert>
+          )}
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <StatTile
+              label={t('billingQuote.activeEmployees')}
+              value={employeeCount.toLocaleString()}
+              tone="tone-neutral"
+              icon="staff"
+            />
+            <StatTile
+              label={t('billingQuote.effectiveRate')}
+              value={formatCurrency(quote.effectiveRatePerEmployee)}
+              tone="tone-info"
+              icon="billing"
+              hint={t('billingQuote.effectiveRateHint')}
+            />
+          </div>
+
+          <Card title={t('billingQuote.priceBreakdown.title')} description={t('billingQuote.priceBreakdown.description')}>
+            <BreakdownReceipt breakdown={quote.breakdown} />
+          </Card>
+        </>
+      )}
 
       <PlanFeaturesCard
-        tier={quote.tier}
+        tier={quote?.tier ?? null}
         companyId={companyId}
         companyFlags={company?.featureFlags ?? null}
+        employeeCount={employeeCount}
         pulseCheckAddOnPrice={pulseCheckAddOnPrice}
         formatCurrency={formatCurrency}
         hasSubscription={Boolean(company?.stripeSubscriptionId)}
         onPulseCheckToggled={refresh}
       />
 
-      <Card
-        title={t('billingQuote.whatIfCard.title')}
-        description={t('billingQuote.whatIfCard.description')}
-      >
-        <div className="flex flex-col gap-4">
-          <Input
-            type="number"
-            min={1}
-            step={1}
-            label={t('billingQuote.whatIfCard.projectedHeadcountLabel')}
-            placeholder={String(employeeCount)}
-            value={projectedInput}
-            onChange={(e) => setProjectedInput(e.target.value)}
-          />
+      {hasQuote && (
+        <Card
+          title={t('billingQuote.whatIfCard.title')}
+          description={t('billingQuote.whatIfCard.description')}
+        >
+          <div className="flex flex-col gap-4">
+            <Input
+              type="number"
+              min={1}
+              step={1}
+              label={t('billingQuote.whatIfCard.projectedHeadcountLabel')}
+              placeholder={String(employeeCount)}
+              value={projectedInput}
+              onChange={(e) => setProjectedInput(e.target.value)}
+            />
 
-          {projectionError && <Alert variant="error">{projectionError}</Alert>}
+            {projectionError && <Alert variant="error">{projectionError}</Alert>}
 
-          {projectedQuote && (
-            <>
-              <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-navy-50/60 px-4 py-3">
-                <span className="text-sm text-muted">
-                  {t('billingQuote.whatIfCard.projectedTier')}{' '}
-                  <span className="font-medium text-charcoal">{TIER_LABELS[projectedQuote.tier] ?? projectedQuote.tier}</span>
-                </span>
-                <span className="text-xl font-semibold tabular-nums text-charcoal">
-                  {formatCurrency(projectedQuote.monthlyPrice)}
-                  <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
-                </span>
-              </div>
+            {projectedQuote && (
+              <>
+                <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-navy-50/60 px-4 py-3">
+                  <span className="text-sm text-muted">
+                    {t('billingQuote.whatIfCard.projectedTier')}{' '}
+                    <span className="font-medium text-charcoal">{TIER_LABELS[projectedQuote.tier] ?? projectedQuote.tier}</span>
+                  </span>
+                  <span className="text-xl font-semibold tabular-nums text-charcoal">
+                    {formatCurrency(projectedQuote.monthlyPrice)}
+                    <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
+                  </span>
+                </div>
 
-              {projectedQuote.needsManualReview && (
-                <Alert variant="warning">{t('billingQuote.whatIfCard.manualReviewNotice')}</Alert>
-              )}
+                {projectedQuote.needsManualReview && (
+                  <Alert variant="warning">{t('billingQuote.whatIfCard.manualReviewNotice')}</Alert>
+                )}
 
-              <BreakdownReceipt breakdown={projectedQuote.breakdown} />
+                <BreakdownReceipt breakdown={projectedQuote.breakdown} />
 
-              <p className="text-xs text-muted">{t('billingQuote.whatIfCard.footnote')}</p>
-            </>
-          )}
-        </div>
-      </Card>
+                <p className="text-xs text-muted">{t('billingQuote.whatIfCard.footnote')}</p>
+              </>
+            )}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }
