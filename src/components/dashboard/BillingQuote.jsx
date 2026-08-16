@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getCompanyQuote } from '../../services/billingService'
+import { getCompany } from '../../services/companyService'
 import { calculateMonthlyPrice } from '../../utils/pricingCalculator'
 import Alert from '../ui/Alert'
 import Card from '../ui/Card'
 import StatTile from '../ui/StatTile'
 import { Input } from '../ui/Field'
 import { SkeletonStats } from '../ui/Loading'
+import PlanFeaturesCard from './PlanFeaturesCard'
 
 function formatCurrency(amount) {
   return new Intl.NumberFormat('en-US', {
@@ -64,6 +66,7 @@ function BillingQuote({ companyId }) {
     enterprise: t('billingQuote.tierLabels.enterprise'),
   }
   const [current, setCurrent] = useState(null)
+  const [companyFlags, setCompanyFlags] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -73,8 +76,9 @@ function BillingQuote({ companyId }) {
     setLoading(true)
     setError(null)
     try {
-      const result = await getCompanyQuote(companyId)
+      const [result, company] = await Promise.all([getCompanyQuote(companyId), getCompany(companyId)])
       setCurrent(result)
+      setCompanyFlags(company?.featureFlags ?? null)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -166,17 +170,12 @@ function BillingQuote({ companyId }) {
         <BreakdownReceipt breakdown={quote.breakdown} />
       </Card>
 
-      <Card
-        title={t('billingQuote.pulseAddOn.title')}
-        description={t('billingQuote.pulseAddOn.description')}
-      >
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-charcoal">{t('billingQuote.employeesCount', { count: employeeCount })}</span>
-          <span className="font-medium tabular-nums text-charcoal">
-            {formatCurrency(pulseCheckAddOnPrice)}{t('billingQuote.perMonth')}
-          </span>
-        </div>
-      </Card>
+      <PlanFeaturesCard
+        tier={quote.tier}
+        companyFlags={companyFlags}
+        pulseCheckAddOnPrice={pulseCheckAddOnPrice}
+        formatCurrency={formatCurrency}
+      />
 
       <Card
         title={t('billingQuote.whatIfCard.title')}

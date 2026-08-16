@@ -2154,10 +2154,6 @@
       "title": "Price breakdown",
       "description": "How your current monthly price was built."
     },
-    "pulseAddOn": {
-      "title": "Pulse Check add-on",
-      "description": "Billed separately from your core plan, at a flat per-employee rate."
-    },
     "whatIfCard": {
       "title": "What if we grow?",
       "description": "See your projected price at a future headcount before it happens - no cliffs, no surprise invoice.",
@@ -2166,6 +2162,19 @@
       "manualReviewNotice": "This projection is above the 5,000-employee threshold where pricing moves to manual sales review - treat this figure as an estimate, not a locked-in price.",
       "footnote": "This projection is calculated instantly in your browser for planning purposes. Your actual bill is always recalculated from your real roster at invoicing time."
     }
+  },
+  "planFeatures": {
+    "title": "What's included in {{tier}}",
+    "description": "Features your plan unlocks today, and what a higher tier would add. Pulse Check is a separate paid add-on at any tier.",
+    "included": "Included",
+    "locked": "Locked",
+    "requiresTier": "Requires {{tier}}",
+    "grantedException": "Enabled (special access)",
+    "turnedOff": "Turned off",
+    "addOn": "Add-on",
+    "active": "Active",
+    "notPurchased": "Not purchased",
+    "footnote": "Locked features can be unlocked by upgrading your plan. Enterprise includes every feature except the Pulse Check add-on, which is always billed separately."
   },
   "staffInvite": {
     "roleHints": {

@@ -1,10 +1,32 @@
 import { useEffect, useState } from 'react'
 import { getCompany, updateCompanyFeatureFlag } from '../../services/companyService'
 import { FEATURE_FLAG_KEYS, FEATURE_FLAGS, hasExplicitFeatureFlag, resolveFeatureFlag } from '../../config/featureFlags'
+import { lowestTierForFeature } from '../../config/pricingConfig'
 import Alert from '../ui/Alert'
 import Card from '../ui/Card'
 import { Select } from '../ui/Field'
 import { SkeletonList } from '../ui/Loading'
+
+const TIER_LABELS = { starter: 'Starter', growth: 'Growth', scale: 'Scale', enterprise: 'Enterprise' }
+
+// Which plan tier normally includes this flag, purely from the static
+// PLAN_FEATURES ladder in pricingConfig.js - not this specific company's
+// actual billing tier. Deliberately not a live per-company lookup: the
+// callable that computes a company's real tier (calculateQuote) is scoped to
+// that company's own Company Admin / billingView staff and rejects a Super
+// Admin's token, so this panel has no server-authorized way to ask "what
+// tier is company X on" for an arbitrary company anyway. This badge is
+// guidance ("this is normally a Growth-and-up feature") for whoever is about
+// to toggle the switch below, not an enforcement of that company's plan.
+function planBadge(flagKey) {
+  if (flagKey === 'pulseCheck') {
+    return { text: 'Add-on (billed separately, any tier)', className: 'bg-navy-100 text-navy' }
+  }
+  const tier = lowestTierForFeature(flagKey)
+  return tier
+    ? { text: `Included from: ${TIER_LABELS[tier]}`, className: 'bg-line-soft text-muted' }
+    : { text: 'Not in any plan tier', className: 'bg-line-soft text-muted' }
+}
 
 // One flag row: label, description, the resolved effective value, and
 // whether that value is an explicit override or just the registry default
@@ -13,6 +35,7 @@ import { SkeletonList } from '../ui/Loading'
 function FlagRow({ flagKey, entry, companyFlags, disabled, onToggle }) {
   const enabled = resolveFeatureFlag(companyFlags, flagKey)
   const isOverride = hasExplicitFeatureFlag(companyFlags, flagKey)
+  const plan = planBadge(flagKey)
 
   return (
     <div className="flex items-start justify-between gap-4 border-b border-line-soft py-4 last:border-b-0">
@@ -26,6 +49,7 @@ function FlagRow({ flagKey, entry, companyFlags, disabled, onToggle }) {
           >
             {isOverride ? 'Override' : `Default (${entry.default ? 'on' : 'off'})`}
           </span>
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${plan.className}`}>{plan.text}</span>
         </div>
         <p className="mt-1 text-xs leading-relaxed text-muted">{entry.description}</p>
       </div>

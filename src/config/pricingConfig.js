@@ -54,3 +54,60 @@ export const MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES = 5000
 export const PULSE_CHECK_ADD_ON = {
   ratePerEmployeePerMonth: 1,
 }
+
+// Ordered cheapest-to-most-expensive, matching the tiers produced by
+// calculateMonthlyPrice() above (PUBLISHED_BANDS' three tiers, plus
+// PROGRESSIVE_PRICING's 'enterprise'). Used to answer "is tier B at least as
+// high as tier A" for the plan feature ladder below.
+export const PLAN_TIER_ORDER = ['starter', 'growth', 'scale', 'enterprise']
+
+// The feature ladder: which of src/config/featureFlags.js's FEATURE_FLAG_KEYS
+// a company's plan unlocks by default at each tier, cumulative - every key
+// listed for 'starter' is also included at 'growth', 'scale', and
+// 'enterprise', and so on up the ladder. This is the plan side of "lock the
+// features according to price": it is what the pricing/billing UI shows as
+// included vs. requiring an upgrade, and what a Super Admin configuring a
+// company's featureFlags overrides should match against.
+//
+// Deliberately excludes 'pulseCheck': Pulse Check is not part of any tier's
+// included feature set at all. It is a standalone paid add-on (see
+// PULSE_CHECK_ADD_ON above), purchased and billed per employee regardless of
+// which core tier the company is on - a Starter-tier company can buy it, and
+// an Enterprise-tier company does not get it for free. See featureFlags.js's
+// comment on the pulseCheck registry entry for the enforcement side of this.
+//
+// This is a display/guidance mapping only, not a hard runtime gate: the
+// actual per-company on/off switch remains companies/{companyId}.featureFlags
+// (resolveFeatureFlag in featureFlags.js), set by a Super Admin. Keeping the
+// two separate means a Super Admin can still grant a feature above a
+// company's tier as a one-off exception without this ladder having to model
+// every such exception.
+export const PLAN_FEATURES = {
+  starter: [],
+  growth: ['aiFollowUp', 'policyGrounding'],
+  scale: ['aiFollowUp', 'policyGrounding', 'patternDetection', 'burnoutTrendDetection'],
+  enterprise: [
+    'aiFollowUp',
+    'policyGrounding',
+    'patternDetection',
+    'burnoutTrendDetection',
+    'benchmarkPool',
+    'externalShareLinks',
+  ],
+}
+
+// Whether `key` is included in `tier`'s plan. Unknown tier or unknown key
+// resolves to false rather than throwing - callers on the pricing/billing UI
+// deal with a tier that may not have loaded yet, and a feature key that will
+// never be 'pulseCheck' should simply read as "not included" there rather
+// than "included in every tier" or "included in none by accident".
+export function planIncludesFeature(tier, key) {
+  return Boolean(PLAN_FEATURES[tier]?.includes(key))
+}
+
+// The lowest tier (in PLAN_TIER_ORDER) whose plan includes `key`, or null if
+// no tier includes it (true today only for 'pulseCheck', the add-on). Used
+// by the billing UI to tell a locked-out company which plan to upgrade to.
+export function lowestTierForFeature(key) {
+  return PLAN_TIER_ORDER.find((tier) => planIncludesFeature(tier, key)) ?? null
+}
