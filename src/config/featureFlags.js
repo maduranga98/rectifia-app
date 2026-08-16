@@ -20,11 +20,19 @@
 // upload are not optional - a flag that could switch one of those off would
 // be a compliance hazard sitting in a settings panel, not a feature toggle.
 export const FEATURE_FLAGS = {
+  // Pulse Check is a paid top-up, not a bundled tier feature - see
+  // PLAN_FEATURES in src/config/pricingConfig.js, which deliberately excludes
+  // this key from every tier's included-feature list, and PULSE_CHECK_ADD_ON
+  // for its per-employee price. `default: false` means a company gets no
+  // Pulse Check module until a Super Admin turns this flag on for them (the
+  // same override write FeatureFlagPanel.jsx already makes for every other
+  // flag) - that toggle is how "the company purchased the add-on" is
+  // recorded, there being no separate purchase-state field.
   pulseCheck: {
     label: 'Pulse Check',
     description:
-      'The employee wellbeing survey module: the questionnaire, invite sending, and department sentiment trends.',
-    default: true,
+      'The employee wellbeing survey module: the questionnaire, invite sending, and department sentiment trends. Paid add-on, billed per employee - not included in any plan tier by default.',
+    default: false,
   },
   benchmarkPool: {
     label: 'Benchmark comparison',

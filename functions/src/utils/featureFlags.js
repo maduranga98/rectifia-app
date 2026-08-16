@@ -14,7 +14,10 @@ const COMPANIES_COLLECTION = 'companies'
 // too, only so a failed-precondition message can name the feature rather
 // than the raw key.
 const FEATURE_FLAG_DEFAULTS = {
-  pulseCheck: { default: true, label: 'Pulse Check' },
+  // Paid top-up, not a bundled tier feature - see the matching comment on
+  // src/config/featureFlags.js's pulseCheck entry. default: false until a
+  // Super Admin's explicit override records that the company bought it.
+  pulseCheck: { default: false, label: 'Pulse Check' },
   benchmarkPool: { default: false, label: 'Benchmark comparison' },
   aiFollowUp: { default: true, label: 'AI follow-up questions' },
   externalShareLinks: { default: false, label: 'External advisor share links' },
