@@ -1321,9 +1321,26 @@
   },
   "billingPage": {
     "subscriptionStatus": "Subscription status",
-    "readOnly": {
-      "title": "Read-only",
-      "body": "Payment details and plan changes are handled outside this panel. Contact Lumora to change your subscription."
+    "actions": {
+      "setUpBilling": "Set up billing",
+      "startingCheckout": "Starting checkout...",
+      "manageBilling": "Manage billing",
+      "openingPortal": "Opening billing portal..."
+    },
+    "checkoutResult": {
+      "dismiss": "Dismiss",
+      "success": {
+        "title": "Billing set up",
+        "body": "Your subscription is active. It can take a few moments for the status below to update."
+      },
+      "cancelled": {
+        "title": "Checkout cancelled",
+        "body": "No changes were made - you can set up billing again whenever you're ready."
+      }
+    },
+    "paymentNote": {
+      "title": "Payments are handled by Stripe",
+      "body": "Rectifia never sees or stores your card details. Use \"Manage billing\" to update your payment method, view invoices, or cancel."
     }
   },
   "adminCasesPage": {
@@ -2174,6 +2191,10 @@
     "addOn": "Add-on",
     "active": "Active",
     "notPurchased": "Not purchased",
+    "addPulseCheck": "Add Pulse Check",
+    "removePulseCheck": "Remove Pulse Check",
+    "pulseCheckSaving": "Saving...",
+    "setUpBillingFirst": "Set up billing above to add this",
     "footnote": "Locked features can be unlocked by upgrading your plan. Enterprise includes every feature except the Pulse Check add-on, which is always billed separately."
   },
   "staffInvite": {

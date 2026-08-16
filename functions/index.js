@@ -91,6 +91,11 @@ const {
   getBenchmarkCatalog,
 } = require('./src/benchmark/benchmarkAccess')
 const { calculateQuote } = require('./src/billing/calculateQuote')
+const { createBillingCheckoutSession } = require('./src/billing/createCheckoutSession')
+const { togglePulseCheckAddOn } = require('./src/billing/togglePulseCheckAddOn')
+const { createBillingPortalSession } = require('./src/billing/createBillingPortalSession')
+const { stripeWebhook } = require('./src/billing/stripeWebhook')
+const { syncSubscriptionPricing } = require('./src/billing/syncSubscriptionPricing')
 const { accessReview, attestAccessReview, getAccessReviewForAttestation } = require('./src/security/accessReview')
 const { keyRotationCheck, recordKeyRotation, rotateIdentityVaultKey } = require('./src/security/keyRotation')
 const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomalyDetection')
@@ -226,6 +231,22 @@ exports.getBenchmarkCatalog = getBenchmarkCatalog
 // See functions/src/billing/calculateQuote.js for why this is the only place
 // a quote may be treated as authoritative.
 exports.calculateQuote = calculateQuote
+// Stripe integration: self-serve checkout for a company's first subscription
+// (createBillingCheckoutSession), adding/removing the paid Pulse Check
+// add-on on an existing subscription (togglePulseCheckAddOn), the Stripe-
+// hosted billing portal for payment method/invoices/cancellation
+// (createBillingPortalSession), the webhook that keeps companies/{companyId}
+// .billingStatus and .featureFlags.pulseCheck in sync with what Stripe
+// actually has on file (stripeWebhook - register this function's URL in the
+// Stripe Dashboard's webhook settings), and the daily job that keeps the
+// amount Stripe charges in sync with this app's own roster-driven price
+// (syncSubscriptionPricing). See functions/src/billing/pricingEngine.js for
+// the shared pricing formula all of these (and calculateQuote above) use.
+exports.createBillingCheckoutSession = createBillingCheckoutSession
+exports.togglePulseCheckAddOn = togglePulseCheckAddOn
+exports.createBillingPortalSession = createBillingPortalSession
+exports.stripeWebhook = stripeWebhook
+exports.syncSubscriptionPricing = syncSubscriptionPricing
 // Module 26: Security Control & Evidence Layer. Five scheduled controls
 // (accessReview quarterly, keyRotationCheck weekly, anomalyDetection daily,
 // integrityCheck weekly, backupVerification monthly) plus the onCall
