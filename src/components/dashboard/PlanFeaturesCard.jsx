@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FEATURE_FLAGS, FEATURE_FLAG_KEYS, hasExplicitFeatureFlag, resolveFeatureFlag } from '../../config/featureFlags'
 import { PLAN_TIER_ORDER, planIncludesFeature, lowestTierForFeature } from '../../config/pricingConfig'
+import { togglePulseCheckAddOn } from '../../services/billingService'
 import Card from '../ui/Card'
 import Badge from '../ui/Badge'
+import Button from '../ui/Button'
+import Alert from '../ui/Alert'
 
 // The "what am I getting" half of the price page: every feature flag
 // (except pulseCheck, which gets its own row below - it is never part of a
@@ -54,12 +58,91 @@ function FeatureRow({ flagKey, entry, tier, companyFlags, t, tierLabel }) {
   )
 }
 
+// The Pulse Check row is the one place on this card that can actually change
+// something, not just display it: a Company Admin with an active
+// subscription can buy or cancel the add-on right here. `hasSubscription` -
+// whether companies/{companyId}.stripeSubscriptionId is set - gates that;
+// without a subscription there is no payment method on file for Stripe to
+// charge, so the row falls back to a plain locked status matching the read-
+// only feature rows above, with a pointer to set up billing first.
+function PulseCheckRow({ companyId, hasSubscription, pulseCheckActive, pulseCheckAddOnPrice, formatCurrency, t, onToggled }) {
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function handleToggle() {
+    setPending(true)
+    setError(null)
+    try {
+      await togglePulseCheckAddOn(companyId, !pulseCheckActive)
+      await onToggled?.()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="border-b border-line-soft py-3.5 last:border-b-0">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-charcoal">{FEATURE_FLAGS.pulseCheck.label}</p>
+            <Badge tone="tone-info">{t('planFeatures.addOn')}</Badge>
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-muted">{FEATURE_FLAGS.pulseCheck.description}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <Badge tone={pulseCheckActive ? 'tone-low' : 'tone-neutral'} icon={pulseCheckActive ? 'check' : 'lock'}>
+            {pulseCheckActive ? t('planFeatures.active') : t('planFeatures.notPurchased')}
+          </Badge>
+          <p className="mt-1.5 text-xs tabular-nums text-muted">
+            {formatCurrency(pulseCheckAddOnPrice)}
+            {t('billingQuote.perMonth')}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-end">
+        {hasSubscription ? (
+          <Button
+            size="sm"
+            variant={pulseCheckActive ? 'dangerGhost' : 'accent'}
+            loading={pending}
+            loadingLabel={t('planFeatures.pulseCheckSaving')}
+            onClick={handleToggle}
+          >
+            {pulseCheckActive ? t('planFeatures.removePulseCheck') : t('planFeatures.addPulseCheck')}
+          </Button>
+        ) : (
+          <p className="text-xs text-muted">{t('planFeatures.setUpBillingFirst')}</p>
+        )}
+      </div>
+
+      {error && (
+        <Alert variant="error" className="mt-2">
+          {error}
+        </Alert>
+      )}
+    </div>
+  )
+}
+
 // `tier` is the company's current billing tier (quote.tier from
 // getCompanyQuote), `companyFlags` is companies/{companyId}.featureFlags as
 // loaded from the company doc (may be undefined). `pulseCheckAddOnPrice` is
 // the already-computed per-employee add-on price so this card doesn't
-// recompute it.
-function PlanFeaturesCard({ tier, companyFlags, pulseCheckAddOnPrice, formatCurrency }) {
+// recompute it. `hasSubscription` and `onPulseCheckToggled` back the Pulse
+// Check purchase toggle - see PulseCheckRow above.
+function PlanFeaturesCard({
+  tier,
+  companyId,
+  companyFlags,
+  pulseCheckAddOnPrice,
+  formatCurrency,
+  hasSubscription,
+  onPulseCheckToggled,
+}) {
   const { t } = useTranslation()
   const tierLabel = (key) => t(`billingQuote.tierLabels.${key}`, key)
 
@@ -83,24 +166,15 @@ function PlanFeaturesCard({ tier, companyFlags, pulseCheckAddOnPrice, formatCurr
           />
         ))}
 
-        <div className="flex items-start justify-between gap-4 border-b border-line-soft py-3.5 last:border-b-0">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-medium text-charcoal">{FEATURE_FLAGS.pulseCheck.label}</p>
-              <Badge tone="tone-info">{t('planFeatures.addOn')}</Badge>
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-muted">{FEATURE_FLAGS.pulseCheck.description}</p>
-          </div>
-          <div className="shrink-0 text-right">
-            <Badge tone={pulseCheckActive ? 'tone-low' : 'tone-neutral'} icon={pulseCheckActive ? 'check' : 'lock'}>
-              {pulseCheckActive ? t('planFeatures.active') : t('planFeatures.notPurchased')}
-            </Badge>
-            <p className="mt-1.5 text-xs tabular-nums text-muted">
-              {formatCurrency(pulseCheckAddOnPrice)}
-              {t('billingQuote.perMonth')}
-            </p>
-          </div>
-        </div>
+        <PulseCheckRow
+          companyId={companyId}
+          hasSubscription={hasSubscription}
+          pulseCheckActive={pulseCheckActive}
+          pulseCheckAddOnPrice={pulseCheckAddOnPrice}
+          formatCurrency={formatCurrency}
+          t={t}
+          onToggled={onPulseCheckToggled}
+        />
       </div>
 
       <p className="mt-4 text-xs text-muted">

@@ -66,7 +66,7 @@ function BillingQuote({ companyId }) {
     enterprise: t('billingQuote.tierLabels.enterprise'),
   }
   const [current, setCurrent] = useState(null)
-  const [companyFlags, setCompanyFlags] = useState(null)
+  const [company, setCompany] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -76,9 +76,9 @@ function BillingQuote({ companyId }) {
     setLoading(true)
     setError(null)
     try {
-      const [result, company] = await Promise.all([getCompanyQuote(companyId), getCompany(companyId)])
+      const [result, companyDoc] = await Promise.all([getCompanyQuote(companyId), getCompany(companyId)])
       setCurrent(result)
-      setCompanyFlags(company?.featureFlags ?? null)
+      setCompany(companyDoc)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -172,9 +172,12 @@ function BillingQuote({ companyId }) {
 
       <PlanFeaturesCard
         tier={quote.tier}
-        companyFlags={companyFlags}
+        companyId={companyId}
+        companyFlags={company?.featureFlags ?? null}
         pulseCheckAddOnPrice={pulseCheckAddOnPrice}
         formatCurrency={formatCurrency}
+        hasSubscription={Boolean(company?.stripeSubscriptionId)}
+        onPulseCheckToggled={refresh}
       />
 
       <Card
