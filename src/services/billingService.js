@@ -51,3 +51,39 @@ export async function openBillingPortal(companyId) {
   const result = await createBillingPortalSessionCallable({ companyId })
   return result.data
 }
+
+const upgradeSubscriptionCallable = httpsCallable(functions, 'upgradeSubscription')
+const requestEnterpriseQuoteCallable = httpsCallable(functions, 'requestEnterpriseQuote')
+
+// Package-selection UI (PackageSelector.jsx / PulseCheckToggle.jsx):
+// self-serve Core plan or Pulse Check band change for a company at or below
+// the 500-employee self-serve threshold, validated against the company's
+// declared employeeCount server-side - a client cannot select a band its
+// declared headcount doesn't qualify for. Actually touches Stripe (see
+// functions/src/billing/upgradeSubscription.js): a tier change on an
+// existing subscription updates its price immediately, but a company's
+// FIRST tier selection has no payment method on file yet, so the response
+// carries a `checkoutUrl` in that case instead of completing synchronously -
+// the caller must redirect to it (`window.location.href = checkoutUrl`),
+// same as startBillingCheckout below.
+//
+// `target` is 'core' or 'pulseCheck'. For 'core', `tier` is required (one of
+// 'starter' | 'growth' | 'scale'). For 'pulseCheck', pass `tier` to turn the
+// add-on on at that band, or `enable: false` to turn it off (no tier needed
+// to disable). Returns { target, tier, enabled?, checkoutUrl? }.
+export async function upgradeSubscription(companyId, { target, tier, enable } = {}) {
+  const result = await upgradeSubscriptionCallable({ companyId, target, tier, enable })
+  return result.data
+}
+
+// The "Contact sales" path for a company above the 500-employee self-serve
+// threshold. `target` is 'core' or 'pulseCheck'. Computes the real quote
+// server-side, files a real (draft, never auto-sent) Stripe Quote object
+// against the company's Stripe Customer, and records both for Lumora's own
+// follow-up - the response here is deliberately just a confirmation
+// ({ requested: true, target }), never a price, so no per-employee rate or
+// formula reaches the client.
+export async function requestEnterpriseQuote(companyId, { target } = {}) {
+  const result = await requestEnterpriseQuoteCallable({ companyId, target })
+  return result.data
+}

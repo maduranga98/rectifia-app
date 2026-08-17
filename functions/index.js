@@ -96,6 +96,8 @@ const { togglePulseCheckAddOn } = require('./src/billing/togglePulseCheckAddOn')
 const { createBillingPortalSession } = require('./src/billing/createBillingPortalSession')
 const { stripeWebhook } = require('./src/billing/stripeWebhook')
 const { syncSubscriptionPricing } = require('./src/billing/syncSubscriptionPricing')
+const { upgradeSubscription } = require('./src/billing/upgradeSubscription')
+const { requestEnterpriseQuote } = require('./src/billing/requestEnterpriseQuote')
 const { accessReview, attestAccessReview, getAccessReviewForAttestation } = require('./src/security/accessReview')
 const { keyRotationCheck, recordKeyRotation, rotateIdentityVaultKey } = require('./src/security/keyRotation')
 const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomalyDetection')
@@ -238,15 +240,33 @@ exports.calculateQuote = calculateQuote
 // (createBillingPortalSession), the webhook that keeps companies/{companyId}
 // .billingStatus and .featureFlags.pulseCheck in sync with what Stripe
 // actually has on file (stripeWebhook - register this function's URL in the
-// Stripe Dashboard's webhook settings), and the daily job that keeps the
-// amount Stripe charges in sync with this app's own roster-driven price
+// Stripe Dashboard's webhook settings), and the hourly job that keeps the
+// amount Stripe charges in sync with this app's own declared-headcount price
 // (syncSubscriptionPricing). See functions/src/billing/pricingEngine.js for
-// the shared pricing formula all of these (and calculateQuote above) use.
+// the shared pricing formula all of these (and calculateQuote above) use,
+// and its readDeclaredEmployeeCount() for which employee-count field is
+// authoritative - companies/{companyId}.employeeCount, not the live Pulse
+// Check roster.
 exports.createBillingCheckoutSession = createBillingCheckoutSession
 exports.togglePulseCheckAddOn = togglePulseCheckAddOn
 exports.createBillingPortalSession = createBillingPortalSession
 exports.stripeWebhook = stripeWebhook
 exports.syncSubscriptionPricing = syncSubscriptionPricing
+// Package-selection UI (PackageSelector.jsx / PulseCheckToggle.jsx):
+// self-serve Core-band or Pulse Check band selection against the company's
+// declared employeeCount. upgradeSubscription is the instant self-serve band
+// change for a company at or below the 500-employee threshold (Core or
+// Pulse Check, independently) - it actually touches Stripe now (Checkout on
+// a company's first tier selection, a subscriptionItems price update on a
+// later one), not just Firestore; see its file-level comment.
+// requestEnterpriseQuote is the "Contact sales" path above that threshold,
+// which computes the real quote via pricingEngine.js, files a real Stripe
+// Quote object (draft, never auto-sent) against the company's Stripe
+// Customer, and records both in quoteRequests/{companyId} for Lumora's own
+// follow-up - without ever handing the formula or per-employee rates back to
+// the client.
+exports.upgradeSubscription = upgradeSubscription
+exports.requestEnterpriseQuote = requestEnterpriseQuote
 // Module 26: Security Control & Evidence Layer. Five scheduled controls
 // (accessReview quarterly, keyRotationCheck weekly, anomalyDetection daily,
 // integrityCheck weekly, backupVerification monthly) plus the onCall

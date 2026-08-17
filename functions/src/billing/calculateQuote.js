@@ -2,16 +2,21 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { resolveStaffEffectivePermissions, hasPermission } = require('../utils/permissionResolver')
-const { calculateMonthlyPrice, calculatePulseCheckAddOnPrice, countActiveEmployees } = require('./pricingEngine')
+const { calculateMonthlyPrice, calculatePulseCheckAddOnPrice, readDeclaredEmployeeCount } = require('./pricingEngine')
 
 if (!admin.apps.length) {
   admin.initializeApp()
 }
 
+const COMPANIES_COLLECTION = 'companies'
+
 // Company Admin's billing quote, computed server-side from the company's
-// real roster so the number this returns always matches what would be
-// invoiced - the client-side pricingCalculator.js copy is for instant what-if
-// UI feedback only and is never the source of truth for an actual bill.
+// declared headcount (companies/{companyId}.employeeCount - see
+// pricingEngine.js's readDeclaredEmployeeCount() for why this, not the live
+// Pulse Check roster, is authoritative) so the number this returns always
+// matches what would be invoiced - the client-side pricingCalculator.js copy
+// is for instant what-if UI feedback only and is never the source of truth
+// for an actual bill.
 // Company Admin only, and only for their own company: companyId in the
 // request is verified against the caller's own custom claim rather than
 // trusted outright, the same pattern functions/src/retention/previewRetention.js
@@ -58,8 +63,12 @@ exports.calculateQuote = onCall(async (request) => {
   }
   await logPrivilegedAction(firestore, { uid, companyId, role, action: 'calculate_quote', outcome: 'granted' })
 
-  const employeeCount = await countActiveEmployees(firestore, companyId)
-  if (employeeCount < 1) {
+  const companySnapshot = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
+  if (!companySnapshot.exists) {
+    throw new HttpsError('not-found', 'Company not found')
+  }
+  const employeeCount = readDeclaredEmployeeCount(companySnapshot.data())
+  if (employeeCount === null) {
     return {
       employeeCount: 0,
       quote: null,

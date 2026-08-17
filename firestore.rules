@@ -77,10 +77,10 @@ service cloud.firestore {
     // touching any other field still fails outright.
     // employeeCount is the self-declared headcount the package-selection UI
     // (PackageSelector.jsx) reads to show a company's matching Core/Pulse
-    // Check band - see functions/src/billing/upgradeSubscription.js's
-    // comment for why this is deliberately a different field from the real
-    // active-roster count countActiveEmployees() computes for the existing
-    // Stripe-metered subscription. A Company Admin may declare it directly
+    // Check band - and, per functions/src/billing/pricingEngine.js's
+    // readDeclaredEmployeeCount(), the number every billing path actually
+    // charges from, not the live employees roster. A Company Admin may
+    // declare it directly
     // (it grants no access, just a number this same admin's own package
     // selections are validated against), but subscriptionTier,
     // pulseCheckEnabled, pulseCheckTier, and the *UpdatedAt companions stay
