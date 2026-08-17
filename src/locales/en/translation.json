@@ -1496,7 +1496,11 @@
     "addEmail": "Add email",
     "deliverable": "Deliverable",
     "awaitingContactInfo": "Awaiting contact info",
-    "remove": "Remove"
+    "remove": "Remove",
+    "headcountCapReached": {
+      "title": "Employee cap reached",
+      "body": "Your current plan allows up to {{cap}} employees. <link>Upgrade your plan on the Billing page</link> to add more."
+    }
   },
   "routingRulesPage": {
     "ruleSaved": "Rule saved. Cases submitted from now on route to that handler automatically.",
@@ -2151,11 +2155,36 @@
     },
     "subscriptionTierLabels": {
       "starter": "Starter",
+      "growth": "Growth",
+      "scale": "Scale",
       "professional": "Professional",
       "enterprise": "Enterprise"
     },
     "activeSubscription": {
-      "unknownTier": "Not set"
+      "unknownTier": "Not set",
+      "pulseCheck": {
+        "label": "Pulse Check add-on",
+        "enable": "Add Pulse Check",
+        "disable": "Remove Pulse Check",
+        "updating": "Updating..."
+      },
+      "cap": {
+        "atCap": "You're at your plan's cap of {{cap}} employees.",
+        "nearCap": "{{current}} of {{cap}} employees on your plan.",
+        "upgrade": "Upgrade plan",
+        "upgrading": "Upgrading..."
+      }
+    },
+    "subscribeCard": {
+      "title": "Start your subscription",
+      "body": "Based on your roster of {{count}} employees, you're on the {{tier}} plan.",
+      "pulseCheckLabel": "Also add the Pulse Check add-on ({{price}}/mo)",
+      "subscribeButton": "Subscribe",
+      "subscribing": "Starting checkout...",
+      "noRoster": {
+        "title": "Add employees to subscribe",
+        "body": "Add your roster on the Employees page before starting a subscription - your plan and price are based on your real headcount."
+      }
     },
     "employeesAtRate_one": "{{count}} employee @ {{rate}}",
     "employeesAtRate_other": "{{count}} employees @ {{rate}}",
@@ -2217,7 +2246,7 @@
     "notPurchased": "Not purchased",
     "pulseCheckRate": "{{rate}} per employee / month",
     "overridesTitle": "Overrides in effect for your company",
-    "footnote": "Whether Pulse Check is active is set by Rectifia once your subscription is arranged - request a quote above to add or change it."
+    "footnote": "Once you're subscribed, add or remove Pulse Check yourself above. Before that, it's included with whichever plan or quote you set up."
   },
   "staffInvite": {
     "roleHints": {

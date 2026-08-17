@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import {
   addEmployee,
   importEmployees,
@@ -41,6 +42,7 @@ function EmployeesPage({ companyId }) {
   const [employees, setEmployees] = useState([])
   const [departments, setDepartments] = useState([])
   const [error, setError] = useState(null)
+  const [capError, setCapError] = useState(null)
   const [notice, setNotice] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -68,18 +70,33 @@ function EmployeesPage({ companyId }) {
     if (companyId) refresh()
   }, [companyId, refresh])
 
+  // addEmployee.js/bulkAddEmployees.js throw a structured error
+  // (err.details = { code: 'headcount_cap_reached', currentTier, cap })
+  // when the roster is already at the plan's headcount cap - see
+  // employeeService.js's addEmployee/importEmployees comments. Surfaced as
+  // its own alert with a direct link to the Billing page's Upgrade action,
+  // rather than the generic error message every other write failure gets.
+  function handleWriteError(err) {
+    if (err.details?.code === 'headcount_cap_reached') {
+      setCapError(err.details)
+    } else {
+      setError(err.message)
+    }
+  }
+
   async function handleAdd(e) {
     e.preventDefault()
     if (!form.name.trim()) return
     setSaving(true)
     setError(null)
+    setCapError(null)
     setNotice(null)
     try {
       await addEmployee(companyId, form)
       setForm({ name: '', department: '', email: '' })
       await refresh()
     } catch (err) {
-      setError(err.message)
+      handleWriteError(err)
     } finally {
       setSaving(false)
     }
@@ -142,13 +159,14 @@ function EmployeesPage({ companyId }) {
     if (!preview?.employees.length) return
     setSaving(true)
     setError(null)
+    setCapError(null)
     try {
       const { added, updated } = await importEmployees(companyId, preview.employees)
       setNotice(t('employeesPage.importResult', { count: added, added, updated }))
       clearPreview()
       await refresh()
     } catch (err) {
-      setError(err.message)
+      handleWriteError(err)
     } finally {
       setSaving(false)
     }
@@ -217,6 +235,15 @@ function EmployeesPage({ companyId }) {
       <p className="max-w-2xl text-sm text-muted">{t('employeesPage.description')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
+      {capError && (
+        <Alert variant="warning" title={t('employeesPage.headcountCapReached.title')}>
+          <Trans
+            i18nKey="employeesPage.headcountCapReached.body"
+            values={{ cap: capError.cap }}
+            components={{ link: <Link to="/admin/billing" className="font-medium underline" /> }}
+          />
+        </Alert>
+      )}
       {notice && <Alert variant="success">{notice}</Alert>}
 
       <Card
