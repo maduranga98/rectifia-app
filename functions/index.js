@@ -94,6 +94,7 @@ const { calculateQuote } = require('./src/billing/calculateQuote')
 const { createBillingPortalSession } = require('./src/billing/createBillingPortalSession')
 const { stripeWebhook } = require('./src/billing/stripeWebhook')
 const { requestQuote } = require('./src/billing/requestQuote')
+const { linkCompanySubscription } = require('./src/billing/linkCompanySubscription')
 const { accessReview, attestAccessReview, getAccessReviewForAttestation } = require('./src/security/accessReview')
 const { keyRotationCheck, recordKeyRotation, rotateIdentityVaultKey } = require('./src/security/keyRotation')
 const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomalyDetection')
@@ -253,6 +254,15 @@ exports.stripeWebhook = stripeWebhook
 // authoritative - companies/{companyId}.employeeCount, not the live Pulse
 // Check roster.
 exports.requestQuote = requestQuote
+// Super Admin only: links (or re-links, to change plan / re-sync) a Stripe
+// subscription a human already created - via an accepted Quote or set up
+// directly in the Stripe Dashboard - to a company. Never creates a Stripe
+// subscription itself. This is the only client-reachable path that can set
+// companies/{companyId}.stripeSubscriptionId/billingStatus/subscriptionTier
+// (alongside stripeWebhook.js reacting to Stripe) - see
+// firestore.rules' superAdminBillingFieldsLocked() for why no other client
+// write, including a direct Super Admin write, can touch these fields.
+exports.linkCompanySubscription = linkCompanySubscription
 // Module 26: Security Control & Evidence Layer. Five scheduled controls
 // (accessReview quarterly, keyRotationCheck weekly, anomalyDetection daily,
 // integrityCheck weekly, backupVerification monthly) plus the onCall

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import {
   SELECTABLE_JURISDICTIONS,
-  SUBSCRIPTION_TIERS,
   createCompany,
   createCompanyAdmin,
   createDepartment,
@@ -12,7 +11,7 @@ import CompanyCredentials from './CompanyCredentials'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Icon from '../ui/Icon'
-import { Input, Select } from '../ui/Field'
+import { Input } from '../ui/Field'
 
 const JURISDICTION_LABELS = {
   EU: 'European Union',
@@ -41,7 +40,6 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   const [slugEdited, setSlugEdited] = useState(false)
   const [adminEmail, setAdminEmail] = useState('')
   const [jurisdictions, setJurisdictions] = useState([])
-  const [subscriptionTier, setSubscriptionTier] = useState(SUBSCRIPTION_TIERS[0])
   const [departments, setDepartments] = useState([])
   const [newDepartmentName, setNewDepartmentName] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -95,7 +93,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
       // so a retry doesn't register a duplicate company.
       const id =
         companyId ??
-        (await createCompany({ name, jurisdictions, departments, subscriptionTier, slug }))
+        (await createCompany({ name, jurisdictions, departments, slug }))
       setCompanyId(id)
 
       const admin = await createCompanyAdmin({ companyId: id, email: adminEmail })
@@ -150,17 +148,6 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
           placeholder={slugifyCompanyName(name) || 'acme-ltd'}
           hint="Appears in the public reporting link (/submit/:slug). Left blank, it's generated from the company name. Normalized to lowercase letters, numbers and hyphens, and must be unique platform-wide."
         />
-        <Select
-          label="Subscription tier"
-          value={subscriptionTier}
-          onChange={(e) => setSubscriptionTier(e.target.value)}
-        >
-          {SUBSCRIPTION_TIERS.map((tier) => (
-            <option key={tier} value={tier}>
-              {tier}
-            </option>
-          ))}
-        </Select>
       </div>
 
       <Input

@@ -32,6 +32,18 @@ const BILLING_TONE = {
 // statuses below should ever co-occur with a live stripeSubscriptionId.
 const PAYING_BILLING_STATUSES = ['active', 'trialing', 'past_due', 'unpaid']
 
+// 'unbilled' means "genuinely has no subscription yet" - the status a
+// company is created with now (see companyService.js's createCompany),
+// distinct from 'unknown' ("we don't know") and from every
+// PAYING_BILLING_STATUSES value, so it never trips
+// hasDataIntegrityWarning below. Falls through to BILLING_TONE's neutral
+// default (no entry needed there) but gets its own readable label here
+// rather than the raw underscore-replaced status string.
+function billingStatusLabel(t, status) {
+  if (status === 'unbilled') return t('billingPage.statusLabels.unbilled')
+  return status.replace(/_/g, ' ')
+}
+
 // Company Admin's billing home. Pilot v1 has a handful of founding customers
 // on individually negotiated discounts, no SOC 2 report or reference
 // customers yet, and self-serve published-rate billing doesn't represent
@@ -164,7 +176,7 @@ function BillingPage({ companyId }) {
               </div>
               <div className="flex items-center gap-3">
                 <Badge tone={BILLING_TONE[billingStatus] ?? 'tone-neutral'} dot>
-                  {billingStatus.replace(/_/g, ' ')}
+                  {billingStatusLabel(t, billingStatus)}
                 </Badge>
                 {company?.stripeSubscriptionId && (
                   <Button
