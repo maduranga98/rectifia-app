@@ -92,7 +92,6 @@ const NAV_ITEMS = [
     to: '/admin/employees',
     labelKey: 'adminNav.employees',
     icon: 'pulse',
-    flag: 'pulseCheck',
     sectionKey: 'adminNav.sections.organization',
   },
   {
@@ -321,7 +320,7 @@ function Admin() {
           <Route path="roles" element={gated(<StaffPage companyId={companyId} initialTab="roles" />)} />
           <Route
             path="employees"
-            element={gated(<EmployeesPage companyId={companyId} />, { flag: 'pulseCheck' })}
+            element={gated(<EmployeesPage companyId={companyId} />)}
           />
           <Route
             path="pulse-questions"

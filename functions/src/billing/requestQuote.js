@@ -5,7 +5,7 @@ const {
   MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
   calculateMonthlyPrice,
   calculatePulseCheckAddOnPrice,
-  readDeclaredEmployeeCount,
+  resolveEffectiveEmployeeCount,
 } = require('./pricingEngine')
 const { stripeSecretKey, getStripeClient } = require('./stripeClient')
 const { LINE_ITEM_TAG } = require('./lineItemTags')
@@ -85,11 +85,11 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
   }
   const company = companySnapshot.data()
 
-  const employeeCount = readDeclaredEmployeeCount(company)
+  const { count: employeeCount } = resolveEffectiveEmployeeCount(company)
   if (employeeCount === null) {
     throw new HttpsError(
       'failed-precondition',
-      'Declare your company\'s employee count before requesting a quote'
+      'Add your employee roster on the Employees page, or declare an estimated employee count, before requesting a quote.'
     )
   }
 
