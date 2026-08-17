@@ -1,12 +1,8 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FEATURE_FLAGS, FEATURE_FLAG_KEYS, hasExplicitFeatureFlag, resolveFeatureFlag } from '../../config/featureFlags'
 import { PLAN_TIER_SUMMARIES, PULSE_CHECK_BANDS, planIncludesFeature } from '../../config/pricingConfig'
-import { togglePulseCheckAddOn } from '../../services/billingService'
 import Card from '../ui/Card'
 import Badge from '../ui/Badge'
-import Button from '../ui/Button'
-import Alert from '../ui/Alert'
 import Icon from '../ui/Icon'
 
 // One column of the plan comparison grid. Self-contained on purpose - every
@@ -73,32 +69,16 @@ function TierCard({ summary, isCurrentTier, t, formatCurrency }) {
   )
 }
 
-// The Pulse Check row is the one place on this card that can actually change
-// something, not just display it: a Company Admin with an active
-// subscription can buy or cancel the add-on right here. `hasSubscription` -
-// whether companies/{companyId}.stripeSubscriptionId is set - gates that;
-// without a subscription there is no payment method on file for Stripe to
-// charge, so the row falls back to a plain locked status with a pointer to
-// set up billing first. `employeeCount` may be 0/unknown (no roster yet),
-// in which case the flat per-employee rate is shown instead of a computed
-// total - there's nothing to compute a total from yet.
-function PulseCheckRow({ companyId, hasSubscription, pulseCheckActive, pulseCheckAddOnPrice, employeeCount, formatCurrency, t, onToggled }) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState(null)
-
-  async function handleToggle() {
-    setPending(true)
-    setError(null)
-    try {
-      await togglePulseCheckAddOn(companyId, !pulseCheckActive)
-      await onToggled?.()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setPending(false)
-    }
-  }
-
+// The Pulse Check row is purely informational: whether the add-on is active
+// for this company is decided by companies/{companyId}.featureFlags.pulseCheck
+// (resolveFeatureFlag), which only ever changes via a Super Admin override or
+// stripeWebhook.js reconciling a manually-set-up Stripe subscription's actual
+// item state. Pilot v1 has no self-serve purchase/cancel action here - see
+// BillingPage.jsx's "Request a quote" button for the only billing action a
+// Company Admin can take themselves. `employeeCount` may be 0/unknown (no
+// declared headcount yet), in which case the flat starting rate is shown
+// instead of a computed total.
+function PulseCheckRow({ pulseCheckActive, pulseCheckAddOnPrice, employeeCount, formatCurrency, t }) {
   return (
     <div className="rounded-xl border border-line-soft p-4">
       <div className="flex items-start justify-between gap-4">
@@ -120,28 +100,6 @@ function PulseCheckRow({ companyId, hasSubscription, pulseCheckActive, pulseChec
           </p>
         </div>
       </div>
-
-      <div className="mt-3 flex items-center justify-end">
-        {hasSubscription ? (
-          <Button
-            size="sm"
-            variant={pulseCheckActive ? 'dangerGhost' : 'accent'}
-            loading={pending}
-            loadingLabel={t('planFeatures.pulseCheckSaving')}
-            onClick={handleToggle}
-          >
-            {pulseCheckActive ? t('planFeatures.removePulseCheck') : t('planFeatures.addPulseCheck')}
-          </Button>
-        ) : (
-          <p className="text-xs text-muted">{t('planFeatures.setUpBillingFirst')}</p>
-        )}
-      </div>
-
-      {error && (
-        <Alert variant="error" className="mt-2">
-          {error}
-        </Alert>
-      )}
     </div>
   )
 }
@@ -174,23 +132,15 @@ function OverridesNote({ companyFlags, t }) {
   )
 }
 
-// `tier` is the company's current billing tier if a live quote exists (null
-// when there's no billable headcount yet - see BillingQuote.jsx, which
-// renders this card either way so a company can see what plans and the
-// Pulse Check add-on look like before adding any employees).
+// `tier` is the company's current reference tier if a live reference quote
+// exists (null when there's no declared headcount yet - see BillingQuote.jsx,
+// which renders this card either way so a company can see what plans and the
+// Pulse Check add-on look like before declaring one).
 // `companyFlags` is companies/{companyId}.featureFlags as loaded from the
-// company doc (may be undefined). `hasSubscription` and
-// `onPulseCheckToggled` back the Pulse Check purchase toggle.
-function PlanFeaturesCard({
-  tier,
-  companyId,
-  companyFlags,
-  employeeCount,
-  pulseCheckAddOnPrice,
-  formatCurrency,
-  hasSubscription,
-  onPulseCheckToggled,
-}) {
+// company doc (may be undefined) - the only thing this card reads to decide
+// what's actually active; see PulseCheckRow's comment above for why there is
+// no purchase action wired up here.
+function PlanFeaturesCard({ tier, companyFlags, employeeCount, pulseCheckAddOnPrice, formatCurrency }) {
   const { t } = useTranslation()
 
   const pulseCheckActive = resolveFeatureFlag(companyFlags, 'pulseCheck')
@@ -211,14 +161,11 @@ function PlanFeaturesCard({
 
       <div className="mt-4">
         <PulseCheckRow
-          companyId={companyId}
-          hasSubscription={hasSubscription}
           pulseCheckActive={pulseCheckActive}
           pulseCheckAddOnPrice={pulseCheckAddOnPrice}
           employeeCount={employeeCount}
           formatCurrency={formatCurrency}
           t={t}
-          onToggled={onPulseCheckToggled}
         />
       </div>
 

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getCompanyQuote } from '../../services/billingService'
-import { getCompany } from '../../services/companyService'
+import { getCompany, updateCompanyEmployeeCount } from '../../services/companyService'
 import { calculateMonthlyPrice } from '../../utils/pricingCalculator'
 import Alert from '../ui/Alert'
+import Button from '../ui/Button'
 import Card from '../ui/Card'
 import StatTile from '../ui/StatTile'
 import { Input } from '../ui/Field'
@@ -52,18 +53,93 @@ function BreakdownReceipt({ breakdown }) {
   )
 }
 
-// Company Admin's billing quote: current tier, current monthly price, the
-// bracket breakdown behind that price, and a what-if calculator for
-// projected headcount growth. `employeeCount`/`quote` below come straight
-// from calculateQuote.js's response, which is computed from the company's
-// DECLARED headcount (companies/{companyId}.employeeCount) - see
+// v1's only source for a company's headcount: a number the Company Admin
+// types in themselves, not derived from the companies/{companyId}/employees
+// roster. Declaring/editing it here is what changes the reference quote
+// below and what a quote request (BillingPage.jsx) is filed at - it never
+// touches a real Stripe charge itself, since there is none until a human
+// sets one up after negotiating a price. Shown inline so declaring/editing
+// it never leaves this card.
+function EmployeeCountEditor({ companyId, employeeCount, onSaved }) {
+  const { t } = useTranslation()
+  const [editing, setEditing] = useState(employeeCount == null)
+  const [value, setValue] = useState(employeeCount != null ? String(employeeCount) : '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function handleSave(event) {
+    event.preventDefault()
+    setSaving(true)
+    setError(null)
+    try {
+      await updateCompanyEmployeeCount(companyId, value)
+      setEditing(false)
+      await onSaved()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-navy-50/60 px-4 py-3">
+        <p className="text-sm text-charcoal">{t('billingQuote.declaredHeadcount', { count: employeeCount })}</p>
+        <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+          {t('billingQuote.employeeCount.edit')}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSave} className="flex flex-col gap-3 rounded-lg border border-line-soft px-4 py-3.5">
+      <Input
+        type="number"
+        min={1}
+        step={1}
+        label={t('billingQuote.employeeCount.label')}
+        hint={t('billingQuote.employeeCount.hint')}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        required
+      />
+      {error && <Alert variant="error">{error}</Alert>}
+      <div className="flex items-center gap-2">
+        <Button type="submit" size="sm" variant="accent" loading={saving} loadingLabel={t('billingQuote.employeeCount.saving')}>
+          {t('billingQuote.employeeCount.save')}
+        </Button>
+        {employeeCount != null && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
+            {t('billingQuote.employeeCount.cancel')}
+          </Button>
+        )}
+      </div>
+    </form>
+  )
+}
+
+// Company Admin's REFERENCE billing quote: current tier, current monthly
+// price, the bracket breakdown behind that price, and a what-if calculator
+// for projected headcount growth - all computed from Rectifia's PUBLISHED
+// rates, never what the company is actually charged. Pilot v1 has a
+// handful of founding customers on individually negotiated discounts and no
+// self-serve subscription path at all, so every number this component shows
+// carries the "reference rate only" framing below and nothing here is a
+// price-change or payment action - see BillingPage.jsx for the single
+// "Request a quote" action that is available, and its file comment for the
+// full rationale.
+//
+// `employeeCount`/`quote` below come straight from calculateQuote.js's
+// response, which is computed from the company's DECLARED headcount
+// (companies/{companyId}.employeeCount) - see
 // functions/src/billing/pricingEngine.js's readDeclaredEmployeeCount()
-// comment for why that field, not the live Pulse Check roster, is
-// authoritative for billing. Case volume never appears here - price is a
-// function of headcount only, and this panel is read-only (no payment form,
-// no plan-change action; see BillingPage.jsx for that boundary, and
-// PackageSelector.jsx/PulseCheckToggle.jsx for where the actual plan/add-on
-// changes happen).
+// comment for why that field, not the live Pulse Check roster, drives this.
+// The employee-count editor below is this component's own - the
+// package-selection UI that used to own it (PackageSelector.jsx) is gone,
+// but a Company Admin still needs a way to declare/update the number this
+// reference quote and a quote request are computed from.
 function BillingQuote({ companyId }) {
   const { t } = useTranslation()
   const TIER_LABELS = {
@@ -128,6 +204,16 @@ function BillingQuote({ companyId }) {
 
   return (
     <div className="flex flex-col gap-5">
+      <Alert variant="warning" title={t('billingQuote.referenceRateNotice.title')}>
+        {t('billingQuote.referenceRateNotice.body')}
+      </Alert>
+
+      <EmployeeCountEditor
+        companyId={companyId}
+        employeeCount={current?.employeeCount || null}
+        onSaved={refresh}
+      />
+
       {!hasQuote && (
         <Alert variant="info" title={t('billingQuote.noHeadcount.title')}>
           {t('billingQuote.noHeadcount.body')}
@@ -184,13 +270,10 @@ function BillingQuote({ companyId }) {
 
       <PlanFeaturesCard
         tier={quote?.tier ?? null}
-        companyId={companyId}
         companyFlags={company?.featureFlags ?? null}
         employeeCount={employeeCount}
         pulseCheckAddOnPrice={pulseCheckAddOnPrice}
         formatCurrency={formatCurrency}
-        hasSubscription={Boolean(company?.stripeSubscriptionId)}
-        onPulseCheckToggled={refresh}
       />
 
       {hasQuote && (

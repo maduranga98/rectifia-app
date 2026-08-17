@@ -1,16 +1,22 @@
-// Single source of truth for Rectifia's billing amounts. Every rate, band
-// boundary, and base fee lives here as a named constant so a price change is
-// a one-file edit: nothing outside this file (src/utils/pricingCalculator.js,
-// functions/src/billing/calculateQuote.js, BillingQuote.jsx) may hardcode a
-// pricing number of its own.
+// Single source of truth for Rectifia's PUBLISHED, REFERENCE billing rates.
+// Every rate, band boundary, and base fee lives here as a named constant so
+// a rate change is a one-file edit: nothing outside this file
+// (src/utils/pricingCalculator.js, functions/src/billing/pricingEngine.js,
+// BillingQuote.jsx) may hardcode a pricing number of its own.
 //
-// functions/src/billing/calculateQuote.js is a separate deployable (its own
+// Pilot v1 has no self-serve subscription path: what these constants drive
+// is a reference quote a prospective customer sees before Rectifia's sales
+// team negotiates their actual price (see BillingQuote.jsx's "reference
+// rate only" framing and requestQuote.js's "Contact sales" flow) - never an
+// invoice.
+//
+// functions/src/billing/pricingEngine.js is a separate deployable (its own
 // CommonJS package - see functions/package.json) and cannot import this ES
 // module at deploy time, so it carries its own copy of these same constants
 // rather than reaching across the deploy boundary. If a number below changes,
-// the matching constant in calculateQuote.js must change with it, or the
-// server-side (billed) price and this client-side (preview) price will
-// disagree - see the comment at the top of that file for the full rationale.
+// the matching constant in pricingEngine.js must change with it, or the
+// server-side reference quote and this client-side preview will disagree -
+// see the comment at the top of that file for the full rationale.
 
 // At or below this headcount, price is a flat lookup in PUBLISHED_BANDS.
 // Above it, price is the progressive marginal-rate formula in
@@ -47,13 +53,11 @@ export const PROGRESSIVE_PRICING = {
 // presented as a final, automatically-issued price at this scale.
 export const MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES = 5000
 
-// Pulse Check's published band pricing - the price Stripe actually meters
-// (createCheckoutSession.js, togglePulseCheckAddOn.js,
-// syncSubscriptionPricing.js, calculateQuote.js, all via
-// functions/src/billing/pricingEngine.js's calculatePulseCheckAddOnPrice()).
-// Four bands, capped at 500 employees like Core's
-// PROGRESSIVE_THRESHOLD_EMPLOYEES - above that, PULSE_CHECK_PROGRESSIVE_PRICING
-// below takes over.
+// Pulse Check's published band reference pricing (functions/src/billing/
+// calculateQuote.js and requestQuote.js, both via pricingEngine.js's
+// calculatePulseCheckAddOnPrice()). Four bands, capped at 500 employees like
+// Core's PROGRESSIVE_THRESHOLD_EMPLOYEES - above that,
+// PULSE_CHECK_PROGRESSIVE_PRICING below takes over.
 export const PULSE_CHECK_BANDS = [
   { tier: 'starter', label: 'Starter', minEmployees: 1, maxEmployees: 25, monthlyPrice: 10 },
   { tier: 'growth', label: 'Growth', minEmployees: 26, maxEmployees: 100, monthlyPrice: 29 },
@@ -63,18 +67,24 @@ export const PULSE_CHECK_BANDS = [
 
 // Pulse Check's progressive formula for headcount above the published-band
 // cap, mirroring PROGRESSIVE_PRICING's tax-bracket shape with Pulse Check's
-// own base fee and rates.
+// own base fee and rates. Every real customer at this scale is priced by a
+// negotiated agreement, not this formula - this only has to be a
+// reasonable, monotonically-decreasing reference number for a prospective
+// pilot customer's "what would this roughly cost" quote.
 //
-// RATE_TBD: the 2,501-5,000 rate has not been published or confirmed
-// anywhere - it is set equal to the 1,001-2,500 rate as a placeholder so the
-// formula stays monotonic instead of guessing a number. Must be confirmed
-// and replaced before billing any company in this headcount range.
+// The 2,501-5,000 rate has never been separately published - it is set to
+// the midpoint between the confirmed 1,001-2,500 rate (0.15) and the
+// confirmed 5,000+ rate (0.1) rather than repeating the 1,001-2,500 rate
+// verbatim, so the reference breakdown a prospective customer sees actually
+// decreases bracket over bracket instead of showing a flat, un-marginal
+// middle tier. Still an interpolated placeholder, not a published rate -
+// must match functions/src/billing/pricingEngine.js's own copy exactly.
 export const PULSE_CHECK_PROGRESSIVE_PRICING = {
   baseFee: 50,
   brackets: [
     { label: 'First 1,000', uptoEmployees: 1000, ratePerEmployee: 0.2 },
     { label: 'Next 1,500 (1,001-2,500)', uptoEmployees: 2500, ratePerEmployee: 0.15 },
-    { label: 'Next 2,500 (2,501-5,000) - RATE_TBD', uptoEmployees: 5000, ratePerEmployee: 0.15 },
+    { label: 'Next 2,500 (2,501-5,000)', uptoEmployees: 5000, ratePerEmployee: 0.125 },
     { label: 'Above 5,000', uptoEmployees: Infinity, ratePerEmployee: 0.1 },
   ],
 }

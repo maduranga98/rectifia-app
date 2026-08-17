@@ -2,7 +2,6 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const {
-  PROGRESSIVE_THRESHOLD_EMPLOYEES,
   MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
   calculateMonthlyPrice,
   calculatePulseCheckAddOnPrice,
@@ -17,27 +16,31 @@ if (!admin.apps.length) {
 const COMPANIES_COLLECTION = 'companies'
 const QUOTE_REQUESTS_COLLECTION = 'quoteRequests'
 
-// The "Contact sales" path for a company above the 500-employee self-serve
-// threshold (see upgradeSubscription.js, which refuses self-serve band
-// selection above that same threshold). This callable computes the real
-// progressive-formula quote using this module's own copy of Module 29's
+// The only way a Company Admin can ask Rectifia for a price, at any
+// headcount. Pilot v1 has a handful of founding customers on individually
+// negotiated discounts and no self-serve subscription path at all (see
+// BillingPage.jsx - there is no "set up billing" button anywhere in the
+// app), so this callable is deliberately not gated to a large-company
+// threshold the way its predecessor (requestEnterpriseQuote) was. It
+// computes the real quote using this module's own copy of Module 29's
 // pricing engine (functions/src/billing/pricingEngine.js - the same
 // calculateMonthlyPrice() calculateQuote.js uses for its own read-only
-// quote) and now files it as an actual Stripe Quote (stripe.quotes.create,
-// left as a draft - never finalized or sent from here) against the
-// company's Stripe Customer, in addition to the existing
+// reference quote) and files it as an actual Stripe Quote
+// (stripe.quotes.create, left as a draft - never finalized or sent from
+// here) against the company's Stripe Customer, in addition to the existing
 // quoteRequests/{companyId} Firestore record for Lumora's internal
 // follow-up. Sales finalizes and sends the Stripe Quote by hand from the
-// Stripe Dashboard once they've reviewed it; this callable's job is only to
-// get a real, priced Stripe object in front of them instead of a bare
-// Firestore doc they'd have to re-key into Stripe themselves. The formula,
-// the brackets, and the per-employee rates that produced the number NEVER
-// appear in this callable's return value to the client - only a bare
-// confirmation that the request was recorded. A customer-facing quote
-// calculator that reveals marginal per-employee rates at this scale is
-// exactly what the published-band pricing model above 500 employees is
-// designed not to expose.
-exports.requestEnterpriseQuote = onCall({ secrets: [stripeSecretKey] }, async (request) => {
+// Stripe Dashboard once they've reviewed it, and negotiates whatever actual
+// price and discount the company ends up on - this callable's job is only
+// to get a real, priced Stripe object and an internal record in front of
+// them, never to complete a purchase itself. The formula, the brackets, and
+// the per-employee rates that produced the number NEVER appear in this
+// callable's return value to the client - only a bare confirmation that the
+// request was recorded. Once sales has negotiated a price, a human sets up
+// the actual Stripe subscription and writes company.stripeSubscriptionId /
+// billingStatus / subscriptionTier directly (see stripeWebhook.js's file
+// comment) - nothing in this directory creates a subscription anymore.
+exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) => {
   const uid = requireAuthUid(request)
   const { companyId, target } = request.data || {}
 
@@ -53,17 +56,17 @@ exports.requestEnterpriseQuote = onCall({ secrets: [stripeSecretKey] }, async (r
   }
 
   const firestore = admin.firestore()
-  const role = await loadCallerRole(firestore, companyId, uid, 'request_enterprise_quote')
+  const role = await loadCallerRole(firestore, companyId, uid, 'request_quote')
   if (role !== 'companyAdmin') {
     await logPrivilegedAction(firestore, {
       uid,
       companyId,
       role,
-      action: 'request_enterprise_quote',
+      action: 'request_quote',
       outcome: 'denied:permission-denied',
       detail: 'role_not_company_admin',
     })
-    throw new HttpsError('permission-denied', 'Only a Company Admin may request an enterprise quote')
+    throw new HttpsError('permission-denied', 'Only a Company Admin may request a quote')
   }
 
   const companySnapshot = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
@@ -79,24 +82,19 @@ exports.requestEnterpriseQuote = onCall({ secrets: [stripeSecretKey] }, async (r
       'Declare your company\'s employee count before requesting a quote'
     )
   }
-  if (employeeCount <= PROGRESSIVE_THRESHOLD_EMPLOYEES) {
-    throw new HttpsError(
-      'failed-precondition',
-      'Self-serve plan selection is available at this headcount - a sales quote is not needed'
-    )
-  }
 
-  // calculateMonthlyPrice() is Core's progressive-bracket formula. Pulse
-  // Check above the self-serve bands has no separate bracket formula of its
-  // own - it continues the same flat per-employee rate
-  // calculatePulseCheckAddOnPrice() already applies at any headcount -
-  // reshaped into the same { tier, monthlyPrice, breakdown } quote shape so
-  // both targets store and log identically.
+  // calculateMonthlyPrice() picks the published-band or progressive formula
+  // on its own depending on employeeCount, so this reshapes cleanly for any
+  // headcount, not just the progressive-formula range. Pulse Check has no
+  // separate bracket formula of its own at any headcount - it's always
+  // calculatePulseCheckAddOnPrice() - reshaped into the same { tier,
+  // monthlyPrice, breakdown } quote shape so both targets store and log
+  // identically.
   const quote =
     target === 'core'
       ? calculateMonthlyPrice(employeeCount)
       : {
-          tier: 'enterprise',
+          tier: 'pulseCheck',
           monthlyPrice: calculatePulseCheckAddOnPrice(employeeCount),
           effectiveRatePerEmployee: null,
           needsManualReview: employeeCount > MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
@@ -118,11 +116,10 @@ exports.requestEnterpriseQuote = onCall({ secrets: [stripeSecretKey] }, async (r
 
   // A real, priced Stripe object for sales to work from - left as a draft
   // (no .finalizeQuote / .sendQuote call here) so nothing is sent to the
-  // customer automatically; a human reviews and sends it. One line item at
-  // the total monthlyPrice, same simplification corePriceData()/
-  // pulseCheckPriceData() use for the self-serve Checkout line items -
-  // the bracket breakdown stays internal (in `quote` below and in
-  // quoteRequests), never on the Stripe object a customer could eventually see.
+  // customer automatically; a human reviews, negotiates, and sends it. One
+  // line item at the reference monthlyPrice - the bracket breakdown stays
+  // internal (in `quote` below and in quoteRequests), never on the Stripe
+  // object a customer could eventually see.
   const stripeQuote = await stripe.quotes.create({
     customer: stripeCustomerId,
     line_items: [
@@ -130,7 +127,7 @@ exports.requestEnterpriseQuote = onCall({ secrets: [stripeSecretKey] }, async (r
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `Rectifia - Enterprise ${target === 'core' ? 'Core plan' : 'Pulse Check add-on'} (${employeeCount} employees)`,
+            name: `Rectifia - ${target === 'core' ? 'Core plan' : 'Pulse Check add-on'} (${employeeCount} employees)`,
           },
           unit_amount: Math.round(quote.monthlyPrice * 100),
           recurring: { interval: 'month' },
@@ -164,7 +161,7 @@ exports.requestEnterpriseQuote = onCall({ secrets: [stripeSecretKey] }, async (r
     uid,
     companyId,
     role,
-    action: 'request_enterprise_quote',
+    action: 'request_quote',
     outcome: 'granted',
     detail: target,
   })

@@ -91,13 +91,9 @@ const {
   getBenchmarkCatalog,
 } = require('./src/benchmark/benchmarkAccess')
 const { calculateQuote } = require('./src/billing/calculateQuote')
-const { createBillingCheckoutSession } = require('./src/billing/createCheckoutSession')
-const { togglePulseCheckAddOn } = require('./src/billing/togglePulseCheckAddOn')
 const { createBillingPortalSession } = require('./src/billing/createBillingPortalSession')
 const { stripeWebhook } = require('./src/billing/stripeWebhook')
-const { syncSubscriptionPricing } = require('./src/billing/syncSubscriptionPricing')
-const { upgradeSubscription } = require('./src/billing/upgradeSubscription')
-const { requestEnterpriseQuote } = require('./src/billing/requestEnterpriseQuote')
+const { requestQuote } = require('./src/billing/requestQuote')
 const { accessReview, attestAccessReview, getAccessReviewForAttestation } = require('./src/security/accessReview')
 const { keyRotationCheck, recordKeyRotation, rotateIdentityVaultKey } = require('./src/security/keyRotation')
 const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomalyDetection')
@@ -228,45 +224,35 @@ exports.computeBenchmarks = computeBenchmarks
 exports.getBenchmarksForCompany = getBenchmarksForCompany
 exports.setBenchmarkOptIn = setBenchmarkOptIn
 exports.getBenchmarkCatalog = getBenchmarkCatalog
-// Company Admin's billing quote: the current tier/price computed server-side
-// from the company's real active roster, and the Pulse Check add-on price.
-// See functions/src/billing/calculateQuote.js for why this is the only place
-// a quote may be treated as authoritative.
+// Company Admin's REFERENCE billing quote: a preview price computed
+// server-side from Rectifia's published rates and the company's declared
+// headcount, always shown in the UI as a reference only - not what the
+// company is actually billed. See functions/src/billing/calculateQuote.js
+// for the full rationale (pilot v1 has no self-serve subscription path;
+// every real customer's price is negotiated and set up by hand).
 exports.calculateQuote = calculateQuote
-// Stripe integration: self-serve checkout for a company's first subscription
-// (createBillingCheckoutSession), adding/removing the paid Pulse Check
-// add-on on an existing subscription (togglePulseCheckAddOn), the Stripe-
-// hosted billing portal for payment method/invoices/cancellation
-// (createBillingPortalSession), the webhook that keeps companies/{companyId}
-// .billingStatus and .featureFlags.pulseCheck in sync with what Stripe
-// actually has on file (stripeWebhook - register this function's URL in the
-// Stripe Dashboard's webhook settings), and the hourly job that keeps the
-// amount Stripe charges in sync with this app's own declared-headcount price
-// (syncSubscriptionPricing). See functions/src/billing/pricingEngine.js for
-// the shared pricing formula all of these (and calculateQuote above) use,
-// and its readDeclaredEmployeeCount() for which employee-count field is
-// authoritative - companies/{companyId}.employeeCount, not the live Pulse
-// Check roster.
-exports.createBillingCheckoutSession = createBillingCheckoutSession
-exports.togglePulseCheckAddOn = togglePulseCheckAddOn
+// Stripe integration: the Stripe-hosted billing portal for payment
+// method/invoices/cancellation once a subscription already exists
+// (createBillingPortalSession), and the webhook that keeps
+// companies/{companyId}.billingStatus and .featureFlags.pulseCheck in sync
+// with whatever Stripe subscription a human has set up for that company
+// (stripeWebhook - register this function's URL in the Stripe Dashboard's
+// webhook settings). Nothing in this codebase creates a Stripe subscription
+// anymore - see stripeWebhook.js's file comment.
 exports.createBillingPortalSession = createBillingPortalSession
 exports.stripeWebhook = stripeWebhook
-exports.syncSubscriptionPricing = syncSubscriptionPricing
-// Package-selection UI (PackageSelector.jsx / PulseCheckToggle.jsx):
-// self-serve Core-band or Pulse Check band selection against the company's
-// declared employeeCount. upgradeSubscription is the instant self-serve band
-// change for a company at or below the 500-employee threshold (Core or
-// Pulse Check, independently) - it actually touches Stripe now (Checkout on
-// a company's first tier selection, a subscriptionItems price update on a
-// later one), not just Firestore; see its file-level comment.
-// requestEnterpriseQuote is the "Contact sales" path above that threshold,
-// which computes the real quote via pricingEngine.js, files a real Stripe
-// Quote object (draft, never auto-sent) against the company's Stripe
-// Customer, and records both in quoteRequests/{companyId} for Lumora's own
-// follow-up - without ever handing the formula or per-employee rates back to
-// the client.
-exports.upgradeSubscription = upgradeSubscription
-exports.requestEnterpriseQuote = requestEnterpriseQuote
+// The only billing action a Company Admin can take beyond viewing the
+// reference quote and managing an existing subscription: ask Rectifia for a
+// real, negotiated price at their declared headcount. Computes the
+// reference quote via pricingEngine.js, files a real Stripe Quote object
+// (draft, never auto-sent) against the company's Stripe Customer, and
+// records both in quoteRequests/{companyId} for Lumora's own sales
+// follow-up - without ever handing the formula or per-employee rates back
+// to the client. See functions/src/billing/pricingEngine.js's
+// readDeclaredEmployeeCount() for which employee-count field is
+// authoritative - companies/{companyId}.employeeCount, not the live Pulse
+// Check roster.
+exports.requestQuote = requestQuote
 // Module 26: Security Control & Evidence Layer. Five scheduled controls
 // (accessReview quarterly, keyRotationCheck weekly, anomalyDetection daily,
 // integrityCheck weekly, backupVerification monthly) plus the onCall
