@@ -38,22 +38,36 @@ const PROGRESSIVE_PRICING = {
 
 const MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES = 5000
 
-const PULSE_CHECK_ADD_ON = {
-  ratePerEmployeePerMonth: 1,
-}
-
-// Server-side copy of src/config/pricingConfig.js's PULSE_CHECK_BANDS /
-// PUBLISHED_BANDS, for the same reason the rest of this file is a copy: this
-// is the authoritative side of the client/functions deploy boundary.
-// upgradeSubscription.js and requestEnterpriseQuote.js are the only callers -
-// see that constant's comment in pricingConfig.js for why this is a separate
-// pricing track from PULSE_CHECK_ADD_ON above.
+// Server-side copy of src/config/pricingConfig.js's PULSE_CHECK_BANDS - the
+// published Pulse Check add-on price for headcount at or below
+// PROGRESSIVE_THRESHOLD_EMPLOYEES. This IS what calculatePulseCheckAddOnPrice()
+// below bills through (createCheckoutSession.js, togglePulseCheckAddOn.js,
+// syncSubscriptionPricing.js, calculateQuote.js) - there is no other,
+// flat-per-employee pricing track for Pulse Check.
 const PULSE_CHECK_BANDS = [
   { tier: 'starter', label: 'Starter', minEmployees: 1, maxEmployees: 25, monthlyPrice: 10 },
   { tier: 'growth', label: 'Growth', minEmployees: 26, maxEmployees: 100, monthlyPrice: 29 },
   { tier: 'scale', label: 'Scale', minEmployees: 101, maxEmployees: 300, monthlyPrice: 69 },
   { tier: 'business', label: 'Business', minEmployees: 301, maxEmployees: 500, monthlyPrice: 129 },
 ]
+
+// Pulse Check's progressive formula for headcount above the published-band
+// cap, mirroring PROGRESSIVE_PRICING's tax-bracket shape with Pulse Check's
+// own base fee and rates.
+//
+// RATE_TBD: the 2,501-5,000 rate has not been published or confirmed
+// anywhere - it is set equal to the 1,001-2,500 rate as a placeholder so the
+// formula stays monotonic instead of guessing a number. Must be confirmed
+// and replaced before billing any company in this headcount range.
+const PULSE_CHECK_PROGRESSIVE_PRICING = {
+  baseFee: 50,
+  brackets: [
+    { label: 'First 1,000', uptoEmployees: 1000, ratePerEmployee: 0.2 },
+    { label: 'Next 1,500 (1,001-2,500)', uptoEmployees: 2500, ratePerEmployee: 0.15 },
+    { label: 'Next 2,500 (2,501-5,000) - RATE_TBD', uptoEmployees: 5000, ratePerEmployee: 0.15 },
+    { label: 'Above 5,000', uptoEmployees: Infinity, ratePerEmployee: 0.1 },
+  ],
+}
 
 function pulseCheckBandForEmployeeCount(employeeCount) {
   return PULSE_CHECK_BANDS.find((band) => employeeCount >= band.minEmployees && employeeCount <= band.maxEmployees) ?? null
@@ -133,8 +147,37 @@ function calculateMonthlyPrice(employeeCount) {
     : calculateProgressivePrice(employeeCount)
 }
 
+function calculatePulseCheckProgressivePrice(employeeCount) {
+  let remaining = employeeCount
+  let previousCeiling = 0
+  let total = PULSE_CHECK_PROGRESSIVE_PRICING.baseFee
+
+  for (const bracket of PULSE_CHECK_PROGRESSIVE_PRICING.brackets) {
+    if (remaining <= 0) break
+
+    const sliceSize = Math.min(remaining, bracket.uptoEmployees - previousCeiling)
+    if (sliceSize > 0) {
+      total += sliceSize * bracket.ratePerEmployee
+      remaining -= sliceSize
+    }
+
+    previousCeiling = bracket.uptoEmployees
+  }
+
+  return roundToCents(total)
+}
+
+// Published-band lookup at or below PROGRESSIVE_THRESHOLD_EMPLOYEES (the
+// $10/$29/$69/$129 bands), the progressive formula above it. This replaces
+// the old flat employeeCount * ratePerEmployeePerMonth calculation - Pulse
+// Check has never actually been priced per-employee at this scale, only in
+// published bands.
 function calculatePulseCheckAddOnPrice(employeeCount) {
-  return roundToCents(employeeCount * PULSE_CHECK_ADD_ON.ratePerEmployeePerMonth)
+  if (employeeCount <= PROGRESSIVE_THRESHOLD_EMPLOYEES) {
+    const band = pulseCheckBandForEmployeeCount(employeeCount)
+    return band.monthlyPrice
+  }
+  return calculatePulseCheckProgressivePrice(employeeCount)
 }
 
 // Counts the company's real, billable headcount: everyone on the Pulse Check

@@ -2193,60 +2193,12 @@
     "addOn": "Add-on",
     "active": "Active",
     "notPurchased": "Not purchased",
-    "pulseCheckRate": "{{rate}} per employee / month",
     "addPulseCheck": "Add Pulse Check",
     "removePulseCheck": "Remove Pulse Check",
     "pulseCheckSaving": "Saving...",
     "setUpBillingFirst": "Set up billing above to add this",
     "overridesTitle": "Overrides in effect for your company",
     "footnote": "Your plan moves up automatically as active headcount grows - there's nothing to select. Enterprise (500+ employees) is quoted individually above 5,000 employees rather than shown as a flat price."
-  },
-  "packageSelector": {
-    "title": "Core plan",
-    "description": "Self-serve, instant upgrades and downgrades between the three published headcount bands. Available up to 500 employees; above that, plans are quoted individually - see Contact sales below.",
-    "declaredHeadcount": "{{count}} declared employees",
-    "employeeCount": {
-      "label": "Employee count",
-      "hint": "A whole number, entered by you - used to determine which band you're eligible for.",
-      "edit": "Edit",
-      "cancel": "Cancel",
-      "save": "Save",
-      "saving": "Saving..."
-    },
-    "currentPlan": "Current plan",
-    "tierRange": "{{min}}-{{max}} employees",
-    "notEligible": "Available at {{min}}-{{max}} employees",
-    "saving": "Saving...",
-    "actions": {
-      "activate": "Activate {{label}}",
-      "upgrade": "Upgrade to {{label}}",
-      "downgrade": "Downgrade to {{label}}"
-    },
-    "immediateEffectNote": "Changes take effect immediately. Proration for mid-cycle switches isn't calculated yet.",
-    "enterprise": {
-      "title": "500+ employees: quoted individually",
-      "body": "At this headcount, self-serve plan selection isn't available. Request a quote and Rectifia's sales team will follow up with pricing tailored to your organization.",
-      "cta": "Contact sales",
-      "requesting": "Sending request...",
-      "requested": "Request sent - Rectifia's sales team will be in touch."
-    }
-  },
-  "pulseCheckToggle": {
-    "title": "Pulse Check",
-    "separateBadge": "Separate add-on",
-    "description": "An independent add-on with its own pricing band, billed and managed separately from your Core plan above - never shown as a combined price.",
-    "needsEmployeeCount": "Declare your employee count in the Core plan section above to manage Pulse Check pricing.",
-    "active": "Active",
-    "updateToBand": "Update to {{label}}",
-    "neverBundledNote": "Pulse Check is never bundled into your Core plan price - it's billed and tracked on its own.",
-    "enterprise": {
-      "title": "500+ employees: quoted individually",
-      "body": "At this headcount, self-serve Pulse Check band selection isn't available. Request a quote and Rectifia's sales team will follow up.",
-      "cta": "Contact sales",
-      "requesting": "Sending request...",
-      "requested": "Request sent - Rectifia's sales team will be in touch.",
-      "disableStillWorks": "You can still turn Pulse Check off at any time using the switch above."
-    }
   },
   "staffInvite": {
     "roleHints": {

@@ -47,35 +47,37 @@ export const PROGRESSIVE_PRICING = {
 // presented as a final, automatically-issued price at this scale.
 export const MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES = 5000
 
-// Pulse Check add-on: always per-employee, always flat, never bracketed.
-// Priced and billed completely separately from the core monthly price above -
-// see calculateMonthlyPrice()'s doc comment in pricingCalculator.js for why
-// the two must never be merged into one function.
-//
-// This is the rate Stripe actually meters (createCheckoutSession.js,
-// togglePulseCheckAddOn.js, syncSubscriptionPricing.js) and stays untouched
-// by PULSE_CHECK_BANDS below - the two are separate pricing tracks for
-// separate purposes, see that constant's comment.
-export const PULSE_CHECK_ADD_ON = {
-  ratePerEmployeePerMonth: 1,
-}
-
-// Pulse Check's own self-serve band pricing, for the Company Admin package-
-// selection UI (PackageSelector.jsx/PulseCheckToggle.jsx,
-// functions/src/billing/upgradeSubscription.js). This is a declared
-// entitlement tier a Company Admin selects against their self-reported
-// employeeCount - stored as companies/{companyId}.pulseCheckTier - and is
-// deliberately independent of PULSE_CHECK_ADD_ON's flat per-employee rate
-// above, which is what the existing Stripe subscription item actually
-// charges. Four bands, not three, and capped at 500 employees like Core's
-// PROGRESSIVE_THRESHOLD_EMPLOYEES - above that, Pulse Check follows the same
-// contact-sales path as Core rather than a published band price.
+// Pulse Check's published band pricing - the price Stripe actually meters
+// (createCheckoutSession.js, togglePulseCheckAddOn.js,
+// syncSubscriptionPricing.js, calculateQuote.js, all via
+// functions/src/billing/pricingEngine.js's calculatePulseCheckAddOnPrice()).
+// Four bands, capped at 500 employees like Core's
+// PROGRESSIVE_THRESHOLD_EMPLOYEES - above that, PULSE_CHECK_PROGRESSIVE_PRICING
+// below takes over.
 export const PULSE_CHECK_BANDS = [
   { tier: 'starter', label: 'Starter', minEmployees: 1, maxEmployees: 25, monthlyPrice: 10 },
   { tier: 'growth', label: 'Growth', minEmployees: 26, maxEmployees: 100, monthlyPrice: 29 },
   { tier: 'scale', label: 'Scale', minEmployees: 101, maxEmployees: 300, monthlyPrice: 69 },
   { tier: 'business', label: 'Business', minEmployees: 301, maxEmployees: 500, monthlyPrice: 129 },
 ]
+
+// Pulse Check's progressive formula for headcount above the published-band
+// cap, mirroring PROGRESSIVE_PRICING's tax-bracket shape with Pulse Check's
+// own base fee and rates.
+//
+// RATE_TBD: the 2,501-5,000 rate has not been published or confirmed
+// anywhere - it is set equal to the 1,001-2,500 rate as a placeholder so the
+// formula stays monotonic instead of guessing a number. Must be confirmed
+// and replaced before billing any company in this headcount range.
+export const PULSE_CHECK_PROGRESSIVE_PRICING = {
+  baseFee: 50,
+  brackets: [
+    { label: 'First 1,000', uptoEmployees: 1000, ratePerEmployee: 0.2 },
+    { label: 'Next 1,500 (1,001-2,500)', uptoEmployees: 2500, ratePerEmployee: 0.15 },
+    { label: 'Next 2,500 (2,501-5,000) - RATE_TBD', uptoEmployees: 5000, ratePerEmployee: 0.15 },
+    { label: 'Above 5,000', uptoEmployees: Infinity, ratePerEmployee: 0.1 },
+  ],
+}
 
 // Which PUBLISHED_BANDS entry `employeeCount` falls in, or null if it's
 // above the top published band (Scale tops out at 500 - anything higher is
@@ -108,10 +110,11 @@ export const PLAN_TIER_ORDER = ['starter', 'growth', 'scale', 'enterprise']
 //
 // Deliberately excludes 'pulseCheck': Pulse Check is not part of any tier's
 // included feature set at all. It is a standalone paid add-on (see
-// PULSE_CHECK_ADD_ON above), purchased and billed per employee regardless of
-// which core tier the company is on - a Starter-tier company can buy it, and
-// an Enterprise-tier company does not get it for free. See featureFlags.js's
-// comment on the pulseCheck registry entry for the enforcement side of this.
+// PULSE_CHECK_BANDS above), purchased and billed via its own published bands
+// regardless of which core tier the company is on - a Starter-tier company
+// can buy it, and an Enterprise-tier company does not get it for free. See
+// featureFlags.js's comment on the pulseCheck registry entry for the
+// enforcement side of this.
 //
 // This is a display/guidance mapping only, not a hard runtime gate: the
 // actual per-company on/off switch remains companies/{companyId}.featureFlags

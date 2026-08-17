@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FEATURE_FLAGS, FEATURE_FLAG_KEYS, hasExplicitFeatureFlag, resolveFeatureFlag } from '../../config/featureFlags'
-import { PLAN_TIER_SUMMARIES, PULSE_CHECK_ADD_ON, planIncludesFeature } from '../../config/pricingConfig'
+import { PLAN_TIER_SUMMARIES, PULSE_CHECK_BANDS, planIncludesFeature } from '../../config/pricingConfig'
 import { togglePulseCheckAddOn } from '../../services/billingService'
 import Card from '../ui/Card'
 import Badge from '../ui/Badge'
@@ -116,7 +116,7 @@ function PulseCheckRow({ companyId, hasSubscription, pulseCheckActive, pulseChec
           <p className="mt-1.5 text-xs tabular-nums text-muted">
             {employeeCount > 0
               ? `${formatCurrency(pulseCheckAddOnPrice)}${t('billingQuote.perMonth')}`
-              : t('planFeatures.pulseCheckRate', { rate: formatCurrency(PULSE_CHECK_ADD_ON.ratePerEmployeePerMonth) })}
+              : `${t('planFeatures.startingAt', { amount: formatCurrency(PULSE_CHECK_BANDS[0].monthlyPrice) })}${t('billingQuote.perMonth')}`}
           </p>
         </div>
       </div>
