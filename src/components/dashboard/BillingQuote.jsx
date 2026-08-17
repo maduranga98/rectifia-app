@@ -120,16 +120,22 @@ function EmployeeCountEditor({ companyId, employeeCount, onSaved }) {
   )
 }
 
-// Company Admin's REFERENCE billing quote: current tier, current monthly
-// price, the bracket breakdown behind that price, and a what-if calculator
-// for projected headcount growth - all computed from Rectifia's PUBLISHED
-// rates, never what the company is actually charged. Pilot v1 has a
-// handful of founding customers on individually negotiated discounts and no
-// self-serve subscription path at all, so every number this component shows
-// carries the "reference rate only" framing below and nothing here is a
-// price-change or payment action - see BillingPage.jsx for the single
-// "Request a quote" action that is available, and its file comment for the
-// full rationale.
+// Company Admin's billing quote card - branches on whether
+// company.stripeSubscriptionId exists (see BillingPage.jsx's file comment
+// for why that field, not billingStatus, is the source of truth):
+//
+//  - No stripeSubscriptionId (a prospect): the REFERENCE quote flow below -
+//    current tier, current monthly price, the bracket breakdown behind that
+//    price, and a what-if calculator for projected headcount growth, all
+//    computed from Rectifia's PUBLISHED rates, never what the company would
+//    actually be charged. Pilot v1 has a handful of founding customers on
+//    individually negotiated discounts and no self-serve subscription path
+//    at all, so every number here carries the "reference rate only" framing
+//    below and nothing here is a price-change or payment action - see
+//    BillingPage.jsx for the single "Request a quote" action that is
+//    available, and its file comment for the full rationale.
+//  - stripeSubscriptionId exists (an active paying customer): none of the
+//    reference-quote UI applies - see ActiveSubscriptionSummary below.
 //
 // `employeeCount`/`quote` below come straight from calculateQuote.js's
 // response, which is computed from the company's DECLARED headcount
@@ -138,8 +144,50 @@ function EmployeeCountEditor({ companyId, employeeCount, onSaved }) {
 // comment for why that field, not the live Pulse Check roster, drives this.
 // The employee-count editor below is this component's own - the
 // package-selection UI that used to own it (PackageSelector.jsx) is gone,
-// but a Company Admin still needs a way to declare/update the number this
+// but a prospect still needs a way to declare/update the number this
 // reference quote and a quote request are computed from.
+
+// Labels for company.subscriptionTier (companyService.js's SUBSCRIPTION_TIERS:
+// starter/professional/enterprise, the tier a Lumora staffer set by hand when
+// setting up the subscription) - a different vocabulary from TIER_LABELS
+// below, which labels quote.tier (the pricingEngine.js headcount bracket a
+// REFERENCE quote falls into: starter/growth/scale/enterprise). Never mix
+// the two: an active subscriber's plan comes from company.subscriptionTier,
+// never from a reference-quote bracket.
+function subscriptionTierLabel(t, tier) {
+  return t(`billingQuote.subscriptionTierLabels.${tier}`, { defaultValue: tier })
+}
+
+// An active paying customer (company.stripeSubscriptionId exists - see
+// BillingPage.jsx's file comment for why that field, not billingStatus, is
+// the source of truth). Shows the plan/tier and status a Lumora staffer set
+// by hand; deliberately does not recompute or display a price from the
+// reference formula below (calculateMonthlyPrice/calculateQuote.js) - that
+// formula is published-rate reference pricing for a prospect, not what an
+// already-negotiated, already-provisioned subscription actually charges. An
+// actual price for this state would have to come from the live Stripe
+// subscription itself, which nothing here fetches.
+function ActiveSubscriptionSummary({ company }) {
+  const { t } = useTranslation()
+  const status = company?.billingStatus ?? 'unknown'
+  return (
+    <Card padded={false} className="p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentTier')}</p>
+          <p className="mt-1 text-2xl font-semibold text-charcoal">
+            {company?.subscriptionTier ? subscriptionTierLabel(t, company.subscriptionTier) : t('billingQuote.activeSubscription.unknownTier')}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingPage.subscriptionStatus')}</p>
+          <p className="mt-1 text-lg font-semibold text-charcoal">{status.replace(/_/g, ' ')}</p>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 function BillingQuote({ companyId }) {
   const { t } = useTranslation()
   const TIER_LABELS = {
@@ -179,6 +227,12 @@ function BillingQuote({ companyId }) {
 
   if (error) {
     return <Alert variant="error">{error}</Alert>
+  }
+
+  const hasStripeSubscription = Boolean(company?.stripeSubscriptionId)
+
+  if (hasStripeSubscription) {
+    return <ActiveSubscriptionSummary company={company} />
   }
 
   const hasQuote = Boolean(current?.quote)

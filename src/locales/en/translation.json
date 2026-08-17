@@ -1321,6 +1321,10 @@
   },
   "billingPage": {
     "subscriptionStatus": "Subscription status",
+    "dataIntegrityWarning": {
+      "title": "Billing data needs review",
+      "body": "This company's billing status is set to \"{{billingStatus}}\", but no Stripe subscription is linked to it. This combination should never happen automatically - it usually means one of the two fields was set by hand without the other. Contact Rectifia support to have this corrected."
+    },
     "actions": {
       "manageBilling": "Manage billing",
       "openingPortal": "Opening billing portal...",
@@ -2142,6 +2146,14 @@
       "scale": "Scale",
       "enterprise": "Enterprise"
     },
+    "subscriptionTierLabels": {
+      "starter": "Starter",
+      "professional": "Professional",
+      "enterprise": "Enterprise"
+    },
+    "activeSubscription": {
+      "unknownTier": "Not set"
+    },
     "employeesAtRate_one": "{{count}} employee @ {{rate}}",
     "employeesAtRate_other": "{{count}} employees @ {{rate}}",
     "employeesCount_one": "{{count}} employee",
@@ -2161,7 +2173,7 @@
     },
     "noHeadcount": {
       "title": "No billable headcount yet",
-      "body": "Add employees to your roster on the Employees page to see a billing quote."
+      "body": "Enter your company's employee count above to see a reference quote."
     },
     "enterWholeNumber": "Enter a whole number of employees",
     "currentTier": "Current tier",
