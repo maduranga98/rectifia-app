@@ -2,21 +2,13 @@ const { onRequest } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { stripeSecretKey, stripeWebhookSecret, getStripeClient } = require('./stripeClient')
+const { LINE_ITEM_TAG } = require('./lineItemTags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
 }
 
 const COMPANIES_COLLECTION = 'companies'
-
-// Tags a Stripe Product's metadata with which of our two billable things a
-// subscription item is. Pilot v1 has no self-serve Checkout anymore (see the
-// file comment below), so nothing in this codebase creates a Product with
-// this tag - a human sets it by hand (or by whatever internal tool
-// eventually replaces manual Stripe Dashboard entry) when setting up a
-// company's subscription, matching the same values this webhook has always
-// looked for.
-const LINE_ITEM_TAG = { CORE: 'core', PULSE_CHECK: 'pulseCheck' }
 
 // Writes the effective state of a Stripe subscription onto
 // companies/{companyId}: which Stripe objects back it, its status (the same
