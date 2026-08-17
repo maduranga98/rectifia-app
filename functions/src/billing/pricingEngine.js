@@ -20,9 +20,10 @@ const { HttpsError } = require('firebase-functions/v2/https')
 // published-rate number a prospective customer sees is a starting point for
 // a conversation, not an invoice.
 //
-// See readDeclaredEmployeeCount() below for which employee-count field is
-// authoritative for this reference calculation - it is not the live Pulse
-// Check roster.
+// See resolveEffectiveEmployeeCount() below for which employee-count field is
+// authoritative for this reference calculation: the real Pulse Check roster
+// whenever a company has one, the self-declared estimate only as a fallback
+// for a company with no roster yet.
 const PROGRESSIVE_THRESHOLD_EMPLOYEES = 500
 
 const PUBLISHED_BANDS = [
@@ -86,21 +87,40 @@ function pulseCheckBandForEmployeeCount(employeeCount) {
   return PULSE_CHECK_BANDS.find((band) => employeeCount >= band.minEmployees && employeeCount <= band.maxEmployees) ?? null
 }
 
-// AUTHORITATIVE EMPLOYEE COUNT, DECIDED: companies/{companyId}.employeeCount
-// (self-declared by the Company Admin, written by
-// companyService.js's updateCompanyEmployeeCount) is the one number every
-// reference-pricing path in this directory reads - calculateQuote.js and
-// requestQuote.js both call this function, not the live Pulse Check roster.
-// The roster-derived count this module used to compute (countActiveEmployees(),
-// removed) is gone from every call site - nothing here computes a reference
-// number off the real Pulse Check roster size. Pilot v1 has no automated
-// reconciliation between the declared number and the roster; a Company Admin
-// under-declaring headcount only skews their own reference quote, and
-// that is an accepted v1 risk, not a bug to route around by silently falling
-// back to the roster count in one code path and not another.
+// Self-declared employee count (companies/{companyId}.employeeCount, written
+// by companyService.js's updateCompanyEmployeeCount) - the fallback estimate
+// used only for a company with no real roster yet. See
+// resolveEffectiveEmployeeCount() below, which every reference-pricing call
+// site (calculateQuote.js, requestQuote.js) actually calls: it prefers the
+// real Pulse Check roster (companies/{companyId}.currentEmployeeCount) over
+// this declared number whenever the roster is non-empty.
 function readDeclaredEmployeeCount(company) {
   const count = Number(company?.employeeCount)
   return Number.isFinite(count) && Number.isInteger(count) && count >= 1 ? count : null
+}
+
+// Single source of truth for which employee-count number a reference quote
+// should be built from: the real Pulse Check roster
+// (companies/{companyId}.currentEmployeeCount, maintained transactionally by
+// addEmployee.js/removeEmployee.js/bulkAddEmployees.js) whenever a company
+// has one, falling back to the self-declared estimate
+// (readDeclaredEmployeeCount() above) only for a company with no roster yet.
+// Returns which source was used so callers (calculateQuote.js,
+// requestQuote.js, and ultimately BillingQuote.jsx) can label the number as
+// an exact roster count or as a manual estimate rather than presenting an
+// estimate as if it were exact.
+function resolveEffectiveEmployeeCount(company) {
+  const rosterCount = Number(company?.currentEmployeeCount)
+  if (Number.isFinite(rosterCount) && Number.isInteger(rosterCount) && rosterCount >= 1) {
+    return { count: rosterCount, source: 'roster' }
+  }
+
+  const declaredCount = readDeclaredEmployeeCount(company)
+  if (declaredCount !== null) {
+    return { count: declaredCount, source: 'declared' }
+  }
+
+  return { count: null, source: null }
 }
 
 function roundToCents(amount) {
@@ -217,4 +237,5 @@ module.exports = {
   calculateMonthlyPrice,
   calculatePulseCheckAddOnPrice,
   readDeclaredEmployeeCount,
+  resolveEffectiveEmployeeCount,
 }

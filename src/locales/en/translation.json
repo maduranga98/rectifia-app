@@ -2180,11 +2180,7 @@
       "body": "Based on your roster of {{count}} employees, you're on the {{tier}} plan.",
       "pulseCheckLabel": "Also add the Pulse Check add-on ({{price}}/mo)",
       "subscribeButton": "Subscribe",
-      "subscribing": "Starting checkout...",
-      "noRoster": {
-        "title": "Add employees to subscribe",
-        "body": "Add your roster on the Employees page before starting a subscription - your plan and price are based on your real headcount."
-      }
+      "subscribing": "Starting checkout..."
     },
     "employeesAtRate_one": "{{count}} employee @ {{rate}}",
     "employeesAtRate_other": "{{count}} employees @ {{rate}}",
@@ -2194,19 +2190,24 @@
       "title": "Reference rate only",
       "body": "The pricing below is calculated from Rectifia's published rates for reference. Your actual price is set out in your service agreement and may differ - request a quote below for pricing specific to your organization."
     },
-    "declaredHeadcount": "{{count}} declared employees",
+    "declaredHeadcount": "Estimated headcount: {{count}} employees",
     "employeeCount": {
-      "label": "Employee count",
-      "hint": "A whole number, entered by you - used to compute the reference quote below and any quote you request.",
+      "label": "Estimated headcount",
+      "hint": "For a reference quote only - add your real roster on the Employees page for exact, self-serve pricing.",
       "edit": "Edit",
       "cancel": "Cancel",
       "save": "Save",
       "saving": "Saving..."
     },
-    "noHeadcount": {
-      "title": "No billable headcount yet",
-      "body": "Enter your company's employee count above to see a reference quote."
+    "onboarding": {
+      "title": "Get a price for your company",
+      "body": "Add your real employee roster on the Employees page to unlock self-serve subscribe pricing at your exact headcount. Or, enter an estimated headcount below for a reference-only quote you can request pricing on right away."
     },
+    "headcountSource": {
+      "roster": "Based on your real employee roster",
+      "declared": "Based on your estimated headcount - add your real roster on the Employees page for exact pricing"
+    },
+    "estimatedEmployees": "Estimated employees",
     "enterWholeNumber": "Enter a whole number of employees",
     "currentTier": "Current tier",
     "currentMonthlyPrice": "Current monthly price",

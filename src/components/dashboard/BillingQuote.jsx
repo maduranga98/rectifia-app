@@ -65,10 +65,13 @@ function BreakdownReceipt({ breakdown }) {
   )
 }
 
-// v1's only source for a company's headcount: a number the Company Admin
-// types in themselves, not derived from the companies/{companyId}/employees
-// roster. Declaring/editing it here is what changes the reference quote
-// below and what a quote request (BillingPage.jsx) is filed at - it never
+// The manually-declared estimate: a number the Company Admin types in
+// themselves, not derived from the companies/{companyId}/employees roster.
+// Only rendered for a company with no real roster yet (see BillingQuote's
+// noRosterYet branch below) - once a real roster exists, it drives the
+// reference quote instead and this editor is not shown. Declaring/editing
+// it here is what changes the reference quote below and what a quote
+// request (BillingPage.jsx) is filed at for a rosterless company - it never
 // touches a real Stripe charge itself, since there is none until a human
 // sets one up after negotiating a price. Shown inline so declaring/editing
 // it never leaves this card.
@@ -149,15 +152,17 @@ function EmployeeCountEditor({ companyId, employeeCount, onSaved }) {
 //  - stripeSubscriptionId exists (an active paying customer): none of the
 //    reference-quote UI applies - see ActiveSubscriptionSummary below.
 //
-// `employeeCount`/`quote` below come straight from calculateQuote.js's
-// response, which is computed from the company's DECLARED headcount
-// (companies/{companyId}.employeeCount) - see
-// functions/src/billing/pricingEngine.js's readDeclaredEmployeeCount()
-// comment for why that field, not the live Pulse Check roster, drives this.
-// The employee-count editor below is this component's own - the
+// `employeeCount`/`quote`/`source` below come straight from
+// calculateQuote.js's response, which is computed from
+// pricingEngine.js's resolveEffectiveEmployeeCount(): the real Pulse Check
+// roster whenever the company has one, the self-declared estimate only as a
+// fallback for a company with no roster yet. `source` ('roster' | 'declared')
+// says which one produced this quote, so the UI can label the number
+// correctly instead of presenting an estimate as if it were exact. The
+// employee-count editor below is this component's own - the
 // package-selection UI that used to own it (PackageSelector.jsx) is gone,
-// but a prospect still needs a way to declare/update the number this
-// reference quote and a quote request are computed from.
+// but a rosterless prospect still needs a way to declare/update the number
+// their reference quote and a quote request are computed from.
 
 // Labels for company.subscriptionTier (companyService.js's SUBSCRIPTION_TIERS:
 // starter/professional/enterprise, the tier a Lumora staffer set by hand when
@@ -289,29 +294,22 @@ function ActiveSubscriptionSummary({ company, companyId, realHeadcount, onChange
   )
 }
 
-// Shown in place of the reference-quote flow for a company at or below the
-// 500-employee self-serve ceiling with no subscription yet
-// (PROGRESSIVE_THRESHOLD_EMPLOYEES). Priced off the REAL roster
-// (`realHeadcount`, a count of companies/{companyId}/employees), never the
-// self-declared employeeCount the reference quote below still uses - an
-// actual subscription must be priced off what the roster actually contains.
-// The reference-quote UI and the "Request a quote" action
-// (BillingPage.jsx) stay exactly as they were below this card, for a
-// company above the ceiling or one that explicitly wants a negotiated deal
-// instead of self-serve checkout.
+// Primary action for a company with a real roster (`realHeadcount` > 0, a
+// count of companies/{companyId}/employees) at or below the 500-employee
+// self-serve ceiling (PROGRESSIVE_THRESHOLD_EMPLOYEES) with no subscription
+// yet - only rendered by BillingQuote in that state. Priced off the REAL
+// roster, matching the reference quote/breakdown shown alongside it below -
+// an actual subscription must be priced off what the roster actually
+// contains, never the self-declared estimate. Above the ceiling,
+// BillingQuote does not render this card at all - only the reference
+// quote plus the "Request a quote" action (BillingPage.jsx) for a company
+// above the ceiling or that wants a negotiated deal instead of self-serve
+// checkout. Callers only ever pass a positive realHeadcount here.
 function SubscribeCard({ companyId, realHeadcount }) {
   const { t } = useTranslation()
   const [includePulseCheck, setIncludePulseCheck] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(null)
-
-  if (realHeadcount < 1) {
-    return (
-      <Alert variant="info" title={t('billingQuote.subscribeCard.noRoster.title')}>
-        {t('billingQuote.subscribeCard.noRoster.body')}
-      </Alert>
-    )
-  }
 
   const band = bandForEmployeeCount(realHeadcount)
   const pulseCheckBand = pulseCheckBandForEmployeeCount(realHeadcount)
@@ -388,9 +386,11 @@ function BillingQuote({ companyId }) {
 
   // realHeadcount is the roster's real size (companies/{companyId}/employees)
   // - what createCheckoutSession.js/updatePulseCheckSubscription.js/
-  // upgradeSubscriptionTier.js actually price off of - kept separate from
-  // `current.employeeCount` above, which is the self-declared number the
-  // reference-quote flow below still uses.
+  // upgradeSubscriptionTier.js actually price off of, and what
+  // resolveEffectiveEmployeeCount() also prefers for `current.employeeCount`
+  // whenever it's non-zero. Kept as its own client-side count (rather than
+  // trusting company.currentEmployeeCount from `current`) only to decide
+  // which of this component's three states to render below.
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -439,6 +439,7 @@ function BillingQuote({ companyId }) {
   const employeeCount = current?.employeeCount ?? 0
   const quote = current?.quote ?? null
   const pulseCheckAddOnPrice = current?.pulseCheckAddOnPrice ?? null
+  const quoteSource = current?.source ?? null
 
   const projectedCount = Number.parseInt(projectedInput, 10)
   const hasValidProjection = Number.isFinite(projectedCount) && projectedCount >= 1
@@ -456,26 +457,39 @@ function BillingQuote({ companyId }) {
     }
   }
 
-  const eligibleForSelfServe = realHeadcount != null && realHeadcount <= PROGRESSIVE_THRESHOLD_EMPLOYEES
+  // Single state machine, keyed off the real roster size
+  // (companies/{companyId}/employees, counted client-side into
+  // realHeadcount): a company with a real roster gets self-serve subscribe
+  // (below the progressive threshold) or a "Request a quote" hand-off
+  // (above it), always priced off that same real headcount - never the
+  // manually-declared estimate. A company with no roster yet (realHeadcount
+  // === 0) is the only state where the self-declared estimate
+  // (EmployeeCountEditor) is offered at all, since it's the only way such a
+  // company can see any reference price before adding real employees.
+  const hasRoster = realHeadcount > 0
+  const overSelfServeCeiling = hasRoster && realHeadcount > PROGRESSIVE_THRESHOLD_EMPLOYEES
+  const noRosterYet = realHeadcount === 0
 
   return (
     <div className="flex flex-col gap-5">
-      {eligibleForSelfServe && <SubscribeCard companyId={companyId} realHeadcount={realHeadcount} />}
+      {hasRoster && !overSelfServeCeiling && <SubscribeCard companyId={companyId} realHeadcount={realHeadcount} />}
 
       <Alert variant="warning" title={t('billingQuote.referenceRateNotice.title')}>
         {t('billingQuote.referenceRateNotice.body')}
       </Alert>
 
-      <EmployeeCountEditor
-        companyId={companyId}
-        employeeCount={current?.employeeCount || null}
-        onSaved={refresh}
-      />
+      {noRosterYet && (
+        <>
+          <Alert variant="info" title={t('billingQuote.onboarding.title')}>
+            {t('billingQuote.onboarding.body')}
+          </Alert>
 
-      {!hasQuote && (
-        <Alert variant="info" title={t('billingQuote.noHeadcount.title')}>
-          {t('billingQuote.noHeadcount.body')}
-        </Alert>
+          <EmployeeCountEditor
+            companyId={companyId}
+            employeeCount={current?.employeeCount || null}
+            onSaved={refresh}
+          />
+        </>
       )}
 
       {hasQuote && (
@@ -486,6 +500,11 @@ function BillingQuote({ companyId }) {
                 <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentTier')}</p>
                 <p className="mt-1 text-2xl font-semibold text-charcoal">
                   {TIER_LABELS[quote.tier] ?? quote.tier}
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {quoteSource === 'roster'
+                    ? t('billingQuote.headcountSource.roster')
+                    : t('billingQuote.headcountSource.declared')}
                 </p>
               </div>
               <div className="text-right">
@@ -506,7 +525,9 @@ function BillingQuote({ companyId }) {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StatTile
-              label={t('billingQuote.activeEmployees')}
+              label={
+                quoteSource === 'roster' ? t('billingQuote.activeEmployees') : t('billingQuote.estimatedEmployees')
+              }
               value={employeeCount.toLocaleString()}
               tone="tone-neutral"
               icon="staff"

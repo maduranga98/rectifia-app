@@ -3,7 +3,7 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { resolveStaffEffectivePermissions, hasPermission } = require('../utils/permissionResolver')
-const { calculateMonthlyPrice, calculatePulseCheckAddOnPrice, readDeclaredEmployeeCount } = require('./pricingEngine')
+const { calculateMonthlyPrice, calculatePulseCheckAddOnPrice, resolveEffectiveEmployeeCount } = require('./pricingEngine')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -19,9 +19,9 @@ const COMPANIES_COLLECTION = 'companies'
 const PAYING_BILLING_STATUSES = ['active', 'trialing', 'past_due', 'unpaid']
 
 // Company Admin's billing quote, computed server-side from the company's
-// declared headcount (companies/{companyId}.employeeCount - see
-// pricingEngine.js's readDeclaredEmployeeCount() for why this, not the live
-// Pulse Check roster, is authoritative) so the number this returns always
+// effective headcount (see pricingEngine.js's resolveEffectiveEmployeeCount()
+// for how the real Pulse Check roster and the self-declared estimate are
+// reconciled into one number) so the number this returns always
 // matches what would be invoiced - the client-side pricingCalculator.js copy
 // is for instant what-if UI feedback only and is never the source of truth
 // for an actual bill.
@@ -93,12 +93,13 @@ exports.calculateQuote = onCall(async (request) => {
     })
   }
 
-  const employeeCount = readDeclaredEmployeeCount(companyData)
+  const { count: employeeCount, source } = resolveEffectiveEmployeeCount(companyData)
   if (employeeCount === null) {
     return {
       employeeCount: 0,
       quote: null,
       pulseCheckAddOnPrice: 0,
+      source: null,
     }
   }
 
@@ -108,5 +109,6 @@ exports.calculateQuote = onCall(async (request) => {
     employeeCount,
     quote,
     pulseCheckAddOnPrice: calculatePulseCheckAddOnPrice(employeeCount),
+    source,
   }
 })
