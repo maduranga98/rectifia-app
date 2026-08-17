@@ -3,12 +3,31 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { stripeSecretKey, stripeWebhookSecret, getStripeClient } = require('./stripeClient')
 const { applySubscriptionState } = require('./applySubscriptionState')
+const { LINE_ITEM_TAG, RECTIFIA_TIER_METADATA_KEY } = require('./lineItemTags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
 }
 
 const COMPANIES_COLLECTION = 'companies'
+
+// Self-serve subscriptions (createCheckoutSession.js, upgradeSubscriptionTier.js)
+// tag the Core item's product with rectifiaTier alongside rectifiaLineItem -
+// see lineItemTags.js. applySubscriptionState() doesn't write
+// company.subscriptionTier itself (that field is also set by hand, via
+// linkCompanySubscription.js, for a manually-negotiated subscription whose
+// Core product carries no rectifiaTier tag at all), so this is the one other
+// place that keeps it in sync: whenever the tag is present, write it;
+// whenever it's absent (a Quote-derived or Dashboard-created subscription),
+// do nothing and leave subscriptionTier exactly as a human last set it.
+async function syncSelfServeTier(firestore, companyId, subscription) {
+  const items = subscription.items?.data ?? []
+  const coreItem = items.find((item) => item.price?.product?.metadata?.rectifiaLineItem === LINE_ITEM_TAG.CORE)
+  const tier = coreItem?.price?.product?.metadata?.[RECTIFIA_TIER_METADATA_KEY]
+  if (tier) {
+    await firestore.collection(COMPANIES_COLLECTION).doc(companyId).update({ subscriptionTier: tier })
+  }
+}
 
 async function handleCheckoutCompleted(stripe, firestore, session) {
   if (session.mode !== 'subscription' || !session.subscription) return
@@ -23,6 +42,7 @@ async function handleCheckoutCompleted(stripe, firestore, session) {
     expand: ['items.data.price.product'],
   })
   await applySubscriptionState(firestore, companyId, subscription)
+  await syncSelfServeTier(firestore, companyId, subscription)
 }
 
 async function handleSubscriptionUpdated(stripe, firestore, subscriptionEventObject) {
@@ -38,6 +58,7 @@ async function handleSubscriptionUpdated(stripe, firestore, subscriptionEventObj
     expand: ['items.data.price.product'],
   })
   await applySubscriptionState(firestore, companyId, subscription)
+  await syncSelfServeTier(firestore, companyId, subscription)
 }
 
 async function handleSubscriptionDeleted(firestore, subscriptionEventObject) {

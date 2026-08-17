@@ -1,8 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getCompanyQuote } from '../../services/billingService'
+import {
+  createCheckoutSession,
+  getCompanyQuote,
+  updatePulseCheckSubscription,
+  upgradeSubscriptionTier,
+} from '../../services/billingService'
 import { getCompany, updateCompanyEmployeeCount } from '../../services/companyService'
+import { listEmployees } from '../../services/employeeService'
 import { calculateMonthlyPrice } from '../../utils/pricingCalculator'
+import {
+  PROGRESSIVE_THRESHOLD_EMPLOYEES,
+  PUBLISHED_BANDS,
+  bandForEmployeeCount,
+  pulseCheckBandForEmployeeCount,
+} from '../../config/pricingConfig'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
@@ -161,27 +173,197 @@ function subscriptionTierLabel(t, tier) {
 // An active paying customer (company.stripeSubscriptionId exists - see
 // BillingPage.jsx's file comment for why that field, not billingStatus, is
 // the source of truth). Shows the plan/tier and status a Lumora staffer set
-// by hand; deliberately does not recompute or display a price from the
-// reference formula below (calculateMonthlyPrice/calculateQuote.js) - that
-// formula is published-rate reference pricing for a prospect, not what an
-// already-negotiated, already-provisioned subscription actually charges. An
-// actual price for this state would have to come from the live Stripe
-// subscription itself, which nothing here fetches.
-function ActiveSubscriptionSummary({ company }) {
+// by hand (or, for a self-serve subscription, that createCheckoutSession.js/
+// stripeWebhook.js/upgradeSubscriptionTier.js set); deliberately does not
+// recompute or display a price from the reference formula below
+// (calculateMonthlyPrice/calculateQuote.js) - that formula is published-rate
+// reference pricing for a prospect, not what an already-provisioned
+// subscription actually charges. An actual price for this state would have
+// to come from the live Stripe subscription itself, which nothing here
+// fetches.
+//
+// Also the self-serve management surface for an active subscription: a
+// Pulse Check on/off toggle (updatePulseCheckSubscription.js) and, once the
+// real roster is near or at the plan's headcount cap (the same cap
+// addEmployee.js enforces), an explicit "Upgrade plan" action
+// (upgradeSubscriptionTier.js) - never triggered automatically.
+// `realHeadcount` is the roster's real size, not the self-declared
+// employeeCount the reference-quote flow below this card uses.
+function ActiveSubscriptionSummary({ company, companyId, realHeadcount, onChanged }) {
   const { t } = useTranslation()
   const status = company?.billingStatus ?? 'unknown'
+  const pulseCheckActive = Boolean(company?.featureFlags?.pulseCheck)
+  const [pulseCheckPending, setPulseCheckPending] = useState(false)
+  const [upgradePending, setUpgradePending] = useState(false)
+  const [actionError, setActionError] = useState(null)
+
+  const band = PUBLISHED_BANDS.find((b) => b.tier === company?.subscriptionTier) ?? null
+  const cap = band?.maxEmployees ?? null
+  const nearCap = cap != null && realHeadcount != null && realHeadcount >= cap - Math.max(2, Math.round(cap * 0.1))
+  const atCap = cap != null && realHeadcount != null && realHeadcount >= cap
+
+  async function handleTogglePulseCheck() {
+    setPulseCheckPending(true)
+    setActionError(null)
+    try {
+      await updatePulseCheckSubscription(companyId, !pulseCheckActive)
+      await onChanged()
+    } catch (err) {
+      setActionError(err.message)
+    } finally {
+      setPulseCheckPending(false)
+    }
+  }
+
+  async function handleUpgrade() {
+    setUpgradePending(true)
+    setActionError(null)
+    try {
+      await upgradeSubscriptionTier(companyId)
+      await onChanged()
+    } catch (err) {
+      setActionError(err.message)
+    } finally {
+      setUpgradePending(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Card padded={false} className="p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentTier')}</p>
+            <p className="mt-1 text-2xl font-semibold text-charcoal">
+              {company?.subscriptionTier ? subscriptionTierLabel(t, company.subscriptionTier) : t('billingQuote.activeSubscription.unknownTier')}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingPage.subscriptionStatus')}</p>
+            <p className="mt-1 text-lg font-semibold text-charcoal">{status.replace(/_/g, ' ')}</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-4">
+          <div>
+            <p className="text-sm font-medium text-charcoal">{t('billingQuote.activeSubscription.pulseCheck.label')}</p>
+            <p className="text-xs text-muted">
+              {pulseCheckActive ? t('planFeatures.active') : t('planFeatures.notPurchased')}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant={pulseCheckActive ? 'dangerGhost' : 'secondary'}
+            loading={pulseCheckPending}
+            loadingLabel={t('billingQuote.activeSubscription.pulseCheck.updating')}
+            onClick={handleTogglePulseCheck}
+          >
+            {pulseCheckActive
+              ? t('billingQuote.activeSubscription.pulseCheck.disable')
+              : t('billingQuote.activeSubscription.pulseCheck.enable')}
+          </Button>
+        </div>
+
+        {cap != null && nearCap && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-4">
+            <p className="text-xs text-muted">
+              {atCap
+                ? t('billingQuote.activeSubscription.cap.atCap', { cap })
+                : t('billingQuote.activeSubscription.cap.nearCap', { current: realHeadcount, cap })}
+            </p>
+            <Button
+              size="sm"
+              variant="accent"
+              loading={upgradePending}
+              loadingLabel={t('billingQuote.activeSubscription.cap.upgrading')}
+              onClick={handleUpgrade}
+            >
+              {t('billingQuote.activeSubscription.cap.upgrade')}
+            </Button>
+          </div>
+        )}
+      </Card>
+
+      {actionError && <Alert variant="error">{actionError}</Alert>}
+    </div>
+  )
+}
+
+// Shown in place of the reference-quote flow for a company at or below the
+// 500-employee self-serve ceiling with no subscription yet
+// (PROGRESSIVE_THRESHOLD_EMPLOYEES). Priced off the REAL roster
+// (`realHeadcount`, a count of companies/{companyId}/employees), never the
+// self-declared employeeCount the reference quote below still uses - an
+// actual subscription must be priced off what the roster actually contains.
+// The reference-quote UI and the "Request a quote" action
+// (BillingPage.jsx) stay exactly as they were below this card, for a
+// company above the ceiling or one that explicitly wants a negotiated deal
+// instead of self-serve checkout.
+function SubscribeCard({ companyId, realHeadcount }) {
+  const { t } = useTranslation()
+  const [includePulseCheck, setIncludePulseCheck] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState(null)
+
+  if (realHeadcount < 1) {
+    return (
+      <Alert variant="info" title={t('billingQuote.subscribeCard.noRoster.title')}>
+        {t('billingQuote.subscribeCard.noRoster.body')}
+      </Alert>
+    )
+  }
+
+  const band = bandForEmployeeCount(realHeadcount)
+  const pulseCheckBand = pulseCheckBandForEmployeeCount(realHeadcount)
+
+  async function handleSubscribe() {
+    setPending(true)
+    setError(null)
+    try {
+      const { url } = await createCheckoutSession(companyId, { includePulseCheck })
+      window.location.href = url
+    } catch (err) {
+      setError(err.message)
+      setPending(false)
+    }
+  }
+
   return (
     <Card padded={false} className="p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingQuote.currentTier')}</p>
-          <p className="mt-1 text-2xl font-semibold text-charcoal">
-            {company?.subscriptionTier ? subscriptionTierLabel(t, company.subscriptionTier) : t('billingQuote.activeSubscription.unknownTier')}
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-charcoal">{t('billingQuote.subscribeCard.title')}</p>
+            <p className="mt-1 text-sm text-muted">
+              {t('billingQuote.subscribeCard.body', { count: realHeadcount, tier: band.label })}
+            </p>
+          </div>
+          <p className="text-2xl font-semibold tabular-nums text-charcoal">
+            {formatCurrency(band.monthlyPrice)}
+            <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">{t('billingPage.subscriptionStatus')}</p>
-          <p className="mt-1 text-lg font-semibold text-charcoal">{status.replace(/_/g, ' ')}</p>
+
+        <label className="flex items-center gap-2 text-sm text-charcoal">
+          <input
+            type="checkbox"
+            checked={includePulseCheck}
+            onChange={(e) => setIncludePulseCheck(e.target.checked)}
+          />
+          {t('billingQuote.subscribeCard.pulseCheckLabel', { price: pulseCheckBand.monthlyPrice })}
+        </label>
+
+        {error && <Alert variant="error">{error}</Alert>}
+
+        <div>
+          <Button
+            variant="accent"
+            loading={pending}
+            loadingLabel={t('billingQuote.subscribeCard.subscribing')}
+            onClick={handleSubscribe}
+          >
+            {t('billingQuote.subscribeCard.subscribeButton')}
+          </Button>
         </div>
       </div>
     </Card>
@@ -198,18 +380,29 @@ function BillingQuote({ companyId }) {
   }
   const [current, setCurrent] = useState(null)
   const [company, setCompany] = useState(null)
+  const [realHeadcount, setRealHeadcount] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const [projectedInput, setProjectedInput] = useState('')
 
+  // realHeadcount is the roster's real size (companies/{companyId}/employees)
+  // - what createCheckoutSession.js/updatePulseCheckSubscription.js/
+  // upgradeSubscriptionTier.js actually price off of - kept separate from
+  // `current.employeeCount` above, which is the self-declared number the
+  // reference-quote flow below still uses.
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [result, companyDoc] = await Promise.all([getCompanyQuote(companyId), getCompany(companyId)])
+      const [result, companyDoc, employees] = await Promise.all([
+        getCompanyQuote(companyId),
+        getCompany(companyId),
+        listEmployees(companyId),
+      ])
       setCurrent(result)
       setCompany(companyDoc)
+      setRealHeadcount(employees.length)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -232,7 +425,14 @@ function BillingQuote({ companyId }) {
   const hasStripeSubscription = Boolean(company?.stripeSubscriptionId)
 
   if (hasStripeSubscription) {
-    return <ActiveSubscriptionSummary company={company} />
+    return (
+      <ActiveSubscriptionSummary
+        company={company}
+        companyId={companyId}
+        realHeadcount={realHeadcount}
+        onChanged={refresh}
+      />
+    )
   }
 
   const hasQuote = Boolean(current?.quote)
@@ -256,8 +456,12 @@ function BillingQuote({ companyId }) {
     }
   }
 
+  const eligibleForSelfServe = realHeadcount != null && realHeadcount <= PROGRESSIVE_THRESHOLD_EMPLOYEES
+
   return (
     <div className="flex flex-col gap-5">
+      {eligibleForSelfServe && <SubscribeCard companyId={companyId} realHeadcount={realHeadcount} />}
+
       <Alert variant="warning" title={t('billingQuote.referenceRateNotice.title')}>
         {t('billingQuote.referenceRateNotice.body')}
       </Alert>

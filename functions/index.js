@@ -95,6 +95,13 @@ const { createBillingPortalSession } = require('./src/billing/createBillingPorta
 const { stripeWebhook } = require('./src/billing/stripeWebhook')
 const { requestQuote } = require('./src/billing/requestQuote')
 const { linkCompanySubscription } = require('./src/billing/linkCompanySubscription')
+const { createCheckoutSession } = require('./src/billing/createCheckoutSession')
+const { updatePulseCheckSubscription } = require('./src/billing/updatePulseCheckSubscription')
+const { upgradeSubscriptionTier } = require('./src/billing/upgradeSubscriptionTier')
+const { addEmployee } = require('./src/roster/addEmployee')
+const { removeEmployee } = require('./src/roster/removeEmployee')
+const { bulkAddEmployees } = require('./src/roster/bulkAddEmployees')
+const { backfillEmployeeCount } = require('./src/roster/backfillEmployeeCount')
 const { accessReview, attestAccessReview, getAccessReviewForAttestation } = require('./src/security/accessReview')
 const { keyRotationCheck, recordKeyRotation, rotateIdentityVaultKey } = require('./src/security/keyRotation')
 const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomalyDetection')
@@ -263,6 +270,35 @@ exports.requestQuote = requestQuote
 // firestore.rules' superAdminBillingFieldsLocked() for why no other client
 // write, including a direct Super Admin write, can touch these fields.
 exports.linkCompanySubscription = linkCompanySubscription
+// Self-serve billing for a company at or below the 500-employee self-serve
+// ceiling with no negotiated deal: createCheckoutSession starts real Stripe
+// Checkout (Core, optionally with Pulse Check, as one subscription);
+// updatePulseCheckSubscription adds/removes the Pulse Check item on an
+// existing subscription; upgradeSubscriptionTier is the explicit,
+// Company-Admin-initiated Core tier change (never a side effect of adding an
+// employee). All three price off the REAL roster headcount
+// (companies/{companyId}/employees), never the self-declared
+// company.employeeCount calculateQuote.js/requestQuote.js use, and all three
+// refuse a company above the self-serve ceiling - that stays exclusively on
+// the requestQuote.js -> linkCompanySubscription.js path. See
+// functions/src/billing/createCheckoutSession.js for the full rationale.
+exports.createCheckoutSession = createCheckoutSession
+exports.updatePulseCheckSubscription = updatePulseCheckSubscription
+exports.upgradeSubscriptionTier = upgradeSubscriptionTier
+// The Pulse Check recipient roster's only remaining write path
+// (companies/{companyId}/employees create/delete - firestore.rules now
+// grants a Company Admin `update` there but not `create`/`delete`): each
+// transactionally enforces the plan's headcount cap
+// (companies/{companyId}.currentEmployeeCount vs. the PUBLISHED_BANDS entry
+// for subscriptionTier) against the same counter it increments/decrements,
+// so the cap can't be bypassed by two concurrent writes. backfillEmployeeCount
+// is the one-time, Super-Admin-triggerable migration that seeds
+// currentEmployeeCount for companies that predate this cap. See
+// functions/src/roster/addEmployee.js for the full rationale.
+exports.addEmployee = addEmployee
+exports.removeEmployee = removeEmployee
+exports.bulkAddEmployees = bulkAddEmployees
+exports.backfillEmployeeCount = backfillEmployeeCount
 // Module 26: Security Control & Evidence Layer. Five scheduled controls
 // (accessReview quarterly, keyRotationCheck weekly, anomalyDetection daily,
 // integrityCheck weekly, backupVerification monthly) plus the onCall

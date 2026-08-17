@@ -71,13 +71,15 @@ function TierCard({ summary, isCurrentTier, t, formatCurrency }) {
 
 // The Pulse Check row is purely informational: whether the add-on is active
 // for this company is decided by companies/{companyId}.featureFlags.pulseCheck
-// (resolveFeatureFlag), which only ever changes via a Super Admin override or
-// stripeWebhook.js reconciling a manually-set-up Stripe subscription's actual
-// item state. Pilot v1 has no self-serve purchase/cancel action here - see
-// BillingPage.jsx's "Request a quote" button for the only billing action a
-// Company Admin can take themselves. `employeeCount` may be 0/unknown (no
-// declared headcount yet), in which case the flat starting rate is shown
-// instead of a computed total.
+// (resolveFeatureFlag), which changes via a Super Admin override, a Company
+// Admin's own toggle once they have a subscription
+// (updatePulseCheckSubscription.js, see BillingQuote.jsx's
+// ActiveSubscriptionSummary), or stripeWebhook.js reconciling a subscription's
+// actual item state either way. This card never renders a purchase/cancel
+// action of its own - that control lives on BillingQuote.jsx, either as the
+// toggle above (once subscribed) or the Subscribe/Request-a-quote flow
+// (before). `employeeCount` may be 0/unknown (no declared headcount yet), in
+// which case the flat starting rate is shown instead of a computed total.
 function PulseCheckRow({ pulseCheckActive, pulseCheckAddOnPrice, employeeCount, formatCurrency, t }) {
   return (
     <div className="rounded-xl border border-line-soft p-4">

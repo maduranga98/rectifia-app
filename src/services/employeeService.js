@@ -1,21 +1,13 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  serverTimestamp,
-  updateDoc,
-  writeBatch,
-} from 'firebase/firestore'
-import { firestore } from './firebase'
+import { collection, doc, getDocs, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { httpsCallable } from 'firebase/functions'
+import { firestore, functions } from './firebase'
 
 const COMPANIES_COLLECTION = 'companies'
 const EMPLOYEES_SUBCOLLECTION = 'employees'
 
-// Firestore caps a batch at 500 writes; stay under it with room to spare so a
-// large CSV import splits into several commits rather than failing outright.
-const IMPORT_BATCH_SIZE = 400
+const addEmployeeCallable = httpsCallable(functions, 'addEmployee')
+const removeEmployeeCallable = httpsCallable(functions, 'removeEmployee')
+const bulkAddEmployeesCallable = httpsCallable(functions, 'bulkAddEmployees')
 
 // companies/{companyId}/employees is deliberately NOT the same collection as
 // companies/{companyId}/staff. Staff are login-having accounts with a role and
@@ -53,20 +45,21 @@ export async function listEmployees(companyId) {
 // roster only needs something stable to show the admin and to attribute a
 // queued invite to, and a company running anonymized pulse checks should not
 // have to invent names to use this.
+//
+// Routed through addEmployee.js rather than a direct Firestore write - a
+// company's roster size is now cap/billing-relevant
+// (companies/{companyId}.currentEmployeeCount, checked against the plan's
+// headcount cap - see functions/src/roster/addEmployee.js), and only the
+// Admin SDK can enforce that atomically. firestore.rules no longer grants a
+// Company Admin `create` on this collection at all - see the rule's own
+// comment. A blocked add throws with err.details = { code:
+// 'headcount_cap_reached', currentTier, cap } (Firebase's HttpsError
+// carries `details` through as-is), which EmployeesPage.jsx reads to show
+// an upgrade prompt instead of a generic error.
 export async function addEmployee(companyId, { name, department, email }) {
-  const trimmedName = String(name ?? '').trim()
   if (!companyId) throw new Error('companyId is required')
-  if (!trimmedName) throw new Error('Name or employee ID is required')
-
-  const ref = await addDoc(employeesCollection(companyId), {
-    name: trimmedName,
-    department: String(department ?? '').trim() || null,
-    email: normalizeEmail(email),
-    status: 'active',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
-  return ref.id
+  const result = await addEmployeeCallable({ companyId, name, department, email })
+  return result.data.id
 }
 
 export async function updateEmployee(companyId, employeeId, { name, department, email }) {
@@ -82,8 +75,11 @@ export async function updateEmployee(companyId, employeeId, { name, department, 
   await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId, EMPLOYEES_SUBCOLLECTION, employeeId), updates)
 }
 
+// Routed through removeEmployee.js for the same reason addEmployee is - see
+// its comment above.
 export async function removeEmployee(companyId, employeeId) {
-  await deleteDoc(doc(firestore, COMPANIES_COLLECTION, companyId, EMPLOYEES_SUBCOLLECTION, employeeId))
+  if (!companyId) throw new Error('companyId is required')
+  await removeEmployeeCallable({ companyId, employeeId })
 }
 
 // Minimal RFC-4180-shaped parser: handles quoted fields, embedded commas, and
@@ -185,56 +181,17 @@ export function parseEmployeeCsv(text) {
   return { employees, errors, headerError: null }
 }
 
-// Bulk-writes parsed rows. Existing employees are matched by email so
-// re-importing an updated export refreshes names/departments in place instead
-// of duplicating everyone; rows with no email are always added as new (there
-// is nothing stable to match them on), which is the tradeoff for not
-// requiring contact info.
+// Bulk-writes parsed rows, routed through bulkAddEmployees.js for the same
+// reason addEmployee is (see its comment above) - the batching, the
+// match-existing-by-email logic, and the headcount cap check all now live
+// server-side, in the one place that can enforce the cap atomically. A CSV
+// that would exceed the plan's cap is rejected outright (err.details.code
+// === 'headcount_cap_reached'), same shape as a blocked addEmployee call.
 export async function importEmployees(companyId, rows) {
   if (!companyId) throw new Error('companyId is required')
   if (!Array.isArray(rows) || rows.length === 0) {
     return { added: 0, updated: 0 }
   }
-
-  const existing = await listEmployees(companyId)
-  const byEmail = new Map(existing.filter((e) => e.email).map((e) => [e.email, e.id]))
-
-  let added = 0
-  let updated = 0
-  let batch = writeBatch(firestore)
-  let pendingWrites = 0
-
-  for (const row of rows) {
-    const email = normalizeEmail(row.email)
-    const payload = {
-      name: String(row.name ?? '').trim(),
-      department: String(row.department ?? '').trim() || null,
-      email,
-      status: 'active',
-      updatedAt: serverTimestamp(),
-    }
-    if (!payload.name) continue
-
-    const existingId = email ? byEmail.get(email) : undefined
-    if (existingId) {
-      batch.update(doc(firestore, COMPANIES_COLLECTION, companyId, EMPLOYEES_SUBCOLLECTION, existingId), payload)
-      updated += 1
-    } else {
-      const ref = doc(employeesCollection(companyId))
-      batch.set(ref, { ...payload, createdAt: serverTimestamp() })
-      if (email) byEmail.set(email, ref.id)
-      added += 1
-    }
-
-    pendingWrites += 1
-    if (pendingWrites >= IMPORT_BATCH_SIZE) {
-      await batch.commit()
-      batch = writeBatch(firestore)
-      pendingWrites = 0
-    }
-  }
-
-  if (pendingWrites > 0) await batch.commit()
-
-  return { added, updated }
+  const result = await bulkAddEmployeesCallable({ companyId, employees: rows })
+  return result.data
 }

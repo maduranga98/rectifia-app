@@ -52,3 +52,42 @@ export async function requestQuote(companyId, { targets } = {}) {
   const result = await requestQuoteCallable({ companyId, targets })
   return result.data
 }
+
+const createCheckoutSessionCallable = httpsCallable(functions, 'createCheckoutSession')
+
+// Real self-serve billing for a company at or below the 500-employee
+// self-serve ceiling with no subscription yet - returns { url } for a Stripe
+// Checkout Session to redirect to. Unlike requestQuote() above, this
+// actually starts a paid subscription: the price is computed server-side
+// from the company's REAL roster headcount, never the self-declared
+// employeeCount BillingQuote.jsx's reference quote uses. Refuses outright
+// (createCheckoutSession.js) if a subscription already exists or the roster
+// is above the self-serve ceiling - BillingPage.jsx keeps requestQuote()'s
+// "Contact sales" flow as the only path in both of those cases.
+export async function createCheckoutSession(companyId, { includePulseCheck = false } = {}) {
+  const result = await createCheckoutSessionCallable({ companyId, includePulseCheck })
+  return result.data
+}
+
+const updatePulseCheckSubscriptionCallable = httpsCallable(functions, 'updatePulseCheckSubscription')
+
+// Adds or removes the Pulse Check add-on on a company's EXISTING self-serve
+// subscription. Only meaningful once createCheckoutSession() above has run
+// once - see updatePulseCheckSubscription.js for the full precondition set.
+export async function updatePulseCheckSubscription(companyId, enable) {
+  const result = await updatePulseCheckSubscriptionCallable({ companyId, enable })
+  return result.data
+}
+
+const upgradeSubscriptionTierCallable = httpsCallable(functions, 'upgradeSubscriptionTier')
+
+// The explicit "Upgrade to Growth"-style action a Company Admin takes after
+// hitting the headcount cap (EmployeesPage.jsx's headcount_cap_reached
+// prompt) - never triggered automatically by adding an employee. Moves the
+// Core item to the band that fits the roster's real headcount plus one; see
+// upgradeSubscriptionTier.js for why the target tier is computed server-side
+// rather than named by the client.
+export async function upgradeSubscriptionTier(companyId) {
+  const result = await upgradeSubscriptionTierCallable({ companyId })
+  return result.data
+}

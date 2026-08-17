@@ -200,7 +200,7 @@ service cloud.firestore {
     function superAdminBillingFieldsLocked() {
       return !request.resource.data.diff(resource.data).affectedKeys()
         .hasAny(['stripeSubscriptionId', 'stripeCustomerId', 'billingStatus', 'subscriptionTier',
-          'stripeCoreItemId', 'stripePulseCheckItemId']);
+          'stripeCoreItemId', 'stripePulseCheckItemId', 'currentEmployeeCount']);
     }
 
     // featureFlags.pulseCheck specifically - not the rest of the featureFlags
@@ -517,12 +517,24 @@ service cloud.firestore {
     //
     // Read is open to any staff of the company (HR Coordinator and Pulse Check
     // Reviewer need to resolve an employeeId on a pulse response to a person);
-    // writes are Company Admin only, the same as departments and routing
-    // rules. `email` is optional by design - see schedulePulseChecks.js, which
-    // queues an invite either way.
+    // updates (editing name/department/email on an existing entry) are
+    // Company Admin only, the same as departments and routing rules. `email`
+    // is optional by design - see schedulePulseChecks.js, which queues an
+    // invite either way.
+    //
+    // create/delete are deliberately absent - a company's roster size is now
+    // cap/billing-relevant (companies/{companyId}.currentEmployeeCount, the
+    // counter addEmployee.js/removeEmployee.js/bulkAddEmployees.js enforce
+    // the plan's headcount cap against), so those writes must happen
+    // transactionally alongside that counter, atomically, which only the
+    // Admin SDK can guarantee. addEmployee.js, removeEmployee.js, and
+    // bulkAddEmployees.js are the only remaining way to create or delete a
+    // roster entry - matching the same "no client-side write path for
+    // anything cap/billing-relevant" principle already applied to
+    // stripeSubscriptionId and friends above (superAdminBillingFieldsLocked).
     match /companies/{companyId}/employees/{employeeId} {
       allow read: if isCompanyStaff(companyId);
-      allow write: if isCompanyAdmin(companyId);
+      allow update: if isCompanyAdmin(companyId);
     }
 
     // Published pulse-check questionnaires (module 21), one immutable document
