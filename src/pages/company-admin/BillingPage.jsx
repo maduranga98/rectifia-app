@@ -24,6 +24,14 @@ const BILLING_TONE = {
   unpaid: 'tone-critical',
 }
 
+// billingStatus values that mean "money is (or was) actively changing
+// hands", per stripeWebhook.js. 'canceled' is deliberately excluded: the
+// webhook legitimately deletes stripeSubscriptionId while setting
+// billingStatus to 'canceled' (handleSubscriptionDeleted), so that
+// combination is expected, not a data-integrity problem - only the four
+// statuses below should ever co-occur with a live stripeSubscriptionId.
+const PAYING_BILLING_STATUSES = ['active', 'trialing', 'past_due', 'unpaid']
+
 // Company Admin's billing home. Pilot v1 has a handful of founding customers
 // on individually negotiated discounts, no SOC 2 report or reference
 // customers yet, and self-serve published-rate billing doesn't represent
@@ -43,13 +51,17 @@ const BILLING_TONE = {
 //    subscription already exists - this is still the right place for a
 //    customer to see invoices or update a payment method after Lumora has
 //    set one up.
-//  - BillingQuote.jsx's reference pricing, clearly labeled as a reference
-//    rate only (see that component's own framing) - never a price a company
-//    can act on directly.
-//  - A single "Request a quote" action (requestQuote.js), the only billing
-//    action a Company Admin can take: it asks Rectifia's sales team for a
-//    real, negotiated price and never creates or changes a subscription
-//    itself.
+//  - BillingQuote.jsx's reference pricing - shown for a prospect only (no
+//    stripeSubscriptionId yet), clearly labeled as a reference rate only
+//    (see that component's own framing) and never a price a company can act
+//    on directly. Once stripeSubscriptionId exists, BillingQuote.jsx
+//    switches to showing the current plan/tier instead of the reference
+//    quote flow.
+//  - A single "Request a quote" action (requestQuote.js) - shown only for a
+//    prospect (no stripeSubscriptionId yet), same gate as the reference
+//    pricing above. It's the only billing action a Company Admin can take:
+//    it asks Rectifia's sales team for a real, negotiated price and never
+//    creates or changes a subscription itself.
 function BillingPage({ companyId }) {
   const { t } = useTranslation()
   const [company, setCompany] = useState(null)
@@ -76,6 +88,25 @@ function BillingPage({ companyId }) {
   }, [companyId, refresh])
 
   const billingStatus = company?.billingStatus ?? 'unknown'
+  // The single source of truth for "is this an active paying customer" -
+  // see the module comment on stripeWebhook.js's applySubscriptionState().
+  // billingStatus alone is never trusted for this: it's the value most
+  // likely to be set by hand ahead of (or without) the matching Stripe
+  // subscription actually existing.
+  const hasStripeSubscription = Boolean(company?.stripeSubscriptionId)
+  // Only reachable via a manual data-entry mistake (see PAYING_BILLING_STATUSES
+  // above) - flagged visibly rather than silently falling through to the
+  // prospect flow below, which is what would otherwise happen since routing
+  // here follows hasStripeSubscription, not billingStatus.
+  const hasDataIntegrityWarning = !hasStripeSubscription && PAYING_BILLING_STATUSES.includes(billingStatus)
+
+  useEffect(() => {
+    if (hasDataIntegrityWarning) {
+      console.error(
+        `BillingPage: company ${companyId} has billingStatus "${billingStatus}" but no stripeSubscriptionId - likely a manual data-entry error`
+      )
+    }
+  }, [hasDataIntegrityWarning, companyId, billingStatus])
 
   async function handleManageBilling() {
     setActionPending(true)
@@ -120,6 +151,12 @@ function BillingPage({ companyId }) {
         <SkeletonStats count={2} />
       ) : (
         <>
+          {hasDataIntegrityWarning && (
+            <Alert variant="error" title={t('billingPage.dataIntegrityWarning.title')}>
+              {t('billingPage.dataIntegrityWarning.body', { billingStatus: billingStatus.replace(/_/g, ' ') })}
+            </Alert>
+          )}
+
           <Card padded={false} className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -149,28 +186,30 @@ function BillingPage({ companyId }) {
 
           <BillingQuote companyId={companyId} />
 
-          <Card padded={false} className="p-5">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-charcoal">{t('billingPage.requestQuote.title')}</p>
-                <p className="mt-1 text-xs text-muted">{t('billingPage.requestQuote.body')}</p>
+          {!hasStripeSubscription && (
+            <Card padded={false} className="p-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-charcoal">{t('billingPage.requestQuote.title')}</p>
+                  <p className="mt-1 text-xs text-muted">{t('billingPage.requestQuote.body')}</p>
+                </div>
+                {quoteRequested ? (
+                  <Alert variant="success" className="grow-0">
+                    {t('billingPage.requestQuote.requested')}
+                  </Alert>
+                ) : (
+                  <Button
+                    variant="accent"
+                    loading={actionPending}
+                    loadingLabel={t('billingPage.actions.requestingQuote')}
+                    onClick={handleRequestQuote}
+                  >
+                    {t('billingPage.actions.requestQuote')}
+                  </Button>
+                )}
               </div>
-              {quoteRequested ? (
-                <Alert variant="success" className="grow-0">
-                  {t('billingPage.requestQuote.requested')}
-                </Alert>
-              ) : (
-                <Button
-                  variant="accent"
-                  loading={actionPending}
-                  loadingLabel={t('billingPage.actions.requestingQuote')}
-                  onClick={handleRequestQuote}
-                >
-                  {t('billingPage.actions.requestQuote')}
-                </Button>
-              )}
-            </div>
-          </Card>
+            </Card>
+          )}
 
           <Alert variant="info" title={t('billingPage.paymentNote.title')}>
             {t('billingPage.paymentNote.body')}

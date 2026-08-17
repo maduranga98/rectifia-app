@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
+const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { resolveStaffEffectivePermissions, hasPermission } = require('../utils/permissionResolver')
@@ -9,6 +10,13 @@ if (!admin.apps.length) {
 }
 
 const COMPANIES_COLLECTION = 'companies'
+
+// billingStatus values written by stripeWebhook.js that mean "money is
+// (or was) actively changing hands", per BILLING_TONE in BillingPage.jsx.
+// 'canceled' is deliberately excluded: handleSubscriptionDeleted() legitimately
+// deletes stripeSubscriptionId while setting billingStatus to 'canceled', so
+// that combination is expected, not a data-integrity problem.
+const PAYING_BILLING_STATUSES = ['active', 'trialing', 'past_due', 'unpaid']
 
 // Company Admin's billing quote, computed server-side from the company's
 // declared headcount (companies/{companyId}.employeeCount - see
@@ -70,7 +78,22 @@ exports.calculateQuote = onCall(async (request) => {
   if (!companySnapshot.exists) {
     throw new HttpsError('not-found', 'Company not found')
   }
-  const employeeCount = readDeclaredEmployeeCount(companySnapshot.data())
+  const companyData = companySnapshot.data()
+
+  // This state should never be reachable from stripeWebhook.js alone - only a
+  // manual edit of one field without the other can produce it. It isn't
+  // fatal to this callable (the reference quote below is still valid to
+  // compute), but it means the company doc disagrees with itself about
+  // whether this is a paying customer, so it's worth a loud log line rather
+  // than passing silently.
+  if (PAYING_BILLING_STATUSES.includes(companyData.billingStatus) && !companyData.stripeSubscriptionId) {
+    logger.warn('calculateQuote: billingStatus indicates a paying customer but stripeSubscriptionId is missing', {
+      companyId,
+      billingStatus: companyData.billingStatus,
+    })
+  }
+
+  const employeeCount = readDeclaredEmployeeCount(companyData)
   if (employeeCount === null) {
     return {
       employeeCount: 0,
