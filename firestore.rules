@@ -181,6 +181,58 @@ service cloud.firestore {
       return !('featureFlags' in request.resource.data.diff(resource.data).affectedKeys())
         || (isSuperAdmin() && isValidFeatureFlagsMap());
     }
+    // Billing-critical fields, written only by the Admin SDK - stripeWebhook.js
+    // reacting to Stripe, and functions/src/billing/linkCompanySubscription.js
+    // when a Super Admin links or re-links a subscription. Mirrors
+    // companyAdminEditableFields()'s allowlist pattern, but as a blocklist:
+    // Super Admin otherwise has a blanket write to the rest of the company
+    // doc, and this is what carves these six fields out of that grant so
+    // there is no client path to them at all - not CompanySetup.jsx, not a
+    // Super Admin session in the Firestore console, nothing. Applied to every
+    // UPDATE of this document regardless of who the writer is.
+    //
+    // billingStatus/subscriptionTier are deliberately absent from this list's
+    // CREATE-time counterpart below (isValidCompanyCreate) - a brand new
+    // company must be able to start out billingStatus:'unbilled' with no
+    // subscriptionTier at all, written by createCompany() itself. It is only
+    // updates - every write after that first one - that these six fields are
+    // sealed against.
+    function superAdminBillingFieldsLocked() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(['stripeSubscriptionId', 'stripeCustomerId', 'billingStatus', 'subscriptionTier',
+          'stripeCoreItemId', 'stripePulseCheckItemId']);
+    }
+
+    // featureFlags.pulseCheck specifically - not the rest of the featureFlags
+    // map, which stays Super-Admin-writable via FeatureFlagPanel.jsx/
+    // featureFlagsFieldValid() above - is one of the six fields
+    // superAdminBillingFieldsLocked() protects. Rules' affectedKeys() only
+    // ever reports the top-level 'featureFlags' key even for a dotted-path
+    // update, so the lock has to compare the value directly: a write that
+    // touches featureFlags at all is only valid if pulseCheck's value (or
+    // absence) is unchanged by it. applySubscriptionState() is the only
+    // place that ever flips this flag, via the Admin SDK, which bypasses
+    // these rules entirely.
+    function pulseCheckFeatureFlagLocked() {
+      return !('featureFlags' in request.resource.data.diff(resource.data).affectedKeys())
+        || request.resource.data.featureFlags.get('pulseCheck', null)
+          == resource.data.featureFlags.get('pulseCheck', null);
+    }
+
+    // The one allowed shape for a brand new company doc's billing fields:
+    // billingStatus must be exactly 'unbilled' (a genuinely un-billed
+    // company, distinct from 'unknown' and from every PAYING_BILLING_STATUSES
+    // value - see companyService.js's createCompany), and none of the other
+    // five billing-critical fields may be present at all - no subscription
+    // has been linked yet, so there is nothing for them to hold.
+    function isValidCompanyCreate() {
+      return request.resource.data.billingStatus == 'unbilled'
+        && !('subscriptionTier' in request.resource.data)
+        && !('stripeSubscriptionId' in request.resource.data)
+        && !('stripeCustomerId' in request.resource.data)
+        && !('stripeCoreItemId' in request.resource.data)
+        && !('stripePulseCheckItemId' in request.resource.data);
+    }
     function claimsMissingSlug() {
       return (!('slug' in resource.data) || resource.data.slug == null)
         && request.resource.data.slug is string
@@ -223,12 +275,14 @@ service cloud.firestore {
       allow get: if isSuperAdmin() || isCompanyStaff(companyId);
       allow list: if isSuperAdmin()
         || (isAnyCompanyAdmin() && request.query.limit <= 1);
-      allow create: if isSuperAdmin();
+      allow create: if isSuperAdmin() && isValidCompanyCreate();
       allow update: if (isSuperAdmin()
           || (isCompanyAdmin(companyId) && (companyAdminEditableFields() || claimsMissingSlug()))
           || isCustomRoleCompanyFieldEditor(companyId))
         && retentionFieldValid()
-        && featureFlagsFieldValid();
+        && featureFlagsFieldValid()
+        && superAdminBillingFieldsLocked()
+        && pulseCheckFeatureFlagLocked();
       allow delete: if isSuperAdmin();
     }
 

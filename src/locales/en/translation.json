@@ -1321,6 +1321,9 @@
   },
   "billingPage": {
     "subscriptionStatus": "Subscription status",
+    "statusLabels": {
+      "unbilled": "Not yet billed"
+    },
     "dataIntegrityWarning": {
       "title": "Billing data needs review",
       "body": "This company's billing status is set to \"{{billingStatus}}\", but no Stripe subscription is linked to it. This combination should never happen automatically - it usually means one of the two fields was set by hand without the other. Contact Rectifia support to have this corrected."

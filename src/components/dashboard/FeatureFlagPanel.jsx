@@ -9,6 +9,15 @@ import { SkeletonList } from '../ui/Loading'
 
 const TIER_LABELS = { starter: 'Starter', growth: 'Growth', scale: 'Scale', enterprise: 'Enterprise' }
 
+// pulseCheck is excluded from this panel's editable set - firestore.rules'
+// pulseCheckFeatureFlagLocked() now rejects any client write to it,
+// including this panel's own updateCompanyFeatureFlag call, because the flag
+// is derived from whether the linked Stripe subscription carries the Pulse
+// Check line item (see functions/src/billing/applySubscriptionState.js).
+// It's toggled by linking/re-linking a subscription on CompanyBillingLink.jsx,
+// not by a standalone switch here.
+const TOGGLEABLE_FLAG_KEYS = FEATURE_FLAG_KEYS.filter((key) => key !== 'pulseCheck')
+
 // Which plan tier normally includes this flag, purely from the static
 // PLAN_FEATURES ladder in pricingConfig.js - not this specific company's
 // actual billing tier. Deliberately not a live per-company lookup: the
@@ -139,7 +148,7 @@ function FeatureFlagPanel({ companies }) {
   return (
     <Card
       title="Feature flags"
-      description="Per-company kill switches. Turning a flag off stops new use of that module; it never deletes or hides data already produced under it."
+      description="Per-company kill switches. Turning a flag off stops new use of that module; it never deletes or hides data already produced under it. Pulse Check isn't shown here - it's controlled by the company's linked Stripe subscription, on its Billing panel."
     >
       <div className="flex flex-col gap-4">
         <Select
@@ -157,10 +166,10 @@ function FeatureFlagPanel({ companies }) {
         {error && <Alert variant="error">{error}</Alert>}
 
         {loading ? (
-          <SkeletonList rows={FEATURE_FLAG_KEYS.length} />
+          <SkeletonList rows={TOGGLEABLE_FLAG_KEYS.length} />
         ) : (
           <div>
-            {FEATURE_FLAG_KEYS.map((key) => (
+            {TOGGLEABLE_FLAG_KEYS.map((key) => (
               <FlagRow
                 key={key}
                 flagKey={key}

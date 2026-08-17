@@ -148,7 +148,6 @@ export async function createCompany({
   name,
   jurisdictions,
   departments = [],
-  subscriptionTier = SUBSCRIPTION_TIERS[0],
   // Optional: a Super Admin can pick a custom reporting slug on the
   // registration form instead of accepting the name-derived default. Still
   // run through allocateUniqueSlug so a manually-typed value is normalized to
@@ -170,9 +169,6 @@ export async function createCompany({
   if (jurisdictions.includes('LK')) {
     throw new Error('LK is deprecated and cannot be selected for a new company')
   }
-  if (!SUBSCRIPTION_TIERS.includes(subscriptionTier)) {
-    throw new Error('A valid subscription tier is required')
-  }
 
   // Unique, URL-safe reporting slug allocated at creation time - this is what
   // /submit/:companySlug resolves against so anonymous reporters can file
@@ -184,15 +180,26 @@ export async function createCompany({
     slug,
     jurisdictions,
     departments,
-    subscriptionTier,
     // Prefill only, from the first selected jurisdiction - the admin can
     // change it immediately on SettingsPage.jsx. null when the jurisdiction
     // has no mapped zone, which never happens today but keeps this from
     // ever writing `undefined`.
     timeZone: DEFAULT_TIMEZONE_BY_JURISDICTION[jurisdictions[0]] ?? null,
-    // The Super Admin overview reads these three; seeding them at creation
-    // is what stops a brand new company rendering as "Unknown"/"-" there.
-    billingStatus: 'active',
+    // The Super Admin overview reads these; seeding them at creation is what
+    // stops a brand new company rendering as "Unknown"/"-" there.
+    //
+    // billingStatus is deliberately 'unbilled', not 'active' - a newly
+    // registered company genuinely has no subscription yet, and no package
+    // has been chosen for it either, so subscriptionTier is not written at
+    // all here (a missing field is more honest than a value nobody paid
+    // for). Both only ever become real once a Super Admin links an actual
+    // Stripe subscription via linkCompanySubscription.js, after a plan has
+    // actually been negotiated - see CompanyBillingLink.jsx. 'unbilled' is
+    // distinct from 'unknown' (which means "we don't know") and from every
+    // PAYING_BILLING_STATUSES value, so it never trips BillingPage.jsx's /
+    // calculateQuote.js's data-integrity warning for a company with no
+    // stripeSubscriptionId.
+    billingStatus: 'unbilled',
     currentPeriodCaseCount: 0,
     createdAt: serverTimestamp(),
   })

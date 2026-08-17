@@ -4,6 +4,7 @@ import { listCompanies } from '../services/companyService'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import CompanySetup from '../components/dashboard/CompanySetup'
+import CompanyBillingLink from '../components/dashboard/CompanyBillingLink'
 import ManualAssignmentQueue from '../components/dashboard/ManualAssignmentQueue'
 import FeatureFlagPanel from '../components/dashboard/FeatureFlagPanel'
 import AppShell from '../components/shared/AppShell'
@@ -21,6 +22,16 @@ const BILLING_TONE = {
   past_due: 'tone-critical',
   canceled: 'tone-critical',
   unpaid: 'tone-critical',
+}
+
+// 'unbilled' is a genuinely-has-no-subscription-yet company (see
+// companyService.js's createCompany) - distinct from 'unknown', and never a
+// billing-needs-attention state, so it stays out of BILLING_TONE (falls
+// through to the neutral default) and gets its own label here rather than
+// the raw underscore-replaced status string.
+function billingStatusLabel(status) {
+  if (!status || status === 'unbilled') return 'Not yet billed'
+  return status.replace(/_/g, ' ')
 }
 
 // Per Module 2's no-case-content-access rule, the companies view reads only
@@ -49,6 +60,11 @@ function SuperAdminDashboardPage() {
     sectionParam === 'manualAssignment' || sectionParam === 'featureFlags' ? sectionParam : 'companies'
   const [section, setSection] = useState(initialSection)
   const [manualAssignmentCount, setManualAssignmentCount] = useState(null)
+  // Which company's billing-link panel (CompanyBillingLink.jsx) is expanded
+  // inline on its card - at most one at a time, toggled by its own "Billing"
+  // button. There is no separate company detail route yet, so this is the
+  // closest thing to one for the one action a Super Admin needs there.
+  const [billingCompanyId, setBillingCompanyId] = useState(null)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -80,8 +96,11 @@ function SuperAdminDashboardPage() {
   }
 
   const totalCases = companies.reduce((sum, c) => sum + (c.currentPeriodCaseCount ?? 0), 0)
+  // 'unbilled' is a company that genuinely has no subscription yet, not a
+  // billing problem to flag - excluded here the same way 'active'/'trialing'
+  // are, so a freshly registered company doesn't inflate this count.
   const attentionCount = companies.filter(
-    (c) => c.billingStatus && !['active', 'trialing'].includes(c.billingStatus)
+    (c) => c.billingStatus && !['active', 'trialing', 'unbilled'].includes(c.billingStatus)
   ).length
 
   const registerButton = (
@@ -202,7 +221,7 @@ function SuperAdminDashboardPage() {
                     </p>
                   </div>
                   <Badge tone={BILLING_TONE[company.billingStatus] ?? 'tone-neutral'} dot>
-                    {(company.billingStatus ?? 'unknown').replace(/_/g, ' ')}
+                    {billingStatusLabel(company.billingStatus)}
                   </Badge>
                 </div>
 
@@ -220,6 +239,24 @@ function SuperAdminDashboardPage() {
                     </dd>
                   </div>
                 </dl>
+
+                <div className="mt-4 border-t border-line-soft pt-4">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon="billing"
+                    onClick={() =>
+                      setBillingCompanyId((current) => (current === company.id ? null : company.id))
+                    }
+                  >
+                    {billingCompanyId === company.id ? 'Hide billing' : 'Billing'}
+                  </Button>
+                  {billingCompanyId === company.id && (
+                    <div className="mt-4">
+                      <CompanyBillingLink company={company} onLinked={loadCompanies} />
+                    </div>
+                  )}
+                </div>
               </Card>
             ))}
           </div>
