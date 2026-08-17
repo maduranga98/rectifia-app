@@ -54,9 +54,16 @@ function BreakdownReceipt({ breakdown }) {
 
 // Company Admin's billing quote: current tier, current monthly price, the
 // bracket breakdown behind that price, and a what-if calculator for
-// projected headcount growth. Case volume never appears here - price is a
+// projected headcount growth. `employeeCount`/`quote` below come straight
+// from calculateQuote.js's response, which is computed from the company's
+// DECLARED headcount (companies/{companyId}.employeeCount) - see
+// functions/src/billing/pricingEngine.js's readDeclaredEmployeeCount()
+// comment for why that field, not the live Pulse Check roster, is
+// authoritative for billing. Case volume never appears here - price is a
 // function of headcount only, and this panel is read-only (no payment form,
-// no plan-change action; see BillingPage.jsx for that boundary).
+// no plan-change action; see BillingPage.jsx for that boundary, and
+// PackageSelector.jsx/PulseCheckToggle.jsx for where the actual plan/add-on
+// changes happen).
 function BillingQuote({ companyId }) {
   const { t } = useTranslation()
   const TIER_LABELS = {

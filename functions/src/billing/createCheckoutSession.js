@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
-const { calculateMonthlyPrice, calculatePulseCheckAddOnPrice, countActiveEmployees } = require('./pricingEngine')
+const { calculateMonthlyPrice, calculatePulseCheckAddOnPrice, readDeclaredEmployeeCount } = require('./pricingEngine')
 const { stripeSecretKey, appBaseUrl, getStripeClient } = require('./stripeClient')
 
 if (!admin.apps.length) {
@@ -45,13 +45,78 @@ function pulseCheckPriceData(addOnPrice) {
 
 // Starts self-serve billing for a company that doesn't have an active
 // subscription yet: returns a Stripe Checkout Session URL for the caller to
-// redirect to. There is no plan picker - this app's tier is a function of
-// headcount (pricingEngine.js's calculateMonthlyPrice), not something a
-// Company Admin selects, so the Checkout line item is always "this
-// company's current computed price," created inline via price_data rather
-// than a pre-registered Stripe Price. Staying in sync as headcount changes
-// afterward is syncSubscriptionPricing.js's job, not this callable's.
+// redirect to. The Checkout line item price is always computed inline via
+// price_data (never a pre-registered Stripe Price) from `employeeCount` -
+// companies/{companyId}.employeeCount, the declared headcount
+// pricingEngine.js's readDeclaredEmployeeCount() treats as authoritative for
+// billing (see that function's comment). Staying in sync as the declared
+// count changes afterward is syncSubscriptionPricing.js's job, not this
+// function's.
 //
+// Factored out of the onCall handler below so upgradeSubscription.js can
+// start the exact same Checkout flow the first time a Company Admin selects
+// a Core band with no subscription yet - a brand-new company has no payment
+// method on file, so that first tier selection has to go through Checkout
+// (which collects one) rather than a subscriptionItems.create() call, which
+// would have no subscription to attach to anyway. Throws HttpsError on any
+// precondition failure; the caller is responsible for its own auth checks
+// and for logging the outcome, since the two callers log under different
+// action names.
+async function startCheckoutForCompany(firestore, stripe, companyId, company, { includePulseCheck = false } = {}) {
+  const companyRef = firestore.collection(COMPANIES_COLLECTION).doc(companyId)
+
+  if (company.stripeSubscriptionId) {
+    throw new HttpsError(
+      'already-exists',
+      'Billing is already set up for this company. Use the billing portal to make changes, or the Pulse Check toggle to add or remove the add-on.'
+    )
+  }
+
+  const employeeCount = readDeclaredEmployeeCount(company)
+  if (employeeCount === null) {
+    throw new HttpsError('failed-precondition', 'Declare your company\'s employee count before setting up billing')
+  }
+
+  const quote = calculateMonthlyPrice(employeeCount)
+  if (quote.needsManualReview) {
+    throw new HttpsError(
+      'failed-precondition',
+      `At ${employeeCount} employees, pricing is reviewed by the Rectifia sales team rather than self-serve. Contact sales to set up billing.`
+    )
+  }
+
+  let stripeCustomerId = company.stripeCustomerId
+  if (!stripeCustomerId) {
+    const customer = await stripe.customers.create({
+      name: company.name,
+      metadata: { companyId },
+    })
+    stripeCustomerId = customer.id
+    await companyRef.update({ stripeCustomerId })
+  }
+
+  const lineItems = [{ price_data: corePriceData(quote), quantity: 1 }]
+  if (includePulseCheck) {
+    lineItems.push({
+      price_data: pulseCheckPriceData(calculatePulseCheckAddOnPrice(employeeCount)),
+      quantity: 1,
+    })
+  }
+
+  const base = appBaseUrl.value().replace(/\/+$/, '')
+  const session = await stripe.checkout.sessions.create({
+    mode: 'subscription',
+    customer: stripeCustomerId,
+    line_items: lineItems,
+    success_url: `${base}/admin/billing?checkout=success`,
+    cancel_url: `${base}/admin/billing?checkout=cancelled`,
+    subscription_data: { metadata: { companyId } },
+    metadata: { companyId },
+  })
+
+  return { url: session.url, quote, employeeCount }
+}
+
 // Company Admin only - stricter than calculateQuote.js's companyAdmin-or-
 // billingView check, because billingView is explicitly documented as
 // view-only (src/config/permissionModules.js) and this callable spends the
@@ -89,56 +154,8 @@ exports.createBillingCheckoutSession = onCall({ secrets: [stripeSecretKey] }, as
   }
   const company = companySnapshot.data()
 
-  if (company.stripeSubscriptionId) {
-    throw new HttpsError(
-      'already-exists',
-      'Billing is already set up for this company. Use the billing portal to make changes, or the Pulse Check toggle to add or remove the add-on.'
-    )
-  }
-
-  const employeeCount = await countActiveEmployees(firestore, companyId)
-  if (employeeCount < 1) {
-    throw new HttpsError('failed-precondition', 'Add employees to your roster before setting up billing')
-  }
-
-  const quote = calculateMonthlyPrice(employeeCount)
-  if (quote.needsManualReview) {
-    throw new HttpsError(
-      'failed-precondition',
-      `At ${employeeCount} employees, pricing is reviewed by the Rectifia sales team rather than self-serve. Contact sales to set up billing.`
-    )
-  }
-
   const stripe = getStripeClient()
-
-  let stripeCustomerId = company.stripeCustomerId
-  if (!stripeCustomerId) {
-    const customer = await stripe.customers.create({
-      name: company.name,
-      metadata: { companyId },
-    })
-    stripeCustomerId = customer.id
-    await companyRef.update({ stripeCustomerId })
-  }
-
-  const lineItems = [{ price_data: corePriceData(quote), quantity: 1 }]
-  if (includePulseCheck) {
-    lineItems.push({
-      price_data: pulseCheckPriceData(calculatePulseCheckAddOnPrice(employeeCount)),
-      quantity: 1,
-    })
-  }
-
-  const base = appBaseUrl.value().replace(/\/+$/, '')
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    customer: stripeCustomerId,
-    line_items: lineItems,
-    success_url: `${base}/admin/billing?checkout=success`,
-    cancel_url: `${base}/admin/billing?checkout=cancelled`,
-    subscription_data: { metadata: { companyId } },
-    metadata: { companyId },
-  })
+  const { url } = await startCheckoutForCompany(firestore, stripe, companyId, company, { includePulseCheck })
 
   await logPrivilegedAction(firestore, {
     uid,
@@ -149,12 +166,15 @@ exports.createBillingCheckoutSession = onCall({ secrets: [stripeSecretKey] }, as
     detail: includePulseCheck ? 'with_pulse_check' : 'core_only',
   })
 
-  return { url: session.url }
+  return { url }
 })
 
 // Exported for togglePulseCheckAddOn.js and syncSubscriptionPricing.js -
 // both need to tell the core item and the Pulse Check item on an existing
 // subscription apart the same way this file tags them at creation.
+// startCheckoutForCompany is exported for upgradeSubscription.js - see its
+// own doc comment above for why.
 exports.LINE_ITEM_TAG = LINE_ITEM_TAG
 exports.pulseCheckPriceData = pulseCheckPriceData
 exports.corePriceData = corePriceData
+exports.startCheckoutForCompany = startCheckoutForCompany

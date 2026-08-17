@@ -9,6 +9,8 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { SkeletonStats } from '../../components/ui/Loading'
 import BillingQuote from '../../components/dashboard/BillingQuote'
+import PackageSelector from '../../components/dashboard/PackageSelector'
+import PulseCheckToggle from '../../components/dashboard/PulseCheckToggle'
 
 // A billing status is either fine or it isn't, and that difference should be
 // visible before the word is read. Values are whatever Stripe's subscription
@@ -154,6 +156,17 @@ function BillingPage({ companyId }) {
           </Card>
 
           <BillingQuote companyId={companyId} />
+
+          {/* Package selection & upgrade UI, driven by the company's
+              declared employeeCount (see companyService.js's
+              updateCompanyEmployeeCount comment and
+              pricingEngine.js's readDeclaredEmployeeCount() for why that
+              field, not the live roster, is authoritative for billing).
+              PackageSelector/PulseCheckToggle write subscriptionTier/
+              pulseCheckTier via upgradeSubscription.js, which now actually
+              calls Stripe - see that function's file comment. */}
+          <PackageSelector companyId={companyId} company={company} onChanged={refresh} />
+          <PulseCheckToggle companyId={companyId} company={company} onChanged={refresh} />
 
           <Alert variant="info" title={t('billingPage.paymentNote.title')}>
             {t('billingPage.paymentNote.body')}

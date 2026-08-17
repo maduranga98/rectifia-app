@@ -2,7 +2,7 @@ const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { shouldRunForCompany } = require('../utils/companySchedule')
-const { calculateMonthlyPrice, calculatePulseCheckAddOnPrice, countActiveEmployees } = require('./pricingEngine')
+const { calculateMonthlyPrice, calculatePulseCheckAddOnPrice, readDeclaredEmployeeCount } = require('./pricingEngine')
 const { stripeSecretKey, getStripeClient } = require('./stripeClient')
 
 if (!admin.apps.length) {
@@ -27,12 +27,15 @@ function titleCase(tier) {
 }
 
 // Keeps a company's Stripe subscription item price in sync with what
-// pricingEngine.js's calculateMonthlyPrice() would quote for the roster
-// *today* - the same formula BillingQuote.jsx shows and createCheckoutSession
-// .js charged at signup. This app's tier is a function of headcount, not a
-// plan a Company Admin picks, so as the roster grows or shrinks the amount
-// Stripe should charge next period has to move with it; nothing else in this
-// codebase keeps that number current after the initial Checkout.
+// pricingEngine.js's calculateMonthlyPrice() would quote for the declared
+// headcount *today* - the same formula BillingQuote.jsx shows and
+// createCheckoutSession.js charged at signup. Declared headcount
+// (company.employeeCount) can drift from what was billed at signup or last
+// sync - a Company Admin edits it via PackageSelector.jsx/upgradeSubscription
+// .js any time, not just at tier-change moments - so the amount Stripe
+// should charge next period has to move with it; nothing else in this
+// codebase keeps that number current after the initial Checkout or the last
+// self-serve tier change.
 //
 // proration_behavior: 'none' on every update here is deliberate and matches
 // BillingQuote.jsx's whatIfCard footnote ("no cliffs, no surprise invoice"):
@@ -119,8 +122,8 @@ exports.syncSubscriptionPricing = onSchedule({ schedule: 'every 1 hours', secret
     if (!shouldRunForCompany(company, TARGET_LOCAL_HOUR, now)) continue
 
     try {
-      const employeeCount = await countActiveEmployees(firestore, companyDoc.id)
-      if (employeeCount < 1) continue
+      const employeeCount = readDeclaredEmployeeCount(company)
+      if (employeeCount === null) continue
 
       const quote = calculateMonthlyPrice(employeeCount)
       await syncCoreItem(stripe, companyDoc.ref, company, quote)

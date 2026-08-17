@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
-const { calculatePulseCheckAddOnPrice, countActiveEmployees } = require('./pricingEngine')
+const { calculatePulseCheckAddOnPrice, readDeclaredEmployeeCount } = require('./pricingEngine')
 const { stripeSecretKey, getStripeClient } = require('./stripeClient')
 const { pulseCheckPriceData } = require('./createCheckoutSession')
 
@@ -75,9 +75,9 @@ exports.togglePulseCheckAddOn = onCall({ secrets: [stripeSecretKey] }, async (re
       return { pulseCheckEnabled: true }
     }
 
-    const employeeCount = await countActiveEmployees(firestore, companyId)
-    if (employeeCount < 1) {
-      throw new HttpsError('failed-precondition', 'Add employees to your roster before adding Pulse Check')
+    const employeeCount = readDeclaredEmployeeCount(company)
+    if (employeeCount === null) {
+      throw new HttpsError('failed-precondition', 'Declare your company\'s employee count before adding Pulse Check')
     }
 
     // Default proration_behavior ('create_prorations') is intentional here:

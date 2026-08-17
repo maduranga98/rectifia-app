@@ -362,6 +362,33 @@ export async function updateCompanyTimeZone(companyId, timeZone) {
   })
 }
 
+// Writes companies/{companyId}.employeeCount - the self-declared headcount
+// that is now the AUTHORITATIVE billing input across the whole app (see
+// functions/src/billing/pricingEngine.js's readDeclaredEmployeeCount()
+// comment): the package-selection UI (PackageSelector.jsx /
+// PulseCheckToggle.jsx) reads it to show a company's matching Core/Pulse
+// Check band, upgradeSubscription.js re-reads it server-side to validate a
+// self-serve band selection AND to price the real Stripe subscription item,
+// and calculateQuote.js/syncSubscriptionPricing.js/createCheckoutSession.js/
+// togglePulseCheckAddOn.js all read it too - none of them fall back to the
+// live Pulse Check roster count. This is a v1 manual entry, not derived from
+// companies/{companyId}/employees, and pilot v1 has no automated
+// reconciliation between the two. firestore.rules permits this field for the
+// company's own Company Admin (companyAdminEditableFields), same allowlist
+// pattern as timeZone above.
+export async function updateCompanyEmployeeCount(companyId, employeeCount) {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  const count = Number(employeeCount)
+  if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
+    throw new Error('Enter a whole number of employees, at least 1')
+  }
+  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
+    employeeCount: count,
+  })
+}
+
 export async function updateCompanyJurisdictions(companyId, jurisdictions) {
   const invalidJurisdictions = jurisdictions.filter(
     (j) => !VALID_JURISDICTIONS.includes(j)

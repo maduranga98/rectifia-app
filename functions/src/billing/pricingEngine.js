@@ -16,6 +16,9 @@ const { HttpsError } = require('firebase-functions/v2/https')
 // quote (calculateQuote.js), Checkout session creation, and the recurring
 // Stripe price resync - shares this one module rather than each carrying its
 // own copy, so there is exactly one server-side formula, not three.
+//
+// See readDeclaredEmployeeCount() below for which employee-count field is
+// authoritative for all of this - it is not the live Pulse Check roster.
 const PROGRESSIVE_THRESHOLD_EMPLOYEES = 500
 
 const PUBLISHED_BANDS = [
@@ -73,8 +76,23 @@ function pulseCheckBandForEmployeeCount(employeeCount) {
   return PULSE_CHECK_BANDS.find((band) => employeeCount >= band.minEmployees && employeeCount <= band.maxEmployees) ?? null
 }
 
-const COMPANIES_COLLECTION = 'companies'
-const EMPLOYEES_SUBCOLLECTION = 'employees'
+// AUTHORITATIVE EMPLOYEE COUNT, DECIDED: companies/{companyId}.employeeCount
+// (self-declared by the Company Admin, written by upgradeSubscription.js /
+// PackageSelector.jsx) is the one number every billing path in this
+// directory reads - calculateQuote.js, createCheckoutSession.js,
+// togglePulseCheckAddOn.js, syncSubscriptionPricing.js, and
+// upgradeSubscription.js all call this function, not the live Pulse Check
+// roster. The roster-derived count this module used to compute
+// (countActiveEmployees(), removed) is gone from every billing call site -
+// nothing here bills off the real Pulse Check roster size. Pilot v1 has no
+// automated reconciliation between the declared number and the roster; a
+// Company Admin under-declaring headcount under-bills their own company, and
+// that is an accepted v1 risk, not a bug to route around by silently falling
+// back to the roster count in one code path and not another.
+function readDeclaredEmployeeCount(company) {
+  const count = Number(company?.employeeCount)
+  return Number.isFinite(count) && Number.isInteger(count) && count >= 1 ? count : null
+}
 
 function roundToCents(amount) {
   return Math.round(amount * 100) / 100
@@ -180,23 +198,6 @@ function calculatePulseCheckAddOnPrice(employeeCount) {
   return calculatePulseCheckProgressivePrice(employeeCount)
 }
 
-// Counts the company's real, billable headcount: everyone on the Pulse Check
-// roster (companies/{companyId}/employees) who isn't marked inactive. Same
-// filter SettingsPage.jsx's roster-size display and
-// functions/src/intake/schedulePulseChecks.js's send loop both use, so the
-// number a quote is based on matches the number a Pulse Check send would
-// actually reach.
-async function countActiveEmployees(firestore, companyId) {
-  const snapshot = await firestore
-    .collection(COMPANIES_COLLECTION)
-    .doc(companyId)
-    .collection(EMPLOYEES_SUBCOLLECTION)
-    .select('status')
-    .get()
-
-  return snapshot.docs.filter((doc) => doc.data().status !== 'inactive').length
-}
-
 module.exports = {
   PROGRESSIVE_THRESHOLD_EMPLOYEES,
   PUBLISHED_BANDS,
@@ -206,5 +207,5 @@ module.exports = {
   pulseCheckBandForEmployeeCount,
   calculateMonthlyPrice,
   calculatePulseCheckAddOnPrice,
-  countActiveEmployees,
+  readDeclaredEmployeeCount,
 }
