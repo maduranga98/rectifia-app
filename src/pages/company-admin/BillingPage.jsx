@@ -120,20 +120,17 @@ function BillingPage({ companyId }) {
     }
   }
 
-  // Files a real quote request for both the Core plan and the Pulse Check
-  // add-on in one click - requestQuote.js only ever takes one `target` per
-  // call, but a Company Admin only sees a single button here (see this
-  // page's requirement to never expose a self-serve plan/add-on picker), so
-  // both requests are filed together so Lumora's sales follow-up has the
-  // full picture from one click.
+  // Files a real quote request covering both the Core plan and the Pulse
+  // Check add-on in one click - requestQuote.js defaults to both targets and
+  // builds a single Stripe Quote with one line item each, so a Company
+  // Admin (who only ever sees this single button, never a self-serve
+  // plan/add-on picker) gets one Quote whose acceptance produces one
+  // subscription.
   async function handleRequestQuote() {
     setActionPending(true)
     setActionError(null)
     try {
-      await Promise.all([
-        requestQuote(companyId, { target: 'core' }),
-        requestQuote(companyId, { target: 'pulseCheck' }),
-      ])
+      await requestQuote(companyId)
       setQuoteRequested(true)
     } catch (err) {
       setActionError(err.message)

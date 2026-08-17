@@ -8,6 +8,7 @@ const {
   readDeclaredEmployeeCount,
 } = require('./pricingEngine')
 const { stripeSecretKey, getStripeClient } = require('./stripeClient')
+const { LINE_ITEM_TAG } = require('./lineItemTags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -42,7 +43,7 @@ const QUOTE_REQUESTS_COLLECTION = 'quoteRequests'
 // comment) - nothing in this directory creates a subscription anymore.
 exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) => {
   const uid = requireAuthUid(request)
-  const { companyId, target } = request.data || {}
+  const { companyId, targets: requestedTargets } = request.data || {}
 
   if (typeof companyId !== 'string' || !companyId) {
     throw new HttpsError('invalid-argument', 'companyId is required')
@@ -51,8 +52,17 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
   if (!tokenCompanyId || tokenCompanyId !== companyId) {
     throw new HttpsError('permission-denied', 'You may only request billing for your own company')
   }
-  if (target !== 'core' && target !== 'pulseCheck') {
-    throw new HttpsError('invalid-argument', "target must be 'core' or 'pulseCheck'")
+  // Defaults to both - a Company Admin only ever sees a single "Request a
+  // quote" button (see BillingPage.jsx), so the common case is asking for
+  // Core and Pulse Check together in one Quote.
+  const targets = requestedTargets === undefined ? ['core', 'pulseCheck'] : requestedTargets
+  if (
+    !Array.isArray(targets) ||
+    targets.length === 0 ||
+    targets.some((target) => target !== 'core' && target !== 'pulseCheck') ||
+    new Set(targets).size !== targets.length
+  ) {
+    throw new HttpsError('invalid-argument', "targets must be a non-empty array of unique values from 'core', 'pulseCheck'")
   }
 
   const firestore = admin.firestore()
@@ -90,8 +100,8 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
   // calculatePulseCheckAddOnPrice() - reshaped into the same { tier,
   // monthlyPrice, breakdown } quote shape so both targets store and log
   // identically.
-  const quote =
-    target === 'core'
+  function quoteForTarget(target) {
+    return target === 'core'
       ? calculateMonthlyPrice(employeeCount)
       : {
           tier: 'pulseCheck',
@@ -100,6 +110,8 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
           needsManualReview: employeeCount > MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
           breakdown: [{ label: 'Pulse Check', employees: employeeCount, ratePerEmployee: null, amount: calculatePulseCheckAddOnPrice(employeeCount) }],
         }
+  }
+  const quotesByTarget = Object.fromEntries(targets.map((target) => [target, quoteForTarget(target)]))
 
   const stripe = getStripeClient()
   const companyRef = firestore.collection(COMPANIES_COLLECTION).doc(companyId)
@@ -117,26 +129,50 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
   // A real, priced Stripe object for sales to work from - left as a draft
   // (no .finalizeQuote / .sendQuote call here) so nothing is sent to the
   // customer automatically; a human reviews, negotiates, and sends it. One
-  // line item at the reference monthlyPrice - the bracket breakdown stays
-  // internal (in `quote` below and in quoteRequests), never on the Stripe
-  // object a customer could eventually see.
+  // Quote with up to two line items (Core and/or Pulse Check), not two
+  // independent Quotes - so that if both get accepted, Stripe creates a
+  // single subscription with both items on it, matching the single
+  // stripeSubscriptionId field on the company doc. Each line item's
+  // product_data is tagged with the shared rectifiaLineItem constant so
+  // stripeWebhook.js's applySubscriptionState() can tell Core and Pulse
+  // Check apart once the Quote is accepted and becomes a subscription.
+  // subscription_data.metadata.companyId carries forward onto that
+  // subscription too, which is what lets the webhook find the company at
+  // all - without it, handleSubscriptionUpdated silently no-ops forever.
+  // The bracket breakdown stays internal (in `quotesByTarget` below and in
+  // quoteRequests), never on the Stripe object a customer could eventually
+  // see.
   const stripeQuote = await stripe.quotes.create({
     customer: stripeCustomerId,
-    line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `Rectifia - ${target === 'core' ? 'Core plan' : 'Pulse Check add-on'} (${employeeCount} employees)`,
-          },
-          unit_amount: Math.round(quote.monthlyPrice * 100),
-          recurring: { interval: 'month' },
+    line_items: targets.map((target) => ({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: `Rectifia - ${target === 'core' ? 'Core plan' : 'Pulse Check add-on'} (${employeeCount} employees)`,
+          metadata: { rectifiaLineItem: LINE_ITEM_TAG[target === 'core' ? 'CORE' : 'PULSE_CHECK'] },
         },
-        quantity: 1,
+        unit_amount: Math.round(quotesByTarget[target].monthlyPrice * 100),
+        recurring: { interval: 'month' },
       },
-    ],
-    metadata: { companyId, target, employeeCountAtRequest: String(employeeCount) },
+      quantity: 1,
+    })),
+    subscription_data: { metadata: { companyId } },
+    metadata: { companyId, targets: targets.join(','), employeeCountAtRequest: String(employeeCount) },
   })
+
+  const requestsUpdate = Object.fromEntries(
+    targets.map((target) => [
+      `requests.${target}`,
+      {
+        employeeCountAtRequest: employeeCount,
+        quote: quotesByTarget[target],
+        stripeQuoteId: stripeQuote.id,
+        requestedByUid: uid,
+        requestedAt: admin.firestore.FieldValue.serverTimestamp(),
+        status: 'pending',
+      },
+    ])
+  )
 
   await firestore
     .collection(QUOTE_REQUESTS_COLLECTION)
@@ -145,14 +181,7 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
       {
         companyId,
         companyName: company.name ?? null,
-        [`requests.${target}`]: {
-          employeeCountAtRequest: employeeCount,
-          quote,
-          stripeQuoteId: stripeQuote.id,
-          requestedByUid: uid,
-          requestedAt: admin.firestore.FieldValue.serverTimestamp(),
-          status: 'pending',
-        },
+        ...requestsUpdate,
       },
       { merge: true }
     )
@@ -163,10 +192,10 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
     role,
     action: 'request_quote',
     outcome: 'granted',
-    detail: target,
+    detail: targets.join(','),
   })
 
   // Deliberately bare - no monthlyPrice, no breakdown, no rate. The quote
   // just written above is for Lumora's own sales follow-up only.
-  return { requested: true, target }
+  return { requested: true, targets }
 })

@@ -38,13 +38,17 @@ const requestQuoteCallable = httpsCallable(functions, 'requestQuote')
 
 // The one billing action a Company Admin can take: ask Rectifia for a real,
 // negotiated price at their declared headcount, at any headcount (not
-// gated to a large-company threshold). `target` is 'core' or 'pulseCheck'.
-// Computes the reference quote server-side, files a real (draft, never
-// auto-sent) Stripe Quote object against the company's Stripe Customer, and
-// records both for Lumora's own sales follow-up - the response here is
-// deliberately just a confirmation ({ requested: true, target }), never a
-// price, so no per-employee rate or formula reaches the client.
-export async function requestQuote(companyId, { target } = {}) {
-  const result = await requestQuoteCallable({ companyId, target })
+// gated to a large-company threshold). `targets` is an array drawn from
+// 'core' / 'pulseCheck' and defaults to both - requestQuote.js builds a
+// single Stripe Quote with one line item per requested target, so that an
+// accepted Quote produces one subscription, matching the single
+// stripeSubscriptionId field on the company doc. Computes the reference
+// quote server-side, files a real (draft, never auto-sent) Stripe Quote
+// object against the company's Stripe Customer, and records it for
+// Lumora's own sales follow-up - the response here is deliberately just a
+// confirmation ({ requested: true, targets }), never a price, so no
+// per-employee rate or formula reaches the client.
+export async function requestQuote(companyId, { targets } = {}) {
+  const result = await requestQuoteCallable({ companyId, targets })
   return result.data
 }
