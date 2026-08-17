@@ -34,6 +34,23 @@ export async function openBillingPortal(companyId) {
   return result.data
 }
 
+const getSubscriptionSummaryCallable = httpsCallable(functions, 'getSubscriptionSummary')
+
+// The live, actually-charged price for a company that already has a Stripe
+// subscription - fetched fresh from Stripe on every call
+// (getSubscriptionSummary.js never trusts cached Firestore price data, and
+// this never caches the result either), unlike getCompanyQuote() above,
+// which is always a reference-only formula. Returns { currency,
+// corePriceCents, pulseCheckPriceCents (null if no Pulse Check item),
+// totalPriceCents, currentPeriodEnd, status } - bare numbers only, never a
+// Stripe price/product ID or the bracket/formula behind them. Throws if the
+// company has no stripeSubscriptionId yet; BillingQuote.jsx's
+// ActiveSubscriptionSummary only calls this once it knows one exists.
+export async function getSubscriptionSummary(companyId) {
+  const result = await getSubscriptionSummaryCallable({ companyId })
+  return result.data
+}
+
 const requestQuoteCallable = httpsCallable(functions, 'requestQuote')
 
 // The one billing action a Company Admin can take: ask Rectifia for a real,

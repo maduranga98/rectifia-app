@@ -92,6 +92,7 @@ const {
 } = require('./src/benchmark/benchmarkAccess')
 const { calculateQuote } = require('./src/billing/calculateQuote')
 const { createBillingPortalSession } = require('./src/billing/createBillingPortalSession')
+const { getSubscriptionSummary } = require('./src/billing/getSubscriptionSummary')
 const { stripeWebhook } = require('./src/billing/stripeWebhook')
 const { requestQuote } = require('./src/billing/requestQuote')
 const { linkCompanySubscription } = require('./src/billing/linkCompanySubscription')
@@ -249,6 +250,13 @@ exports.calculateQuote = calculateQuote
 // anymore - see stripeWebhook.js's file comment.
 exports.createBillingPortalSession = createBillingPortalSession
 exports.stripeWebhook = stripeWebhook
+// A live read-only summary of what an active subscriber is actually
+// charged, fetched straight from Stripe on every call (never cached in
+// Firestore) so BillingQuote.jsx's ActiveSubscriptionSummary can show a
+// real price instead of the reference-quote formula. See
+// getSubscriptionSummary.js for why it never hands back a Stripe
+// price/product ID or the underlying bracket/formula.
+exports.getSubscriptionSummary = getSubscriptionSummary
 // The only billing action a Company Admin can take beyond viewing the
 // reference quote and managing an existing subscription: ask Rectifia for a
 // real, negotiated price at their declared headcount. Computes the
