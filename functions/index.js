@@ -96,8 +96,6 @@ const { togglePulseCheckAddOn } = require('./src/billing/togglePulseCheckAddOn')
 const { createBillingPortalSession } = require('./src/billing/createBillingPortalSession')
 const { stripeWebhook } = require('./src/billing/stripeWebhook')
 const { syncSubscriptionPricing } = require('./src/billing/syncSubscriptionPricing')
-const { upgradeSubscription } = require('./src/billing/upgradeSubscription')
-const { requestEnterpriseQuote } = require('./src/billing/requestEnterpriseQuote')
 const { accessReview, attestAccessReview, getAccessReviewForAttestation } = require('./src/security/accessReview')
 const { keyRotationCheck, recordKeyRotation, rotateIdentityVaultKey } = require('./src/security/keyRotation')
 const { anomalyDetection, reviewSecurityAlert } = require('./src/security/anomalyDetection')
@@ -249,19 +247,6 @@ exports.togglePulseCheckAddOn = togglePulseCheckAddOn
 exports.createBillingPortalSession = createBillingPortalSession
 exports.stripeWebhook = stripeWebhook
 exports.syncSubscriptionPricing = syncSubscriptionPricing
-// Package-selection UI (PackageSelector.jsx / PulseCheckToggle.jsx): a
-// self-declared entitlement track, separate from the Stripe-metered flow
-// above. upgradeSubscription is the instant self-serve band change for a
-// company at or below the 500-employee threshold (Core or Pulse Check,
-// independently); requestEnterpriseQuote is the "Contact sales" path above
-// it, which computes a quote via pricingEngine.js and files it to
-// quoteRequests/{companyId} for Lumora's own follow-up without ever handing
-// the formula or per-employee rates back to the client. Neither function
-// creates a charge, a Stripe object, or touches billingStatus - see the
-// file-level comments on both for why this stays a parallel, no-payment
-// track rather than replacing the Stripe flow above.
-exports.upgradeSubscription = upgradeSubscription
-exports.requestEnterpriseQuote = requestEnterpriseQuote
 // Module 26: Security Control & Evidence Layer. Five scheduled controls
 // (accessReview quarterly, keyRotationCheck weekly, anomalyDetection daily,
 // integrityCheck weekly, backupVerification monthly) plus the onCall

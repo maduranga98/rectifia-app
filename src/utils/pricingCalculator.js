@@ -15,7 +15,8 @@ import {
   PROGRESSIVE_PRICING,
   PROGRESSIVE_THRESHOLD_EMPLOYEES,
   PUBLISHED_BANDS,
-  PULSE_CHECK_ADD_ON,
+  PULSE_CHECK_PROGRESSIVE_PRICING,
+  pulseCheckBandForEmployeeCount,
 } from '../config/pricingConfig'
 
 function roundToCents(amount) {
@@ -105,15 +106,44 @@ export function calculateMonthlyPrice(employeeCount) {
     : calculateProgressivePrice(count)
 }
 
+function calculatePulseCheckProgressivePrice(employeeCount) {
+  let remaining = employeeCount
+  let previousCeiling = 0
+  let total = PULSE_CHECK_PROGRESSIVE_PRICING.baseFee
+
+  for (const bracket of PULSE_CHECK_PROGRESSIVE_PRICING.brackets) {
+    if (remaining <= 0) break
+
+    const sliceSize = Math.min(remaining, bracket.uptoEmployees - previousCeiling)
+    if (sliceSize > 0) {
+      total += sliceSize * bracket.ratePerEmployee
+      remaining -= sliceSize
+    }
+
+    previousCeiling = bracket.uptoEmployees
+  }
+
+  return roundToCents(total)
+}
+
 // Pulse Check add-on price. Deliberately a separate function from
-// calculateMonthlyPrice(): the add-on is always a flat per-employee rate with
-// no bracket logic, and merging it into the core pricing function would let a
-// future edit accidentally apply bracket math to it.
+// calculateMonthlyPrice(): it has its own published bands and its own
+// progressive formula above the self-serve threshold, not Core's - merging
+// it into the core pricing function would let a future edit accidentally
+// apply Core's bracket math to it.
 export function calculatePulseCheckAddOnPrice(employeeCount) {
   const count = Number(employeeCount)
   if (!Number.isFinite(count) || count < 0) {
     throw new Error('employeeCount must be a non-negative number')
   }
 
-  return roundToCents(count * PULSE_CHECK_ADD_ON.ratePerEmployeePerMonth)
+  if (count <= PROGRESSIVE_THRESHOLD_EMPLOYEES) {
+    const band = pulseCheckBandForEmployeeCount(count)
+    if (!band) {
+      throw new Error(`No published Pulse Check band covers ${count} employees`)
+    }
+    return band.monthlyPrice
+  }
+
+  return calculatePulseCheckProgressivePrice(count)
 }
