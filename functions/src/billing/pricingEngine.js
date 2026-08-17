@@ -1,24 +1,28 @@
 const { HttpsError } = require('firebase-functions/v2/https')
 
 // Server-side copy of src/config/pricingConfig.js's constants. This file is
-// the ONLY place a quote may legitimately be computed for billing: functions
+// the ONLY place a REFERENCE quote may legitimately be computed: functions
 // and the app are separate deployables (this is CommonJS, the app is an ES
 // module bundle - see functions/package.json vs. package.json), so this
 // module cannot import the client config across that boundary and instead
 // carries its own copy. The client-side calculator
 // (src/utils/pricingCalculator.js) mirrors these same numbers for instant UI
-// feedback only; ITS output must never be persisted as a billed amount.
-// Whenever a rate, band boundary, or base fee changes, update it here AND in
-// src/config/pricingConfig.js, or the price a company sees will drift from
-// what this function would actually quote.
+// feedback only; ITS output must never be shown as anything but a preview
+// either. Whenever a rate, band boundary, or base fee changes, update it
+// here AND in src/config/pricingConfig.js, or the reference price a company
+// sees will drift from what this function actually computes.
 //
-// Every function in functions/src/billing/ that needs a price - the read-only
-// quote (calculateQuote.js), Checkout session creation, and the recurring
-// Stripe price resync - shares this one module rather than each carrying its
-// own copy, so there is exactly one server-side formula, not three.
+// Pilot v1 has no self-serve subscription path at all: every real
+// customer's actual price is negotiated by hand and set up directly against
+// Stripe by a human (see stripeWebhook.js's file comment), never computed
+// here. What this module's formula drives is calculateQuote.js's read-only
+// reference display and requestQuote.js's "Contact sales" request - the
+// published-rate number a prospective customer sees is a starting point for
+// a conversation, not an invoice.
 //
 // See readDeclaredEmployeeCount() below for which employee-count field is
-// authoritative for all of this - it is not the live Pulse Check roster.
+// authoritative for this reference calculation - it is not the live Pulse
+// Check roster.
 const PROGRESSIVE_THRESHOLD_EMPLOYEES = 500
 
 const PUBLISHED_BANDS = [
@@ -42,11 +46,10 @@ const PROGRESSIVE_PRICING = {
 const MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES = 5000
 
 // Server-side copy of src/config/pricingConfig.js's PULSE_CHECK_BANDS - the
-// published Pulse Check add-on price for headcount at or below
-// PROGRESSIVE_THRESHOLD_EMPLOYEES. This IS what calculatePulseCheckAddOnPrice()
-// below bills through (createCheckoutSession.js, togglePulseCheckAddOn.js,
-// syncSubscriptionPricing.js, calculateQuote.js) - there is no other,
-// flat-per-employee pricing track for Pulse Check.
+// published Pulse Check add-on reference price for headcount at or below
+// PROGRESSIVE_THRESHOLD_EMPLOYEES, shown by calculateQuote.js and quoted by
+// requestQuote.js. There is no other, flat-per-employee pricing track for
+// Pulse Check.
 const PULSE_CHECK_BANDS = [
   { tier: 'starter', label: 'Starter', minEmployees: 1, maxEmployees: 25, monthlyPrice: 10 },
   { tier: 'growth', label: 'Growth', minEmployees: 26, maxEmployees: 100, monthlyPrice: 29 },
@@ -56,18 +59,25 @@ const PULSE_CHECK_BANDS = [
 
 // Pulse Check's progressive formula for headcount above the published-band
 // cap, mirroring PROGRESSIVE_PRICING's tax-bracket shape with Pulse Check's
-// own base fee and rates.
+// own base fee and rates. Every real customer at this scale is priced by a
+// negotiated agreement, not this formula (see requestQuote.js) - this only
+// has to be a reasonable, monotonically-decreasing reference number for a
+// prospective pilot customer's "what would this roughly cost" quote.
 //
-// RATE_TBD: the 2,501-5,000 rate has not been published or confirmed
-// anywhere - it is set equal to the 1,001-2,500 rate as a placeholder so the
-// formula stays monotonic instead of guessing a number. Must be confirmed
-// and replaced before billing any company in this headcount range.
+// The 2,501-5,000 rate has never been separately published - it is set to
+// the midpoint between the confirmed 1,001-2,500 rate (0.15) and the
+// confirmed 5,000+ rate (0.1) rather than repeating the 1,001-2,500 rate
+// verbatim, so the reference breakdown a prospective customer sees actually
+// decreases bracket over bracket (as every other bracket here and in
+// PROGRESSIVE_PRICING does) instead of showing a flat, un-marginal middle
+// tier. Still an interpolated placeholder, not a published rate - confirm
+// with sales before treating it as anything more than a reference number.
 const PULSE_CHECK_PROGRESSIVE_PRICING = {
   baseFee: 50,
   brackets: [
     { label: 'First 1,000', uptoEmployees: 1000, ratePerEmployee: 0.2 },
     { label: 'Next 1,500 (1,001-2,500)', uptoEmployees: 2500, ratePerEmployee: 0.15 },
-    { label: 'Next 2,500 (2,501-5,000) - RATE_TBD', uptoEmployees: 5000, ratePerEmployee: 0.15 },
+    { label: 'Next 2,500 (2,501-5,000)', uptoEmployees: 5000, ratePerEmployee: 0.125 },
     { label: 'Above 5,000', uptoEmployees: Infinity, ratePerEmployee: 0.1 },
   ],
 }
@@ -77,16 +87,15 @@ function pulseCheckBandForEmployeeCount(employeeCount) {
 }
 
 // AUTHORITATIVE EMPLOYEE COUNT, DECIDED: companies/{companyId}.employeeCount
-// (self-declared by the Company Admin, written by upgradeSubscription.js /
-// PackageSelector.jsx) is the one number every billing path in this
-// directory reads - calculateQuote.js, createCheckoutSession.js,
-// togglePulseCheckAddOn.js, syncSubscriptionPricing.js, and
-// upgradeSubscription.js all call this function, not the live Pulse Check
-// roster. The roster-derived count this module used to compute
-// (countActiveEmployees(), removed) is gone from every billing call site -
-// nothing here bills off the real Pulse Check roster size. Pilot v1 has no
-// automated reconciliation between the declared number and the roster; a
-// Company Admin under-declaring headcount under-bills their own company, and
+// (self-declared by the Company Admin, written by
+// companyService.js's updateCompanyEmployeeCount) is the one number every
+// reference-pricing path in this directory reads - calculateQuote.js and
+// requestQuote.js both call this function, not the live Pulse Check roster.
+// The roster-derived count this module used to compute (countActiveEmployees(),
+// removed) is gone from every call site - nothing here computes a reference
+// number off the real Pulse Check roster size. Pilot v1 has no automated
+// reconciliation between the declared number and the roster; a Company Admin
+// under-declaring headcount only skews their own reference quote, and
 // that is an accepted v1 risk, not a bug to route around by silently falling
 // back to the roster count in one code path and not another.
 function readDeclaredEmployeeCount(company) {

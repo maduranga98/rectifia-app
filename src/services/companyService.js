@@ -363,19 +363,17 @@ export async function updateCompanyTimeZone(companyId, timeZone) {
 }
 
 // Writes companies/{companyId}.employeeCount - the self-declared headcount
-// that is now the AUTHORITATIVE billing input across the whole app (see
-// functions/src/billing/pricingEngine.js's readDeclaredEmployeeCount()
-// comment): the package-selection UI (PackageSelector.jsx /
-// PulseCheckToggle.jsx) reads it to show a company's matching Core/Pulse
-// Check band, upgradeSubscription.js re-reads it server-side to validate a
-// self-serve band selection AND to price the real Stripe subscription item,
-// and calculateQuote.js/syncSubscriptionPricing.js/createCheckoutSession.js/
-// togglePulseCheckAddOn.js all read it too - none of them fall back to the
-// live Pulse Check roster count. This is a v1 manual entry, not derived from
-// companies/{companyId}/employees, and pilot v1 has no automated
-// reconciliation between the two. firestore.rules permits this field for the
-// company's own Company Admin (companyAdminEditableFields), same allowlist
-// pattern as timeZone above.
+// that drives the REFERENCE quote shown on BillingPage.jsx/BillingQuote.jsx
+// (see functions/src/billing/pricingEngine.js's readDeclaredEmployeeCount()
+// comment) and is what requestQuote.js reads when a Company Admin asks
+// Rectifia for a real, negotiated price. Pilot v1 has no self-serve
+// subscription path, so this field never drives an actual Stripe charge by
+// itself - it only decides what reference number is shown and what
+// headcount a quote request is filed at. This is a v1 manual entry, not
+// derived from companies/{companyId}/employees, and pilot v1 has no
+// automated reconciliation between the two. firestore.rules permits this
+// field for the company's own Company Admin (companyAdminEditableFields),
+// same allowlist pattern as timeZone above.
 export async function updateCompanyEmployeeCount(companyId, employeeCount) {
   if (!companyId) {
     throw new Error('companyId is required')

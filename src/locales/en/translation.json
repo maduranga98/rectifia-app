@@ -1322,21 +1322,15 @@
   "billingPage": {
     "subscriptionStatus": "Subscription status",
     "actions": {
-      "setUpBilling": "Set up billing",
-      "startingCheckout": "Starting checkout...",
       "manageBilling": "Manage billing",
-      "openingPortal": "Opening billing portal..."
+      "openingPortal": "Opening billing portal...",
+      "requestQuote": "Request a quote",
+      "requestingQuote": "Sending request..."
     },
-    "checkoutResult": {
-      "dismiss": "Dismiss",
-      "success": {
-        "title": "Billing set up",
-        "body": "Your subscription is active. It can take a few moments for the status below to update."
-      },
-      "cancelled": {
-        "title": "Checkout cancelled",
-        "body": "No changes were made - you can set up billing again whenever you're ready."
-      }
+    "requestQuote": {
+      "title": "Want to talk pricing?",
+      "body": "Request a quote and Rectifia's team will follow up with pricing tailored to your organization. This never starts or changes a subscription on its own.",
+      "requested": "Request sent - Rectifia's team will be in touch."
     },
     "paymentNote": {
       "title": "Payments are handled by Stripe",
@@ -2152,6 +2146,19 @@
     "employeesAtRate_other": "{{count}} employees @ {{rate}}",
     "employeesCount_one": "{{count}} employee",
     "employeesCount_other": "{{count}} employees",
+    "referenceRateNotice": {
+      "title": "Reference rate only",
+      "body": "The pricing below is calculated from Rectifia's published rates for reference. Your actual price is set out in your service agreement and may differ - request a quote below for pricing specific to your organization."
+    },
+    "declaredHeadcount": "{{count}} declared employees",
+    "employeeCount": {
+      "label": "Employee count",
+      "hint": "A whole number, entered by you - used to compute the reference quote below and any quote you request.",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving..."
+    },
     "noHeadcount": {
       "title": "No billable headcount yet",
       "body": "Add employees to your roster on the Employees page to see a billing quote."
@@ -2194,59 +2201,8 @@
     "active": "Active",
     "notPurchased": "Not purchased",
     "pulseCheckRate": "{{rate}} per employee / month",
-    "addPulseCheck": "Add Pulse Check",
-    "removePulseCheck": "Remove Pulse Check",
-    "pulseCheckSaving": "Saving...",
-    "setUpBillingFirst": "Set up billing above to add this",
     "overridesTitle": "Overrides in effect for your company",
-    "footnote": "Your plan moves up automatically as active headcount grows - there's nothing to select. Enterprise (500+ employees) is quoted individually above 5,000 employees rather than shown as a flat price."
-  },
-  "packageSelector": {
-    "title": "Core plan",
-    "description": "Self-serve, instant upgrades and downgrades between the three published headcount bands. Available up to 500 employees; above that, plans are quoted individually - see Contact sales below.",
-    "declaredHeadcount": "{{count}} declared employees",
-    "employeeCount": {
-      "label": "Employee count",
-      "hint": "A whole number, entered by you - used to determine which band you're eligible for.",
-      "edit": "Edit",
-      "cancel": "Cancel",
-      "save": "Save",
-      "saving": "Saving..."
-    },
-    "currentPlan": "Current plan",
-    "tierRange": "{{min}}-{{max}} employees",
-    "notEligible": "Available at {{min}}-{{max}} employees",
-    "saving": "Saving...",
-    "actions": {
-      "activate": "Activate {{label}}",
-      "upgrade": "Upgrade to {{label}}",
-      "downgrade": "Downgrade to {{label}}"
-    },
-    "immediateEffectNote": "Changes take effect immediately. Proration for mid-cycle switches isn't calculated yet.",
-    "enterprise": {
-      "title": "500+ employees: quoted individually",
-      "body": "At this headcount, self-serve plan selection isn't available. Request a quote and Rectifia's sales team will follow up with pricing tailored to your organization.",
-      "cta": "Contact sales",
-      "requesting": "Sending request...",
-      "requested": "Request sent - Rectifia's sales team will be in touch."
-    }
-  },
-  "pulseCheckToggle": {
-    "title": "Pulse Check",
-    "separateBadge": "Separate add-on",
-    "description": "An independent add-on with its own pricing band, billed and managed separately from your Core plan above - never shown as a combined price.",
-    "needsEmployeeCount": "Declare your employee count in the Core plan section above to manage Pulse Check pricing.",
-    "active": "Active",
-    "updateToBand": "Update to {{label}}",
-    "neverBundledNote": "Pulse Check is never bundled into your Core plan price - it's billed and tracked on its own.",
-    "enterprise": {
-      "title": "500+ employees: quoted individually",
-      "body": "At this headcount, self-serve Pulse Check band selection isn't available. Request a quote and Rectifia's sales team will follow up.",
-      "cta": "Contact sales",
-      "requesting": "Sending request...",
-      "requested": "Request sent - Rectifia's sales team will be in touch.",
-      "disableStillWorks": "You can still turn Pulse Check off at any time using the switch above."
-    }
+    "footnote": "Whether Pulse Check is active is set by Rectifia once your subscription is arranged - request a quote above to add or change it."
   },
   "staffInvite": {
     "roleHints": {

@@ -23,12 +23,15 @@ const COMPANIES_COLLECTION = 'companies'
 // uses.
 //
 // This does not implement payment processing or invoicing itself - it
-// returns a price number and a breakdown for display only. Actual Stripe
-// checkout, subscription creation, and webhook-driven billingStatus sync
-// live alongside this in createCheckoutSession.js, togglePulseCheckAddOn.js,
-// createBillingPortalSession.js, stripeWebhook.js, and
-// syncSubscriptionPricing.js - all of which share this same pricing formula
-// via pricingEngine.js rather than recomputing it.
+// returns a REFERENCE price number and a breakdown for display only, always
+// labeled as such in the UI (BillingQuote.jsx). Pilot v1 has no self-serve
+// subscription creation: a real company's actual price is negotiated by
+// sales (see requestQuote.js, the "Contact sales" path this reference quote
+// feeds into) and the resulting subscription is set up by hand directly
+// against Stripe. createBillingPortalSession.js and stripeWebhook.js are the
+// only other billing callables left alongside this one - the portal for a
+// customer to manage payment/invoices once a subscription exists, the
+// webhook to keep billingStatus in sync with whatever was set up manually.
 exports.calculateQuote = onCall(async (request) => {
   const uid = requireAuthUid(request)
   const { companyId } = request.data || {}

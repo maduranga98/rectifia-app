@@ -1,16 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
 import { getCompany } from '../../services/companyService'
-import { startBillingCheckout, openBillingPortal } from '../../services/billingService'
+import { openBillingPortal, requestQuote } from '../../services/billingService'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { SkeletonStats } from '../../components/ui/Loading'
 import BillingQuote from '../../components/dashboard/BillingQuote'
-import PackageSelector from '../../components/dashboard/PackageSelector'
-import PulseCheckToggle from '../../components/dashboard/PulseCheckToggle'
 
 // A billing status is either fine or it isn't, and that difference should be
 // visible before the word is read. Values are whatever Stripe's subscription
@@ -27,21 +24,40 @@ const BILLING_TONE = {
   unpaid: 'tone-critical',
 }
 
-// Company Admin's billing home: subscription status, the "set up billing" /
-// "manage billing" action, and the pricing engine (current tier, current
-// price, bracket breakdown, plan feature lock display, what-if headcount
-// calculator) in BillingQuote below it. Actually starting or changing
-// billing always goes through Stripe - Checkout for the first subscription,
-// the Stripe-hosted Billing Portal for payment method/invoices/cancellation
-// afterward - never a form on this page; see src/services/billingService.js.
+// Company Admin's billing home. Pilot v1 has a handful of founding customers
+// on individually negotiated discounts, no SOC 2 report or reference
+// customers yet, and self-serve published-rate billing doesn't represent
+// what any real customer actually pays - so this page is READ-ONLY plus one
+// request action, never a place to start or change a subscription:
+//
+//  - Subscription status, as last set (manually, after negotiating a price)
+//    on the company doc's billingStatus/subscriptionTier, or reconciled by
+//    stripeWebhook.js once a subscription exists. There is no "Set up
+//    billing" button anywhere on this page - a Company Admin cannot start a
+//    subscription themselves. Actual subscription setup happens outside the
+//    app: Lumora staff create the Stripe subscription by hand once sales has
+//    negotiated a price, and set company.stripeSubscriptionId/billingStatus/
+//    subscriptionTier directly, the same manual-write pattern the
+//    billingHistory audit trail already uses elsewhere in this app.
+//  - "Manage billing" (the Stripe-hosted Billing Portal) only once a
+//    subscription already exists - this is still the right place for a
+//    customer to see invoices or update a payment method after Lumora has
+//    set one up.
+//  - BillingQuote.jsx's reference pricing, clearly labeled as a reference
+//    rate only (see that component's own framing) - never a price a company
+//    can act on directly.
+//  - A single "Request a quote" action (requestQuote.js), the only billing
+//    action a Company Admin can take: it asks Rectifia's sales team for a
+//    real, negotiated price and never creates or changes a subscription
+//    itself.
 function BillingPage({ companyId }) {
   const { t } = useTranslation()
   const [company, setCompany] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionError, setActionError] = useState(null)
-  const [actionPending, setActionPending] = useState(null)
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [actionPending, setActionPending] = useState(false)
+  const [quoteRequested, setQuoteRequested] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -60,58 +76,44 @@ function BillingPage({ companyId }) {
   }, [companyId, refresh])
 
   const billingStatus = company?.billingStatus ?? 'unknown'
-  const checkoutResult = searchParams.get('checkout')
-
-  function dismissCheckoutResult() {
-    const next = new URLSearchParams(searchParams)
-    next.delete('checkout')
-    setSearchParams(next, { replace: true })
-  }
-
-  async function handleSetUpBilling() {
-    setActionPending('checkout')
-    setActionError(null)
-    try {
-      const { url } = await startBillingCheckout(companyId)
-      window.location.href = url
-    } catch (err) {
-      setActionError(err.message)
-      setActionPending(null)
-    }
-  }
 
   async function handleManageBilling() {
-    setActionPending('portal')
+    setActionPending(true)
     setActionError(null)
     try {
       const { url } = await openBillingPortal(companyId)
       window.location.href = url
     } catch (err) {
       setActionError(err.message)
-      setActionPending(null)
+      setActionPending(false)
+    }
+  }
+
+  // Files a real quote request for both the Core plan and the Pulse Check
+  // add-on in one click - requestQuote.js only ever takes one `target` per
+  // call, but a Company Admin only sees a single button here (see this
+  // page's requirement to never expose a self-serve plan/add-on picker), so
+  // both requests are filed together so Lumora's sales follow-up has the
+  // full picture from one click.
+  async function handleRequestQuote() {
+    setActionPending(true)
+    setActionError(null)
+    try {
+      await Promise.all([
+        requestQuote(companyId, { target: 'core' }),
+        requestQuote(companyId, { target: 'pulseCheck' }),
+      ])
+      setQuoteRequested(true)
+    } catch (err) {
+      setActionError(err.message)
+    } finally {
+      setActionPending(false)
     }
   }
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
       {error && <Alert variant="error">{error}</Alert>}
-
-      {checkoutResult === 'success' && (
-        <Alert variant="success" title={t('billingPage.checkoutResult.success.title')}>
-          {t('billingPage.checkoutResult.success.body')}{' '}
-          <button type="button" className="underline" onClick={dismissCheckoutResult}>
-            {t('billingPage.checkoutResult.dismiss')}
-          </button>
-        </Alert>
-      )}
-      {checkoutResult === 'cancelled' && (
-        <Alert variant="info" title={t('billingPage.checkoutResult.cancelled.title')}>
-          {t('billingPage.checkoutResult.cancelled.body')}{' '}
-          <button type="button" className="underline" onClick={dismissCheckoutResult}>
-            {t('billingPage.checkoutResult.dismiss')}
-          </button>
-        </Alert>
-      )}
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
       {loading && !company ? (
@@ -130,25 +132,15 @@ function BillingPage({ companyId }) {
                 <Badge tone={BILLING_TONE[billingStatus] ?? 'tone-neutral'} dot>
                   {billingStatus.replace(/_/g, ' ')}
                 </Badge>
-                {company?.stripeSubscriptionId ? (
+                {company?.stripeSubscriptionId && (
                   <Button
                     size="sm"
                     variant="secondary"
-                    loading={actionPending === 'portal'}
+                    loading={actionPending}
                     loadingLabel={t('billingPage.actions.openingPortal')}
                     onClick={handleManageBilling}
                   >
                     {t('billingPage.actions.manageBilling')}
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="accent"
-                    loading={actionPending === 'checkout'}
-                    loadingLabel={t('billingPage.actions.startingCheckout')}
-                    onClick={handleSetUpBilling}
-                  >
-                    {t('billingPage.actions.setUpBilling')}
                   </Button>
                 )}
               </div>
@@ -157,16 +149,28 @@ function BillingPage({ companyId }) {
 
           <BillingQuote companyId={companyId} />
 
-          {/* Package selection & upgrade UI, driven by the company's
-              declared employeeCount (see companyService.js's
-              updateCompanyEmployeeCount comment and
-              pricingEngine.js's readDeclaredEmployeeCount() for why that
-              field, not the live roster, is authoritative for billing).
-              PackageSelector/PulseCheckToggle write subscriptionTier/
-              pulseCheckTier via upgradeSubscription.js, which now actually
-              calls Stripe - see that function's file comment. */}
-          <PackageSelector companyId={companyId} company={company} onChanged={refresh} />
-          <PulseCheckToggle companyId={companyId} company={company} onChanged={refresh} />
+          <Card padded={false} className="p-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-charcoal">{t('billingPage.requestQuote.title')}</p>
+                <p className="mt-1 text-xs text-muted">{t('billingPage.requestQuote.body')}</p>
+              </div>
+              {quoteRequested ? (
+                <Alert variant="success" className="grow-0">
+                  {t('billingPage.requestQuote.requested')}
+                </Alert>
+              ) : (
+                <Button
+                  variant="accent"
+                  loading={actionPending}
+                  loadingLabel={t('billingPage.actions.requestingQuote')}
+                  onClick={handleRequestQuote}
+                >
+                  {t('billingPage.actions.requestQuote')}
+                </Button>
+              )}
+            </div>
+          </Card>
 
           <Alert variant="info" title={t('billingPage.paymentNote.title')}>
             {t('billingPage.paymentNote.body')}
