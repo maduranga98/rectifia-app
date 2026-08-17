@@ -2162,6 +2162,10 @@
     },
     "activeSubscription": {
       "unknownTier": "Not set",
+      "currentPrice": "Current monthly price",
+      "coreLine": "Core: {{price}}",
+      "pulseCheckLine": "Pulse Check: {{price}}",
+      "renewsOn": "Renews on {{date}}",
       "pulseCheck": {
         "label": "Pulse Check add-on",
         "enable": "Add Pulse Check",

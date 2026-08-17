@@ -2133,7 +2133,11 @@
       "enterprise": "ව්‍යවසාය"
     },
     "activeSubscription": {
-      "unknownTier": "සකසා නැත"
+      "unknownTier": "සකසා නැත",
+      "currentPrice": "වත්මන් මාසික මිල",
+      "coreLine": "මූලික: {{price}}",
+      "pulseCheckLine": "Pulse Check: {{price}}",
+      "renewsOn": "{{date}} දින අලුත් වේ"
     },
     "employeesAtRate_one": "සේවකයෙකු @ {{rate}}",
     "employeesAtRate_other": "සේවකයින් {{count}} @ {{rate}}",

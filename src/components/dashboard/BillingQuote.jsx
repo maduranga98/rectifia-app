@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   createCheckoutSession,
   getCompanyQuote,
+  getSubscriptionSummary,
   updatePulseCheckSubscription,
   upgradeSubscriptionTier,
 } from '../../services/billingService'
@@ -23,13 +24,20 @@ import { Input } from '../ui/Field'
 import { SkeletonStats } from '../ui/Loading'
 import PlanFeaturesCard from './PlanFeaturesCard'
 
-function formatCurrency(amount) {
+function formatCurrency(amount, currency = 'USD') {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency,
     minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(amount)
+}
+
+// getSubscriptionSummary.js returns whole-currency-unit cents (Stripe's own
+// unit), never dollars - this is the one place that gets converted back to
+// a plain number for formatCurrency() above.
+function formatCurrencyFromCents(cents, currency) {
+  return formatCurrency(cents / 100, (currency || 'usd').toUpperCase())
 }
 
 // The bracket receipt: "First 1,000 @ $1.10 = $1,100", one row per
@@ -202,6 +210,32 @@ function ActiveSubscriptionSummary({ company, companyId, realHeadcount, onChange
   const [upgradePending, setUpgradePending] = useState(false)
   const [actionError, setActionError] = useState(null)
 
+  // The live Stripe price - fetched fresh on every mount (never cached in
+  // Firestore, per getSubscriptionSummary.js) and kept separate from the
+  // rest of this card's state: a failed fetch (network error, etc.) should
+  // just drop the price line, never block the tier/status card above from
+  // rendering.
+  const [summary, setSummary] = useState(null)
+  const [summaryLoading, setSummaryLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setSummaryLoading(true)
+    getSubscriptionSummary(companyId)
+      .then((result) => {
+        if (!cancelled) setSummary(result)
+      })
+      .catch(() => {
+        if (!cancelled) setSummary(null)
+      })
+      .finally(() => {
+        if (!cancelled) setSummaryLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [companyId])
+
   const band = PUBLISHED_BANDS.find((b) => b.tier === company?.subscriptionTier) ?? null
   const cap = band?.maxEmployees ?? null
   const nearCap = cap != null && realHeadcount != null && realHeadcount >= cap - Math.max(2, Math.round(cap * 0.1))
@@ -248,6 +282,47 @@ function ActiveSubscriptionSummary({ company, companyId, realHeadcount, onChange
             <p className="mt-1 text-lg font-semibold text-charcoal">{status.replace(/_/g, ' ')}</p>
           </div>
         </div>
+
+        {summaryLoading ? (
+          <div className="mt-4 border-t border-line-soft pt-4">
+            <SkeletonStats count={1} />
+          </div>
+        ) : (
+          summary && (
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-4 border-t border-line-soft pt-4">
+              <div className="flex flex-col gap-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.06em] text-muted">
+                  {t('billingQuote.activeSubscription.currentPrice')}
+                </p>
+                {summary.pulseCheckPriceCents != null && (
+                  <>
+                    <p className="text-xs text-muted">
+                      {t('billingQuote.activeSubscription.coreLine', {
+                        price: formatCurrencyFromCents(summary.corePriceCents, summary.currency),
+                      })}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {t('billingQuote.activeSubscription.pulseCheckLine', {
+                        price: formatCurrencyFromCents(summary.pulseCheckPriceCents, summary.currency),
+                      })}
+                    </p>
+                  </>
+                )}
+                {summary.currentPeriodEnd != null && (
+                  <p className="text-xs text-muted">
+                    {t('billingQuote.activeSubscription.renewsOn', {
+                      date: new Date(summary.currentPeriodEnd * 1000).toLocaleDateString(),
+                    })}
+                  </p>
+                )}
+              </div>
+              <p className="text-2xl font-semibold tabular-nums text-charcoal">
+                {formatCurrencyFromCents(summary.totalPriceCents, summary.currency)}
+                <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
+              </p>
+            </div>
+          )
+        )}
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line-soft pt-4">
           <div>
