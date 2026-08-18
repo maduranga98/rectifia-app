@@ -15,8 +15,7 @@ const SUPER_ADMINS_COLLECTION = 'superAdmins'
 
 // Same param the other outbound-email modules read (see
 // staff/inviteStaff.js, notifications/sendContactEmailUpdate.js) - the bare
-// app origin, used below to build the login link this new Company Admin
-// receives alongside their credentials.
+// app origin, used below to build the links this new Company Admin receives.
 const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a1e.web.app' })
 
 function escapeHtml(value) {
@@ -27,22 +26,25 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
 }
 
-// Builds the plain-text + HTML account-handover email: the credentials this
-// call generated, plus the app's login page, so the new Company Admin doesn't
-// depend on the Super Admin who created the company relaying anything by hand.
-// Matches the visual language of staff/inviteStaff.js's invitation email.
-function buildAdminCredentialsEmail({ companyName, email, password, loginLink }) {
+// Builds the plain-text + HTML account-handover email. No password ever
+// appears in it - clicking "Set your password" lands the new admin on
+// AcceptInvitePage (via the app's own /invite/:token route, see
+// buildAppInviteLink below), where they choose their own password and are
+// dropped straight into their dashboard. Matches the visual language of
+// staff/inviteStaff.js's invitation email, which uses the same link-based
+// pattern.
+function buildAdminInviteEmail({ companyName, inviteLink, loginLink }) {
   const company = companyName || 'your organization'
   const subject = `Your Rectifia admin account for ${company}`
   const text = [
     `A Company Admin account for ${company} has been created on Rectifia.`,
     '',
-    `Email: ${email}`,
-    `Temporary password: ${password}`,
+    'Set your password to activate it and open your dashboard:',
+    inviteLink,
     '',
-    `Sign in at: ${loginLink}`,
+    `Already set your password? Sign in any time at ${loginLink}`,
     '',
-    'For your security, sign in and change this password as soon as possible.',
+    "If you weren't expecting this, you can safely ignore this email.",
   ].join('\n')
 
   const html = `
@@ -62,31 +64,27 @@ function buildAdminCredentialsEmail({ companyName, email, password, loginLink })
             A Company Admin account for <strong>${escapeHtml(company)}</strong> has been created on
             Rectifia.
           </p>
-          <table style="width: 100%; border-collapse: collapse; margin: 0 0 24px; font-size: 14px;">
-            <tr>
-              <td style="padding: 10px 12px; background: #f2f6fa; border-radius: 8px 0 0 8px; color: #14456f; font-weight: 600;">Email</td>
-              <td style="padding: 10px 12px; background: #f2f6fa; border-radius: 0 8px 8px 0; font-family: monospace;">${escapeHtml(email)}</td>
-            </tr>
-            <tr><td colspan="2" style="height: 4px;"></td></tr>
-            <tr>
-              <td style="padding: 10px 12px; background: #f2f6fa; border-radius: 8px 0 0 8px; color: #14456f; font-weight: 600;">Temporary password</td>
-              <td style="padding: 10px 12px; background: #f2f6fa; border-radius: 0 8px 8px 0; font-family: monospace;">${escapeHtml(password)}</td>
-            </tr>
-          </table>
+          <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.5;">
+            Set your password to activate it and open your dashboard:
+          </p>
           <p style="margin: 24px 0;">
-            <a href="${escapeHtml(loginLink)}" style="background: #db9b3a; color: #0b2c49; text-decoration: none; font-weight: 600; padding: 13px 24px; border-radius: 8px; display: inline-block;">Sign in to Rectifia</a>
+            <a href="${escapeHtml(inviteLink)}" style="background: #db9b3a; color: #0b2c49; text-decoration: none; font-weight: 600; padding: 13px 24px; border-radius: 8px; display: inline-block;">Set your password</a>
           </p>
-          <p style="font-size: 13px; color: #666; margin: 0 0 8px;">
+          <p style="font-size: 13px; color: #666; margin: 0 0 24px;">
             Or copy and paste this link into your browser:<br />
-            <a href="${escapeHtml(loginLink)}" style="color: #14456f;">${escapeHtml(loginLink)}</a>
+            <a href="${escapeHtml(inviteLink)}" style="color: #14456f;">${escapeHtml(inviteLink)}</a>
           </p>
-          <div style="border-top: 1px solid #e7edf3; padding-top: 16px; margin-top: 16px;">
+          <div style="border-top: 1px solid #e7edf3; padding-top: 16px; margin-top: 8px;">
             <p style="font-size: 13px; color: #666; margin: 0;">
-              For your security, sign in and change this password as soon as possible.
+              Already set your password? Sign in any time at
+              <a href="${escapeHtml(loginLink)}" style="color: #14456f;">${escapeHtml(loginLink)}</a>.
             </p>
           </div>
         </div>
       </div>
+      <p style="font-size: 12px; color: #9db4c9; text-align: center; margin: 20px 0 0;">
+        If you weren't expecting this, you can safely ignore this email.
+      </p>
     </div>
   `
 
@@ -137,51 +135,25 @@ async function requireSuperAdmin(actorUid) {
   }
 }
 
-// Character sets chosen to avoid glyphs that get misread when the Super
-// Admin copies the password out of the UI and reads it to someone over the
-// phone (no O/0, l/1/I).
-const UPPERCASE = 'ABCDEFGHJKMNPQRSTUVWXYZ'
-const LOWERCASE = 'abcdefghijkmnpqrstuvwxyz'
-const DIGITS = '23456789'
-const SYMBOLS = '!@#$%*?'
-
-function pick(charset, bytes, offset) {
-  return charset[bytes[offset] % charset.length]
-}
-
-// Generates a password that is shown once, in plain text, to the Super
-// Admin who created the company - there is no invite email in this flow, so
-// this string is the only way the new Company Admin gets in.
-function generatePassword(length = 14) {
-  const bytes = randomBytes(length)
-  const all = UPPERCASE + LOWERCASE + DIGITS + SYMBOLS
-  const chars = [
-    pick(UPPERCASE, bytes, 0),
-    pick(LOWERCASE, bytes, 1),
-    pick(DIGITS, bytes, 2),
-    pick(SYMBOLS, bytes, 3),
-  ]
-  for (let i = 4; i < length; i += 1) {
-    chars.push(pick(all, bytes, i))
+// Firebase's admin.auth().generatePasswordResetLink() points at its own
+// generic hosted action page (…firebaseapp.com/__/auth/action), which never
+// matches this app's /invite/:token route (AcceptInvitePage) - so the
+// oobCode is pulled out of Firebase's link and rebuilt as this app's own URL
+// instead. Mirrors buildAppInviteLink in staff/inviteStaff.js.
+function buildAppInviteLink(firebaseResetLink) {
+  const oobCode = new URL(firebaseResetLink).searchParams.get('oobCode')
+  if (!oobCode) {
+    throw new Error('Password reset link did not contain an oobCode')
   }
-  return chars.join('')
+  return `${appBaseUrl.value()}/invite/${oobCode}`
 }
 
 // Creates the Company Admin account for a freshly registered company and
-// returns its credentials to the caller so the Super Admin can hand them
-// over directly. Deliberately does NOT queue a staffInvite notification the
-// way inviteStaff.js does: invitation delivery is out of scope for now, the
-// credentials shown in the UI are the handover mechanism.
-//
-// The password is returned exactly once, in this response - it is never
-// written to Firestore and cannot be read back afterwards. If it is lost,
-// the Company Admin must use the password-reset flow.
-//
-// It is also emailed directly to the new admin (buildAdminCredentialsEmail
-// below), alongside the app's login link, rather than relying solely on the
-// Super Admin who created the company to relay it by hand - the credentials
-// screen in the UI still shows it once for the Super Admin's own records, but
-// the new admin no longer depends on that handover happening correctly.
+// emails the new admin a one-click link to set their own password
+// (AcceptInvitePage, the same screen staff invites use) - no password is
+// ever generated, shown, or handed over in plain text. The invite link is
+// also returned to the caller so the Super Admin's confirmation screen can
+// show it as a backup in case the email fails to deliver.
 exports.createCompanyAdmin = onCall({ secrets: [smtpPassword] }, async (request) => {
   const { companyId, email } = request.data || {}
   if (!companyId || !email) {
@@ -206,11 +178,13 @@ exports.createCompanyAdmin = onCall({ secrets: [smtpPassword] }, async (request)
     await companySnapshot.ref.update({ slug })
   }
 
-  const password = generatePassword()
-
   let userRecord
   try {
-    userRecord = await admin.auth().createUser({ email, password })
+    // The account needs some password to exist, but nobody ever uses it -
+    // the admin sets their own via the invite link below, the same as
+    // inviteStaff.js's temporaryPassword.
+    const temporaryPassword = admin.firestore().collection('_').doc().id + 'Aa1!'
+    userRecord = await admin.auth().createUser({ email, password: temporaryPassword })
   } catch (err) {
     if (err.code === 'auth/email-already-exists') {
       throw new HttpsError('already-exists', 'An account with this email already exists')
@@ -229,8 +203,10 @@ exports.createCompanyAdmin = onCall({ secrets: [smtpPassword] }, async (request)
     companyId,
   })
 
-  // 'active' rather than 'invited': there is no invite for this account to
-  // accept, it can sign in with the credentials shown to the Super Admin.
+  // 'invited' rather than 'active': the admin hasn't set their password yet.
+  // AcceptInvitePage calls acceptInvite (functions/src/staff/acceptInvite.js)
+  // once they do, which flips this to 'active' the same way it does for
+  // invited staff.
   await admin
     .firestore()
     .collection(COMPANIES_COLLECTION)
@@ -240,28 +216,31 @@ exports.createCompanyAdmin = onCall({ secrets: [smtpPassword] }, async (request)
     .set({
       email,
       role: 'companyAdmin',
-      status: 'active',
+      status: 'invited',
       createdBy: request.auth?.uid ?? null,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     })
 
-  // A delivery failure shouldn't fail the whole call - the account exists and
-  // the credentials are already returned to the Super Admin below - so it's
-  // recorded and surfaced to the caller rather than thrown, the same pattern
-  // inviteStaff.js uses.
+  const firebaseResetLink = await admin.auth().generatePasswordResetLink(email)
+  const inviteLink = buildAppInviteLink(firebaseResetLink)
+  const loginLink = `${appBaseUrl.value()}/login`
+
+  // A delivery failure shouldn't fail the whole call - the account and
+  // invite link already exist and are returned to the Super Admin below -
+  // so it's recorded and surfaced to the caller rather than thrown, the same
+  // pattern inviteStaff.js uses.
   let emailDelivered = true
   try {
-    const { subject, text, html } = buildAdminCredentialsEmail({
+    const { subject, text, html } = buildAdminInviteEmail({
       companyName: companySnapshot.data()?.name,
-      email,
-      password,
-      loginLink: `${appBaseUrl.value()}/login`,
+      inviteLink,
+      loginLink,
     })
     await sendMail({ to: email, subject, text, html })
   } catch (err) {
     emailDelivered = false
-    logger.error('createCompanyAdmin: credentials email failed to send', { companyId, email, error: err.message })
+    logger.error('createCompanyAdmin: invite email failed to send', { companyId, email, error: err.message })
   }
 
-  return { success: true, staffId: userRecord.uid, email, password, emailDelivered }
+  return { success: true, staffId: userRecord.uid, email, inviteLink, emailDelivered }
 })

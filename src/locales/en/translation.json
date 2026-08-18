@@ -102,7 +102,7 @@
       "alertTitle": "This link cannot be used"
     },
     "errors": {
-      "expired": "This invite link has expired or has already been used. Ask your Company Admin to send a new one.",
+      "expired": "This invite link has expired or has already been used. Ask whoever sent it to send a new one.",
       "invalid": "This invite link is not valid.",
       "tooShort": "Password must be at least 8 characters",
       "mismatch": "Passwords do not match",

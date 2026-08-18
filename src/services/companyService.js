@@ -210,11 +210,12 @@ export async function createCompany({
 const createCompanyAdminCallable = httpsCallable(functions, 'createCompanyAdmin')
 
 // Creates the Company Admin account for a newly registered company and
-// returns { email, password, emailDelivered } so the Super Admin can hand the
-// credentials over directly. The same credentials and a login link are also
-// emailed to the admin directly by createCompanyAdmin.js - emailDelivered
-// reflects whether that send succeeded. The password comes back once and is
-// never stored, so whatever calls this has to display it immediately.
+// returns { email, inviteLink, emailDelivered } so the Super Admin can hand
+// the invite link over directly if needed. The same link is also emailed to
+// the admin directly by createCompanyAdmin.js - emailDelivered reflects
+// whether that send succeeded. No password is ever generated; the admin sets
+// their own by following the invite link (AcceptInvitePage), the same flow
+// staff invites use.
 export async function createCompanyAdmin({ companyId, email }) {
   if (!companyId || !email?.trim()) {
     throw new Error('companyId and an admin email are required')

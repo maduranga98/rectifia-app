@@ -62,12 +62,14 @@ function AcceptInvitePage() {
     setSubmitting(true)
     try {
       await acceptInvite(token, password)
-      // Invites only ever create company staff (never a super admin - that
-      // account type is created directly by Lumora), so this always lands
-      // on the staff dashboard.
+      // Invites create both company staff and Company Admins (never a super
+      // admin - that account type is created directly by Lumora), so this
+      // hands off to RootRedirect via "/" rather than a hardcoded route -
+      // it already knows a Company Admin belongs on /admin/overview and
+      // everyone else on /dashboard.
       await signIn(email, password)
       await markInviteAccepted()
-      navigate('/dashboard', { replace: true })
+      navigate('/', { replace: true })
     } catch {
       setFormError(t('acceptInvite.errors.setPasswordFailed'))
     } finally {
