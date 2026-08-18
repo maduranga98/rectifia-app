@@ -227,15 +227,54 @@ function calculatePulseCheckAddOnPrice(employeeCount) {
   return calculatePulseCheckProgressivePrice(employeeCount)
 }
 
+// Server-side copy of src/config/pricingConfig.js's PLAN_FEATURES map - the
+// feature ladder driving which of featureFlags.js's FEATURE_FLAG_DEFAULTS
+// keys a company's tier unlocks by default. Cloud Functions deploy
+// separately from the web app and cannot import that ES module at deploy
+// time (see this file's header comment for the same CommonJS/ES-module
+// boundary), so this is an independent hand-kept copy, not a re-export -
+// KEEP IT IN SYNC BY HAND with src/config/pricingConfig.js's PLAN_FEATURES.
+const PLAN_FEATURES = {
+  starter: [],
+  growth: ['aiFollowUp', 'policyGrounding'],
+  scale: ['aiFollowUp', 'policyGrounding', 'patternDetection', 'burnoutTrendDetection'],
+  enterprise: [
+    'aiFollowUp',
+    'policyGrounding',
+    'patternDetection',
+    'burnoutTrendDetection',
+    'benchmarkPool',
+    'externalShareLinks',
+  ],
+}
+
+// The six PLAN_FEATURES-ladder flags (deliberately excludes 'pulseCheck' -
+// see PLAN_FEATURES' client-side comment) as an explicit true/false map for
+// `tier`. An unknown or missing tier resolves every key to false rather than
+// throwing, matching PLAN_FEATURES' own unknown-tier handling.
+function featureFlagsForTier(tier) {
+  const included = PLAN_FEATURES[tier] ?? []
+  return {
+    benchmarkPool: included.includes('benchmarkPool'),
+    aiFollowUp: included.includes('aiFollowUp'),
+    externalShareLinks: included.includes('externalShareLinks'),
+    patternDetection: included.includes('patternDetection'),
+    burnoutTrendDetection: included.includes('burnoutTrendDetection'),
+    policyGrounding: included.includes('policyGrounding'),
+  }
+}
+
 module.exports = {
   PROGRESSIVE_THRESHOLD_EMPLOYEES,
   PUBLISHED_BANDS,
   PULSE_CHECK_BANDS,
   MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
+  PLAN_FEATURES,
   bandForEmployeeCount,
   pulseCheckBandForEmployeeCount,
   calculateMonthlyPrice,
   calculatePulseCheckAddOnPrice,
   readDeclaredEmployeeCount,
   resolveEffectiveEmployeeCount,
+  featureFlagsForTier,
 }
