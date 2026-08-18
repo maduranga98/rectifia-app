@@ -1388,7 +1388,8 @@
     "departmentNameLabel": "Department name for {{name}}",
     "head": "Head",
     "notAssigned": "Not assigned",
-    "delete": "Delete"
+    "delete": "Delete",
+    "deleteBlocked": "\"{{name}}\" is used by a routing rule ({{categories}}) and can't be deleted. Remove or reassign that rule first."
   },
   "policiesPage": {
     "confirmDelete": "Delete \"{{title}}\" (v{{version}})? This removes the file and cannot be undone.",
