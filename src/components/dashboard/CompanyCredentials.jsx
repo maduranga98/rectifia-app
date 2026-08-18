@@ -4,8 +4,8 @@ import Button from '../ui/Button'
 import Icon from '../ui/Icon'
 
 // One credential row: a label, the value in a mono face, and its own copy
-// button. Split out so the email and the password are visibly the same kind
-// of thing and the copy affordance sits in the same place on both.
+// button. Split out so the email and the invite link are visibly the same
+// kind of thing and the copy affordance sits in the same place on both.
 function CredentialRow({ label, value, copied, onCopy }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-canvas px-3.5 py-3">
@@ -20,13 +20,14 @@ function CredentialRow({ label, value, copied, onCopy }) {
   )
 }
 
-// Shows the Company Admin's login credentials once, right after the company
-// is registered. The same credentials and a login link are emailed directly
-// to the admin by createCompanyAdmin.js, but this screen is still the backup
-// handover: the password is generated server-side, returned in the
-// createCompanyAdmin response, and never stored anywhere - once this screen
-// is dismissed it cannot be shown again, only reset.
-function CompanyCredentials({ companyName, email, password, emailDelivered, onDone }) {
+// Shows the Company Admin's invite link once, right after the company is
+// registered. The same link is emailed directly to the admin by
+// createCompanyAdmin.js - clicking it lets them set their own password
+// (AcceptInvitePage) - but this screen is still the backup handover in case
+// that email fails to deliver. No password is ever generated or shown; the
+// link itself is a Firebase password-reset action code and expires the same
+// way one does.
+function CompanyCredentials({ companyName, email, inviteLink, emailDelivered, onDone }) {
   const [copied, setCopied] = useState(null)
   const [copyFailed, setCopyFailed] = useState(false)
 
@@ -54,10 +55,10 @@ function CompanyCredentials({ companyName, email, password, emailDelivered, onDo
           <p className="mt-1 text-sm text-muted">
             {companyName ? `${companyName} is set up. ` : ''}
             {emailDelivered
-              ? 'These credentials and a sign-in link were also emailed directly to the admin. '
+              ? 'A link to set their password was also emailed directly to the admin. '
               : ''}
-            Give these credentials to the Company Admin. They can sign in with them straight away
-            and should change the password afterwards.
+            Give this link to the Company Admin if the email doesn&rsquo;t arrive - opening it lets
+            them set their own password and sign in.
           </p>
         </div>
       </div>
@@ -70,19 +71,11 @@ function CompanyCredentials({ companyName, email, password, emailDelivered, onDo
           onCopy={() => copy('email', email)}
         />
         <CredentialRow
-          label="Temporary password"
-          value={password}
-          copied={copied === 'password'}
-          onCopy={() => copy('password', password)}
+          label="Set-password link"
+          value={inviteLink}
+          copied={copied === 'link'}
+          onCopy={() => copy('link', inviteLink)}
         />
-        <Button
-          className="self-start"
-          size="sm"
-          icon={copied === 'both' ? 'check' : undefined}
-          onClick={() => copy('both', `Email: ${email}\nPassword: ${password}`)}
-        >
-          {copied === 'both' ? 'Copied both' : 'Copy both'}
-        </Button>
         {copyFailed && (
           <p className="text-xs text-muted">
             Could not use the clipboard - copy the values above manually.
@@ -91,14 +84,13 @@ function CompanyCredentials({ companyName, email, password, emailDelivered, onDo
       </div>
 
       <Alert variant="warning" title="Shown once">
-        This password is not stored anywhere. Copy it before closing - if it is lost, the admin
-        has to reset their password.
+        This link is not stored anywhere and expires after use. If it&rsquo;s lost, the admin can
+        request a new one from the sign-in page&rsquo;s &ldquo;Forgot password&rdquo; link.
       </Alert>
 
       {emailDelivered === false && (
         <Alert variant="error" title="Email delivery failed">
-          The credentials email to {email} could not be sent. Hand these credentials over
-          directly instead.
+          The invite email to {email} could not be sent. Hand this link over directly instead.
         </Alert>
       )}
 

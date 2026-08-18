@@ -48,8 +48,10 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
   // Company Admin account fails to be created afterwards (duplicate email,
   // say), retrying reuses the company instead of registering a second one.
   const [companyId, setCompanyId] = useState(null)
-  // { email, password } returned once by createCompanyAdmin - the only time
-  // the password is ever available, since nothing stores it.
+  // { email, inviteLink } returned by createCompanyAdmin - the invite link
+  // that lets the new admin set their own password. No password is ever
+  // generated or shown here; it's the same link-based flow inviteStaff.js
+  // uses for staff.
   const [credentials, setCredentials] = useState(null)
 
   const strictestJurisdiction = getStrictestJurisdiction(jurisdictions)
@@ -97,7 +99,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
       setCompanyId(id)
 
       const admin = await createCompanyAdmin({ companyId: id, email: adminEmail })
-      setCredentials({ email: admin.email, password: admin.password, emailDelivered: admin.emailDelivered })
+      setCredentials({ email: admin.email, inviteLink: admin.inviteLink, emailDelivered: admin.emailDelivered })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -105,15 +107,15 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
     }
   }
 
-  // The credentials replace the form: the password is shown exactly once and
-  // is unrecoverable afterwards, so the Super Admin has to be able to sit on
-  // this screen and copy it before moving on.
+  // The credentials screen replaces the form so the Super Admin can copy the
+  // invite link as a backup before moving on, in case the email fails to
+  // deliver.
   if (credentials) {
     return (
       <CompanyCredentials
         companyName={name}
         email={credentials.email}
-        password={credentials.password}
+        inviteLink={credentials.inviteLink}
         emailDelivered={credentials.emailDelivered}
         onDone={() => onCreated?.(companyId)}
       />
@@ -157,7 +159,7 @@ function CompanySetup({ onCreated, onCancel, title = 'Company setup' }) {
         onChange={(e) => setAdminEmail(e.target.value)}
         required
         placeholder="admin@company.com"
-        hint="A Company Admin account is created with this email, and the login credentials are emailed to it directly. They're also shown on the next screen in case you need to hand them over yourself."
+        hint="A Company Admin account is created with this email, and a link to set a password is emailed to it directly. The same link is also shown on the next screen in case you need to hand it over yourself."
       />
 
       <fieldset className="flex flex-col gap-2">
