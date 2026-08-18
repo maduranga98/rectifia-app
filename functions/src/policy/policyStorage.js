@@ -192,13 +192,24 @@ async function createUploadUrl(companyId, policyId, rawFileName, { contentType, 
   return { fileName, storagePath, uploadUrl: url, contentType, expiresAt }
 }
 
-async function createDownloadUrl(storagePath) {
+// responseDisposition forces the browser straight to a file download instead
+// of navigating to the signed URL. Without it, opening a .docx/.pdf link in a
+// new tab makes Chrome try to render it with its own Office/PDF viewer first,
+// which issues a background fetch against the URL and gets blocked by CORS -
+// the bucket has no reason to allow that origin for a bearer-credential URL
+// that's supposed to be used once and discarded, not fetched from JS.
+async function createDownloadUrl(storagePath, fileName) {
   const expiresAt = Date.now() + ttlMs()
   let url
   try {
     ;[url] = await bucket()
       .file(storagePath)
-      .getSignedUrl({ version: 'v4', action: 'read', expires: expiresAt })
+      .getSignedUrl({
+        version: 'v4',
+        action: 'read',
+        expires: expiresAt,
+        responseDisposition: fileName ? `attachment; filename="${fileName}"` : 'attachment',
+      })
   } catch (err) {
     wrapSigningError(err)
   }
