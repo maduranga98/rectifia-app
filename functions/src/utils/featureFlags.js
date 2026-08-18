@@ -1,5 +1,6 @@
 const { HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
+const { featureFlagsForTier } = require('../billing/pricingEngine')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -70,9 +71,28 @@ function requireFeatureEnabled(enabled, key) {
   }
 }
 
+// One-time write of the PLAN_FEATURES ladder (pricingEngine.js's
+// featureFlagsForTier()) into companies/{companyId}.featureFlags whenever a
+// self-serve tier change happens (see stripeWebhook.js's syncSelfServeTier).
+// Writes each of the six ladder keys as its own dot-path field update, never
+// a whole-map overwrite, so featureFlags.pulseCheck - and any other flag key
+// outside this ladder - is left completely untouched regardless of its
+// current value. This is not a recurring re-sync: a Super Admin's later
+// manual override via FeatureFlagPanel.jsx is not reverted by anything else
+// here.
+async function applyTierFeatureFlags(firestore, companyId, tier) {
+  const flags = featureFlagsForTier(tier)
+  const update = {}
+  for (const [key, value] of Object.entries(flags)) {
+    update[`featureFlags.${key}`] = value
+  }
+  await firestore.collection(COMPANIES_COLLECTION).doc(companyId).update(update)
+}
+
 module.exports = {
   FEATURE_FLAG_DEFAULTS,
   resolveFlag,
   isFeatureEnabled,
   requireFeatureEnabled,
+  applyTierFeatureFlags,
 }

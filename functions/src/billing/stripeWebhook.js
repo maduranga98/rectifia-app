@@ -4,6 +4,7 @@ const admin = require('firebase-admin')
 const { stripeSecretKey, stripeWebhookSecret, getStripeClient } = require('./stripeClient')
 const { applySubscriptionState } = require('./applySubscriptionState')
 const { LINE_ITEM_TAG, RECTIFIA_TIER_METADATA_KEY } = require('./lineItemTags')
+const { applyTierFeatureFlags } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -26,6 +27,7 @@ async function syncSelfServeTier(firestore, companyId, subscription) {
   const tier = coreItem?.price?.product?.metadata?.[RECTIFIA_TIER_METADATA_KEY]
   if (tier) {
     await firestore.collection(COMPANIES_COLLECTION).doc(companyId).update({ subscriptionTier: tier })
+    await applyTierFeatureFlags(firestore, companyId, tier)
   }
 }
 
