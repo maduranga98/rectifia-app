@@ -46,10 +46,12 @@ service cloud.firestore {
     }
 
     // "A Company Admin of some company" - deliberately not scoped to one
-    // company, and used for exactly one thing: the slug-uniqueness probe in
-    // src/services/companyService.js's allocateUniqueSlug, which has to ask
-    // whether a candidate slug is taken platform-wide before claiming it.
-    // See the companies match block for why this is bounded to limit(1).
+    // company. Used for the legacy list-based slug-uniqueness probe on the
+    // companies match block below (see the comment there), and for reading
+    // companySlugs/{slug} registry docs during reserveUniqueSlug's
+    // transaction (companyId-scoped writes to that collection are further
+    // restricted by isCompanyAdmin(companyId) - see the companySlugs match
+    // block).
     function isAnyCompanyAdmin() {
       return request.auth != null && request.auth.token.role == 'companyAdmin';
     }
@@ -262,11 +264,13 @@ service cloud.firestore {
     //
     // Reading someone else's company doc stays off-limits: `get` is still the
     // requester's own company (or any, for a Super Admin). `list` is opened up
-    // one document at a time, and only for a Company Admin, purely so
-    // allocateUniqueSlug can ask "is this candidate slug taken?" before
-    // claiming one - the query it issues carries limit(1), and a
-    // collection-wide dump of the company list has no such limit, so it is
-    // still denied. Slug writes are narrower still: they fall outside the
+    // one document at a time, and only for a Company Admin - a leftover allowance
+    // from when slug-taken checks queried this collection directly; slug
+    // allocation now goes through the companySlugs registry below instead
+    // (reserveUniqueSlug), but this is kept as a narrow, harmless allowance
+    // rather than removed as an unrelated cleanup. A collection-wide dump of
+    // the company list has no such limit, so it is still denied. Slug writes
+    // are narrower still: they fall outside the
     // companyAdminEditableFields allowlist, so the only Company Admin path that
     // can touch slug is claimsMissingSlug() above - any other role has no update
     // path here at all, so a company's reporting slug is only ever writable by
@@ -284,6 +288,24 @@ service cloud.firestore {
         && superAdminBillingFieldsLocked()
         && pulseCheckFeatureFlagLocked();
       allow delete: if isSuperAdmin();
+    }
+
+    // Registry of claimed reporting slugs, doc id == the slug itself
+    // (companyService.js's reserveUniqueSlug). Its only purpose is making
+    // slug allocation atomic: a Super Admin (createCompany) or a Company
+    // Admin claiming their own missing slug (assignCompanySlug) runs a
+    // transaction that reads candidate slug docs here and creates the first
+    // one that doesn't exist, in the same transaction as the companies/{id}
+    // write - so two callers racing on the same company name can never both
+    // land on the same slug the way a plain "query, then write" check could.
+    // Never updated or deleted: once claimed, a slug is claimed for good
+    // (companies/{companyId} itself is still the only place a slug is ever
+    // read back from for routing).
+    match /companySlugs/{slug} {
+      allow get: if isSuperAdmin() || isAnyCompanyAdmin();
+      allow create: if isSuperAdmin()
+        || (isAnyCompanyAdmin() && isCompanyAdmin(request.resource.data.companyId));
+      allow update, delete: if false;
     }
 
     // Audit trail for a company's plan/add-on tier and its billing-relevant

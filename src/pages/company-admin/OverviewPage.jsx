@@ -168,9 +168,9 @@ function ShareableLink({ heading, description, url, qrAlt, downloadName }) {
 // at submission.
 //
 // A company with no slug isn't stuck waiting on a backfill: this role can
-// allocate one here. The allocation itself is the same platform-wide-unique
-// function company creation uses (companyService.assignCompanySlug ->
-// allocateUniqueSlug), and firestore.rules lets only this company's Company
+// allocate one here. The allocation itself is the same platform-wide-unique,
+// race-safe reservation company creation uses (companyService.assignCompanySlug
+// -> reserveUniqueSlug), and firestore.rules lets only this company's Company
 // Admin write the field, so the button is a convenience on top of a
 // server-enforced permission rather than the thing granting it.
 function ReportingLinkCard({ company, onSlugGenerated }) {
