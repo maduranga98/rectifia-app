@@ -175,7 +175,7 @@ exports.requestPolicyDownloadUrl = onCall(async (request) => {
     throw new HttpsError('permission-denied', 'That policy file path is not valid')
   }
 
-  const { downloadUrl, expiresAt } = await createDownloadUrl(data.storagePath)
+  const { downloadUrl, expiresAt } = await createDownloadUrl(data.storagePath, data.fileName)
   return { downloadUrl, expiresAt, fileName: data.fileName ?? null, title: data.title ?? null }
 })
 
