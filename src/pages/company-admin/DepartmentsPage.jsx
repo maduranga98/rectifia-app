@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createDepartment, getCompany, updateCompanyDepartments } from '../../services/companyService'
-import { listStaff } from '../../services/routingService'
+import { listRoutingRules, listStaff } from '../../services/routingService'
 import { listEmployees } from '../../services/employeeService'
+import { CATEGORIES } from '../../data/categories'
 import Alert from '../../components/ui/Alert'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -18,6 +19,7 @@ function DepartmentsPage({ companyId }) {
   const [company, setCompany] = useState(null)
   const [staff, setStaff] = useState([])
   const [employees, setEmployees] = useState([])
+  const [routingRules, setRoutingRules] = useState([])
   const [newDeptName, setNewDeptName] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -27,14 +29,16 @@ function DepartmentsPage({ companyId }) {
     setLoading(true)
     setError(null)
     try {
-      const [companyData, staffRows, employeeRows] = await Promise.all([
+      const [companyData, staffRows, employeeRows, ruleRows] = await Promise.all([
         getCompany(companyId),
         listStaff(companyId),
         listEmployees(companyId),
+        listRoutingRules(companyId),
       ])
       setCompany(companyData)
       setStaff(staffRows)
       setEmployees(employeeRows)
+      setRoutingRules(ruleRows)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -80,8 +84,27 @@ function DepartmentsPage({ companyId }) {
     await saveDepartments(updated)
   }
 
+  // Routing rules key off the department *name* (see routingService's
+  // (category, department) doc ID), not this department's id, so that's
+  // what has to match here - deleting the department out from under an
+  // active rule would leave routeCase.js resolving a bucket that no
+  // longer exists anywhere an admin can see or edit it.
   async function handleDeleteDepartment(deptId) {
     if (!company) return
+    const dept = (company.departments ?? []).find((d) => d.id === deptId)
+    if (!dept) return
+    const blockingRules = routingRules.filter((r) => r.department === dept.name)
+    if (blockingRules.length > 0) {
+      setError(
+        t('departmentsPage.deleteBlocked', {
+          name: dept.name,
+          categories: blockingRules
+            .map((r) => (CATEGORIES.find((c) => c.id === r.category)?.label ?? r.category))
+            .join(', '),
+        })
+      )
+      return
+    }
     const updated = (company.departments ?? []).filter((d) => d.id !== deptId)
     await saveDepartments(updated)
   }
