@@ -144,6 +144,12 @@
       "alertBody": "The link you followed doesn't point to a company that accepts reports through Rectifia. Double-check the address, or ask whoever shared it for a current one.",
       "tempUnavailable": "If this keeps happening, the reporting service may be temporarily unavailable."
     },
+    "suspended": {
+      "title": "Not currently accepting reports",
+      "description": "This organization's reporting link is temporarily unavailable.",
+      "alertTitle": "Reports can't be filed here right now",
+      "alertBody": "This organization is not currently accepting new reports through Rectifia. If you already have a Case ID, you can still track it below."
+    },
     "tiers": {
       "anonymous": {
         "label": "Stay anonymous",

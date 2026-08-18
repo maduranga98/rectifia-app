@@ -5,6 +5,7 @@ import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import CompanySetup from '../components/dashboard/CompanySetup'
 import CompanyBillingLink from '../components/dashboard/CompanyBillingLink'
+import CompanySuspensionControl from '../components/dashboard/CompanySuspensionControl'
 import ManualAssignmentQueue from '../components/dashboard/ManualAssignmentQueue'
 import FeatureFlagPanel from '../components/dashboard/FeatureFlagPanel'
 import AppShell from '../components/shared/AppShell'
@@ -65,6 +66,10 @@ function SuperAdminDashboardPage() {
   // button. There is no separate company detail route yet, so this is the
   // closest thing to one for the one action a Super Admin needs there.
   const [billingCompanyId, setBillingCompanyId] = useState(null)
+  // Which company's suspend/reactivate panel (CompanySuspensionControl.jsx)
+  // is expanded inline - same one-at-a-time pattern as billingCompanyId
+  // above, and its own toggle so opening one doesn't close the other.
+  const [suspensionCompanyId, setSuspensionCompanyId] = useState(null)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -220,9 +225,16 @@ function SuperAdminDashboardPage() {
                       {company.subscriptionTier ?? 'Plan unknown'}
                     </p>
                   </div>
-                  <Badge tone={BILLING_TONE[company.billingStatus] ?? 'tone-neutral'} dot>
-                    {billingStatusLabel(company.billingStatus)}
-                  </Badge>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <Badge tone={BILLING_TONE[company.billingStatus] ?? 'tone-neutral'} dot>
+                      {billingStatusLabel(company.billingStatus)}
+                    </Badge>
+                    {company.suspended && (
+                      <Badge tone="tone-critical" dot>
+                        Suspended
+                      </Badge>
+                    )}
+                  </div>
                 </div>
 
                 <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-line-soft pt-4 text-sm">
@@ -240,7 +252,7 @@ function SuperAdminDashboardPage() {
                   </div>
                 </dl>
 
-                <div className="mt-4 border-t border-line-soft pt-4">
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-line-soft pt-4">
                   <Button
                     size="sm"
                     variant="secondary"
@@ -251,12 +263,31 @@ function SuperAdminDashboardPage() {
                   >
                     {billingCompanyId === company.id ? 'Hide billing' : 'Billing'}
                   </Button>
-                  {billingCompanyId === company.id && (
-                    <div className="mt-4">
-                      <CompanyBillingLink company={company} onLinked={loadCompanies} />
-                    </div>
-                  )}
+                  <Button
+                    size="sm"
+                    variant={company.suspended ? 'secondary' : 'dangerGhost'}
+                    icon="shield"
+                    onClick={() =>
+                      setSuspensionCompanyId((current) => (current === company.id ? null : company.id))
+                    }
+                  >
+                    {suspensionCompanyId === company.id
+                      ? 'Hide suspension'
+                      : company.suspended
+                        ? 'Manage suspension'
+                        : 'Suspend'}
+                  </Button>
                 </div>
+                {billingCompanyId === company.id && (
+                  <div className="mt-4 border-t border-line-soft pt-4">
+                    <CompanyBillingLink company={company} onLinked={loadCompanies} />
+                  </div>
+                )}
+                {suspensionCompanyId === company.id && (
+                  <div className="mt-4 border-t border-line-soft pt-4">
+                    <CompanySuspensionControl company={company} onChanged={loadCompanies} />
+                  </div>
+                )}
               </Card>
             ))}
           </div>

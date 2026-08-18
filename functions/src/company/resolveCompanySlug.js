@@ -50,6 +50,11 @@ async function resolveCompanyBySlug(slug) {
     companyId: doc.id,
     companyName: doc.data().name ?? null,
     departments: doc.data().departments ?? [],
+    // Not part of what the public resolveCompanySlug callable below exposes
+    // (see its own comment) - submitCase.js reads this off the object
+    // returned here to refuse new intake for a suspended company, without a
+    // second Firestore read.
+    suspended: doc.data().suspended === true,
   }
 }
 
@@ -57,12 +62,17 @@ exports.resolveCompanyBySlug = resolveCompanyBySlug
 
 // Public, unauthenticated lookup used by the anonymous reporter's Submit page
 // to turn a /submit/:companySlug link into a company it can name on screen.
-// It deliberately exposes ONLY { companyId, companyName, departments } for a
-// slug the caller already holds - never the full company document, and never
-// a way to list or enumerate slugs. An unknown slug returns { found: false }
-// so the UI can show a clear "this reporting link isn't valid" message
-// instead of a blank form. No auth by design: company resolution has to stay
-// anonymous, the same way case submission does.
+// It deliberately exposes ONLY { companyId, companyName, departments,
+// suspended } for a slug the caller already holds - never the full company
+// document, and never a way to list or enumerate slugs. An unknown slug
+// returns { found: false } so the UI can show a clear "this reporting link
+// isn't valid" message instead of a blank form. `suspended` lets Submit.jsx
+// show "not currently accepting reports" up front, before a reporter spends
+// time filling in the questionnaire, rather than only failing at the final
+// submitCase call - submitCase.js re-checks it server-side regardless, since
+// this lookup and the actual filing are two separate calls and the company
+// could be suspended in between. No auth by design: company resolution has
+// to stay anonymous, the same way case submission does.
 exports.resolveCompanySlug = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   const { companySlug } = request.data || {}
 
@@ -85,5 +95,6 @@ exports.resolveCompanySlug = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => 
     companyId: resolved.companyId,
     companyName: resolved.companyName,
     departments: resolved.departments,
+    suspended: resolved.suspended,
   }
 })

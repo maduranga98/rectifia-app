@@ -23,6 +23,7 @@ if (!admin.apps.length) {
 }
 
 const STAFF_INTAKE_LOG_COLLECTION = 'staffIntakeAuditLog'
+const COMPANIES_COLLECTION = 'companies'
 const DAY_MS = 24 * 60 * 60 * 1000
 
 // The identity fields this form collects, and the only keys that ever go
@@ -130,6 +131,19 @@ exports.createCaseOnBehalf = onCall({ secrets: [encryptionKeySecret] }, async (r
   // rejects a companyAdmin (see INTAKE_ROLES in utils/staffAuth.js) without
   // that account's request ever reaching the identity-handling code below.
   const { companyId, role } = await requireIntakeRole(firestore, request, uid)
+
+  // A suspended company (Super Admin action, non-payment or offboarding -
+  // see companyService.js's setCompanySuspended) blocks new intake through
+  // this path too, not just the reporter's own submitCase.js - a staff
+  // member entering a phoned-in report on behalf of a reporter is still new
+  // intake. Existing cases and every other staff-facing path stay untouched.
+  const companySnapshot = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
+  if (companySnapshot.data()?.suspended) {
+    throw new HttpsError(
+      'failed-precondition',
+      "This company's account is currently suspended. Contact your Rectifia account manager to reactivate it before filing new reports."
+    )
+  }
 
   const {
     category,
