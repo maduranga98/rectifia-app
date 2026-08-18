@@ -2177,11 +2177,18 @@
         "nearCap": "{{current}} of {{cap}} employees on your plan.",
         "upgrade": "Upgrade plan",
         "upgrading": "Upgrading..."
+      },
+      "declaredHeadcount": {
+        "current": "Declared headcount: {{count}} employees",
+        "attestation": "I attest that this headcount is accurate for billing purposes.",
+        "tierChanged": "{{fromTier}} → {{toTier}}, new price {{price}}/mo",
+        "reconfirmed": "Headcount reconfirmed - no plan change needed."
       }
     },
     "subscribeCard": {
       "title": "Start your subscription",
       "body": "Based on your roster of {{count}} employees, you're on the {{tier}} plan.",
+      "declaredBody": "Based on your declared headcount of {{count}} employees, you're on the {{tier}} plan.",
       "pulseCheckLabel": "Also add the Pulse Check add-on ({{price}}/mo)",
       "subscribeButton": "Subscribe",
       "subscribing": "Starting checkout..."

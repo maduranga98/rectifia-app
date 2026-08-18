@@ -19,11 +19,20 @@ const EMPLOYEES_SUBCOLLECTION = 'employees'
 // spends the company's money.
 //
 // Headcount is read from the REAL roster (a count() aggregation against
-// companies/{companyId}/employees), never the self-declared
-// company.employeeCount pricingEngine.js's readDeclaredEmployeeCount() feeds
-// the reference-quote-only calculateQuote.js/requestQuote.js path - an
-// actual subscription must be priced off what the roster actually contains,
-// not what a Company Admin typed into a form.
+// companies/{companyId}/employees) whenever the company has one - an actual
+// subscription must be priced off what the roster actually contains, not
+// what a Company Admin typed into a form, wherever that's possible.
+//
+// Module 29J: a company with NO roster yet has no other way to start a real
+// subscription at all (EmployeeCountEditor's self-declared
+// company.employeeCount only ever fed the reference-quote-only
+// calculateQuote.js/requestQuote.js path before this), so this callable
+// falls back to that self-declared number for checkout ONLY when the roster
+// is empty. Which source priced this checkout is recorded on the company doc
+// as billingHeadcountSource ('roster' | 'declared') so every later billing
+// callable - updateDeclaredHeadcount.js in particular - knows which pricing
+// model this company is on. A company that already has a roster is always
+// priced off it, never the declared number, even if the two disagree.
 //
 // Builds one Checkout Session with up to two line items (Core, always; Pulse
 // Check, only if includePulseCheck is true) so an accepted checkout produces
@@ -81,7 +90,24 @@ exports.createCheckoutSession = onCall({ secrets: [stripeSecretKey] }, async (re
   }
 
   const countSnapshot = await companyRef.collection(EMPLOYEES_SUBCOLLECTION).count().get()
-  const employeeCount = countSnapshot.data().count
+  const rosterCount = countSnapshot.data().count
+
+  let employeeCount
+  let headcountSource
+  if (rosterCount > 0) {
+    employeeCount = rosterCount
+    headcountSource = 'roster'
+  } else {
+    const declaredCount = Number(company.employeeCount)
+    if (!Number.isFinite(declaredCount) || !Number.isInteger(declaredCount) || declaredCount < 1) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Add employees to your roster, or declare an estimated headcount, before subscribing'
+      )
+    }
+    employeeCount = declaredCount
+    headcountSource = 'declared'
+  }
 
   // Above the self-serve ceiling, this callable must never touch the
   // company - route to requestQuote.js's Contact sales flow instead (the
@@ -93,9 +119,6 @@ exports.createCheckoutSession = onCall({ secrets: [stripeSecretKey] }, async (re
       `Self-serve checkout isn't available above ${PROGRESSIVE_THRESHOLD_EMPLOYEES} employees - request a quote instead.`
     )
   }
-  if (employeeCount < 1) {
-    throw new HttpsError('failed-precondition', 'Add employees to your roster before subscribing')
-  }
 
   const band = bandForEmployeeCount(employeeCount)
 
@@ -106,6 +129,11 @@ exports.createCheckoutSession = onCall({ secrets: [stripeSecretKey] }, async (re
     stripeCustomerId = customer.id
     await companyRef.update({ stripeCustomerId })
   }
+
+  // Recorded before the Checkout Session is even created (not deferred to
+  // stripeWebhook.js's handleCheckoutCompleted) so it's available the moment
+  // a subscription exists, same as stripeCustomerId above.
+  await companyRef.update({ billingHeadcountSource: headcountSource })
 
   const lineItems = [
     {

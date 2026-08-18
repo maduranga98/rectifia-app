@@ -3,8 +3,7 @@ const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { PROGRESSIVE_THRESHOLD_EMPLOYEES, bandForEmployeeCount } = require('./pricingEngine')
 const { stripeSecretKey, getStripeClient } = require('./stripeClient')
-const { applySubscriptionState } = require('./applySubscriptionState')
-const { LINE_ITEM_TAG, RECTIFIA_TIER_METADATA_KEY } = require('./lineItemTags')
+const { changeCoreTier } = require('./changeCoreTier')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -12,7 +11,6 @@ if (!admin.apps.length) {
 
 const COMPANIES_COLLECTION = 'companies'
 const EMPLOYEES_SUBCOLLECTION = 'employees'
-const BILLING_HISTORY_SUBCOLLECTION = 'billingHistory'
 
 // Explicit, Company-Admin-initiated Core tier change - never triggered
 // silently as a side effect of adding an employee. addEmployee.js /
@@ -80,42 +78,15 @@ exports.upgradeSubscriptionTier = onCall({ secrets: [stripeSecretKey] }, async (
   }
 
   const stripe = getStripeClient()
-  const item = await stripe.subscriptionItems.retrieve(company.stripeCoreItemId, { expand: ['price.product'] })
-  const productId = typeof item.price.product === 'string' ? item.price.product : item.price.product.id
-
-  await stripe.products.update(productId, {
-    name: `Rectifia - ${band.label} plan`,
-    metadata: { rectifiaLineItem: LINE_ITEM_TAG.CORE, [RECTIFIA_TIER_METADATA_KEY]: band.tier },
-  })
-  // Default proration_behavior ('create_prorations') is intentional - this
-  // is a discrete action a Company Admin just took, not a background sync.
-  await stripe.subscriptionItems.update(company.stripeCoreItemId, {
-    price_data: {
-      currency: 'usd',
-      product: productId,
-      unit_amount: Math.round(band.monthlyPrice * 100),
-      recurring: { interval: 'month' },
-    },
-  })
-
-  // Re-syncs billingStatus/item IDs/featureFlags.pulseCheck from the live
-  // subscription (applySubscriptionState() doesn't touch subscriptionTier -
-  // see its own file comment - so that field is written explicitly right
-  // after, the same two-step linkCompanySubscription.js already uses).
-  const subscription = await stripe.subscriptions.retrieve(company.stripeSubscriptionId, {
-    expand: ['items.data.price.product'],
-  })
-  await applySubscriptionState(firestore, companyId, subscription)
-  await companyRef.update({ subscriptionTier: band.tier })
-
-  await companyRef.collection(BILLING_HISTORY_SUBCOLLECTION).add({
+  // See changeCoreTier.js for the shared Stripe product-rename + price
+  // update + applySubscriptionState + subscriptionTier write + billingHistory
+  // log this delegates to - updateDeclaredHeadcount.js drives the exact same
+  // mechanics for a declared-count company.
+  await changeCoreTier(firestore, stripe, companyRef, company, band, {
     action: 'core_tier_upgrade',
     changedByUid: uid,
     changedByRole: role,
-    fromTier: previousTier,
-    toTier: band.tier,
-    employeeCountAtChange: employeeCount,
-    at: admin.firestore.FieldValue.serverTimestamp(),
+    extra: { employeeCountAtChange: employeeCount },
   })
 
   await logPrivilegedAction(firestore, {

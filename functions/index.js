@@ -99,6 +99,7 @@ const { linkCompanySubscription } = require('./src/billing/linkCompanySubscripti
 const { createCheckoutSession } = require('./src/billing/createCheckoutSession')
 const { updatePulseCheckSubscription } = require('./src/billing/updatePulseCheckSubscription')
 const { upgradeSubscriptionTier } = require('./src/billing/upgradeSubscriptionTier')
+const { updateDeclaredHeadcount } = require('./src/billing/updateDeclaredHeadcount')
 const { addEmployee } = require('./src/roster/addEmployee')
 const { removeEmployee } = require('./src/roster/removeEmployee')
 const { bulkAddEmployees } = require('./src/roster/bulkAddEmployees')
@@ -293,6 +294,14 @@ exports.linkCompanySubscription = linkCompanySubscription
 exports.createCheckoutSession = createCheckoutSession
 exports.updatePulseCheckSubscription = updatePulseCheckSubscription
 exports.upgradeSubscriptionTier = upgradeSubscriptionTier
+// The declared-count counterpart of upgradeSubscriptionTier.js: lets a
+// company whose subscription is priced from a self-declared headcount
+// (billingHeadcountSource === 'declared', set by createCheckoutSession.js)
+// re-declare that number and move the Core tier up OR down to match - the
+// only tier-movement path such a company has, since it never has a real
+// roster to hit upgradeSubscriptionTier.js's cap check. Refuses outright for
+// a roster-priced company. See updateDeclaredHeadcount.js.
+exports.updateDeclaredHeadcount = updateDeclaredHeadcount
 // The Pulse Check recipient roster's only remaining write path
 // (companies/{companyId}/employees create/delete - firestore.rules now
 // grants a Company Admin `update` there but not `create`/`delete`): each

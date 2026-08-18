@@ -108,3 +108,21 @@ export async function upgradeSubscriptionTier(companyId) {
   const result = await upgradeSubscriptionTierCallable({ companyId })
   return result.data
 }
+
+const updateDeclaredHeadcountCallable = httpsCallable(functions, 'updateDeclaredHeadcount')
+
+// The declared-count counterpart of upgradeSubscriptionTier() above: for a
+// company whose subscription is priced from a self-declared headcount
+// (company.billingHeadcountSource === 'declared', set at checkout by
+// createCheckoutSession.js), re-declares that number and, if it now falls in
+// a different PUBLISHED_BANDS tier, moves the Core item up OR down to match.
+// Refuses outright (updateDeclaredHeadcount.js) for a roster-priced company -
+// that company's only tier-movement path is upgradeSubscriptionTier().
+// `attested` is always sent as true - the UI's own checkbox is what gates
+// whether this function ever gets called at all, so there is no case where
+// this wrapper is invoked without the Company Admin having just confirmed
+// the number.
+export async function updateDeclaredHeadcount(companyId, newCount) {
+  const result = await updateDeclaredHeadcountCallable({ companyId, newCount, attested: true })
+  return result.data
+}
