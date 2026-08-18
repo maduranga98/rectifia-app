@@ -3,9 +3,12 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  query,
   runTransaction,
   serverTimestamp,
   updateDoc,
+  where,
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { firestore, functions } from './firebase'
@@ -96,8 +99,8 @@ export function slugifyCompanyName(name) {
 
 // Atomically claims a slug for companyId within an already-open Firestore
 // transaction: the name-derived base slug is tried first, then -2, -3, ...
-// until one whose companySlugs/{slug} registry doc doesn't exist yet is
-// found, and that doc is created to claim it in the same transaction as the
+// until one that's free on BOTH checks below is found, and a companySlugs
+// registry doc is created to claim it in the same transaction as the
 // caller's own writes.
 //
 // This replaces a plain "query for a taken slug, then write" check, which is
@@ -106,25 +109,46 @@ export function slugifyCompanyName(name) {
 // free and both write it, since firestore.rules has no way to reject a
 // duplicate slug value on companies/{companyId} itself (the slug isn't the
 // document's own id, so there's nothing for rules to compare against). A
-// Firestore transaction closes that gap - if two transactions' reads
-// overlap, only one commits, and the SDK automatically re-runs the loser
-// with fresh reads, so its retry sees the slug already claimed and moves on
-// to the next candidate. The slug is what an unauthenticated reporter's link
-// resolves against, so it has to be unique across the whole platform, not
-// per company - same scope the old per-companies-collection check had.
+// Firestore transaction closes that gap for two callers going through THIS
+// function - if two transactions' reads overlap, only one commits, and the
+// SDK automatically re-runs the loser with fresh reads, so its retry sees
+// the slug already claimed in the registry and moves on to the next
+// candidate.
+//
+// The registry alone is not enough on its own, though: it only knows about
+// slugs claimed by a caller that went through this function. A company
+// created before the companySlugs collection existed (i.e. every company
+// already in the database the first time this shipped) has no registry
+// entry for its slug at all, so checking the registry alone would let a
+// brand new company claim a slug that's actually already sitting on an
+// older companies/{companyId} doc. The plain query below catches that case -
+// it isn't part of the transaction's tracked reads (the client SDK's
+// Transaction.get only accepts a single document reference, not a query),
+// so it can't participate in the same all-or-nothing commit, but it closes
+// the much bigger, permanent gap of "this company predates the registry"
+// rather than just the narrow instant-of-collision race the registry alone
+// handles. Run functions/scripts/backfillCompanySlugs.js once to populate
+// companySlugs for every pre-existing company and this check becomes a pure
+// safety net rather than the thing actually doing the work.
 async function reserveUniqueSlug(transaction, name, companyId) {
   const base = slugifyCompanyName(name) || 'company'
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`
     const slugRef = doc(firestore, COMPANY_SLUGS_COLLECTION, candidate)
     // eslint-disable-next-line no-await-in-loop -- each candidate depends on
-    // whether the previous one was already taken; transaction reads can't be
-    // parallelized anyway (Firestore requires all reads before any write).
-    const existing = await transaction.get(slugRef)
-    if (!existing.exists()) {
-      transaction.set(slugRef, { companyId, reservedAt: serverTimestamp() })
-      return candidate
-    }
+    // whether the previous one was already taken; these reads can't be
+    // parallelized anyway (Firestore requires all of a transaction's tracked
+    // reads before any of its writes).
+    const existingReservation = await transaction.get(slugRef)
+    if (existingReservation.exists()) continue
+    // eslint-disable-next-line no-await-in-loop -- same candidate-by-candidate
+    // dependency as above.
+    const existingCompany = await getDocs(
+      query(collection(firestore, COMPANIES_COLLECTION), where('slug', '==', candidate), limit(1))
+    )
+    if (!existingCompany.empty) continue
+    transaction.set(slugRef, { companyId, reservedAt: serverTimestamp() })
+    return candidate
   }
   // Astronomically unlikely with 50 name-based attempts; fall back to a
   // random suffix rather than blocking company creation outright.
