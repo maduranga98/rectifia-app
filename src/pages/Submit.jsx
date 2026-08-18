@@ -170,6 +170,29 @@ function Submit() {
     )
   }
 
+  // A real, existing company - but suspended (Super Admin action, non-payment
+  // or offboarding). Shown up front rather than only failing at the final
+  // submitCase call, so a reporter never spends time on a questionnaire that
+  // was never going to file. submitCase.js re-checks this server-side
+  // regardless, since suspension can change between this lookup and filing.
+  if (company.suspended) {
+    return (
+      <ReporterLayout
+        title={t('submit.suspended.title')}
+        description={t('submit.suspended.description')}
+      >
+        <Alert variant="error" title={t('submit.suspended.alertTitle')}>
+          {t('submit.suspended.alertBody')}
+        </Alert>
+        <div className="mt-4">
+          <Link to="/case" className="btn btn-secondary">
+            {t('reporterLayout.trackExisting')}
+          </Link>
+        </div>
+      </ReporterLayout>
+    )
+  }
+
   const step = completed ? 3 : pending ? 2 : category ? 1 : 0
   const categoryLabel = CATEGORIES.some((c) => c.id === category)
     ? t(`categories.${category}.label`)

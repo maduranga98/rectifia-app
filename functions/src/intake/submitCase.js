@@ -178,6 +178,17 @@ exports.submitCase = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   if (!company) {
     throw new HttpsError('not-found', 'This reporting link is not valid')
   }
+  // A suspended company (Super Admin action, non-payment or offboarding -
+  // see companyService.js's setCompanySuspended) blocks new intake but must
+  // never delete or hide anything that already exists: this is the one place
+  // that check applies, before a case is ever written. Existing cases,
+  // reporter threads, and every other read/write path are untouched.
+  if (company.suspended) {
+    throw new HttpsError(
+      'failed-precondition',
+      'This organization is not currently accepting new reports. Please contact them directly.'
+    )
+  }
 
   const firestore = admin.firestore()
 

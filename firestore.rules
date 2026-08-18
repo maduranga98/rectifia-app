@@ -183,6 +183,19 @@ service cloud.firestore {
       return !('featureFlags' in request.resource.data.diff(resource.data).affectedKeys())
         || (isSuperAdmin() && isValidFeatureFlagsMap());
     }
+
+    // companies/{companyId}.suspended (+ suspendedAt/suspendedReason) - the
+    // Super Admin suspend/reactivate action (companyService.js's
+    // setCompanySuspended). Deliberately not in companyAdminEditableFields,
+    // same reasoning as featureFlagsFieldValid above: a company can never
+    // suspend itself, and widening that allowlist later can't accidentally
+    // hand it write access to this field too. suspended must be a bool when
+    // touched; suspendedAt/suspendedReason ride along unchecked since they're
+    // display-only and only ever set by the same trusted call site.
+    function suspensionFieldValid() {
+      return !('suspended' in request.resource.data.diff(resource.data).affectedKeys())
+        || (isSuperAdmin() && request.resource.data.suspended is bool);
+    }
     // Billing-critical fields, written only by the Admin SDK - stripeWebhook.js
     // reacting to Stripe, and functions/src/billing/linkCompanySubscription.js
     // when a Super Admin links or re-links a subscription. Mirrors
@@ -286,7 +299,8 @@ service cloud.firestore {
         && retentionFieldValid()
         && featureFlagsFieldValid()
         && superAdminBillingFieldsLocked()
-        && pulseCheckFeatureFlagLocked();
+        && pulseCheckFeatureFlagLocked()
+        && suspensionFieldValid();
       allow delete: if isSuperAdmin();
     }
 

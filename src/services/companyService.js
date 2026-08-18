@@ -276,6 +276,35 @@ export async function getCompany(companyId) {
   return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null
 }
 
+// Suspends or reactivates a company - the Super Admin action for
+// non-payment or offboarding, deliberately separate from `billingStatus`
+// (which mirrors Stripe's own subscription state 1:1 and is locked against
+// manual writes by superAdminBillingFieldsLocked() in firestore.rules; a
+// company can be suspended for reasons that have nothing to do with billing,
+// e.g. an offboarding request, so overloading that field would either fight
+// the webhook or require unlocking it for hand-edits).
+//
+// Suspension blocks new case intake (functions/src/intake/submitCase.js and
+// createCaseOnBehalf.js both refuse to file while `suspended` is true) but
+// touches nothing else: existing cases, staff accounts, and employee data
+// are all left exactly as they were, and every dashboard the company's own
+// staff already had access to keeps working - this is a stop on new
+// business, not a data-access change. firestore.rules leaves `suspended` out
+// of companyAdminEditableFields, so only a Super Admin can ever set it.
+export async function setCompanySuspended(companyId, suspended, reason = '') {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), {
+    suspended: Boolean(suspended),
+    // Cleared back to null on reactivation rather than left stale, so a
+    // reactivated company doesn't carry a misleading reason forward if it's
+    // suspended again later for a different one.
+    suspendedReason: suspended ? String(reason ?? '').trim() || null : null,
+    suspendedAt: suspended ? serverTimestamp() : null,
+  })
+}
+
 // Self-service repair for a company that predates the slug field (or whose
 // creation never got one): allocates a slug with the exact same function
 // createCompany uses, so format and platform-wide uniqueness are identical
