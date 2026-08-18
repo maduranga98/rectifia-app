@@ -2137,7 +2137,16 @@
       "currentPrice": "වත්මන් මාසික මිල",
       "coreLine": "මූලික: {{price}}",
       "pulseCheckLine": "Pulse Check: {{price}}",
-      "renewsOn": "{{date}} දින අලුත් වේ"
+      "renewsOn": "{{date}} දින අලුත් වේ",
+      "declaredHeadcount": {
+        "current": "ප්‍රකාශිත සේවක සංඛ්‍යාව: සේවකයින් {{count}}",
+        "attestation": "බිල්පත් කිරීමේ අරමුණු සඳහා මෙම සේවක සංඛ්‍යාව නිවැරදි බව මම සහතික කරමි.",
+        "tierChanged": "{{fromTier}} → {{toTier}}, නව මිල {{price}}/මාසයට",
+        "reconfirmed": "සේවක සංඛ්‍යාව නැවත තහවුරු කරන ලදී - සැලසුම් වෙනසක් අවශ්‍ය නොවේ."
+      }
+    },
+    "subscribeCard": {
+      "declaredBody": "ඔබේ ප්‍රකාශිත සේවක සංඛ්‍යාව {{count}} මත පදනම්ව, ඔබ {{tier}} සැලැස්මේ සිටී."
     },
     "employeesAtRate_one": "සේවකයෙකු @ {{rate}}",
     "employeesAtRate_other": "සේවකයින් {{count}} @ {{rate}}",

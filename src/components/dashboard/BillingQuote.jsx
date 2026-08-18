@@ -4,6 +4,7 @@ import {
   createCheckoutSession,
   getCompanyQuote,
   getSubscriptionSummary,
+  updateDeclaredHeadcount,
   updatePulseCheckSubscription,
   upgradeSubscriptionTier,
 } from '../../services/billingService'
@@ -183,6 +184,123 @@ function subscriptionTierLabel(t, tier) {
   return t(`billingQuote.subscriptionTierLabels.${tier}`, { defaultValue: tier })
 }
 
+// Only rendered inside ActiveSubscriptionSummary for a company whose
+// subscription is priced from a self-declared headcount
+// (company.billingHeadcountSource === 'declared', Module 29J) - a
+// roster-priced company (or one predating 29J, no field at all) gets none of
+// this and the card stays exactly as it was before this control existed. A
+// declared-count company has no roster to move its tier off of the way the
+// cap-triggered "Upgrade plan" action above does, so this is its own way to
+// re-declare that number and, via updateDeclaredHeadcount(), move the Core
+// tier up OR down to match. The attestation checkbox is required on every
+// submit, not only a changed one - re-declaring the same number is still a
+// deliberate "yes, this is still accurate" affirmation. On a tier change,
+// confirms the resulting price with a fresh getSubscriptionSummary() call
+// (Module 29I's live-price fetch) rather than trusting the reference formula.
+function DeclaredHeadcountCard({ companyId, company, onChanged }) {
+  const { t } = useTranslation()
+  const employeeCount = company?.employeeCount ?? null
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(employeeCount != null ? String(employeeCount) : '')
+  const [attested, setAttested] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
+  const [result, setResult] = useState(null)
+
+  async function handleSave(event) {
+    event.preventDefault()
+    setSaving(true)
+    setError(null)
+    setResult(null)
+    try {
+      const outcome = await updateDeclaredHeadcount(companyId, value)
+      let priceLine = null
+      if (outcome.changed) {
+        try {
+          const summary = await getSubscriptionSummary(companyId)
+          priceLine = { cents: summary.totalPriceCents, currency: summary.currency }
+        } catch {
+          priceLine = null
+        }
+      }
+      setResult({ ...outcome, priceLine })
+      setEditing(false)
+      setAttested(false)
+      await onChanged()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mt-4 flex flex-col gap-3 border-t border-line-soft pt-4">
+      {!editing ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-charcoal">
+            {t('billingQuote.activeSubscription.declaredHeadcount.current', { count: employeeCount ?? 0 })}
+          </p>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+            {t('billingQuote.employeeCount.edit')}
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSave} className="flex flex-col gap-3 rounded-lg border border-line-soft px-4 py-3.5">
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            label={t('billingQuote.employeeCount.label')}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            required
+          />
+          <label className="flex items-start gap-2 text-sm text-charcoal">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={attested}
+              onChange={(e) => setAttested(e.target.checked)}
+            />
+            {t('billingQuote.activeSubscription.declaredHeadcount.attestation')}
+          </label>
+          {error && <Alert variant="error">{error}</Alert>}
+          <div className="flex items-center gap-2">
+            <Button
+              type="submit"
+              size="sm"
+              variant="accent"
+              loading={saving}
+              loadingLabel={t('billingQuote.employeeCount.saving')}
+              disabled={!attested}
+            >
+              {t('billingQuote.employeeCount.save')}
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
+              {t('billingQuote.employeeCount.cancel')}
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {result && (
+        <Alert variant={result.changed ? 'success' : 'info'}>
+          {result.changed
+            ? t('billingQuote.activeSubscription.declaredHeadcount.tierChanged', {
+                fromTier: subscriptionTierLabel(t, result.previousTier),
+                toTier: subscriptionTierLabel(t, result.subscriptionTier),
+                price: result.priceLine
+                  ? formatCurrencyFromCents(result.priceLine.cents, result.priceLine.currency)
+                  : '—',
+              })
+            : t('billingQuote.activeSubscription.declaredHeadcount.reconfirmed')}
+        </Alert>
+      )}
+    </div>
+  )
+}
+
 // An active paying customer (company.stripeSubscriptionId exists - see
 // BillingPage.jsx's file comment for why that field, not billingStatus, is
 // the source of truth). Shows the plan/tier and status a Lumora staffer set
@@ -283,6 +401,10 @@ function ActiveSubscriptionSummary({ company, companyId, realHeadcount, onChange
           </div>
         </div>
 
+        {company?.billingHeadcountSource === 'declared' && (
+          <DeclaredHeadcountCard companyId={companyId} company={company} onChanged={onChanged} />
+        )}
+
         {summaryLoading ? (
           <div className="mt-4 border-t border-line-soft pt-4">
             <SkeletonStats count={1} />
@@ -369,25 +491,28 @@ function ActiveSubscriptionSummary({ company, companyId, realHeadcount, onChange
   )
 }
 
-// Primary action for a company with a real roster (`realHeadcount` > 0, a
-// count of companies/{companyId}/employees) at or below the 500-employee
-// self-serve ceiling (PROGRESSIVE_THRESHOLD_EMPLOYEES) with no subscription
-// yet - only rendered by BillingQuote in that state. Priced off the REAL
-// roster, matching the reference quote/breakdown shown alongside it below -
-// an actual subscription must be priced off what the roster actually
-// contains, never the self-declared estimate. Above the ceiling,
-// BillingQuote does not render this card at all - only the reference
-// quote plus the "Request a quote" action (BillingPage.jsx) for a company
-// above the ceiling or that wants a negotiated deal instead of self-serve
-// checkout. Callers only ever pass a positive realHeadcount here.
-function SubscribeCard({ companyId, realHeadcount }) {
+// Primary action for a company with no subscription yet, at or below the
+// 500-employee self-serve ceiling (PROGRESSIVE_THRESHOLD_EMPLOYEES) - only
+// rendered by BillingQuote in that state. Priced off `employeeCount`, which
+// the caller resolves the same way createCheckoutSession.js itself does
+// (Module 29J): the REAL roster whenever the company has one (`source`
+// 'roster'), falling back to the self-declared estimate only for a company
+// with no roster yet (`source` 'declared') - createCheckoutSession.js
+// re-derives and validates this same number server-side rather than trusting
+// what's passed here, and records which source priced the checkout as
+// company.billingHeadcountSource for every later billing callable to key off
+// of. Above the ceiling, BillingQuote does not render this card at all -
+// only the reference quote plus the "Request a quote" action (BillingPage.jsx)
+// for a company above the ceiling or that wants a negotiated deal instead of
+// self-serve checkout.
+function SubscribeCard({ companyId, employeeCount, source }) {
   const { t } = useTranslation()
   const [includePulseCheck, setIncludePulseCheck] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(null)
 
-  const band = bandForEmployeeCount(realHeadcount)
-  const pulseCheckBand = pulseCheckBandForEmployeeCount(realHeadcount)
+  const band = bandForEmployeeCount(employeeCount)
+  const pulseCheckBand = pulseCheckBandForEmployeeCount(employeeCount)
 
   async function handleSubscribe() {
     setPending(true)
@@ -408,7 +533,10 @@ function SubscribeCard({ companyId, realHeadcount }) {
           <div>
             <p className="text-sm font-semibold text-charcoal">{t('billingQuote.subscribeCard.title')}</p>
             <p className="mt-1 text-sm text-muted">
-              {t('billingQuote.subscribeCard.body', { count: realHeadcount, tier: band.label })}
+              {t(
+                source === 'declared' ? 'billingQuote.subscribeCard.declaredBody' : 'billingQuote.subscribeCard.body',
+                { count: employeeCount, tier: band.label }
+              )}
             </p>
           </div>
           <p className="text-2xl font-semibold tabular-nums text-charcoal">
@@ -539,15 +667,23 @@ function BillingQuote({ companyId }) {
   // (above it), always priced off that same real headcount - never the
   // manually-declared estimate. A company with no roster yet (realHeadcount
   // === 0) is the only state where the self-declared estimate
-  // (EmployeeCountEditor) is offered at all, since it's the only way such a
-  // company can see any reference price before adding real employees.
+  // (EmployeeCountEditor) is offered at all - and, since Module 29J, the
+  // only state where checkout itself is priced off that declared number
+  // (quoteSource === 'declared') instead of being unavailable outright.
   const hasRoster = realHeadcount > 0
   const overSelfServeCeiling = hasRoster && realHeadcount > PROGRESSIVE_THRESHOLD_EMPLOYEES
   const noRosterYet = realHeadcount === 0
+  const canSubscribeOnDeclaredCount =
+    noRosterYet && hasQuote && quoteSource === 'declared' && employeeCount <= PROGRESSIVE_THRESHOLD_EMPLOYEES
 
   return (
     <div className="flex flex-col gap-5">
-      {hasRoster && !overSelfServeCeiling && <SubscribeCard companyId={companyId} realHeadcount={realHeadcount} />}
+      {hasRoster && !overSelfServeCeiling && (
+        <SubscribeCard companyId={companyId} employeeCount={realHeadcount} source="roster" />
+      )}
+      {canSubscribeOnDeclaredCount && (
+        <SubscribeCard companyId={companyId} employeeCount={employeeCount} source="declared" />
+      )}
 
       <Alert variant="warning" title={t('billingQuote.referenceRateNotice.title')}>
         {t('billingQuote.referenceRateNotice.body')}
