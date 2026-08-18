@@ -1,14 +1,11 @@
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
   getDocs,
-  limit,
-  query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
-  where,
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { firestore, functions } from './firebase'
@@ -78,6 +75,11 @@ export const DEFAULT_TIMEZONE_BY_JURISDICTION = {
 }
 
 const COMPANIES_COLLECTION = 'companies'
+// A registry doc per claimed slug (doc id == the slug itself), used only to
+// make slug allocation atomic - see reserveUniqueSlug below. Never read for
+// anything else; /submit/:companySlug and everywhere else still resolve
+// against companies/{companyId}.slug.
+const COMPANY_SLUGS_COLLECTION = 'companySlugs'
 
 // Turns a company name into a URL-safe slug: lowercase, non-alphanumeric runs
 // collapsed to single hyphens, no leading/trailing hyphens. This is the
@@ -92,32 +94,46 @@ export function slugifyCompanyName(name) {
     .replace(/^-+|-+$/g, '')
 }
 
-// Finds a slug that isn't already taken by another company. The base slug
-// derived from the name is tried first; on a collision it appends -2, -3, ...
-// Callers are a Super Admin (createCompany) or a Company Admin generating a
-// link for their own company after the fact (assignCompanySlug); firestore.rules
-// permits the existence probe below for both, but only as a limit(1) query -
-// hence the explicit limit, which is also all the check needs. The slug is what
-// an unauthenticated reporter's link resolves against, so it has to be unique
-// across the whole platform - not per company.
-export async function allocateUniqueSlug(name) {
+// Atomically claims a slug for companyId within an already-open Firestore
+// transaction: the name-derived base slug is tried first, then -2, -3, ...
+// until one whose companySlugs/{slug} registry doc doesn't exist yet is
+// found, and that doc is created to claim it in the same transaction as the
+// caller's own writes.
+//
+// This replaces a plain "query for a taken slug, then write" check, which is
+// a classic check-then-act race: two Super Admins registering companies with
+// the same name at nearly the same moment could both see the base slug as
+// free and both write it, since firestore.rules has no way to reject a
+// duplicate slug value on companies/{companyId} itself (the slug isn't the
+// document's own id, so there's nothing for rules to compare against). A
+// Firestore transaction closes that gap - if two transactions' reads
+// overlap, only one commits, and the SDK automatically re-runs the loser
+// with fresh reads, so its retry sees the slug already claimed and moves on
+// to the next candidate. The slug is what an unauthenticated reporter's link
+// resolves against, so it has to be unique across the whole platform, not
+// per company - same scope the old per-companies-collection check had.
+async function reserveUniqueSlug(transaction, name, companyId) {
   const base = slugifyCompanyName(name) || 'company'
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`
-    const snapshot = await getDocs(
-      query(
-        collection(firestore, COMPANIES_COLLECTION),
-        where('slug', '==', candidate),
-        limit(1)
-      )
-    )
-    if (snapshot.empty) {
+    const slugRef = doc(firestore, COMPANY_SLUGS_COLLECTION, candidate)
+    // eslint-disable-next-line no-await-in-loop -- each candidate depends on
+    // whether the previous one was already taken; transaction reads can't be
+    // parallelized anyway (Firestore requires all reads before any write).
+    const existing = await transaction.get(slugRef)
+    if (!existing.exists()) {
+      transaction.set(slugRef, { companyId, reservedAt: serverTimestamp() })
       return candidate
     }
   }
   // Astronomically unlikely with 50 name-based attempts; fall back to a
   // random suffix rather than blocking company creation outright.
-  return `${base}-${Math.random().toString(36).slice(2, 8)}`
+  const candidate = `${base}-${Math.random().toString(36).slice(2, 8)}`
+  transaction.set(doc(firestore, COMPANY_SLUGS_COLLECTION, candidate), {
+    companyId,
+    reservedAt: serverTimestamp(),
+  })
+  return candidate
 }
 
 function createDepartmentId() {
@@ -150,9 +166,12 @@ export async function createCompany({
   departments = [],
   // Optional: a Super Admin can pick a custom reporting slug on the
   // registration form instead of accepting the name-derived default. Still
-  // run through allocateUniqueSlug so a manually-typed value is normalized to
+  // run through reserveUniqueSlug so a manually-typed value is normalized to
   // the same URL-safe shape and checked for a platform-wide collision the
-  // same way the auto-generated slug is.
+  // same way the auto-generated slug is - including when it collides because
+  // the company name (and therefore the derived slug) matches an existing
+  // company exactly, which is adjusted with a -2, -3, ... suffix rather than
+  // silently saved as a duplicate.
   slug: requestedSlug,
 }) {
   if (!name?.trim()) {
@@ -170,41 +189,53 @@ export async function createCompany({
     throw new Error('LK is deprecated and cannot be selected for a new company')
   }
 
-  // Unique, URL-safe reporting slug allocated at creation time - this is what
-  // /submit/:companySlug resolves against so anonymous reporters can file
-  // against the right company without ever being handed a raw companyId.
-  const slug = await allocateUniqueSlug(requestedSlug?.trim() ? requestedSlug : name)
+  // The company doc's id is generated client-side up front so the slug
+  // reservation (which needs to record which company claimed it) and the
+  // company doc itself can be written in the same transaction.
+  const companyRef = doc(collection(firestore, COMPANIES_COLLECTION))
 
-  const docRef = await addDoc(collection(firestore, COMPANIES_COLLECTION), {
-    name: name.trim(),
-    slug,
-    jurisdictions,
-    departments,
-    // Prefill only, from the first selected jurisdiction - the admin can
-    // change it immediately on SettingsPage.jsx. null when the jurisdiction
-    // has no mapped zone, which never happens today but keeps this from
-    // ever writing `undefined`.
-    timeZone: DEFAULT_TIMEZONE_BY_JURISDICTION[jurisdictions[0]] ?? null,
-    // The Super Admin overview reads these; seeding them at creation is what
-    // stops a brand new company rendering as "Unknown"/"-" there.
-    //
-    // billingStatus is deliberately 'unbilled', not 'active' - a newly
-    // registered company genuinely has no subscription yet, and no package
-    // has been chosen for it either, so subscriptionTier is not written at
-    // all here (a missing field is more honest than a value nobody paid
-    // for). Both only ever become real once a Super Admin links an actual
-    // Stripe subscription via linkCompanySubscription.js, after a plan has
-    // actually been negotiated - see CompanyBillingLink.jsx. 'unbilled' is
-    // distinct from 'unknown' (which means "we don't know") and from every
-    // PAYING_BILLING_STATUSES value, so it never trips BillingPage.jsx's /
-    // calculateQuote.js's data-integrity warning for a company with no
-    // stripeSubscriptionId.
-    billingStatus: 'unbilled',
-    currentPeriodCaseCount: 0,
-    createdAt: serverTimestamp(),
+  await runTransaction(firestore, async (transaction) => {
+    // Unique, URL-safe reporting slug reserved atomically at creation time -
+    // this is what /submit/:companySlug resolves against so anonymous
+    // reporters can file against the right company without ever being handed
+    // a raw companyId.
+    const slug = await reserveUniqueSlug(
+      transaction,
+      requestedSlug?.trim() ? requestedSlug : name,
+      companyRef.id
+    )
+
+    transaction.set(companyRef, {
+      name: name.trim(),
+      slug,
+      jurisdictions,
+      departments,
+      // Prefill only, from the first selected jurisdiction - the admin can
+      // change it immediately on SettingsPage.jsx. null when the jurisdiction
+      // has no mapped zone, which never happens today but keeps this from
+      // ever writing `undefined`.
+      timeZone: DEFAULT_TIMEZONE_BY_JURISDICTION[jurisdictions[0]] ?? null,
+      // The Super Admin overview reads these; seeding them at creation is what
+      // stops a brand new company rendering as "Unknown"/"-" there.
+      //
+      // billingStatus is deliberately 'unbilled', not 'active' - a newly
+      // registered company genuinely has no subscription yet, and no package
+      // has been chosen for it either, so subscriptionTier is not written at
+      // all here (a missing field is more honest than a value nobody paid
+      // for). Both only ever become real once a Super Admin links an actual
+      // Stripe subscription via linkCompanySubscription.js, after a plan has
+      // actually been negotiated - see CompanyBillingLink.jsx. 'unbilled' is
+      // distinct from 'unknown' (which means "we don't know") and from every
+      // PAYING_BILLING_STATUSES value, so it never trips BillingPage.jsx's /
+      // calculateQuote.js's data-integrity warning for a company with no
+      // stripeSubscriptionId.
+      billingStatus: 'unbilled',
+      currentPeriodCaseCount: 0,
+      createdAt: serverTimestamp(),
+    })
   })
 
-  return docRef.id
+  return companyRef.id
 }
 
 const createCompanyAdminCallable = httpsCallable(functions, 'createCompanyAdmin')
@@ -257,20 +288,27 @@ export async function assignCompanySlug(companyId, name) {
   if (!companyId) {
     throw new Error('companyId is required')
   }
-  // Re-read rather than trusting the caller's copy: if another admin generated
-  // the link in a different tab, reuse theirs instead of overwriting it (the
-  // rules would reject the write anyway).
-  const existing = await getCompany(companyId)
-  if (!existing) {
-    throw new Error('Company not found')
-  }
-  if (existing.slug) {
-    return existing.slug
-  }
+  const companyRef = doc(firestore, COMPANIES_COLLECTION, companyId)
 
-  const slug = await allocateUniqueSlug(name ?? existing.name)
-  await updateDoc(doc(firestore, COMPANIES_COLLECTION, companyId), { slug })
-  return slug
+  return runTransaction(firestore, async (transaction) => {
+    // Re-read rather than trusting the caller's copy: if another admin
+    // generated the link in a different tab, reuse theirs instead of
+    // overwriting it (the rules would reject the write anyway) - and reading
+    // it inside the same transaction that reserves the slug is what makes
+    // this race-safe against a concurrent call for the same company.
+    const existingSnapshot = await transaction.get(companyRef)
+    if (!existingSnapshot.exists()) {
+      throw new Error('Company not found')
+    }
+    const existing = existingSnapshot.data()
+    if (existing.slug) {
+      return existing.slug
+    }
+
+    const slug = await reserveUniqueSlug(transaction, name ?? existing.name, companyId)
+    transaction.update(companyRef, { slug })
+    return slug
+  })
 }
 
 // A permissive email shape check - enough to catch a typo'd address, not a
