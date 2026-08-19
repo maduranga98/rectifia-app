@@ -2736,7 +2736,8 @@
     "save": "Save",
     "edit": "Edit",
     "unignore": "Unignore",
-    "ignore": "Ignore"
+    "ignore": "Ignore",
+    "useInThread": "Ask in thread"
   },
   "deletionRequestPanel": {
     "recently": "recently",

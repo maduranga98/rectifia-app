@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import {
   CHECKLIST_ITEM_STATUSES,
   CHECKLIST_ITEM_TYPES,
@@ -24,8 +25,9 @@ const TYPE_TONE = {
 // on-demand (not automatic) since the checklist is only as good as the
 // thread it's built from, and the handler decides when there's enough
 // there to be worth regenerating from.
-function InvestigationChecklist({ caseId }) {
+function InvestigationChecklist({ caseId, threadPath }) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const TYPE_LABELS = {
     [CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION]: t('investigationChecklist.types.interviewQuestion'),
     [CHECKLIST_ITEM_TYPES.DOCUMENT_REQUEST]: t('investigationChecklist.types.documentRequest'),
@@ -173,6 +175,16 @@ function InvestigationChecklist({ caseId }) {
                         >
                           {ignored ? t('investigationChecklist.unignore') : t('investigationChecklist.ignore')}
                         </Button>
+                        {(item.type === CHECKLIST_ITEM_TYPES.INTERVIEW_QUESTION ||
+                          item.type === CHECKLIST_ITEM_TYPES.DOCUMENT_REQUEST) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(threadPath, { state: { draftText: item.item } })}
+                          >
+                            {t('investigationChecklist.useInThread')}
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
