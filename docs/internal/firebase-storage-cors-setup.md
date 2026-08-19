@@ -1,9 +1,12 @@
-# Firebase Storage CORS setup (policy document uploads)
+# Firebase Storage CORS setup (policy document + case evidence uploads)
 
-`uploadPolicy()` (`src/services/policyService.js`) does not proxy file bytes
-through a Cloud Function. It asks `requestPolicyUploadUrl` for a V4 signed
-URL (`functions/src/policy/policyStorage.js:createUploadUrl`), then the
-browser itself does `fetch(uploadUrl, { method: 'PUT', ... })` straight
+`uploadPolicy()` (`src/services/policyService.js`) and `uploadCaseEvidence()`
+(`src/services/caseThreadService.js`, used by the case thread's message
+attachments and by the intake evidence-staging flow) do not proxy file bytes
+through a Cloud Function. Both ask a callable for a V4 signed URL
+(`functions/src/policy/policyStorage.js:createUploadUrl` and
+`functions/src/utils/evidenceStorage.js:createUploadUrl` respectively), then
+the browser itself does `fetch(uploadUrl, { method: 'PUT', ... })` straight
 against `storage.googleapis.com`. That is a cross-origin request from
 `https://app.rectifia.com`, so the browser sends a CORS preflight (`OPTIONS`)
 before the `PUT`. Google Cloud Storage buckets have **no CORS
@@ -32,12 +35,21 @@ request.
 ## The config
 
 [`infra/storage/cors.json`](../../infra/storage/cors.json) is the source of
-truth for the bucket's CORS policy:
+truth for the bucket's CORS policy - it is the only copy of this config in
+the repo; an earlier duplicate at the repo root (`storage.cors.json`) with a
+different, wider origin list has been removed to stop the two from drifting
+apart:
 
 ```json
 [
   {
-    "origin": ["https://app.rectifia.com", "http://localhost:5173"],
+    "origin": [
+      "https://app.rectifia.com",
+      "https://rectifia.com",
+      "https://rectifia-59a1e.web.app",
+      "https://rectifia-59a1e.firebaseapp.com",
+      "http://localhost:5173"
+    ],
     "method": ["GET", "PUT", "HEAD"],
     "responseHeader": ["Content-Type"],
     "maxAgeSeconds": 3600
@@ -78,4 +90,7 @@ gcloud storage buckets describe gs://rectifia-59a1e.firebasestorage.app --format
 ```
 
 No redeploy of hosting or functions is needed - the policy lives on the
-bucket itself and takes effect immediately.
+bucket itself and takes effect immediately. This is a single bucket-wide
+setting, so applying it fixes policy-document uploads and case-evidence
+uploads (message attachments and intake evidence staging) at the same time -
+there is nothing to apply per-feature.

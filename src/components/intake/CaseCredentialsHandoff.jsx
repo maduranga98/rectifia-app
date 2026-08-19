@@ -209,8 +209,8 @@ function CaseCredentialsHandoff({
   // a PDF the reporter can hand off or keep in a way that reads as a saved
   // document rather than a stray text file - it's what makes it easy to come
   // back and check progress later.
-  function downloadPdf() {
-    downloadSimplePdf(
+  async function downloadPdf() {
+    await downloadSimplePdf(
       [
         // Rectifia's own wordmark, not the reporting company's - see the
         // comment above downloadDetails() for why this document stays

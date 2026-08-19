@@ -228,9 +228,9 @@ function Submit() {
   // CaseCredentialsHandoff's downloadDetails(): no company name, no report
   // category, and a filename that doesn't announce what the file is to
   // anything indexing a Downloads folder.
-  function downloadCredentialsPdf() {
+  async function downloadCredentialsPdf() {
     if (!completed) return
-    downloadSimplePdf(
+    await downloadSimplePdf(
       [
         // Rectifia's own wordmark, not the reporting company's - same
         // privacy constraint as the rest of this document, see the comment

@@ -2,6 +2,9 @@
   {
     "origin": [
       "https://app.rectifia.com",
+      "https://rectifia.com",
+      "https://rectifia-59a1e.web.app",
+      "https://rectifia-59a1e.firebaseapp.com",
       "http://localhost:5173"
     ],
     "method": ["GET", "PUT", "HEAD"],

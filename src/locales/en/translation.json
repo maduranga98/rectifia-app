@@ -867,7 +867,8 @@
     },
     "messageLabel": "Message",
     "messagePlaceholder": "Type a message...",
-    "attachFile": "Attach file",
+    "attachFile": "Attach files",
+    "removeFile": "Remove",
     "sending": "Sending",
     "send": "Send",
     "manualLog": {
