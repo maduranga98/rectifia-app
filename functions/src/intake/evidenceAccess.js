@@ -38,23 +38,34 @@ const CASES_COLLECTION = 'cases'
 // The one access check, shared by both callables. A reporter proves the case
 // is theirs with Case ID + passcode (verifyReporterAccess, unchanged and
 // unduplicated); a staff member proves it with a Firebase Auth token plus the
-// assignment check in loadCaseForHandler. Which branch applies is decided by
-// whether the call carries an auth token, never by a client-supplied flag.
+// assignment check in loadCaseForHandler.
+//
+// Which branch applies is decided by whether the call carries a passcode,
+// not by whether it carries an auth token - the same rule
+// postReporterMessage (caseThread.js) follows, and for the same reason: a
+// reporter's browser can carry an ambient Firebase Auth session for reasons
+// that have nothing to do with this call (a staff member also signed in on
+// the same device, a stale session from an earlier tab), and that must never
+// let the passcode check be skipped. Checking auth first used to route any
+// such caller into loadCaseForHandler instead, where a reporter is never an
+// assigned case handler - denying a legitimate reporter upload with
+// 'permission-denied' rather than validating the passcode they actually
+// presented.
 //
 // Returns the actor string written to the audit log and the case's companyId.
 async function authorizeCaseAccess(firestore, request, caseId) {
-  if (request.auth?.uid) {
-    const uid = requireAuthUid(request)
-    const { snapshot } = await loadCaseForHandler(firestore, caseId, uid)
-    return { actor: uid, companyId: snapshot.data().companyId ?? null }
+  const { passcode } = request.data || {}
+  if (passcode) {
+    const snapshot = await verifyReporterAccess(firestore, caseId, passcode)
+    // 'reporter' rather than any identifier: the audit trail records that the
+    // holder of the passcode acted, which is all it can honestly record and
+    // all an anonymous-tier case has to give.
+    return { actor: 'reporter', companyId: snapshot.data().companyId ?? null }
   }
 
-  const { passcode } = request.data || {}
-  const snapshot = await verifyReporterAccess(firestore, caseId, passcode)
-  // 'reporter' rather than any identifier: the audit trail records that the
-  // holder of the passcode acted, which is all it can honestly record and all
-  // an anonymous-tier case has to give.
-  return { actor: 'reporter', companyId: snapshot.data().companyId ?? null }
+  const uid = requireAuthUid(request)
+  const { snapshot } = await loadCaseForHandler(firestore, caseId, uid)
+  return { actor: uid, companyId: snapshot.data().companyId ?? null }
 }
 
 // Issues a short-lived, write-only signed URL for exactly one new object under
