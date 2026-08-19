@@ -8,10 +8,11 @@ function unwrap(optionsOrHandler, maybeHandler) {
 }
 
 class HttpsError extends Error {
-  constructor(code, message) {
+  constructor(code, message, details) {
     super(message)
     this.name = 'HttpsError'
     this.code = code
+    this.details = details
   }
 }
 

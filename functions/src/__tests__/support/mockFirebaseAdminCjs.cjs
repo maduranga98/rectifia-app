@@ -15,6 +15,7 @@
 // same object - production code never references them, it only ever sees
 // the real firebase-admin surface (apps, initializeApp, firestore).
 const { FakeFirestore } = require('./fakeFirestore.cjs')
+const { FakeAuth } = require('./fakeAuth.cjs')
 
 // This exact file is loaded twice - once through Node's real CJS module
 // cache (production code's require('firebase-admin'), redirected by
@@ -29,12 +30,16 @@ const { FakeFirestore } = require('./fakeFirestore.cjs')
 // one Firestore regardless of which loader got here first.
 const GLOBAL_KEY = '__rectifia_test_firestore_state__'
 if (!globalThis[GLOBAL_KEY]) {
-  globalThis[GLOBAL_KEY] = { firestore: new FakeFirestore() }
+  globalThis[GLOBAL_KEY] = { firestore: new FakeFirestore(), auth: new FakeAuth() }
 }
 const state = globalThis[GLOBAL_KEY]
 
 function firestoreFn() {
   return state.firestore
+}
+
+function authFn() {
+  return state.auth
 }
 
 firestoreFn.FieldValue = {
@@ -52,8 +57,11 @@ module.exports = {
   apps: [],
   initializeApp: () => {},
   firestore: firestoreFn,
+  auth: authFn,
   __reset: () => {
     state.firestore = new FakeFirestore()
+    state.auth = new FakeAuth()
   },
   __firestore: () => state.firestore,
+  __auth: () => state.auth,
 }
