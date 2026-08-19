@@ -79,9 +79,18 @@ const MANUAL_ASSIGNMENT_STATUS = 'needs_manual_assignment'
 
 // Reasons routeCase.js hands to the platform operator rather than the company
 // (MANUAL_ASSIGNMENT_AUDIENCE in functions/src/intake/routeCase.js).
-// 'no_routing_rule' is deliberately not here - that one is the company's own
-// configuration gap and is resolved on RoutingRulesPage.
+// 'no_routing_rule' and 'handler_not_designated' are deliberately not here -
+// those two are the company's own configuration gap and are resolved on
+// RoutingRulesPage (COMPANY_ADMIN_ROUTING_REASONS below).
 const SUPER_ADMIN_ROUTING_REASONS = ['conflict_of_interest', 'missing_company_id']
+
+// The Company Admin queue's two reasons, mirrored from
+// MANUAL_ASSIGNMENT_AUDIENCE in functions/src/intake/routeCase.js and the
+// matching disjuncts in the caseMetadata firestore.rules entry - both route
+// to companyAdmin because both are the company's own configuration gap
+// (a missing routing rule, or a rule pointing at an undesignated handler)
+// rather than anything only the platform operator should see.
+const COMPANY_ADMIN_ROUTING_REASONS = ['no_routing_rule', 'handler_not_designated']
 
 // Both queue readers below go through caseMetadata/{caseId}, the metadata-only
 // mirror the HR Coordinator dashboard uses, never cases/{caseId} - and
@@ -132,20 +141,28 @@ export async function listCasesForSuperAdminAssignment() {
 }
 
 // The Company Admin queue on RoutingRulesPage: this company's cases that
-// stalled purely because no rule covered their (category, department) bucket.
-// Conflict-of-interest cases can't appear here - the rule denies this role any
-// read of them, not just this query.
+// stalled on a configuration gap the company itself can fix - no rule
+// covering their (category, department) bucket, or a rule that points at a
+// handler no longer designated. Conflict-of-interest cases can't appear
+// here - the rule denies this role any read of them, not just this query.
+// One equality query per reason, same as listCasesForSuperAdminAssignment
+// above and for the same reason: each has to line up with a matching
+// disjunct in the caseMetadata rule.
 export async function listCasesMissingRoutingRule(companyId) {
   if (!companyId) return []
-  const snapshot = await getDocs(
-    query(
-      collection(firestore, CASE_METADATA_COLLECTION),
-      where('companyId', '==', companyId),
-      where('status', '==', MANUAL_ASSIGNMENT_STATUS),
-      where('routingReason', '==', 'no_routing_rule')
+  const snapshots = await Promise.all(
+    COMPANY_ADMIN_ROUTING_REASONS.map((reason) =>
+      getDocs(
+        query(
+          collection(firestore, CASE_METADATA_COLLECTION),
+          where('companyId', '==', companyId),
+          where('status', '==', MANUAL_ASSIGNMENT_STATUS),
+          where('routingReason', '==', reason)
+        )
+      )
     )
   )
-  return newestFirst(snapshot.docs.map(toQueueRow))
+  return newestFirst(snapshots.flatMap((snapshot) => snapshot.docs.map(toQueueRow)))
 }
 
 // Reassigns a case to a different Case Handler - used both for ordinary

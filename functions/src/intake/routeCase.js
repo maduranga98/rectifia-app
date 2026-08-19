@@ -500,11 +500,11 @@ exports.reassignCase = onCall(async (request) => {
   // routing-configuration gap, matching what CasesPage.jsx's UI already
   // exposes and what firestore.rules' caseMetadata read already lets it see.
   // The scope check on caseData a few lines below - status ==
-  // 'needs_manual_assignment' AND routingReason == 'no_routing_rule' - is
-  // what keeps this from becoming general reassignment power; role
-  // membership here only says "no need to ask a human", not "this specific
-  // case is fair game". HR Coordinator can reassign using metadata alone,
-  // which is all this action needs.
+  // 'needs_manual_assignment' AND routingReason in ('no_routing_rule',
+  // 'handler_not_designated') - is what keeps this from becoming general
+  // reassignment power; role membership here only says "no need to ask a
+  // human", not "this specific case is fair game". HR Coordinator can
+  // reassign using metadata alone, which is all this action needs.
   //
   // A platform Super Admin is also allowed through, and is the only caller who
   // can be resolving a case from the manual-assignment queue on
@@ -590,13 +590,20 @@ exports.reassignCase = onCall(async (request) => {
   // membership in REASSIGN_ROLES from being general reassignment power for
   // this role - the conflict_of_interest guard above already rules out that
   // one reason, this rules out every other case shape.
+  //
+  // Both 'no_routing_rule' and 'handler_not_designated' are the company's own
+  // configuration gap (MANUAL_ASSIGNMENT_AUDIENCE above routes both to
+  // companyAdmin, and the caseMetadata firestore.rules entry grants this role
+  // read access to both) - denying the second here would leave Company Admin
+  // able to see those cases on RoutingRulesPage but never place them.
   if (
     actorRole === 'companyAdmin' &&
-    (caseData.status !== 'needs_manual_assignment' || caseData.routingReason !== 'no_routing_rule')
+    (caseData.status !== 'needs_manual_assignment' ||
+      !['no_routing_rule', 'handler_not_designated'].includes(caseData.routingReason))
   ) {
     throw new HttpsError(
       'permission-denied',
-      'A Company Admin can only assign cases waiting on a missing routing rule'
+      'A Company Admin can only assign cases waiting on a missing routing rule or an undesignated handler'
     )
   }
 

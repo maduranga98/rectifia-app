@@ -31,9 +31,11 @@ function formatDate(value) {
 //
 // The cases shown are exactly the ones firestore.rules lets this role read:
 // caseMetadata/{caseId} where status == 'needs_manual_assignment' and
-// routingReason == 'no_routing_rule' (see listCasesMissingRoutingRule). This
-// page deliberately does NOT widen that scope - it reuses the same metadata-
-// only query, so it can't show a case the rules would deny. Case *content*
+// routingReason is 'no_routing_rule' or 'handler_not_designated' - a missing
+// rule, or one that points at a handler no longer designated (see
+// listCasesMissingRoutingRule). This page deliberately does NOT widen that
+// scope - it reuses the same metadata-only query, so it can't show a case
+// the rules would deny. Case *content*
 // still appears only inside CaseTriageModal, which reads it through the
 // getCaseForTriage callable's server-side allowlist; the list here is
 // metadata only, the same as every other company-admin surface.
