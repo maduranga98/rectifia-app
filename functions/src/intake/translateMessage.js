@@ -4,6 +4,7 @@ const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
 const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
+const { verifyReporterAccess } = require('./caseThread')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -95,20 +96,19 @@ function serializeTranslation(entry) {
   }
 }
 
-// On-demand, per-message translation for the Case Handler side of the case
-// thread only - one click, one message, one target language, spending exactly
-// one Claude call (unless a translation for that language already exists).
-// There is deliberately no reporter-facing counterpart, no auto-translation
-// on arrival, and no general free-text translation path: this only ever
-// translates the text already stored on one existing message doc by ID.
+// On-demand, per-message translation, reachable from either side of the case
+// thread - one click, one message, one target language, spending exactly one
+// Claude call (unless a translation for that language already exists). There
+// is no auto-translation on arrival and no general free-text translation
+// path: this only ever translates the text already stored on one existing
+// message doc by ID.
 //
 // Writes are purely additive, under messages/{messageId}.translations.
 // {targetLang} - message.text and every other field on the doc are untouched,
 // so nothing downstream of the original text (scoring, crisis detection, the
 // audit trail) is affected by a translation ever having happened.
 exports.translateMessage = onCall({ secrets: [anthropicApiKey] }, async (request) => {
-  const uid = requireAuthUid(request)
-  const { caseId, messageId, targetLang } = request.data || {}
+  const { caseId, messageId, targetLang, passcode } = request.data || {}
 
   if (!messageId) {
     throw new HttpsError('invalid-argument', 'messageId is required')
@@ -118,12 +118,26 @@ exports.translateMessage = onCall({ secrets: [anthropicApiKey] }, async (request
   }
 
   const firestore = admin.firestore()
-  // Same investigator-only, assigned-handler gate every other case-content
-  // action uses - this is what keeps translation unreachable from the
-  // unauthenticated reporter/passcode path. Logged under 'message_translate'
-  // whether granted or denied: having Claude read the reporter's content is
-  // itself the privileged act, same as any other access to it.
-  const { caseRef } = await loadCaseForHandler(firestore, caseId, uid, 'message_translate')
+  // A caller with a Firebase Auth token is a Case Handler, authorised the
+  // same investigator-only, assigned-handler way every other case-content
+  // action is (logged under 'message_translate' whether granted or denied -
+  // having Claude read the reporter's content is itself the privileged act).
+  // A caller with no auth token has no Firebase identity at all - the same
+  // Case ID + passcode check getCaseThread/postReporterMessage use is the
+  // only credential they can present, so that's the branch taken instead.
+  const isReporter = !request.auth?.uid
+  let caseRef
+  // translatedBy records who requested the translation - a Firebase Auth
+  // uid for a Case Handler, or the literal string 'reporter' for the
+  // passcode-authenticated path, which has no uid to record.
+  let translatedBy = 'reporter'
+  if (isReporter) {
+    await verifyReporterAccess(firestore, caseId, passcode)
+    caseRef = firestore.collection('cases').doc(caseId)
+  } else {
+    translatedBy = requireAuthUid(request)
+    ;({ caseRef } = await loadCaseForHandler(firestore, caseId, translatedBy, 'message_translate'))
+  }
 
   const messageRef = caseRef.collection(MESSAGES_SUBCOLLECTION).doc(messageId)
   const messageSnapshot = await messageRef.get()
@@ -132,6 +146,20 @@ exports.translateMessage = onCall({ secrets: [anthropicApiKey] }, async (request
   }
 
   const messageData = messageSnapshot.data()
+
+  // A reporter may only translate investigator/system messages - never their
+  // own words back to them (pointless), and never a manual_log entry.
+  // manual_log is already excluded from getCaseThread entirely (see
+  // caseThread.js), so this is defense in depth against a reporter who
+  // guessed or previously saw a messageId, not the primary control.
+  if (isReporter) {
+    if (messageData.type === 'manual_log') {
+      throw new HttpsError('not-found', 'No such message')
+    }
+    if (messageData.sender === 'reporter') {
+      throw new HttpsError('invalid-argument', 'Your own messages cannot be translated')
+    }
+  }
 
   // Idempotent per language: the client already checks
   // message.translations[targetLang] before calling this at all (its fast
@@ -164,7 +192,7 @@ exports.translateMessage = onCall({ secrets: [anthropicApiKey] }, async (request
     sourceLanguageGuess: result.sourceLanguageGuess,
     model: MODEL,
     translatedAt,
-    translatedBy: uid,
+    translatedBy,
   }
 
   await messageRef.update({ [`translations.${targetLang}`]: translation })

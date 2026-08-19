@@ -150,8 +150,13 @@ exports.getCaseThread = onCall(PUBLIC_CALLABLE_OPTIONS, async (request) => {
   // here is what lets a reporter who wrote in a language the browser check
   // can't cover still see the same support panel. See CrisisResources.jsx's
   // header comment for why nothing about this is ever logged or indicated.
+  // manual_log entries are internal Case Handler notes (see
+  // postInvestigatorMessage below) and must never reach the reporter -
+  // getCaseThreadForHandler is the only callable allowed to return them.
   return {
-    messages: messagesSnapshot.docs.map(serializeMessage),
+    messages: messagesSnapshot.docs
+      .filter((doc) => doc.data().type !== 'manual_log')
+      .map(serializeMessage),
     crisisFlag: caseSnapshot.data()?.crisisFlag === true,
   }
 })

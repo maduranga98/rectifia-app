@@ -54,6 +54,17 @@ function bubbleClasses(message, mine) {
   return 'border border-line bg-surface text-charcoal'
 }
 
+// Sinhala script occupies U+0D80-U+0DFF; the app supports exactly two
+// languages (src/services/i18n.js's SUPPORTED_LANGUAGES), so a single range
+// check is enough to tell them apart without a server round trip. Used only
+// to pick which language the reporter-side translate button defaults to -
+// it is a UI convenience, not a security or correctness boundary.
+function detectReporterLanguage(messages, uiLocale) {
+  const lastReporterMessage = [...messages].reverse().find((m) => m.sender === 'reporter' && m.text?.trim())
+  if (!lastReporterMessage) return uiLocale
+  return /[඀-෿]/.test(lastReporterMessage.text) ? 'si' : 'en'
+}
+
 function formatSize(bytes) {
   if (!bytes) return null
   if (bytes < 1024) return `${bytes} B`
@@ -119,14 +130,19 @@ function AttachmentLink({ caseId, mode, passcode, attachment, tone }) {
   )
 }
 
-// Case Handler side only - see CaseThread's render below, which never
-// mounts this in mode === 'reporter'. Investigator-facing, on-demand, one
-// message at a time: clicking it calls translateMessage for the UI's
-// current language and renders the result beneath the original text, which
-// is never replaced or hidden. If the server already has a translation for
-// this language (message.translations[targetLang], passed down as
-// `existing` via serializeMessage), it renders immediately with no call.
-function MessageTranslation({ caseId, messageId, targetLang, existing, tone }) {
+// Used on both sides of the thread - see CaseThread's render below, which
+// mounts this for investigator/system messages in mode === 'investigator'
+// and, separately, for investigator/system messages in mode === 'reporter'
+// (never for a reporter's own words - see the render comments at each call
+// site). On-demand, one message at a time: clicking it calls translateMessage
+// for `targetLang` and renders the result beneath the original text, which is
+// never replaced or hidden. If the server already has a translation for this
+// language (message.translations[targetLang], passed down as `existing` via
+// serializeMessage), it renders immediately with no call. `passcode` is
+// undefined in investigator mode - translateMessage.js falls back to the
+// caller's Firebase Auth identity in that case, same as every other
+// investigator-side call in this file.
+function MessageTranslation({ caseId, messageId, targetLang, existing, tone, passcode }) {
   const { t } = useTranslation()
   const [translation, setTranslation] = useState(existing ?? null)
   const [loading, setLoading] = useState(false)
@@ -140,7 +156,7 @@ function MessageTranslation({ caseId, messageId, targetLang, existing, tone }) {
     setLoading(true)
     setFailed(false)
     try {
-      const result = await translateMessage(caseId, messageId, targetLang)
+      const result = await translateMessage(caseId, messageId, targetLang, passcode)
       setTranslation(result)
     } catch {
       setFailed(true)
@@ -325,6 +341,10 @@ function CaseThread({ caseId, mode, passcode }) {
   }
 
   const mySender = mode === 'reporter' ? 'reporter' : 'investigator'
+  // Defaults the reporter-side translate button to whatever language the
+  // reporter has actually been writing in, falling back to the UI's current
+  // locale when there's no reporter message yet to read that off of.
+  const reporterTargetLang = detectReporterLanguage(messages, i18n.language)
 
   return (
     <div className="flex flex-col gap-4">
@@ -412,9 +432,9 @@ function CaseThread({ caseId, mode, passcode }) {
                   </ul>
                 )}
 
-                {/* Case Handler side only - no reporter-facing counterpart. Hidden
-                    for a system record and a manual log entry, neither of which is
-                    a reporter's own words to translate. */}
+                {/* Case Handler side. Hidden for a system record and a manual
+                    log entry, neither of which is a reporter's own words to
+                    translate. */}
                 {mode === 'investigator' &&
                   message.sender !== 'system' &&
                   message.type !== 'manual_log' && (
@@ -426,6 +446,22 @@ function CaseThread({ caseId, mode, passcode }) {
                       tone={mine ? 'border-navy-200 text-white' : 'border-line text-charcoal'}
                     />
                   )}
+
+                {/* Reporter side. Only for the Case Handler's or the system's
+                    words - never the reporter's own message, which needs no
+                    translating back to them. manual_log never reaches this
+                    view at all (getCaseThread excludes it server-side), so
+                    there is nothing to guard against re-exposing here. */}
+                {mode === 'reporter' && message.sender !== 'reporter' && (
+                  <MessageTranslation
+                    caseId={caseId}
+                    passcode={passcode}
+                    messageId={message.id}
+                    targetLang={reporterTargetLang}
+                    existing={message.translations?.[reporterTargetLang]}
+                    tone={mine ? 'border-navy-200 text-white' : 'border-line text-charcoal'}
+                  />
+                )}
               </div>
             </div>
           )
