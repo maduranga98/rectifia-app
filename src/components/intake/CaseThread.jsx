@@ -440,10 +440,16 @@ function CaseThread({ caseId, mode, passcode }) {
               type="file"
               multiple
               onChange={(e) => {
-                addPendingFiles(e.target.files)
+                // input.files is a *live* FileList tied to the input -
+                // resetting e.target.value below empties it retroactively,
+                // and setPendingFiles's updater doesn't run until after this
+                // handler returns, so it has to be copied into a plain array
+                // synchronously here rather than handed the FileList itself.
+                const files = Array.from(e.target.files ?? [])
                 // Without resetting the input, choosing the same file again
                 // in a later selection fires no change event at all.
                 e.target.value = ''
+                addPendingFiles(files)
               }}
               className="sr-only"
             />
