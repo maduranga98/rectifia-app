@@ -2599,7 +2599,9 @@
     "opening": "Opening",
     "openSource": "Open source",
     "unlabelledSection": "Unlabelled section",
-    "footnote": "Policy context informs the questions asked and the evidence sought. It does not determine the outcome - every determination on this case is yours."
+    "footnote": "Policy context informs the questions asked and the evidence sought. It does not determine the outcome - every determination on this case is yours.",
+    "alsoReferenced": "Also referenced",
+    "alsoReferencedDescription": "Contributed one general clause to this case, not the document's main subject."
   },
   "evidenceInventory": {
     "manualLogEntry": "Manual log entry",

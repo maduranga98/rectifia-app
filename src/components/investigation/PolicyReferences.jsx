@@ -39,6 +39,8 @@ function PolicyReferences({ caseData }) {
     return acc
   }, {})
   const documents = Object.values(byDocument)
+  const primaryDocuments = documents.filter((document) => document.clauses.length >= 2)
+  const incidentalDocuments = documents.filter((document) => document.clauses.length === 1)
 
   async function handleOpen(policyId) {
     setError(null)
@@ -73,39 +75,80 @@ function PolicyReferences({ caseData }) {
               <Alert variant="error">{error}</Alert>
             </div>
           )}
-          <ul className="divide-y divide-line-soft">
-            {documents.map((document) => (
-              <li key={document.policyId} className="flex flex-col gap-2 px-5 py-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-medium text-charcoal">{document.title}</p>
-                    {document.version != null && (
-                      <p className="text-xs text-muted">{t('policyReferences.version', { version: document.version })}</p>
-                    )}
+          {primaryDocuments.length > 0 && (
+            <ul className="divide-y divide-line-soft">
+              {primaryDocuments.map((document) => (
+                <li key={document.policyId} className="flex flex-col gap-2 px-5 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-charcoal">{document.title}</p>
+                      {document.version != null && (
+                        <p className="text-xs text-muted">{t('policyReferences.version', { version: document.version })}</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon="document"
+                      loading={openingId === document.policyId}
+                      loadingLabel={t('policyReferences.opening')}
+                      onClick={() => handleOpen(document.policyId)}
+                    >
+                      {t('policyReferences.openSource')}
+                    </Button>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    icon="document"
-                    loading={openingId === document.policyId}
-                    loadingLabel={t('policyReferences.opening')}
-                    onClick={() => handleOpen(document.policyId)}
-                  >
-                    {t('policyReferences.openSource')}
-                  </Button>
-                </div>
-                <ul className="flex flex-col gap-1">
-                  {document.clauses.map((clause) => (
-                    <li key={clause.chunkId} className="text-xs text-muted">
-                      {Array.isArray(clause.headingPath) && clause.headingPath.length > 0
-                        ? clause.headingPath.join(' › ')
-                        : t('policyReferences.unlabelledSection')}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
+                  <ul className="flex flex-col gap-1">
+                    {document.clauses.map((clause) => (
+                      <li key={clause.chunkId} className="text-xs text-muted">
+                        {Array.isArray(clause.headingPath) && clause.headingPath.length > 0
+                          ? clause.headingPath.join(' › ')
+                          : t('policyReferences.unlabelledSection')}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+          {incidentalDocuments.length > 0 && (
+            <div className="border-t border-line-soft px-5 py-4">
+              <p className="text-xs font-medium text-muted">{t('policyReferences.alsoReferenced')}</p>
+              <p className="text-xs text-muted/80">{t('policyReferences.alsoReferencedDescription')}</p>
+              <ul className="mt-3 divide-y divide-line-soft/60">
+                {incidentalDocuments.map((document) => (
+                  <li key={document.policyId} className="flex flex-col gap-2 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-normal text-xs text-muted">{document.title}</p>
+                        {document.version != null && (
+                          <p className="text-[11px] text-muted/80">{t('policyReferences.version', { version: document.version })}</p>
+                        )}
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        icon="document"
+                        loading={openingId === document.policyId}
+                        loadingLabel={t('policyReferences.opening')}
+                        onClick={() => handleOpen(document.policyId)}
+                      >
+                        {t('policyReferences.openSource')}
+                      </Button>
+                    </div>
+                    <ul className="flex flex-col gap-1">
+                      {document.clauses.map((clause) => (
+                        <li key={clause.chunkId} className="text-[11px] text-muted/80">
+                          {Array.isArray(clause.headingPath) && clause.headingPath.length > 0
+                            ? clause.headingPath.join(' › ')
+                            : t('policyReferences.unlabelledSection')}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p className="px-5 py-3 text-xs text-muted">{t('policyReferences.footnote')}</p>
         </div>
       )}
