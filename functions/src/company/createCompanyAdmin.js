@@ -16,7 +16,7 @@ const SUPER_ADMINS_COLLECTION = 'superAdmins'
 // Same param the other outbound-email modules read (see
 // staff/inviteStaff.js, notifications/sendContactEmailUpdate.js) - the bare
 // app origin, used below to build the links this new Company Admin receives.
-const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a1e.web.app' })
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://app.rectifia.com' })
 
 function escapeHtml(value) {
   return String(value ?? '')
