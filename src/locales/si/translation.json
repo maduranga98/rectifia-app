@@ -864,7 +864,8 @@
     },
     "messageLabel": "පණිවිඩය",
     "messagePlaceholder": "පණිවිඩයක් ටයිප් කරන්න...",
-    "attachFile": "ගොනුවක් අමුණන්න",
+    "attachFile": "ගොනු අමුණන්න",
+    "removeFile": "ඉවත් කරන්න",
     "sending": "එවමින්",
     "send": "එවන්න",
     "manualLog": {

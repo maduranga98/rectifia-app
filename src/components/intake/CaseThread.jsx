@@ -186,7 +186,7 @@ function CaseThread({ caseId, mode, passcode }) {
   const { t, i18n } = useTranslation()
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
-  const [pendingFile, setPendingFile] = useState(null)
+  const [pendingFiles, setPendingFiles] = useState([])
   const [logDraft, setLogDraft] = useState('')
   const [showLogForm, setShowLogForm] = useState(false)
   const [sending, setSending] = useState(false)
@@ -254,18 +254,19 @@ function CaseThread({ caseId, mode, passcode }) {
 
   async function handleSend(event) {
     event.preventDefault()
-    if (!draft.trim() && !pendingFile) return
+    if (!draft.trim() && pendingFiles.length === 0) return
 
     setSending(true)
     setError(null)
     try {
-      let attachments = []
-      if (pendingFile) {
-        // The passcode is what authorizes the upload for a reporter; in
-        // investigator mode it is undefined and the callable falls back to the
-        // caller's Firebase Auth identity plus the case assignment check.
-        const uploaded = await uploadCaseEvidence(caseId, pendingFile, passcode)
-        attachments = [uploaded]
+      // The passcode is what authorizes each upload for a reporter; in
+      // investigator mode it is undefined and the callable falls back to the
+      // caller's Firebase Auth identity plus the case assignment check.
+      // Uploaded one at a time (not Promise.all) so a failure partway
+      // through reports which file it was, via the surrounding catch below.
+      const attachments = []
+      for (const file of pendingFiles) {
+        attachments.push(await uploadCaseEvidence(caseId, file, passcode))
       }
 
       if (mode === 'reporter') {
@@ -275,13 +276,21 @@ function CaseThread({ caseId, mode, passcode }) {
       }
 
       setDraft('')
-      setPendingFile(null)
+      setPendingFiles([])
       await refresh()
     } catch (err) {
       setError(err.message)
     } finally {
       setSending(false)
     }
+  }
+
+  function addPendingFiles(fileList) {
+    setPendingFiles((current) => [...current, ...Array.from(fileList ?? [])])
+  }
+
+  function removePendingFile(index) {
+    setPendingFiles((current) => current.filter((_, i) => i !== index))
   }
 
   async function handleAddLog(event) {
@@ -429,10 +438,15 @@ function CaseThread({ caseId, mode, passcode }) {
             </span>
             <input
               type="file"
-              onChange={(e) => setPendingFile(e.target.files?.[0] ?? null)}
+              multiple
+              onChange={(e) => {
+                addPendingFiles(e.target.files)
+                // Without resetting the input, choosing the same file again
+                // in a later selection fires no change event at all.
+                e.target.value = ''
+              }}
               className="sr-only"
             />
-            {pendingFile && <span className="truncate">{pendingFile.name}</span>}
           </label>
 
           <Button
@@ -441,11 +455,31 @@ function CaseThread({ caseId, mode, passcode }) {
             className="ml-auto"
             loading={sending}
             loadingLabel={t('caseThread.sending')}
-            disabled={!draft.trim() && !pendingFile}
+            disabled={!draft.trim() && pendingFiles.length === 0}
           >
             {t('caseThread.send')}
           </Button>
         </div>
+
+        {pendingFiles.length > 0 && (
+          <ul className="flex flex-col gap-1">
+            {pendingFiles.map((file, index) => (
+              <li
+                key={`${file.name}-${index}`}
+                className="flex items-center justify-between gap-2 rounded-md border border-line-soft px-2.5 py-1.5 text-xs text-charcoal"
+              >
+                <span className="truncate">{file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removePendingFile(index)}
+                  className="shrink-0 text-muted underline hover:text-charcoal"
+                >
+                  {t('caseThread.removeFile')}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </form>
 
       {/* Persistent opt-in: shown on every visit for a reporter, so someone who
