@@ -2601,7 +2601,11 @@
     "unlabelledSection": "Unlabelled section",
     "footnote": "Policy context informs the questions asked and the evidence sought. It does not determine the outcome - every determination on this case is yours.",
     "alsoReferenced": "Also referenced",
-    "alsoReferencedDescription": "Contributed one general clause to this case, not the document's main subject."
+    "alsoReferencedDescription": "Contributed one general clause to this case, not the document's main subject.",
+    "usedForCase": "Used for this case",
+    "allRelated": "All related company policy",
+    "allRelatedDescription": "Every clause in your company's active policy currently tagged for this case's category - this reflects the policy as it stands today, not necessarily what was used when the case was scored.",
+    "allRelatedEmpty": "No active policy is currently tagged for this category."
   },
   "evidenceInventory": {
     "manualLogEntry": "Manual log entry",
