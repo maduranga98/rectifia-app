@@ -9,6 +9,9 @@ if (!admin.apps.length) {
 const COMPANIES_COLLECTION = 'companies'
 const STAFF_SUBCOLLECTION = 'staff'
 const CUSTOM_ROLES_SUBCOLLECTION = 'customRoles'
+const CASES_COLLECTION = 'cases'
+const CLOSED_STATUS = 'closed'
+const CASE_HANDLER_ROLE = 'caseHandler'
 
 // Company Admin itself is not assignable through this callable - it is
 // issued only by createCompanyAdmin.js at company setup, never re-assigned
@@ -68,6 +71,33 @@ exports.assignStaffRole = onCall(async (request) => {
   const staffSnapshot = await staffRef.get()
   if (!staffSnapshot.exists) {
     throw new HttpsError('not-found', 'No staff record found for this account in this company')
+  }
+  const staffData = staffSnapshot.data()
+
+  // Moving someone OUT of caseHandler must not silently orphan an open case
+  // they're still assigned to - listCaseHandlers() (src/services/routingService.js)
+  // filters strictly on role === 'caseHandler' at read time, so a case whose
+  // assignedHandlerId points at a former handler becomes invisible to normal
+  // reassignment flows. Same query shape and openCaseCount logic as
+  // removeStaffMember.js's equivalent guard.
+  const movingOutOfCaseHandler =
+    staffData.role === CASE_HANDLER_ROLE && (customRoleId || role !== CASE_HANDLER_ROLE)
+  if (movingOutOfCaseHandler) {
+    const assignedCasesSnapshot = await firestore
+      .collection(CASES_COLLECTION)
+      .where('companyId', '==', companyId)
+      .where('assignedHandlerId', '==', staffId)
+      .get()
+    const openCaseCount = assignedCasesSnapshot.docs.filter((d) => d.data().status !== CLOSED_STATUS).length
+    if (openCaseCount > 0) {
+      throw new HttpsError(
+        'failed-precondition',
+        `This staff member is still assigned to ${openCaseCount} open case${openCaseCount === 1 ? '' : 's'}. Reassign ${
+          openCaseCount === 1 ? 'it' : 'them'
+        } to another handler before changing this person's role.`,
+        { openCaseCount }
+      )
+    }
   }
 
   if (customRoleId) {
