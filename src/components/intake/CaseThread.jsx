@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   addManualLogEntry,
   getCaseThread,
@@ -184,6 +185,8 @@ function MessageTranslation({ caseId, messageId, targetLang, existing, tone }) {
 // dropped onto a page by itself.
 function CaseThread({ caseId, mode, passcode }) {
   const { t, i18n } = useTranslation()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [pendingFiles, setPendingFiles] = useState([])
@@ -244,6 +247,16 @@ function CaseThread({ caseId, mode, passcode }) {
 
   useEffect(() => {
     refresh()
+    // Prefilling the composer from a checklist item's "Ask in thread" action
+    // (InvestigationChecklist.jsx) - investigator-only, and only into an
+    // empty composer so it never clobbers a message already being typed.
+    // Consumed once here rather than in its own effect so it can't re-fire
+    // on a later render; the history state is cleared immediately after so
+    // navigating back to this tab later doesn't silently refill it.
+    if (mode === 'investigator' && location.state?.draftText && !draft) {
+      setDraft(location.state.draftText)
+      navigate(location.pathname, { replace: true, state: {} })
+    }
     // No real-time listener - the messages subcollection isn't
     // client-readable (see caseThreadService.js), so we poll instead.
     pollRef.current = setInterval(refresh, POLL_INTERVAL_MS)

@@ -2691,7 +2691,8 @@
     "save": "සුරකින්න",
     "edit": "සංස්කරණය",
     "unignore": "නොසලකා හැරීම අහෝසි කරන්න",
-    "ignore": "නොසලකා හරින්න"
+    "ignore": "නොසලකා හරින්න",
+    "useInThread": "තුනියේ අසන්න"
   },
   "deletionRequestPanel": {
     "recently": "මෑතකදී",

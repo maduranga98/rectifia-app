@@ -234,7 +234,10 @@ function CaseWorkspacePage() {
           }
         />
         <Route path="evidence" element={<CaseEvidencePanel caseId={caseId} />} />
-        <Route path="checklist" element={<InvestigationChecklist caseId={caseId} />} />
+        <Route
+          path="checklist"
+          element={<InvestigationChecklist caseId={caseId} threadPath={`${basePath}/thread`} />}
+        />
         <Route
           path="consistency"
           element={
