@@ -18,7 +18,7 @@ const NOTIFICATIONS_COLLECTION = 'notifications'
 // generic password-reset action code into a link that actually lands on this
 // app's own /invite/:token screen (AcceptInvitePage), and to give the invitee a
 // plain link to Rectifia's sign-in page for later.
-const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a1e.web.app' })
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://app.rectifia.com' })
 
 // Must stay in lockstep with ROLES in src/constants/roles.js and the role
 // checks in firestore.rules - a role added there needs adding here too.

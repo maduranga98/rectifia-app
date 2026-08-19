@@ -17,7 +17,7 @@ const NOTIFICATIONS_COLLECTION = 'notifications'
 // Base URL the reporter/staff app is served from - the pulse invite link and
 // the staff-facing links are built against it. Deploy-time config with a
 // sensible default for the hosted app, same defineString pattern as email.js.
-const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a1e.web.app' })
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://app.rectifia.com' })
 
 // Statuses this worker owns. 'pending' is a fresh queued send; 'failed' is a
 // previous attempt we may retry; 'sending' is a claim in flight (reclaimed

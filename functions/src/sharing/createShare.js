@@ -28,7 +28,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // Same base URL param deliverNotifications.js already declares - both
 // modules build links against the same deployed app, so this reuses the
 // param name rather than inventing a second one that could drift.
-const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a1e.web.app' })
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://app.rectifia.com' })
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

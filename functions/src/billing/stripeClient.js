@@ -21,7 +21,7 @@ const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET')
 // used (inviteStaff.js, createCompanyAdmin.js, createShare.js,
 // deliverNotifications.js, sendContactEmailUpdate.js) - deploy-time config,
 // not a secret, and not trusted from the client on any individual request.
-const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a1e.web.app' })
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://app.rectifia.com' })
 
 let cachedClient = null
 

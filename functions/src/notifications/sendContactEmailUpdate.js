@@ -15,7 +15,7 @@ const CASES_COLLECTION = 'cases'
 
 // The bare app origin, and nothing else, is the only link this email ever
 // carries. Same deploy-time param deliverNotifications.js reads.
-const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://rectifia-59a1e.web.app' })
+const appBaseUrl = defineString('APP_BASE_URL', { default: 'https://app.rectifia.com' })
 
 // The email transport for reporter case updates. It is the second transport on
 // the SAME decoy pool the push path uses (./decoyTemplates.js) - one pool, two
