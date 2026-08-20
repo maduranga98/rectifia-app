@@ -166,12 +166,13 @@ export async function getEvidenceDownloadUrl(caseId, fileName, passcode) {
   return data.downloadUrl
 }
 
-// On-demand, per-message translation - Case Handler side only. The caller's
-// identity comes from their Firebase Auth ID token, same as
-// getCaseThreadForHandler; there is no reporter-facing counterpart and none
-// should be added (translateMessage.js authorises via loadCaseForHandler,
-// which the unauthenticated reporter/passcode path cannot satisfy).
-export async function translateMessage(caseId, messageId, targetLang) {
-  const { data } = await translateMessageCallable({ caseId, messageId, targetLang })
+// On-demand, per-message translation, callable from either side of the case
+// thread. A Case Handler is identified by their Firebase Auth ID token, same
+// as getCaseThreadForHandler - `passcode` is omitted for that path. A
+// reporter has no such token, so their Case ID + passcode is sent instead;
+// translateMessage.js branches on whether request.auth carries a uid to tell
+// the two apart, mirroring how getCaseThread/getCaseThreadForHandler split.
+export async function translateMessage(caseId, messageId, targetLang, passcode) {
+  const { data } = await translateMessageCallable({ caseId, messageId, targetLang, passcode })
   return data.translation
 }

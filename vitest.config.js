@@ -24,6 +24,7 @@ export default defineConfig({
       { find: /^firebase-functions\/v2\/scheduler$/, replacement: `${testSupportDir}aliasSchedulerCjs.cjs` },
       { find: /^firebase-functions\/params$/, replacement: `${testSupportDir}aliasParamsCjs.cjs` },
       { find: /^firebase-functions$/, replacement: `${testSupportDir}aliasLoggerCjs.cjs` },
+      { find: /^@anthropic-ai\/sdk$/, replacement: `${testSupportDir}aliasAnthropicCjs.cjs` },
     ],
   },
   test: {

@@ -37,6 +37,7 @@ const REDIRECTS = {
   'firebase-functions/v2/scheduler': `${here}aliasSchedulerCjs.cjs`,
   'firebase-functions/params': `${here}aliasParamsCjs.cjs`,
   'firebase-functions': `${here}aliasLoggerCjs.cjs`,
+  '@anthropic-ai/sdk': `${here}aliasAnthropicCjs.cjs`,
 }
 
 const originalResolveFilename = Module._resolveFilename
