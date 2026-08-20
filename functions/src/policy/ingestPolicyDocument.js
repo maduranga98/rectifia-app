@@ -234,6 +234,23 @@ exports.ingestPolicyDocument = onObjectFinalized(async (event) => {
     return
   }
 
+  // Idempotency guard: Cloud Storage finalize events are delivered at-least-
+  // once, so a redelivery of an event already handled by this function is
+  // normal, expected behaviour, not an edge case. status only ever moves to
+  // 'active' or 'failed', and only ever from this function, so either value
+  // means ingestion already concluded for this policyId - any further
+  // delivery is a no-op by construction. A new policy version always gets a
+  // new policyId (see "Immutable-forward versioning" below), so there is no
+  // legitimate reason for a second delivery to re-ingest here.
+  if (policy.status === 'active' || policy.status === 'failed') {
+    logger.info('ingestPolicyDocument: skipping duplicate event delivery', {
+      policyId,
+      name,
+      status: policy.status,
+    })
+    return
+  }
+
   try {
     const bucket = admin.storage().bucket(object.bucket)
     const [buffer] = await bucket.file(name).download()
