@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
+const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { stripeSecretKey, getStripeClient } = require('./stripeClient')
 const { applySubscriptionState } = require('./applySubscriptionState')
@@ -11,6 +12,7 @@ if (!admin.apps.length) {
 const COMPANIES_COLLECTION = 'companies'
 const SUPER_ADMINS_COLLECTION = 'superAdmins'
 const BILLING_HISTORY_SUBCOLLECTION = 'billingHistory'
+const NOTIFICATIONS_COLLECTION = 'notifications'
 
 // The plans a Super Admin can label a linked subscription with - kept in
 // sync by hand with src/services/companyService.js's SUBSCRIPTION_TIERS,
@@ -151,6 +153,25 @@ exports.linkCompanySubscription = onCall({ secrets: [stripeSecretKey] }, async (
     },
     at: admin.firestore.FieldValue.serverTimestamp(),
   })
+
+  // Company-facing (companyAdmin role, via resolveStaffEmailsByRole in
+  // deliverNotifications.js) - a one-line confirmation only, never the
+  // Stripe subscription id or any price breakdown. Best-effort: a failure
+  // here must never fail the link itself, which has already succeeded above.
+  try {
+    await firestore.collection(NOTIFICATIONS_COLLECTION).add({
+      type: 'subscriptionLinked',
+      companyId,
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      subscriptionTier,
+    })
+  } catch (err) {
+    logger.error('linkCompanySubscription: failed to write subscriptionLinked notification', {
+      companyId,
+      error: err.message,
+    })
+  }
 
   return {
     billingStatus: subscription.status,

@@ -1,8 +1,10 @@
+const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { applySubscriptionState } = require('./applySubscriptionState')
 const { LINE_ITEM_TAG, RECTIFIA_TIER_METADATA_KEY } = require('./lineItemTags')
 
 const BILLING_HISTORY_SUBCOLLECTION = 'billingHistory'
+const NOTIFICATIONS_COLLECTION = 'notifications'
 
 // Shared Core-item mover: renames the Stripe product, reprices the
 // subscription item to `newBand`'s rate, reconciles Firestore via
@@ -59,6 +61,28 @@ async function changeCoreTier(firestore, stripe, companyRef, company, newBand, {
     ...extra,
     at: admin.firestore.FieldValue.serverTimestamp(),
   })
+
+  // Company-facing (companyAdmin role) - previousTier/newTier/action only,
+  // no price data (that's already visible on BillingPage.jsx). Shared by
+  // both upgradeSubscriptionTier.js and updateDeclaredHeadcount.js, so both
+  // callers get this notification for free. Best-effort: a failure here must
+  // never fail the tier change itself, which has already succeeded above.
+  try {
+    await firestore.collection(NOTIFICATIONS_COLLECTION).add({
+      type: 'coreTierChanged',
+      companyId: companyRef.id,
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      previousTier,
+      newTier: newBand.tier,
+      action,
+    })
+  } catch (err) {
+    logger.error('changeCoreTier: failed to write coreTierChanged notification', {
+      companyId: companyRef.id,
+      error: err.message,
+    })
+  }
 
   return { previousTier, tier: newBand.tier }
 }

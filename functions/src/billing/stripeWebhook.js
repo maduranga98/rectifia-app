@@ -11,6 +11,7 @@ if (!admin.apps.length) {
 }
 
 const COMPANIES_COLLECTION = 'companies'
+const NOTIFICATIONS_COLLECTION = 'notifications'
 
 // Self-serve subscriptions (createCheckoutSession.js, upgradeSubscriptionTier.js)
 // tag the Core item's product with rectifiaTier alongside rectifiaLineItem -
@@ -63,7 +64,7 @@ async function handleSubscriptionUpdated(stripe, firestore, subscriptionEventObj
   await syncSelfServeTier(firestore, companyId, subscription)
 }
 
-async function handleSubscriptionDeleted(firestore, subscriptionEventObject) {
+async function handleSubscriptionDeleted(firestore, subscriptionEventObject, eventId) {
   const companyId = subscriptionEventObject.metadata?.companyId
   if (!companyId) return
 
@@ -74,13 +75,88 @@ async function handleSubscriptionDeleted(firestore, subscriptionEventObject) {
     stripePulseCheckItemId: admin.firestore.FieldValue.delete(),
     'featureFlags.pulseCheck': false,
   })
+
+  // Company-facing (companyAdmin role) AND Lumora (resolveSuperAdminEmails) -
+  // a paying customer just churned. Deduped on event.id via .create() so a
+  // Stripe retry-delivery of the same event never queues a second email.
+  // Best-effort: a failure here must never fail the webhook's own state sync
+  // above, which has already succeeded.
+  try {
+    await firestore
+      .collection(NOTIFICATIONS_COLLECTION)
+      .doc(`subscriptionCanceled_${eventId}`)
+      .create({
+        type: 'subscriptionCanceled',
+        companyId,
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+  } catch (err) {
+    // ALREADY_EXISTS from .create() on a Stripe redelivery of the same event
+    // is expected and not logged as an error - anything else is.
+    if (err.code !== 6 /* firestore ALREADY_EXISTS */) {
+      logger.error('stripeWebhook: failed to write subscriptionCanceled notification', {
+        companyId,
+        eventId,
+        error: err.message,
+      })
+    }
+  }
+}
+
+async function handleInvoicePaymentFailed(stripe, firestore, invoice, eventId) {
+  const subscriptionId =
+    typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id
+  if (!subscriptionId) return
+
+  let subscription
+  try {
+    subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  } catch (err) {
+    logger.error('stripeWebhook: could not retrieve subscription for payment failure', {
+      subscriptionId,
+      error: err.message,
+    })
+    return
+  }
+  const companyId = subscription.metadata?.companyId
+  if (!companyId) return
+
+  // Company-facing (companyAdmin role) - highest priority of these
+  // notifications, since a company currently has no other way to learn their
+  // card was declined besides noticing case access degrade. Deliberately
+  // carries nothing from the invoice object (no line items, no amounts) -
+  // this doc is plaintext at rest same as every other notifications entry -
+  // just the fact of failure and a link to the billing portal route.
+  // Deduped on event.id via .create() so a Stripe retry-delivery of the same
+  // event never queues a second email.
+  try {
+    await firestore
+      .collection(NOTIFICATIONS_COLLECTION)
+      .doc(`paymentFailed_${eventId}`)
+      .create({
+        type: 'paymentFailed',
+        companyId,
+        status: 'pending',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      })
+  } catch (err) {
+    if (err.code !== 6 /* firestore ALREADY_EXISTS */) {
+      logger.error('stripeWebhook: failed to write paymentFailed notification', {
+        companyId,
+        eventId,
+        error: err.message,
+      })
+    }
+  }
 }
 
 // Raw HTTP endpoint (not onCall - Stripe posts here directly, unauthenticated
 // by Firebase Auth) that keeps companies/{companyId}'s billing state in sync
 // with Stripe. Must be registered as this function's URL in the Stripe
 // Dashboard's webhook settings, subscribed to at least: checkout.session.
-// completed, customer.subscription.updated, customer.subscription.deleted.
+// completed, customer.subscription.updated, customer.subscription.deleted,
+// invoice.payment_failed.
 //
 // Pilot v1 has no self-serve subscription creation anywhere in this app -
 // BillingPage.jsx is read-only plus a "Request a quote" button
@@ -125,7 +201,10 @@ exports.stripeWebhook = onRequest({ secrets: [stripeSecretKey, stripeWebhookSecr
         await handleSubscriptionUpdated(stripe, firestore, event.data.object)
         break
       case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(firestore, event.data.object)
+        await handleSubscriptionDeleted(firestore, event.data.object, event.id)
+        break
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(stripe, firestore, event.data.object, event.id)
         break
       default:
         break
