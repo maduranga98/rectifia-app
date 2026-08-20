@@ -56,6 +56,7 @@ const postInvestigatorMessageCallable = httpsCallable(functions, 'postInvestigat
 const requestEvidenceUploadUrlCallable = httpsCallable(functions, 'requestEvidenceUploadUrl')
 const requestEvidenceDownloadUrlCallable = httpsCallable(functions, 'requestEvidenceDownloadUrl')
 const translateMessageCallable = httpsCallable(functions, 'translateMessage')
+const askInThreadCallable = httpsCallable(functions, 'askInThread')
 
 // Cases and their messages subcollection are not client-readable or
 // writable (see firestore.rules) - reporters have no Firebase Auth
@@ -175,4 +176,18 @@ export async function getEvidenceDownloadUrl(caseId, fileName, passcode) {
 export async function translateMessage(caseId, messageId, targetLang, passcode) {
   const { data } = await translateMessageCallable({ caseId, messageId, targetLang, passcode })
   return data.translation
+}
+
+// Case Handler side only, staff-authenticated the same way as
+// sendInvestigatorMessage. Drafts one reporter-facing question from `intent`
+// (what the handler wants to ask about) plus the case's full thread and
+// questionnaire responses - it never posts anything itself. The returned
+// text is meant to be reviewed and edited in the composer, then sent through
+// sendInvestigatorMessage like any other handler-typed message.
+export async function askInThread(caseId, intent) {
+  if (!intent?.trim()) {
+    throw new Error('Describe what you want to ask about')
+  }
+  const { data } = await askInThreadCallable({ caseId, intent })
+  return data.question
 }
