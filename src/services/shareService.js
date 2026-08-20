@@ -12,6 +12,14 @@ const listCaseSharesCallable = httpsCallable(functions, 'listCaseShares')
 const revokeExternalShareCallable = httpsCallable(functions, 'revokeExternalShare')
 const getSharedCaseCallable = httpsCallable(functions, 'getSharedCase')
 const accessSharedEvidenceCallable = httpsCallable(functions, 'accessSharedEvidence')
+// Module 49's review queue. submitExternalComment is unauthenticated, same
+// as getSharedCase/accessSharedEvidence; listExternalComments and
+// reviewExternalComment are the assigned Case Handler's own tools, gated by
+// requireHandlerUid() below like createExternalShare/listCaseShares/
+// revokeExternalShare.
+const submitExternalCommentCallable = httpsCallable(functions, 'submitExternalComment')
+const listExternalCommentsCallable = httpsCallable(functions, 'listExternalComments')
+const reviewExternalCommentCallable = httpsCallable(functions, 'reviewExternalComment')
 
 // Mirrors MIN_PURPOSE_LENGTH in functions/src/sharing/createShare.js -
 // duplicated to gate the form and message the requirement; the server
@@ -90,4 +98,23 @@ export async function getSharedCase({ shareId, token, acceptedName }) {
 export async function getSharedEvidenceDownloadUrl(shareId, token, fileName) {
   const result = await accessSharedEvidenceCallable({ shareId, token, fileName })
   return result.data.downloadUrl
+}
+
+// Unauthenticated, deliberately - the recipient sending feedback back is the
+// same holder-of-the-token as the rest of this view, never signed in.
+export async function submitExternalComment(shareId, token, text) {
+  const result = await submitExternalCommentCallable({ shareId, token, text })
+  return result.data
+}
+
+export async function listExternalComments(caseId) {
+  requireHandlerUid()
+  const result = await listExternalCommentsCallable({ caseId })
+  return result.data.comments
+}
+
+export async function reviewExternalComment(commentId, action, text) {
+  requireHandlerUid()
+  const result = await reviewExternalCommentCallable({ commentId, action, text })
+  return result.data
 }

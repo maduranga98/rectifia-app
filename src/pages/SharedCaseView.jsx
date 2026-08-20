@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { getSharedCase, getSharedEvidenceDownloadUrl, SCOPE_LABELS } from '../services/shareService'
+import { getSharedCase, getSharedEvidenceDownloadUrl, submitExternalComment, SCOPE_LABELS } from '../services/shareService'
 import Alert from '../components/ui/Alert'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
-import { Input } from '../components/ui/Field'
+import { Input, Textarea } from '../components/ui/Field'
 
 function formatTimestamp(ms) {
   if (!ms) return '-'
@@ -120,6 +120,72 @@ function EvidenceOpenAction({ shareId, token, fileName }) {
       </Button>
       {failed && <span className="text-xs text-critical">{t('sharedCaseView.evidence.openFailed')}</span>}
     </div>
+  )
+}
+
+const MAX_COMMENT_LENGTH = 4000
+
+// Module 49. A single textarea + send button - deliberately not an ongoing
+// thread. Once sent, the form is replaced with a confirmation rather than
+// left resettable: the recipient's note goes into a review queue the Case
+// Handler decides whether to act on, not a conversation this view keeps
+// open. Copy throughout makes clear this does not join the case record
+// directly.
+function CommentForm({ shareId, token }) {
+  const { t } = useTranslation()
+  const [text, setText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+  const [sent, setSent] = useState(false)
+
+  const trimmedLength = text.trim().length
+  const canSubmit = trimmedLength > 0 && trimmedLength <= MAX_COMMENT_LENGTH && !submitting
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    if (!canSubmit) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await submitExternalComment(shareId, token, text.trim())
+      setSent(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (sent) {
+    return <Alert variant="success">{t('sharedCaseView.comment.sentConfirmation')}</Alert>
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <p className="text-sm text-muted">{t('sharedCaseView.comment.description')}</p>
+      <Textarea
+        label={t('sharedCaseView.comment.label')}
+        rows={4}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        error={
+          trimmedLength > MAX_COMMENT_LENGTH
+            ? t('sharedCaseView.comment.tooLong', { max: MAX_COMMENT_LENGTH })
+            : undefined
+        }
+      />
+      {error && <Alert variant="error">{error}</Alert>}
+      <Button
+        type="submit"
+        variant="primary"
+        className="self-start"
+        loading={submitting}
+        loadingLabel={t('sharedCaseView.comment.sending')}
+        disabled={!canSubmit}
+      >
+        {t('sharedCaseView.comment.send')}
+      </Button>
+    </form>
   )
 }
 
@@ -455,6 +521,13 @@ function SharedCaseView() {
                   ))}
                 </ul>
               )}
+            </Section>
+
+            <Section
+              title={t('sharedCaseView.comment.sectionTitle')}
+              description={t('sharedCaseView.comment.sectionDescription')}
+            >
+              <CommentForm shareId={shareId} token={token} />
             </Section>
 
             <p className="pb-8 text-center text-xs text-muted">{t('sharedCaseView.footer')}</p>
