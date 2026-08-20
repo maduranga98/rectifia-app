@@ -882,6 +882,13 @@
       "loading": "Translating…",
       "failed": "Translation failed.",
       "resultLabel": "Translated from detected language - original above"
+    },
+    "askInThread": {
+      "trigger": "Ask in thread",
+      "intentLabel": "What do you want to ask about?",
+      "intentPlaceholder": "e.g. Ask about the January 19th in-person comment she mentioned but didn't document",
+      "draft": "Draft question",
+      "drafting": "Drafting…"
     }
   },
   "followUpPrompt": {

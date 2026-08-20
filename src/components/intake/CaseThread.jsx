@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   addManualLogEntry,
+  askInThread,
   getCaseThread,
   getCaseThreadForHandler,
   getEvidenceDownloadUrl,
@@ -208,6 +209,14 @@ function CaseThread({ caseId, mode, passcode }) {
   const [pendingFiles, setPendingFiles] = useState([])
   const [logDraft, setLogDraft] = useState('')
   const [showLogForm, setShowLogForm] = useState(false)
+  // Investigator-only. Drafting is a separate in-flight flag from `sending`
+  // (posting a message) - the two can't happen at once from this UI, but
+  // conflating them would show "Sending…" while a draft is still being
+  // written, which is the wrong verb for what's happening.
+  const [showAskInThread, setShowAskInThread] = useState(false)
+  const [askIntent, setAskIntent] = useState('')
+  const [asking, setAsking] = useState(false)
+  const [askError, setAskError] = useState(null)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
   // Separate from `error` (send/log-entry failures) and, deliberately, not
@@ -320,6 +329,28 @@ function CaseThread({ caseId, mode, passcode }) {
 
   function removePendingFile(index) {
     setPendingFiles((current) => current.filter((_, i) => i !== index))
+  }
+
+  // Drafts one reporter-facing question from `askIntent` and drops it into
+  // the composer for review - it is never sent on its own. The handler edits
+  // or sends it exactly like anything else they typed, through the same
+  // handleSend/sendInvestigatorMessage path above.
+  async function handleAskInThread(event) {
+    event.preventDefault()
+    if (!askIntent.trim()) return
+
+    setAsking(true)
+    setAskError(null)
+    try {
+      const question = await askInThread(caseId, askIntent)
+      setDraft(question)
+      setAskIntent('')
+      setShowAskInThread(false)
+    } catch (err) {
+      setAskError(err.message)
+    } finally {
+      setAsking(false)
+    }
   }
 
   async function handleAddLog(event) {
@@ -469,6 +500,60 @@ function CaseThread({ caseId, mode, passcode }) {
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
+
+      {/* Investigator-only. Drafts one reporter-facing question from a short
+          intent, using the case's own thread and questionnaire responses -
+          see askInThread.js. The draft lands in the composer below for the
+          handler to review and edit; it is never sent on its own. */}
+      {mode === 'investigator' && (
+        <div className="rounded-lg border border-navy-200 bg-navy-50 p-3">
+          {!showAskInThread ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="sparkle"
+              onClick={() => setShowAskInThread(true)}
+              className="text-navy"
+            >
+              {t('caseThread.askInThread.trigger')}
+            </Button>
+          ) : (
+            <form onSubmit={handleAskInThread} className="flex flex-col gap-2">
+              <textarea
+                aria-label={t('caseThread.askInThread.intentLabel')}
+                value={askIntent}
+                onChange={(e) => setAskIntent(e.target.value)}
+                rows={2}
+                placeholder={t('caseThread.askInThread.intentPlaceholder')}
+                className="field border-navy-200"
+              />
+              {askError && <Alert variant="error">{askError}</Alert>}
+              <div className="flex gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  loading={asking}
+                  loadingLabel={t('caseThread.askInThread.drafting')}
+                  disabled={!askIntent.trim()}
+                >
+                  {t('caseThread.askInThread.draft')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowAskInThread(false)
+                    setAskError(null)
+                  }}
+                >
+                  {t('common.cancel')}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSend} className="flex flex-col gap-2 border-t border-line-soft pt-4">
         <textarea

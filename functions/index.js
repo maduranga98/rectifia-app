@@ -21,6 +21,7 @@ const {
 const { aiFollowUp } = require('./src/intake/aiFollowUp')
 const { translateMessage } = require('./src/intake/translateMessage')
 const { generateChecklist, updateChecklistItem } = require('./src/intake/generateChecklist')
+const { askInThread } = require('./src/intake/askInThread')
 const { storeReferenceCase } = require('./src/consistency/storeReferenceCase')
 const { checkConsistency } = require('./src/consistency/checkConsistency')
 const { detectPatterns } = require('./src/patterns/detectPatterns')
@@ -139,6 +140,7 @@ exports.requestEvidenceDownloadUrl = requestEvidenceDownloadUrl
 exports.aiFollowUp = aiFollowUp
 exports.translateMessage = translateMessage
 exports.generateChecklist = generateChecklist
+exports.askInThread = askInThread
 exports.updateChecklistItem = updateChecklistItem
 exports.storeReferenceCase = storeReferenceCase
 exports.checkConsistency = checkConsistency
