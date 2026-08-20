@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
+const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCaseForHandler, logPrivilegedAction } = require('../utils/staffAuth')
 const { EXTERNAL_SHARE_COMMENTS_COLLECTION } = require('./submitExternalComment')
@@ -31,11 +32,25 @@ exports.listExternalComments = onCall(async (request) => {
     throw new HttpsError('permission-denied', "Only the assigned Case Handler may view this case's external feedback")
   }
 
-  const commentsSnapshot = await firestore
-    .collection(EXTERNAL_SHARE_COMMENTS_COLLECTION)
-    .where('caseId', '==', caseId)
-    .orderBy('submittedAt', 'desc')
-    .get()
+  let commentsSnapshot
+  try {
+    commentsSnapshot = await firestore
+      .collection(EXTERNAL_SHARE_COMMENTS_COLLECTION)
+      .where('caseId', '==', caseId)
+      .orderBy('submittedAt', 'desc')
+      .get()
+  } catch (err) {
+    // A callable that throws a plain (non-HttpsError) error is collapsed by
+    // the Functions framework into a bare 'internal' error with no detail
+    // reaching the client - the exact failure mode listCaseShares.js already
+    // hits if the composite index on (caseId, submittedAt) declared in
+    // firestore.indexes.json was never actually deployed
+    // (`firebase deploy --only firestore:indexes`) or is still building.
+    // Logging the real error here is what makes that diagnosable from Cloud
+    // Functions logs instead of a dead end.
+    logger.error('listExternalComments: query failed', { caseId, error: err.message })
+    throw err
+  }
 
   const comments = commentsSnapshot.docs.map((doc) => {
     const data = doc.data()
