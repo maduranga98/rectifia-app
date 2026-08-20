@@ -1430,7 +1430,11 @@
     "uploaded": "Uploaded {{date}}",
     "open": "Open",
     "archive": "Archive",
-    "restore": "Restore"
+    "restore": "Restore",
+    "deduplicate": "Clean up duplicates",
+    "deduplicateResult_zero": "No duplicates found.",
+    "deduplicateResult_one": "{{count}} duplicate removed.",
+    "deduplicateResult_other": "{{count}} duplicates removed."
   },
   "designatedHandlersPage": {
     "status": {

@@ -40,6 +40,7 @@ const requestPolicyDownloadUrlCallable = httpsCallable(functions, 'requestPolicy
 const archivePolicyDocumentCallable = httpsCallable(functions, 'archivePolicyDocument')
 const restorePolicyDocumentCallable = httpsCallable(functions, 'restorePolicyDocument')
 const deletePolicyDocumentCallable = httpsCallable(functions, 'deletePolicyDocument')
+const deduplicatePolicyChunksCallable = httpsCallable(functions, 'deduplicatePolicyChunks')
 
 // The .md exception: a Markdown file is very often served by the browser as
 // text/plain (empty file.type on some systems too). Accept it by extension so
@@ -170,6 +171,14 @@ export async function restorePolicy(policyId) {
 
 export async function deletePolicy(policyId) {
   await deletePolicyDocumentCallable({ policyId })
+}
+
+// Company Admin cleanup for a policy affected by the duplicate-chunk
+// ingestion bug (Module 48) - collapses chunks that were written twice by a
+// redelivered Storage finalize event back down to one per source passage.
+export async function deduplicatePolicyChunks(policyId) {
+  const { data } = await deduplicatePolicyChunksCallable({ policyId })
+  return data
 }
 
 // Fetches a fresh, short-lived signed URL to open a policy document at the

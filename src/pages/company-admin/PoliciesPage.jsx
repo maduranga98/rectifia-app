@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import {
   POLICY_CATEGORIES,
   archivePolicy,
+  deduplicatePolicyChunks,
   deletePolicy,
   getPolicyDownloadUrl,
   listPolicies,
@@ -39,6 +40,7 @@ function PoliciesPage({ companyId }) {
   const [policies, setPolicies] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
   const refresh = useCallback(async () => {
@@ -87,6 +89,25 @@ function PoliciesPage({ companyId }) {
     }
   }
 
+  async function handleDeduplicate(policyId) {
+    setBusyId(policyId)
+    setError(null)
+    setNotice(null)
+    try {
+      const result = await deduplicatePolicyChunks(policyId)
+      setNotice(
+        result.duplicatesRemoved === 0
+          ? t('policiesPage.deduplicateResult_zero')
+          : t('policiesPage.deduplicateResult', { count: result.duplicatesRemoved })
+      )
+      await refresh()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   // Coverage: which categories any *active* policy can ground, and which have
   // nothing. This is the at-a-glance answer to "we have a harassment policy but
   // nothing burnout can draw on".
@@ -99,6 +120,7 @@ function PoliciesPage({ companyId }) {
       <p className="max-w-2xl text-sm text-muted">{t('policiesPage.description')}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
+      {notice && <Alert variant="success">{notice}</Alert>}
 
       <Card title={t('policiesPage.coverage.title')} description={t('policiesPage.coverage.description')}>
         <div className="flex flex-wrap gap-2">
@@ -198,6 +220,16 @@ function PoliciesPage({ companyId }) {
                         onClick={() => runAction(policy.id, restorePolicy)}
                       >
                         {t('policiesPage.restore')}
+                      </Button>
+                    )}
+                    {(policy.status === 'active' || policy.status === 'archived') && policy.chunkCount > 1 && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={busyId === policy.id}
+                        onClick={() => handleDeduplicate(policy.id)}
+                      >
+                        {t('policiesPage.deduplicate')}
                       </Button>
                     )}
                     <Button
