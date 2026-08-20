@@ -231,7 +231,7 @@ service cloud.firestore {
     function pulseCheckFeatureFlagLocked() {
       return !('featureFlags' in request.resource.data.diff(resource.data).affectedKeys())
         || request.resource.data.featureFlags.get('pulseCheck', null)
-          == resource.data.featureFlags.get('pulseCheck', null);
+          == resource.data.get('featureFlags', {}).get('pulseCheck', null);
     }
 
     // The one allowed shape for a brand new company doc's billing fields:
