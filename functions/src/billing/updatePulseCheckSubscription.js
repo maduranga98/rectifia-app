@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
+const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const { PROGRESSIVE_THRESHOLD_EMPLOYEES, pulseCheckBandForEmployeeCount } = require('./pricingEngine')
@@ -12,6 +13,7 @@ if (!admin.apps.length) {
 
 const COMPANIES_COLLECTION = 'companies'
 const EMPLOYEES_SUBCOLLECTION = 'employees'
+const NOTIFICATIONS_COLLECTION = 'notifications'
 
 // Adds or removes the Pulse Check add-on item on a company's EXISTING Stripe
 // subscription - never a new Checkout Session, since a payment method is
@@ -116,6 +118,24 @@ exports.updatePulseCheckSubscription = onCall({ secrets: [stripeSecretKey] }, as
     expand: ['items.data.price.product'],
   })
   await applySubscriptionState(firestore, companyId, subscription)
+
+  // Company-facing (companyAdmin role) - enable flag only. Best-effort: a
+  // failure here must never fail the toggle itself, which has already
+  // succeeded above.
+  try {
+    await firestore.collection(NOTIFICATIONS_COLLECTION).add({
+      type: 'pulseCheckToggled',
+      companyId,
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      enable,
+    })
+  } catch (err) {
+    logger.error('updatePulseCheckSubscription: failed to write pulseCheckToggled notification', {
+      companyId,
+      error: err.message,
+    })
+  }
 
   await logPrivilegedAction(firestore, {
     uid,

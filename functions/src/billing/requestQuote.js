@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
+const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const {
@@ -16,6 +17,7 @@ if (!admin.apps.length) {
 
 const COMPANIES_COLLECTION = 'companies'
 const QUOTE_REQUESTS_COLLECTION = 'quoteRequests'
+const NOTIFICATIONS_COLLECTION = 'notifications'
 
 // The only way a Company Admin can ask Rectifia for a price, at any
 // headcount. Pilot v1 has a handful of founding customers on individually
@@ -194,6 +196,28 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
     outcome: 'granted',
     detail: targets.join(','),
   })
+
+  // Lumora-sales-facing only (resolveSuperAdminEmails in
+  // deliverNotifications.js) - never the Company Admin who requested it,
+  // and never the computed price, same "never leaks the formula to the
+  // client" rule this callable's return value already follows. Best-effort:
+  // a failure here must never fail the quote request itself, which has
+  // already succeeded above.
+  try {
+    await firestore.collection(NOTIFICATIONS_COLLECTION).add({
+      type: 'quoteRequested',
+      companyId,
+      status: 'pending',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      employeeCount,
+      stripeQuoteId: stripeQuote.id,
+    })
+  } catch (err) {
+    logger.error('requestQuote: failed to write quoteRequested notification', {
+      companyId,
+      error: err.message,
+    })
+  }
 
   // Deliberately bare - no monthlyPrice, no breakdown, no rate. The quote
   // just written above is for Lumora's own sales follow-up only.

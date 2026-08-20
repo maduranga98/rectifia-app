@@ -275,6 +275,106 @@ async function buildEmailForNotification(firestore, data, { getCompanyName }) {
       return { recipients: [data.recipientEmail], subject, text, html: null }
     }
 
+    case 'quoteRequested': {
+      // Lumora-sales-facing only (requestQuote.js) - never the Company Admin
+      // who requested it. Never the computed price, only the id of the
+      // Stripe Quote object sales works from.
+      const recipients = await resolveSuperAdminEmails(firestore)
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const companyName = (await getCompanyName(data.companyId)) || data.companyId
+      const subject = `New quote requested: ${companyName}`
+      const text = [
+        `${companyName} has requested a quote.`,
+        '',
+        `Company: ${data.companyId ?? 'unknown'}`,
+        `Employee count: ${data.employeeCount ?? 'unknown'}`,
+        `Stripe Quote: ${data.stripeQuoteId ?? 'unknown'}`,
+        '',
+        'Open the Stripe Dashboard to review, negotiate, and send the quote.',
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
+    case 'subscriptionLinked': {
+      // Company-facing (linkCompanySubscription.js) - a one-line
+      // confirmation only, never Stripe ids or price breakdowns.
+      const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['companyAdmin'])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const subject = 'Your Rectifia subscription has been set up'
+      const text = [
+        `Your Rectifia subscription has been linked on the ${data.subscriptionTier ?? 'selected'} plan.`,
+        '',
+        'Open the Billing page in your admin dashboard for details.',
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
+    case 'coreTierChanged': {
+      // Company-facing (changeCoreTier.js, shared by both upgrade paths) -
+      // previousTier/newTier/action only, no price data (already visible on
+      // BillingPage.jsx).
+      const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['companyAdmin'])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const subject = 'Your Rectifia plan has changed'
+      const text = [
+        `Your Rectifia Core plan has changed from ${data.previousTier ?? 'unknown'} to ${data.newTier ?? 'unknown'}.`,
+        '',
+        `Reason: ${data.action ?? 'unknown'}`,
+        '',
+        'Open the Billing page in your admin dashboard for details.',
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
+    case 'pulseCheckToggled': {
+      // Company-facing (updatePulseCheckSubscription.js).
+      const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['companyAdmin'])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const subject = data.enable ? 'Pulse Check has been added to your plan' : 'Pulse Check has been removed from your plan'
+      const text = [
+        data.enable
+          ? 'The Pulse Check add-on has been enabled on your Rectifia subscription.'
+          : 'The Pulse Check add-on has been removed from your Rectifia subscription.',
+        '',
+        'Open the Billing page in your admin dashboard for details.',
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
+    case 'paymentFailed': {
+      // Company-facing (stripeWebhook.js, invoice.payment_failed) - highest
+      // priority of these. Deliberately carries nothing from the invoice
+      // object here, or in this email - no line items, no amounts.
+      const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['companyAdmin'])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const subject = 'Action needed: a payment on your Rectifia subscription failed'
+      const text = [
+        'A recent payment on your Rectifia subscription did not go through.',
+        '',
+        `Update your payment method at ${appBaseUrl.value()}/admin/billing to avoid interruption to your service.`,
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
+    case 'subscriptionCanceled': {
+      // Both company-facing (companyAdmin role) AND Lumora-facing
+      // (resolveSuperAdminEmails) - stripeWebhook.js, customer.subscription.deleted.
+      const [companyRecipients, superAdminRecipients] = await Promise.all([
+        resolveStaffEmailsByRole(firestore, data.companyId, ['companyAdmin']),
+        resolveSuperAdminEmails(firestore),
+      ])
+      const recipients = dedupe([...companyRecipients, ...superAdminRecipients])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const companyName = (await getCompanyName(data.companyId)) || data.companyId
+      const subject = `Your Rectifia subscription (${companyName}) has been canceled`
+      const text = [
+        `The Rectifia subscription for ${companyName} has been canceled.`,
+        '',
+        'If this was unexpected, open the Billing page in your admin dashboard, or contact Rectifia support.',
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
     case 'acknowledgmentDeadlineRisk':
     case 'feedbackDeadlineRisk': {
       const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['hrCoordinator'])
