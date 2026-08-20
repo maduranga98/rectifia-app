@@ -112,6 +112,12 @@ const limits = {
   // itself since a normal viewing session opens a handful of files, not a
   // handful of page loads.
   accessSharedEvidence: limit('accessSharedEvidence', 'RATE_LIMIT_ACCESS_SHARED_EVIDENCE', 20),
+  // Module 49's external feedback queue (functions/src/sharing/
+  // submitExternalComment.js), scoped per share like postReporterMessage is
+  // scoped per case - so several people behind one NAT can each still send
+  // their own note. Occasional feedback, not a high-frequency endpoint like
+  // getSharedCase/accessSharedEvidence, so this stays tight.
+  submitExternalComment: limit('submitExternalComment', 'RATE_LIMIT_SUBMIT_EXTERNAL_COMMENT', 5),
 }
 
 // Resolves a configured limit to a usable number. Anything that is not a

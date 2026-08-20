@@ -117,6 +117,9 @@ const { getSharedCase } = require('./src/sharing/accessShare')
 const { accessSharedEvidence } = require('./src/sharing/accessSharedEvidence')
 const { revokeExternalShare } = require('./src/sharing/revokeShare')
 const { expireShares } = require('./src/sharing/expireShares')
+const { submitExternalComment } = require('./src/sharing/submitExternalComment')
+const { reviewExternalComment } = require('./src/sharing/reviewExternalComment')
+const { listExternalComments } = require('./src/sharing/listExternalComments')
 const { aggregateCaseAnalytics } = require('./src/analytics/aggregateCaseAnalytics')
 const { exportComplianceReport } = require('./src/analytics/exportComplianceReport')
 
@@ -357,6 +360,16 @@ exports.getSharedCase = getSharedCase
 exports.accessSharedEvidence = accessSharedEvidence
 exports.revokeExternalShare = revokeExternalShare
 exports.expireShares = expireShares
+// Module 49: External Advisor Feedback (Review Queue). submitExternalComment
+// is the second unauthenticated entry point a share recipient ever reaches
+// (alongside getSharedCase/accessSharedEvidence above) - it never writes case
+// content directly, only to the externalShareComments holding collection.
+// reviewExternalComment/listExternalComments are the assigned Case Handler's
+// own tools, matching createExternalShare/listCaseShares/revokeExternalShare's
+// Company-Admin-has-no-path shape.
+exports.submitExternalComment = submitExternalComment
+exports.reviewExternalComment = reviewExternalComment
+exports.listExternalComments = listExternalComments
 // Module 28: Analytics & Reporting Dashboard. aggregateCaseAnalytics is the
 // daily scheduled recompute of companies/{companyId}/analytics/* from
 // caseMetadata and referenceCases only - never cases/{caseId}, never

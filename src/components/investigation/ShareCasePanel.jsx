@@ -4,6 +4,8 @@ import {
   createExternalShare,
   listCaseShares,
   revokeExternalShare,
+  listExternalComments,
+  reviewExternalComment,
   MIN_PURPOSE_LENGTH,
   MAX_EXPIRES_DAYS,
   DEFAULT_EXPIRES_DAYS,
@@ -250,6 +252,116 @@ function CreateShareForm({ caseId, disabled, evidenceInventory, isAnonymousTier,
   )
 }
 
+const COMMENT_STATUS_TONE = {
+  pending: 'tone-high',
+  logged: 'tone-low',
+  dismissed: 'tone-neutral',
+}
+
+// One piece of feedback from an external share recipient. Pending rows are
+// the ones needing action: "Log to case" opens an editable textarea
+// pre-filled with the original text (the handler may edit or paraphrase
+// before it becomes a permanent entry), "Dismiss" needs no confirmation step
+// - dismissing loses nothing since the original submission stays on record
+// with status 'dismissed'. Already-reviewed rows render read-only with their
+// resulting status badge.
+function CommentRow({ comment, onChanged }) {
+  const { t } = useTranslation()
+  const [logging, setLogging] = useState(false)
+  const [editedText, setEditedText] = useState(comment.text)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function handleLog() {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await reviewExternalComment(comment.commentId, 'log', editedText.trim())
+      setLogging(false)
+      await onChanged()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDismiss() {
+    setSubmitting(true)
+    setError(null)
+    try {
+      await reviewExternalComment(comment.commentId, 'dismiss')
+      await onChanged()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium text-charcoal">
+              {comment.recipientName} · {comment.recipientOrganisation}
+            </p>
+            <Badge tone={COMMENT_STATUS_TONE[comment.status] ?? 'tone-neutral'} dot>
+              {t(`shareCasePanel.comments.status.${comment.status}`, { defaultValue: comment.status })}
+            </Badge>
+          </div>
+          <p className="mt-0.5 text-xs text-muted">{formatDate(comment.submittedAt)}</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-charcoal">{comment.text}</p>
+          {comment.status !== 'pending' && (
+            <p className="mt-1 text-xs text-muted">
+              {t('shareCasePanel.comments.reviewedOn', { date: formatDate(comment.reviewedAt) })}
+            </p>
+          )}
+        </div>
+        {comment.status === 'pending' && !logging && (
+          <div className="flex shrink-0 gap-2">
+            <Button variant="secondary" size="sm" onClick={() => setLogging(true)}>
+              {t('shareCasePanel.comments.logToCase')}
+            </Button>
+            <Button variant="dangerGhost" size="sm" loading={submitting} onClick={handleDismiss}>
+              {t('shareCasePanel.comments.dismiss')}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {error && <Alert variant="error">{error}</Alert>}
+
+      {logging && (
+        <div className="flex flex-col gap-2 rounded-lg border border-line p-3">
+          <Textarea
+            label={t('shareCasePanel.comments.logTextLabel')}
+            rows={3}
+            value={editedText}
+            onChange={(e) => setEditedText(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              loading={submitting}
+              loadingLabel={t('shareCasePanel.comments.logging')}
+              disabled={!editedText.trim()}
+              onClick={handleLog}
+            >
+              {t('shareCasePanel.comments.confirmLog')}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setLogging(false)} disabled={submitting}>
+              {t('common.cancel')}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ShareRow({ share, onChanged }) {
   const { t } = useTranslation()
   const [revoking, setRevoking] = useState(false)
@@ -346,7 +458,9 @@ function ShareRow({ share, onChanged }) {
 function ShareCasePanel({ caseId }) {
   const { t } = useTranslation()
   const [shares, setShares] = useState(null)
+  const [comments, setComments] = useState(null)
   const [error, setError] = useState(null)
+  const [commentsError, setCommentsError] = useState(null)
   const [evidenceInventory, setEvidenceInventory] = useState([])
   // Defaults to the stricter, anonymous-tier acknowledgement until the case
   // doc actually loads - an unknown tier should never relax the gate.
@@ -360,9 +474,18 @@ function ShareCasePanel({ caseId }) {
     }
   }, [caseId])
 
+  const refreshComments = useCallback(async () => {
+    try {
+      setComments(await listExternalComments(caseId))
+    } catch (err) {
+      setCommentsError(err.message)
+    }
+  }, [caseId])
+
   useEffect(() => {
     refresh()
-  }, [refresh])
+    refreshComments()
+  }, [refresh, refreshComments])
 
   // The file picker's own data, loaded independently of the shares list: the
   // same thread flatten CaseEvidencePanel.jsx (Module 36) uses via
@@ -392,6 +515,7 @@ function ShareCasePanel({ caseId }) {
   }, [caseId])
 
   const activeCount = shares?.filter((s) => s.status === 'active').length ?? 0
+  const pendingCommentCount = comments?.filter((c) => c.status === 'pending').length ?? 0
 
   return (
     <div className="flex flex-col gap-5">
@@ -407,6 +531,33 @@ function ShareCasePanel({ caseId }) {
             isAnonymousTier={isAnonymousTier}
             onCreated={refresh}
           />
+        )}
+      </Card>
+
+      <Card
+        title={t('shareCasePanel.comments.cardTitle')}
+        description={t('shareCasePanel.comments.cardDescription')}
+      >
+        {commentsError && <Alert variant="error">{commentsError}</Alert>}
+        {comments === null ? (
+          <SkeletonList rows={2} />
+        ) : (
+          <>
+            {pendingCommentCount > 0 && (
+              <Alert variant="info" className="mb-3">
+                {t('shareCasePanel.comments.pendingBanner', { count: pendingCommentCount })}
+              </Alert>
+            )}
+            {comments.length === 0 ? (
+              <EmptyState compact icon="mail" title={t('shareCasePanel.comments.empty')} />
+            ) : (
+              <div className="flex flex-col divide-y divide-line-soft">
+                {comments.map((comment) => (
+                  <CommentRow key={comment.commentId} comment={comment} onChanged={refreshComments} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </Card>
 

@@ -127,6 +127,14 @@
       ]
     },
     {
+      "collectionGroup": "externalShareComments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "caseId", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "securityAlerts",
       "queryScope": "COLLECTION",
       "fields": [

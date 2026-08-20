@@ -1203,5 +1203,17 @@ service cloud.firestore {
     match /externalAccessLog/{entryId} {
       allow read, write: if false;
     }
+
+    // Module 49: External Advisor Feedback (Review Queue). Sealed exactly
+    // like externalShares above - every access goes through the three
+    // callables in functions/src/sharing/{submitExternalComment,
+    // reviewExternalComment,listExternalComments}.js, including for a Super
+    // Admin. This collection carries real case-adjacent content (the
+    // recipient's actual feedback text), unlike reportExports' metadata-only
+    // shape, so it follows cases/{caseId}'s own access model - assigned Case
+    // Handler only, no Company Admin path - not reportExports' broader one.
+    match /externalShareComments/{commentId} {
+      allow read, write: if false;
+    }
   }
 }
