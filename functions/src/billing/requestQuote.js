@@ -19,74 +19,17 @@ const COMPANIES_COLLECTION = 'companies'
 const QUOTE_REQUESTS_COLLECTION = 'quoteRequests'
 const NOTIFICATIONS_COLLECTION = 'notifications'
 
-// The only way a Company Admin can ask Rectifia for a price, at any
-// headcount. Pilot v1 has a handful of founding customers on individually
-// negotiated discounts and no self-serve subscription path at all (see
-// BillingPage.jsx - there is no "set up billing" button anywhere in the
-// app), so this callable is deliberately not gated to a large-company
-// threshold the way its predecessor (requestEnterpriseQuote) was. It
-// computes the real quote using this module's own copy of Module 29's
-// pricing engine (functions/src/billing/pricingEngine.js - the same
-// calculateMonthlyPrice() calculateQuote.js uses for its own read-only
-// reference quote) and files it as an actual Stripe Quote
-// (stripe.quotes.create, left as a draft - never finalized or sent from
-// here) against the company's Stripe Customer, in addition to the existing
-// quoteRequests/{companyId} Firestore record for Lumora's internal
-// follow-up. Sales finalizes and sends the Stripe Quote by hand from the
-// Stripe Dashboard once they've reviewed it, and negotiates whatever actual
-// price and discount the company ends up on - this callable's job is only
-// to get a real, priced Stripe object and an internal record in front of
-// them, never to complete a purchase itself. The formula, the brackets, and
-// the per-employee rates that produced the number NEVER appear in this
-// callable's return value to the client - only a bare confirmation that the
-// request was recorded. Once sales has negotiated a price, a human sets up
-// the actual Stripe subscription and writes company.stripeSubscriptionId /
-// billingStatus / subscriptionTier directly (see stripeWebhook.js's file
-// comment) - nothing in this directory creates a subscription anymore.
-exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) => {
-  const uid = requireAuthUid(request)
-  const { companyId, targets: requestedTargets } = request.data || {}
-
-  if (typeof companyId !== 'string' || !companyId) {
-    throw new HttpsError('invalid-argument', 'companyId is required')
-  }
-  const tokenCompanyId = request.auth?.token?.companyId
-  if (!tokenCompanyId || tokenCompanyId !== companyId) {
-    throw new HttpsError('permission-denied', 'You may only request billing for your own company')
-  }
-  // Defaults to both - a Company Admin only ever sees a single "Request a
-  // quote" button (see BillingPage.jsx), so the common case is asking for
-  // Core and Pulse Check together in one Quote.
-  const targets = requestedTargets == null ? ['core', 'pulseCheck'] : requestedTargets
-  if (
-    !Array.isArray(targets) ||
-    targets.length === 0 ||
-    targets.some((target) => target !== 'core' && target !== 'pulseCheck') ||
-    new Set(targets).size !== targets.length
-  ) {
-    throw new HttpsError('invalid-argument', "targets must be a non-empty array of unique values from 'core', 'pulseCheck'")
-  }
-
-  const firestore = admin.firestore()
-  const role = await loadCallerRole(firestore, companyId, uid, 'request_quote')
-  if (role !== 'companyAdmin') {
-    await logPrivilegedAction(firestore, {
-      uid,
-      companyId,
-      role,
-      action: 'request_quote',
-      outcome: 'denied:permission-denied',
-      detail: 'role_not_company_admin',
-    })
-    throw new HttpsError('permission-denied', 'Only a Company Admin may request a quote')
-  }
-
-  const companySnapshot = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
-  if (!companySnapshot.exists) {
-    throw new HttpsError('not-found', 'Company not found')
-  }
-  const company = companySnapshot.data()
-
+// The shared quote-building core behind both the Company-Admin-initiated
+// onCall below and autoGenerateQuoteOnGrowth.js's Firestore trigger:
+// resolves the effective employee count, computes the reference quote per
+// target via pricingEngine.js, files a real (draft, never finalized) Stripe
+// Quote against the company's Stripe Customer, and records the result in
+// quoteRequests/{companyId}. `triggeredBy` ('companyAdmin' | 'system') is
+// stored on each requests.{target} entry so the record itself says whether
+// a human asked for this or the growth trigger fired it - callable-agnostic
+// by design so it carries no onCall/auth concerns of its own; the caller is
+// responsible for authorizing the request before calling this.
+async function generateAndFileQuote(firestore, stripe, { companyId, company, targets, triggeredBy }) {
   const { count: employeeCount } = resolveEffectiveEmployeeCount(company)
   if (employeeCount === null) {
     throw new HttpsError(
@@ -115,7 +58,6 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
   }
   const quotesByTarget = Object.fromEntries(targets.map((target) => [target, quoteForTarget(target)]))
 
-  const stripe = getStripeClient()
   const companyRef = firestore.collection(COMPANIES_COLLECTION).doc(companyId)
 
   let stripeCustomerId = company.stripeCustomerId
@@ -169,7 +111,7 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
         employeeCountAtRequest: employeeCount,
         quote: quotesByTarget[target],
         stripeQuoteId: stripeQuote.id,
-        requestedByUid: uid,
+        triggeredBy,
         requestedAt: admin.firestore.FieldValue.serverTimestamp(),
         status: 'pending',
       },
@@ -188,21 +130,14 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
       { merge: true }
     )
 
-  await logPrivilegedAction(firestore, {
-    uid,
-    companyId,
-    role,
-    action: 'request_quote',
-    outcome: 'granted',
-    detail: targets.join(','),
-  })
-
   // Lumora-sales-facing only (resolveSuperAdminEmails in
   // deliverNotifications.js) - never the Company Admin who requested it,
   // and never the computed price, same "never leaks the formula to the
   // client" rule this callable's return value already follows. Best-effort:
   // a failure here must never fail the quote request itself, which has
-  // already succeeded above.
+  // already succeeded above. Fires identically regardless of triggeredBy -
+  // sales gets the same alert whether a human asked or the growth trigger
+  // fired it; only the stored record distinguishes how it originated.
   try {
     await firestore.collection(NOTIFICATIONS_COLLECTION).add({
       type: 'quoteRequested',
@@ -213,11 +148,82 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
       stripeQuoteId: stripeQuote.id,
     })
   } catch (err) {
-    logger.error('requestQuote: failed to write quoteRequested notification', {
+    logger.error('generateAndFileQuote: failed to write quoteRequested notification', {
       companyId,
       error: err.message,
     })
   }
+
+  return { employeeCount, stripeQuote, quotesByTarget }
+}
+
+// The only way a Company Admin can ask Rectifia for a price, at any
+// headcount. Pilot v1 has a handful of founding customers on individually
+// negotiated discounts and no self-serve subscription path at all (see
+// BillingPage.jsx - there is no "set up billing" button anywhere in the
+// app), so this callable is deliberately not gated to a large-company
+// threshold the way its predecessor (requestEnterpriseQuote) was. Auth and
+// role checks live here; the actual quote-building work is shared with
+// autoGenerateQuoteOnGrowth.js's Firestore trigger via
+// generateAndFileQuote() above, so both paths file the same shape of Stripe
+// Quote and quoteRequests record, distinguished only by triggeredBy.
+exports.generateAndFileQuote = generateAndFileQuote
+
+exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) => {
+  const uid = requireAuthUid(request)
+  const { companyId, targets: requestedTargets } = request.data || {}
+
+  if (typeof companyId !== 'string' || !companyId) {
+    throw new HttpsError('invalid-argument', 'companyId is required')
+  }
+  const tokenCompanyId = request.auth?.token?.companyId
+  if (!tokenCompanyId || tokenCompanyId !== companyId) {
+    throw new HttpsError('permission-denied', 'You may only request billing for your own company')
+  }
+  // Defaults to both - a Company Admin only ever sees a single "Request a
+  // quote" button (see BillingPage.jsx), so the common case is asking for
+  // Core and Pulse Check together in one Quote.
+  const targets = requestedTargets == null ? ['core', 'pulseCheck'] : requestedTargets
+  if (
+    !Array.isArray(targets) ||
+    targets.length === 0 ||
+    targets.some((target) => target !== 'core' && target !== 'pulseCheck') ||
+    new Set(targets).size !== targets.length
+  ) {
+    throw new HttpsError('invalid-argument', "targets must be a non-empty array of unique values from 'core', 'pulseCheck'")
+  }
+
+  const firestore = admin.firestore()
+  const role = await loadCallerRole(firestore, companyId, uid, 'request_quote')
+  if (role !== 'companyAdmin') {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action: 'request_quote',
+      outcome: 'denied:permission-denied',
+      detail: 'role_not_company_admin',
+    })
+    throw new HttpsError('permission-denied', 'Only a Company Admin may request a quote')
+  }
+
+  const companySnapshot = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
+  if (!companySnapshot.exists) {
+    throw new HttpsError('not-found', 'Company not found')
+  }
+  const company = companySnapshot.data()
+
+  const stripe = getStripeClient()
+  await generateAndFileQuote(firestore, stripe, { companyId, company, targets, triggeredBy: 'companyAdmin' })
+
+  await logPrivilegedAction(firestore, {
+    uid,
+    companyId,
+    role,
+    action: 'request_quote',
+    outcome: 'granted',
+    detail: targets.join(','),
+  })
 
   // Deliberately bare - no monthlyPrice, no breakdown, no rate. The quote
   // just written above is for Lumora's own sales follow-up only.
