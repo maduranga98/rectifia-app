@@ -86,15 +86,27 @@ async function generateAndFileQuote(firestore, stripe, { companyId, company, tar
   // The bracket breakdown stays internal (in `quotesByTarget` below and in
   // quoteRequests), never on the Stripe object a customer could eventually
   // see.
+  // Stripe Quotes' price_data doesn't accept inline product_data the way
+  // Checkout Sessions and subscription updates do, so each target needs its
+  // own real Product created up front - a fresh one per quote request (never
+  // reused across requests) since the employee count is baked into the name.
+  const stripeProducts = await Promise.all(
+    targets.map(async (target) => {
+      const product = await stripe.products.create({
+        name: `Rectifia - ${target === 'core' ? 'Core plan' : 'Pulse Check add-on'} (${employeeCount} employees)`,
+        metadata: { rectifiaLineItem: LINE_ITEM_TAG[target === 'core' ? 'CORE' : 'PULSE_CHECK'] },
+      })
+      return [target, product.id]
+    })
+  )
+  const productIdByTarget = Object.fromEntries(stripeProducts)
+
   const stripeQuote = await stripe.quotes.create({
     customer: stripeCustomerId,
     line_items: targets.map((target) => ({
       price_data: {
         currency: 'usd',
-        product_data: {
-          name: `Rectifia - ${target === 'core' ? 'Core plan' : 'Pulse Check add-on'} (${employeeCount} employees)`,
-          metadata: { rectifiaLineItem: LINE_ITEM_TAG[target === 'core' ? 'CORE' : 'PULSE_CHECK'] },
-        },
+        product: productIdByTarget[target],
         unit_amount: Math.round(quotesByTarget[target].monthlyPrice * 100),
         recurring: { interval: 'month' },
       },
