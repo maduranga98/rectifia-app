@@ -1,13 +1,22 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getCompany } from '../../services/companyService'
-import { openBillingPortal, requestQuote } from '../../services/billingService'
+import { getCompanyQuote, openBillingPortal, requestQuote } from '../../services/billingService'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { SkeletonStats } from '../../components/ui/Loading'
 import BillingQuote from '../../components/dashboard/BillingQuote'
+
+function formatCurrency(amount, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
 
 // A billing status is either fine or it isn't, and that difference should be
 // visible before the word is read. Values are whatever Stripe's subscription
@@ -77,17 +86,21 @@ function billingStatusLabel(t, status) {
 function BillingPage({ companyId }) {
   const { t } = useTranslation()
   const [company, setCompany] = useState(null)
+  const [quote, setQuote] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionError, setActionError] = useState(null)
   const [actionPending, setActionPending] = useState(false)
   const [quoteRequested, setQuoteRequested] = useState(false)
+  const [includePulseCheck, setIncludePulseCheck] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      setCompany(await getCompany(companyId))
+      const [companyDoc, quoteResult] = await Promise.all([getCompany(companyId), getCompanyQuote(companyId)])
+      setCompany(companyDoc)
+      setQuote(quoteResult)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -142,7 +155,7 @@ function BillingPage({ companyId }) {
     setActionPending(true)
     setActionError(null)
     try {
-      await requestQuote(companyId)
+      await requestQuote(companyId, { targets: includePulseCheck ? ['core', 'pulseCheck'] : ['core'] })
       setQuoteRequested(true)
     } catch (err) {
       setActionError(err.message)
@@ -150,6 +163,10 @@ function BillingPage({ companyId }) {
       setActionPending(false)
     }
   }
+
+  const hasQuote = Boolean(quote?.quote)
+  const pulseCheckAddOnPrice = quote?.pulseCheckAddOnPrice ?? null
+  const employeeCount = quote?.employeeCount ?? 0
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
@@ -207,14 +224,29 @@ function BillingPage({ companyId }) {
                     {t('billingPage.requestQuote.requested')}
                   </Alert>
                 ) : (
-                  <Button
-                    variant="accent"
-                    loading={actionPending}
-                    loadingLabel={t('billingPage.actions.requestingQuote')}
-                    onClick={handleRequestQuote}
-                  >
-                    {t('billingPage.actions.requestQuote')}
-                  </Button>
+                  <div className="flex flex-col items-end gap-2">
+                    {hasQuote && (
+                      <label className="flex items-center gap-2 text-sm text-charcoal">
+                        <input
+                          type="checkbox"
+                          checked={includePulseCheck}
+                          onChange={(e) => setIncludePulseCheck(e.target.checked)}
+                        />
+                        {t('billingPage.requestQuote.includePulseCheck', {
+                          price: formatCurrency(pulseCheckAddOnPrice),
+                          count: employeeCount,
+                        })}
+                      </label>
+                    )}
+                    <Button
+                      variant="accent"
+                      loading={actionPending}
+                      loadingLabel={t('billingPage.actions.requestingQuote')}
+                      onClick={handleRequestQuote}
+                    >
+                      {t('billingPage.actions.requestQuote')}
+                    </Button>
+                  </div>
                 )}
               </div>
             </Card>

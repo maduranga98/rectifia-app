@@ -1361,7 +1361,8 @@
     "requestQuote": {
       "title": "Want to talk pricing?",
       "body": "Request a quote and Rectifia's team will follow up with pricing tailored to your organization. This never starts or changes a subscription on its own.",
-      "requested": "Request sent - Rectifia's team will be in touch."
+      "requested": "Request sent - Rectifia's team will be in touch.",
+      "includePulseCheck": "Also request pricing for Pulse Check ({{price}}/mo for your {{count}} employees)"
     },
     "paymentNote": {
       "title": "Payments are handled by Stripe",
