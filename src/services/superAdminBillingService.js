@@ -22,3 +22,30 @@ export async function linkCompanySubscription({ companyId, stripeSubscriptionId,
   const result = await linkCompanySubscriptionCallable({ companyId, stripeSubscriptionId, subscriptionTier })
   return result.data
 }
+
+const getCompanyBillingSummaryCallable = httpsCallable(functions, 'getCompanyBillingSummary')
+
+// Super Admin's read-only counterpart to billingService.js's
+// getSubscriptionSummary() - same live-from-Stripe shape, but callable
+// against any company rather than only the caller's own. Returns { billed,
+// status, corePriceCents, pulseCheckPriceCents, totalPriceCents, currency,
+// currentPeriodEnd, employeeCount, employeeCountSource }; `billed` is false
+// (with the price fields null and status 'unbilled') for a company with no
+// stripeSubscriptionId yet, rather than throwing.
+export async function getCompanyBillingSummary(companyId) {
+  const result = await getCompanyBillingSummaryCallable({ companyId })
+  return result.data
+}
+
+const listCompanyPaymentHistoryCallable = httpsCallable(functions, 'listCompanyPaymentHistory')
+
+// The Super Admin billing panel's invoice list - the company's most recent
+// Stripe invoices, fetched live on every call. Returns { invoices: [{ id,
+// amountPaidCents, currency, status, created, hostedInvoiceUrl, number }] },
+// each entry a narrow pre-picked shape rather than the raw Stripe Invoice
+// object. Returns an empty list (never throws) for a company with no
+// stripeCustomerId yet.
+export async function listCompanyPaymentHistory(companyId) {
+  const result = await listCompanyPaymentHistoryCallable({ companyId })
+  return result.data
+}
