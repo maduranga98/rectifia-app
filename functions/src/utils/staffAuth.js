@@ -303,6 +303,32 @@ async function requireIntakeRole(firestore, request, uid, action = 'staff_intake
   return { companyId, role }
 }
 
+// Blocks a growth action (inviting staff, adding an employee) once a
+// company's 7-day trial has lapsed without a subscription - see
+// scheduleTrialExpiration.js/checkTrialExpirations.js for how accessBlocked
+// gets set, and applySubscriptionState.js for how it gets cleared the moment
+// a subscription exists. Deliberately narrow: this is wired into exactly the
+// three growth-action call sites that add new staff/employee rows, never
+// into anything case-related, billing-related, or reporter-facing - a
+// billing lapse must never make an active case inaccessible.
+async function requireCompanyNotBlocked(firestore, companyId, { uid, role, action }) {
+  const snapshot = await firestore.collection(COMPANIES_COLLECTION).doc(companyId).get()
+  if (snapshot.exists && snapshot.data().accessBlocked === true) {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role,
+      action,
+      outcome: 'denied:failed-precondition',
+      detail: 'company_access_blocked',
+    })
+    throw new HttpsError(
+      'failed-precondition',
+      'Your trial has ended. A Company Admin needs to subscribe on the Billing page to resume adding staff or employees.'
+    )
+  }
+}
+
 module.exports = {
   HANDLER_ROLES,
   TRIAGE_ROLES,
@@ -312,6 +338,7 @@ module.exports = {
   loadCaseForHandler,
   loadCaseForTriage,
   requireIntakeRole,
+  requireCompanyNotBlocked,
   logPrivilegedAction,
   PRIVILEGED_ACTION_LOG_COLLECTION,
 }

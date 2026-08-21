@@ -5,8 +5,10 @@ import { getCompany } from '../../services/companyService'
 import { removeStaffMember, updateStaffDepartments } from '../../services/staffService'
 import { assignStaffRole, listCustomRoles } from '../../services/roleService'
 import { useAuth } from '../../contexts/AuthContext'
+import { useCompanyBlocked } from '../../hooks/useCompanyBlocked'
 import { ROLES, ROLE_LABELS } from '../../constants/roles'
 import StaffInvite from '../../components/dashboard/StaffInvite'
+import AccessBlockedNotice from '../../components/shared/AccessBlockedNotice'
 import RoleBuilder from '../../components/dashboard/RoleBuilder'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
@@ -51,6 +53,7 @@ const ASSIGNABLE_FIXED_ROLES = [ROLES.HR_COORDINATOR, ROLES.CASE_HANDLER, ROLES.
 function StaffPage({ companyId, initialTab = 'roster' }) {
   const { t } = useTranslation()
   const { role } = useAuth()
+  const { blocked: companyBlocked } = useCompanyBlocked()
   const isCompanyAdmin = role === ROLES.COMPANY_ADMIN
   const [activeTab, setActiveTab] = useState(initialTab === 'roles' && isCompanyAdmin ? 'roles' : 'roster')
   const [staff, setStaff] = useState([])
@@ -249,7 +252,9 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
 
           {error && <Alert variant="error">{error}</Alert>}
 
-          {isCompanyAdmin && showInvite && (
+          {isCompanyAdmin && showInvite && (companyBlocked ? (
+            <AccessBlockedNotice />
+          ) : (
             <StaffInvite
               companyId={companyId}
               onInvited={() => {
@@ -257,7 +262,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                 refresh()
               }}
             />
-          )}
+          ))}
 
           {loading && staff.length === 0 ? (
             <SkeletonList rows={4} />

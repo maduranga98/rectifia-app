@@ -47,6 +47,15 @@ async function applySubscriptionState(firestore, companyId, subscription) {
     stripeSubscriptionId: subscription.id,
     billingStatus: subscription.status,
     stripeCoreItemId: coreItem ? coreItem.id : admin.firestore.FieldValue.delete(),
+    // A subscription existing at all - regardless of status, active or
+    // past_due or anything else - permanently resolves the 7-day-trial
+    // question (see scheduleTrialExpiration.js / checkTrialExpirations.js):
+    // this function runs unconditionally every time a subscription is
+    // created or reconciled, so accessBlocked is always cleared here. An
+    // ongoing payment problem after that point is the separate, already-
+    // existing paymentFailed notification, not a reason to re-block.
+    accessBlocked: false,
+    accessBlockedAt: admin.firestore.FieldValue.delete(),
   }
 
   // The Pulse Check add-on's presence on the subscription is the actual

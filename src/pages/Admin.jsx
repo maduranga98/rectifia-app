@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import { useFeatureFlag } from '../hooks/useFeatureFlag'
+import { useCompanyBlocked } from '../hooks/useCompanyBlocked'
 import { ROLES } from '../constants/roles'
 import AppShell from '../components/shared/AppShell'
+import AccessBlockedNotice from '../components/shared/AccessBlockedNotice'
 import Alert from '../components/ui/Alert'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
@@ -227,6 +229,7 @@ function Admin() {
   const location = useLocation()
   const isCompanyAdmin = role === ROLES.COMPANY_ADMIN
 
+  const { blocked: companyBlocked } = useCompanyBlocked()
   const { enabled: pulseCheckEnabled } = useFeatureFlag('pulseCheck')
   const { enabled: benchmarkPoolEnabled } = useFeatureFlag('benchmarkPool')
   const flags = { pulseCheck: pulseCheckEnabled, benchmarkPool: benchmarkPoolEnabled }
@@ -282,7 +285,9 @@ function Admin() {
           />
         </Card>
       ) : (
-        <Routes>
+        <>
+          {companyBlocked && section !== 'billing' && <AccessBlockedNotice />}
+          <Routes>
           <Route index element={toIndex} />
           <Route path="overview" element={gated(<OverviewPage companyId={companyId} />)} />
           <Route path="cases" element={gated(<CasesPage companyId={companyId} />)} />
@@ -355,7 +360,8 @@ function Admin() {
           />
           <Route path="help" element={gated(<HelpSupportPage role={ROLES.COMPANY_ADMIN} />)} />
           <Route path="*" element={toIndex} />
-        </Routes>
+          </Routes>
+        </>
       ) : (
         // No companyId claim means the account was never linked to a company
         // - an empty panel would look like the company had no data, so say

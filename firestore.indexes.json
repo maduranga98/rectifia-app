@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "companies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "accessBlocked", "order": "ASCENDING" },
+        { "fieldPath": "trialEndsAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "caseMetadata",
       "queryScope": "COLLECTION",
       "fields": [

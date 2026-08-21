@@ -11,6 +11,8 @@ import {
   updateEmployee,
 } from '../../services/employeeService'
 import { getCompany } from '../../services/companyService'
+import { useCompanyBlocked } from '../../hooks/useCompanyBlocked'
+import AccessBlockedNotice from '../../components/shared/AccessBlockedNotice'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -39,6 +41,7 @@ function initials(employee) {
 // off the roster.
 function EmployeesPage({ companyId }) {
   const { t } = useTranslation()
+  const { blocked: companyBlocked } = useCompanyBlocked()
   const [employees, setEmployees] = useState([])
   const [departments, setDepartments] = useState([])
   const [error, setError] = useState(null)
@@ -183,7 +186,9 @@ function EmployeesPage({ companyId }) {
 
   const missingContact = employees.filter((employee) => !isDeliverable(employee)).length
 
-  const addForm = (
+  const addForm = companyBlocked ? (
+    <AccessBlockedNotice />
+  ) : (
     <form onSubmit={handleAdd} className="flex flex-col gap-3 sm:flex-row sm:items-end">
       <Input
         label={t('employeesPage.nameOrId')}
@@ -250,11 +255,16 @@ function EmployeesPage({ companyId }) {
         title={t('employeesPage.bulkImport.title')}
         description={t('employeesPage.bulkImport.description')}
         actions={
-          <Button variant="secondary" size="sm" onClick={downloadTemplate}>
-            {t('employeesPage.bulkImport.downloadTemplate')}
-          </Button>
+          companyBlocked ? null : (
+            <Button variant="secondary" size="sm" onClick={downloadTemplate}>
+              {t('employeesPage.bulkImport.downloadTemplate')}
+            </Button>
+          )
         }
       >
+        {companyBlocked ? (
+          <AccessBlockedNotice />
+        ) : (
         <div className="flex flex-col gap-3">
           <input
             ref={fileInputRef}
@@ -305,6 +315,7 @@ function EmployeesPage({ companyId }) {
             </div>
           )}
         </div>
+        )}
       </Card>
 
       {loading && employees.length === 0 ? (
