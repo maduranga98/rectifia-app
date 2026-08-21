@@ -1,7 +1,11 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
-const { PUBLISHED_BANDS, bandForEmployeeCount } = require('../billing/pricingEngine')
+const {
+  PUBLISHED_BANDS,
+  bandForEmployeeCount,
+  MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
+} = require('../billing/pricingEngine')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -27,6 +31,9 @@ const NO_TIER_CAP = 25
 const SANITY_CEILING_EMPLOYEES = 10000
 
 function capForTier(subscriptionTier, prospectiveEmployeeCount) {
+  if (subscriptionTier === 'enterprise') {
+    return MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES
+  }
   if (subscriptionTier) {
     const band = PUBLISHED_BANDS.find((b) => b.tier === subscriptionTier)
     return band ? band.maxEmployees : NO_TIER_CAP

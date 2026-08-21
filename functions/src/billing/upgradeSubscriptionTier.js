@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
-const { PROGRESSIVE_THRESHOLD_EMPLOYEES, bandForEmployeeCount } = require('./pricingEngine')
+const { bandLikeForEmployeeCount, MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES } = require('./pricingEngine')
 const { stripeSecretKey, getStripeClient } = require('./stripeClient')
 const { changeCoreTier } = require('./changeCoreTier')
 
@@ -64,14 +64,14 @@ exports.upgradeSubscriptionTier = onCall({ secrets: [stripeSecretKey] }, async (
   const countSnapshot = await companyRef.collection(EMPLOYEES_SUBCOLLECTION).count().get()
   const employeeCount = countSnapshot.data().count
 
-  if (employeeCount + 1 > PROGRESSIVE_THRESHOLD_EMPLOYEES) {
+  if (employeeCount + 1 > MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES) {
     throw new HttpsError(
       'failed-precondition',
-      `Self-serve plan changes aren't available above ${PROGRESSIVE_THRESHOLD_EMPLOYEES} employees - request a quote instead.`
+      `Self-serve plan changes aren't available above ${MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES} employees - request a quote instead.`
     )
   }
 
-  const band = bandForEmployeeCount(employeeCount + 1)
+  const band = bandLikeForEmployeeCount(employeeCount + 1)
   const previousTier = company.subscriptionTier ?? null
   if (band.tier === previousTier) {
     throw new HttpsError('failed-precondition', `Your plan is already ${band.label} - no upgrade needed`)
