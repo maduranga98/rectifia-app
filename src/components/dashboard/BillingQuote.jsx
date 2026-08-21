@@ -12,7 +12,6 @@ import { getCompany, updateCompanyEmployeeCount } from '../../services/companySe
 import { listEmployees } from '../../services/employeeService'
 import { calculateMonthlyPrice, calculatePulseCheckAddOnPrice } from '../../utils/pricingCalculator'
 import {
-  PROGRESSIVE_THRESHOLD_EMPLOYEES,
   MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
   PUBLISHED_BANDS,
 } from '../../config/pricingConfig'
@@ -491,7 +490,7 @@ function ActiveSubscriptionSummary({ company, companyId, realHeadcount, onChange
 }
 
 // Primary action for a company with no subscription yet, at or below the
-// 500-employee self-serve ceiling (PROGRESSIVE_THRESHOLD_EMPLOYEES) - only
+// self-serve ceiling (MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES) - only
 // rendered by BillingQuote in that state. Priced off `employeeCount`, which
 // the caller resolves the same way createCheckoutSession.js itself does
 // (Module 29J): the REAL roster whenever the company has one (`source`
@@ -673,7 +672,7 @@ function BillingQuote({ companyId }) {
   const overSelfServeCeiling = hasRoster && realHeadcount > MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES
   const noRosterYet = realHeadcount === 0
   const canSubscribeOnDeclaredCount =
-    noRosterYet && hasQuote && quoteSource === 'declared' && employeeCount <= PROGRESSIVE_THRESHOLD_EMPLOYEES
+    noRosterYet && hasQuote && quoteSource === 'declared' && employeeCount <= MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES
 
   return (
     <div className="flex flex-col gap-5">
