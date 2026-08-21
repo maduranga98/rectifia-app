@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
-const { PROGRESSIVE_THRESHOLD_EMPLOYEES, bandForEmployeeCount } = require('./pricingEngine')
+const { bandLikeForEmployeeCount, MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES } = require('./pricingEngine')
 const { stripeSecretKey, getStripeClient } = require('./stripeClient')
 const { changeCoreTier } = require('./changeCoreTier')
 
@@ -79,14 +79,14 @@ exports.updateDeclaredHeadcount = onCall({ secrets: [stripeSecretKey] }, async (
     throw new HttpsError('invalid-argument', 'You must attest that this headcount is accurate')
   }
 
-  if (count > PROGRESSIVE_THRESHOLD_EMPLOYEES) {
+  if (count > MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES) {
     throw new HttpsError(
       'failed-precondition',
-      `Self-serve plan changes aren't available above ${PROGRESSIVE_THRESHOLD_EMPLOYEES} employees - request a quote instead.`
+      `Self-serve plan changes aren't available above ${MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES} employees - request a quote instead.`
     )
   }
 
-  const band = bandForEmployeeCount(count)
+  const band = bandLikeForEmployeeCount(count)
   const previousTier = company.subscriptionTier ?? null
 
   // Reconfirmed at the same tier - just record the new number and the

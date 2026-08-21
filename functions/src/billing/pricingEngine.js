@@ -133,6 +133,31 @@ function bandForEmployeeCount(employeeCount) {
   )
 }
 
+// Uniform {tier, label, minEmployees, maxEmployees, monthlyPrice} shape
+// spanning the full self-serve range (1-MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES),
+// unlike bandForEmployeeCount() which only covers the flat PUBLISHED_BANDS
+// range (up to PROGRESSIVE_THRESHOLD_EMPLOYEES). Above the flat bands it
+// synthesizes an Enterprise pseudo-band from calculateProgressivePrice()'s
+// output so self-serve callers (upgradeSubscriptionTier.js,
+// updateDeclaredHeadcount.js) have one lookup that works across the whole
+// self-serve ceiling instead of stopping at 500. Returns null above that
+// ceiling - callers already guard that case separately.
+function bandLikeForEmployeeCount(employeeCount) {
+  const band = bandForEmployeeCount(employeeCount)
+  if (band) return band
+  if (employeeCount <= MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES) {
+    const priced = calculateProgressivePrice(employeeCount)
+    return {
+      tier: priced.tier,
+      label: 'Enterprise',
+      minEmployees: PROGRESSIVE_THRESHOLD_EMPLOYEES + 1,
+      maxEmployees: MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
+      monthlyPrice: priced.monthlyPrice,
+    }
+  }
+  return null
+}
+
 function calculateFlatBandPrice(employeeCount) {
   const band = bandForEmployeeCount(employeeCount)
   return {
@@ -271,6 +296,7 @@ module.exports = {
   MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
   PLAN_FEATURES,
   bandForEmployeeCount,
+  bandLikeForEmployeeCount,
   pulseCheckBandForEmployeeCount,
   calculateMonthlyPrice,
   calculatePulseCheckAddOnPrice,
