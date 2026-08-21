@@ -40,6 +40,8 @@ const { getCaseForTriage } = require('./src/investigation/getCaseForTriage')
 const { revealIdentity } = require('./src/investigation/revealIdentity')
 const { syncCaseMetadata } = require('./src/intake/syncCaseMetadata')
 const { syncCompanyStats } = require('./src/company/syncCompanyStats')
+const { scheduleTrialExpiration } = require('./src/company/scheduleTrialExpiration')
+const { checkTrialExpirations } = require('./src/company/checkTrialExpirations')
 const { inviteStaff } = require('./src/staff/inviteStaff')
 const { createCompanyAdmin } = require('./src/company/createCompanyAdmin')
 const { resolveCompanySlug } = require('./src/company/resolveCompanySlug')
@@ -170,6 +172,14 @@ exports.getCaseForTriage = getCaseForTriage
 exports.revealIdentity = revealIdentity
 exports.syncCaseMetadata = syncCaseMetadata
 exports.syncCompanyStats = syncCompanyStats
+// 7-day trial tracking + growth-action blocking. scheduleTrialExpiration
+// stamps trialStartedAt/trialEndsAt/accessBlocked once, at company creation;
+// checkTrialExpirations is the daily sweep that blocks a company whose trial
+// has lapsed with no subscription (and warns 2 days out) - see
+// functions/src/utils/staffAuth.js's requireCompanyNotBlocked for where that
+// block is actually enforced.
+exports.scheduleTrialExpiration = scheduleTrialExpiration
+exports.checkTrialExpirations = checkTrialExpirations
 exports.inviteStaff = inviteStaff
 exports.createCompanyAdmin = createCompanyAdmin
 exports.resolveCompanySlug = resolveCompanySlug

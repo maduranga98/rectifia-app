@@ -68,6 +68,12 @@ exports.bulkAddEmployees = onCall(async (request) => {
     throw new HttpsError('not-found', 'Company not found')
   }
   const company = companySnapshot.data()
+  if (company.accessBlocked === true) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Your trial has ended. A Company Admin needs to subscribe on the Billing page to resume adding employees.'
+    )
+  }
   const currentCount = Number(company.currentEmployeeCount) || 0
   const cap = capForTier(company.subscriptionTier)
 

@@ -375,6 +375,36 @@ async function buildEmailForNotification(firestore, data, { getCompanyName }) {
       return { recipients, subject, text, html: null }
     }
 
+    case 'trialEndingSoon': {
+      // Company-facing (checkTrialExpirations.js), Company Admin only - the
+      // only role that can act on this by subscribing.
+      const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['companyAdmin'])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const trialEndsText = data.trialEndsAt && data.trialEndsAt.toDate ? data.trialEndsAt.toDate().toISOString() : 'soon'
+      const subject = 'Your Rectifia trial is ending soon'
+      const text = [
+        `Your Rectifia trial ends on ${trialEndsText}.`,
+        '',
+        `Subscribe before then at ${appBaseUrl.value()}/admin/billing to avoid any interruption to adding staff or employees.`,
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
+    case 'trialExpired': {
+      // Company-facing (checkTrialExpirations.js), Company Admin only.
+      const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['companyAdmin'])
+      if (recipients.length === 0) throw new Error('no_recipient')
+      const subject = 'Your Rectifia trial has ended'
+      const text = [
+        'Your 7-day Rectifia trial has ended without a subscription, so adding new staff or employees is now paused.',
+        '',
+        'Existing cases, investigations, and staff sign-in are unaffected.',
+        '',
+        `Subscribe at ${appBaseUrl.value()}/admin/billing to lift this immediately.`,
+      ].join('\n')
+      return { recipients, subject, text, html: null }
+    }
+
     case 'acknowledgmentDeadlineRisk':
     case 'feedbackDeadlineRisk': {
       const recipients = await resolveStaffEmailsByRole(firestore, data.companyId, ['hrCoordinator'])

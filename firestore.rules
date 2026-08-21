@@ -215,7 +215,13 @@ service cloud.firestore {
     function superAdminBillingFieldsLocked() {
       return !request.resource.data.diff(resource.data).affectedKeys()
         .hasAny(['stripeSubscriptionId', 'stripeCustomerId', 'billingStatus', 'subscriptionTier',
-          'stripeCoreItemId', 'stripePulseCheckItemId', 'currentEmployeeCount']);
+          'stripeCoreItemId', 'stripePulseCheckItemId', 'currentEmployeeCount',
+          // 7-day trial tracking (scheduleTrialExpiration.js/checkTrialExpirations.js)
+          // and its growth-action block. No client write - not even a Super
+          // Admin's own browser - can ever touch these; only the Admin SDK
+          // (the trigger, the daily sweep, and applySubscriptionState.js
+          // clearing the block once a subscription exists) may write them.
+          'accessBlocked', 'accessBlockedAt', 'trialStartedAt', 'trialEndsAt', 'trialWarningNotifiedAt']);
     }
 
     // featureFlags.pulseCheck specifically - not the rest of the featureFlags

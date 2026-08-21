@@ -3,6 +3,7 @@ const { defineString } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { sendMail, smtpPassword } = require('../utils/email')
+const { requireCompanyNotBlocked } = require('../utils/staffAuth')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -202,6 +203,11 @@ exports.inviteStaff = onCall({ secrets: [smtpPassword] }, async (request) => {
   const managerDepartments = role === 'manager' ? normalizeDepartments(departments) : []
 
   await requireCompanyAdmin(actorId ?? request.auth?.uid, companyId)
+  await requireCompanyNotBlocked(admin.firestore(), companyId, {
+    uid: actorId ?? request.auth?.uid,
+    role: 'companyAdmin',
+    action: 'invite_staff',
+  })
 
   const companySnapshot = await admin.firestore().collection(COMPANIES_COLLECTION).doc(companyId).get()
   if (!companySnapshot.exists) {
