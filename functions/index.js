@@ -99,6 +99,7 @@ const { createBillingPortalSession } = require('./src/billing/createBillingPorta
 const { getSubscriptionSummary } = require('./src/billing/getSubscriptionSummary')
 const { stripeWebhook } = require('./src/billing/stripeWebhook')
 const { requestQuote } = require('./src/billing/requestQuote')
+const { autoGenerateQuoteOnGrowth } = require('./src/billing/autoGenerateQuoteOnGrowth')
 const { linkCompanySubscription } = require('./src/billing/linkCompanySubscription')
 const { createCheckoutSession } = require('./src/billing/createCheckoutSession')
 const { updatePulseCheckSubscription } = require('./src/billing/updatePulseCheckSubscription')
@@ -287,6 +288,14 @@ exports.getSubscriptionSummary = getSubscriptionSummary
 // authoritative - companies/{companyId}.employeeCount, not the live Pulse
 // Check roster.
 exports.requestQuote = requestQuote
+// Growth-triggered counterpart of requestQuote.js's Company-Admin button:
+// fires the same generateAndFileQuote() core the moment a company's real
+// Pulse Check roster crosses above PROGRESSIVE_THRESHOLD_EMPLOYEES, once
+// per crossing, skipped entirely once the company already has a
+// subscription or an existing quoteRequests record on file. See
+// functions/src/billing/autoGenerateQuoteOnGrowth.js for the full edge-case
+// rationale.
+exports.autoGenerateQuoteOnGrowth = autoGenerateQuoteOnGrowth
 // Super Admin only: links (or re-links, to change plan / re-sync) a Stripe
 // subscription a human already created - via an accepted Quote or set up
 // directly in the Stripe Dashboard - to a company. Never creates a Stripe
