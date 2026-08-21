@@ -10,12 +10,11 @@ import {
 } from '../../services/billingService'
 import { getCompany, updateCompanyEmployeeCount } from '../../services/companyService'
 import { listEmployees } from '../../services/employeeService'
-import { calculateMonthlyPrice } from '../../utils/pricingCalculator'
+import { calculateMonthlyPrice, calculatePulseCheckAddOnPrice } from '../../utils/pricingCalculator'
 import {
   PROGRESSIVE_THRESHOLD_EMPLOYEES,
+  MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
   PUBLISHED_BANDS,
-  bandForEmployeeCount,
-  pulseCheckBandForEmployeeCount,
 } from '../../config/pricingConfig'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
@@ -511,8 +510,8 @@ function SubscribeCard({ companyId, employeeCount, source }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(null)
 
-  const band = bandForEmployeeCount(employeeCount)
-  const pulseCheckBand = pulseCheckBandForEmployeeCount(employeeCount)
+  const priced = calculateMonthlyPrice(employeeCount)
+  const pulseCheckPrice = calculatePulseCheckAddOnPrice(employeeCount)
 
   async function handleSubscribe() {
     setPending(true)
@@ -535,12 +534,12 @@ function SubscribeCard({ companyId, employeeCount, source }) {
             <p className="mt-1 text-sm text-muted">
               {t(
                 source === 'declared' ? 'billingQuote.subscribeCard.declaredBody' : 'billingQuote.subscribeCard.body',
-                { count: employeeCount, tier: band.label }
+                { count: employeeCount, tier: t(`billingQuote.tierLabels.${priced.tier}`, { defaultValue: priced.tier }) }
               )}
             </p>
           </div>
           <p className="text-2xl font-semibold tabular-nums text-charcoal">
-            {formatCurrency(band.monthlyPrice)}
+            {formatCurrency(priced.monthlyPrice)}
             <span className="text-sm font-normal text-muted">{t('billingQuote.perMonth')}</span>
           </p>
         </div>
@@ -551,7 +550,7 @@ function SubscribeCard({ companyId, employeeCount, source }) {
             checked={includePulseCheck}
             onChange={(e) => setIncludePulseCheck(e.target.checked)}
           />
-          {t('billingQuote.subscribeCard.pulseCheckLabel', { price: pulseCheckBand.monthlyPrice })}
+          {t('billingQuote.subscribeCard.pulseCheckLabel', { price: pulseCheckPrice })}
         </label>
 
         {error && <Alert variant="error">{error}</Alert>}
@@ -671,7 +670,7 @@ function BillingQuote({ companyId }) {
   // only state where checkout itself is priced off that declared number
   // (quoteSource === 'declared') instead of being unavailable outright.
   const hasRoster = realHeadcount > 0
-  const overSelfServeCeiling = hasRoster && realHeadcount > PROGRESSIVE_THRESHOLD_EMPLOYEES
+  const overSelfServeCeiling = hasRoster && realHeadcount > MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES
   const noRosterYet = realHeadcount === 0
   const canSubscribeOnDeclaredCount =
     noRosterYet && hasQuote && quoteSource === 'declared' && employeeCount <= PROGRESSIVE_THRESHOLD_EMPLOYEES

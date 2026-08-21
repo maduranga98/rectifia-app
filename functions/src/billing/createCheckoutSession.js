@@ -1,7 +1,12 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
-const { PROGRESSIVE_THRESHOLD_EMPLOYEES, bandForEmployeeCount, pulseCheckBandForEmployeeCount } = require('./pricingEngine')
+const {
+  PROGRESSIVE_THRESHOLD_EMPLOYEES,
+  MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
+  calculateMonthlyPrice,
+  calculatePulseCheckAddOnPrice,
+} = require('./pricingEngine')
 const { stripeSecretKey, appBaseUrl, getStripeClient } = require('./stripeClient')
 const { LINE_ITEM_TAG, RECTIFIA_TIER_METADATA_KEY } = require('./lineItemTags')
 
@@ -113,14 +118,14 @@ exports.createCheckoutSession = onCall({ secrets: [stripeSecretKey] }, async (re
   // company - route to requestQuote.js's Contact sales flow instead (the
   // same threshold and the same two callables Modules 29F/29G already split
   // this way).
-  if (employeeCount > PROGRESSIVE_THRESHOLD_EMPLOYEES) {
+  if (employeeCount > MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES) {
     throw new HttpsError(
       'failed-precondition',
-      `Self-serve checkout isn't available above ${PROGRESSIVE_THRESHOLD_EMPLOYEES} employees - request a quote instead.`
+      `Self-serve checkout isn't available above ${MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES} employees - request a quote instead.`
     )
   }
 
-  const band = bandForEmployeeCount(employeeCount)
+  const priced = calculateMonthlyPrice(employeeCount)
 
   const stripe = getStripeClient()
   let stripeCustomerId = company.stripeCustomerId
@@ -140,10 +145,10 @@ exports.createCheckoutSession = onCall({ secrets: [stripeSecretKey] }, async (re
       price_data: {
         currency: 'usd',
         product_data: {
-          name: `Rectifia - ${band.label} plan`,
-          metadata: { rectifiaLineItem: LINE_ITEM_TAG.CORE, [RECTIFIA_TIER_METADATA_KEY]: band.tier },
+          name: `Rectifia - Core plan (${employeeCount} employees)`,
+          metadata: { rectifiaLineItem: LINE_ITEM_TAG.CORE, [RECTIFIA_TIER_METADATA_KEY]: priced.tier },
         },
-        unit_amount: Math.round(band.monthlyPrice * 100),
+        unit_amount: Math.round(priced.monthlyPrice * 100),
         recurring: { interval: 'month' },
       },
       quantity: 1,
@@ -151,7 +156,7 @@ exports.createCheckoutSession = onCall({ secrets: [stripeSecretKey] }, async (re
   ]
 
   if (includePulseCheck) {
-    const pulseCheckBand = pulseCheckBandForEmployeeCount(employeeCount)
+    const pulseCheckPrice = calculatePulseCheckAddOnPrice(employeeCount)
     lineItems.push({
       price_data: {
         currency: 'usd',
@@ -159,7 +164,7 @@ exports.createCheckoutSession = onCall({ secrets: [stripeSecretKey] }, async (re
           name: 'Rectifia - Pulse Check add-on',
           metadata: { rectifiaLineItem: LINE_ITEM_TAG.PULSE_CHECK },
         },
-        unit_amount: Math.round(pulseCheckBand.monthlyPrice * 100),
+        unit_amount: Math.round(pulseCheckPrice * 100),
         recurring: { interval: 'month' },
       },
       quantity: 1,
