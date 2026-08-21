@@ -57,7 +57,7 @@ exports.requestQuote = onCall({ secrets: [stripeSecretKey] }, async (request) =>
   // Defaults to both - a Company Admin only ever sees a single "Request a
   // quote" button (see BillingPage.jsx), so the common case is asking for
   // Core and Pulse Check together in one Quote.
-  const targets = requestedTargets === undefined ? ['core', 'pulseCheck'] : requestedTargets
+  const targets = requestedTargets == null ? ['core', 'pulseCheck'] : requestedTargets
   if (
     !Array.isArray(targets) ||
     targets.length === 0 ||
