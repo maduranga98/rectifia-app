@@ -7,6 +7,7 @@ import { useCompanyBlocked } from '../hooks/useCompanyBlocked'
 import { ROLES } from '../constants/roles'
 import AppShell from '../components/shared/AppShell'
 import AccessBlockedNotice from '../components/shared/AccessBlockedNotice'
+import RosterSetupNotice from '../components/shared/RosterSetupNotice'
 import Alert from '../components/ui/Alert'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
@@ -229,7 +230,7 @@ function Admin() {
   const location = useLocation()
   const isCompanyAdmin = role === ROLES.COMPANY_ADMIN
 
-  const { blocked: companyBlocked } = useCompanyBlocked()
+  const { blocked: companyBlocked, company } = useCompanyBlocked()
   const { enabled: pulseCheckEnabled } = useFeatureFlag('pulseCheck')
   const { enabled: benchmarkPoolEnabled } = useFeatureFlag('benchmarkPool')
   const flags = { pulseCheck: pulseCheckEnabled, benchmarkPool: benchmarkPoolEnabled }
@@ -287,6 +288,7 @@ function Admin() {
       ) : (
         <>
           {companyBlocked && section !== 'billing' && <AccessBlockedNotice />}
+          {section !== 'billing' && <RosterSetupNotice company={company} />}
           <Routes>
           <Route index element={toIndex} />
           <Route path="overview" element={gated(<OverviewPage companyId={companyId} />)} />
