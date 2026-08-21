@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
-const { PUBLISHED_BANDS } = require('../billing/pricingEngine')
+const { PUBLISHED_BANDS, bandForEmployeeCount } = require('../billing/pricingEngine')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -10,16 +10,29 @@ if (!admin.apps.length) {
 const COMPANIES_COLLECTION = 'companies'
 const EMPLOYEES_SUBCOLLECTION = 'employees'
 
-// A company with no subscriptionTier yet (a brand-new company that hasn't
-// subscribed via createCheckoutSession.js, or one on a manually-negotiated
-// plan whose tier vocabulary doesn't match PUBLISHED_BANDS at all) gets the
-// same cap Starter would give it - a company must never be able to grow an
-// unbounded roster simply by not having billed yet.
+// A company with a subscriptionTier set but whose tier vocabulary doesn't
+// match PUBLISHED_BANDS at all (a manually-negotiated plan) gets the same
+// cap Starter would give it - a company must never be able to grow an
+// unbounded roster on a plan whose tier we don't recognize.
 const NO_TIER_CAP = 25
 
-function capForTier(subscriptionTier) {
-  const band = PUBLISHED_BANDS.find((b) => b.tier === subscriptionTier)
-  return band ? band.maxEmployees : NO_TIER_CAP
+// A company with no subscriptionTier yet (a brand-new company that hasn't
+// subscribed via createCheckoutSession.js) isn't capped at the self-serve
+// Scale boundary - a real enterprise prospect building out their pilot
+// roster must not be blocked mid-import just because they crossed 500
+// employees, since that's exactly the segment requestQuote.js exists to
+// convert, not exclude. It still can't grow completely unbounded without
+// ever billing, so above the top published band it falls through to this
+// flat sanity ceiling instead.
+const SANITY_CEILING_EMPLOYEES = 10000
+
+function capForTier(subscriptionTier, prospectiveEmployeeCount) {
+  if (subscriptionTier) {
+    const band = PUBLISHED_BANDS.find((b) => b.tier === subscriptionTier)
+    return band ? band.maxEmployees : NO_TIER_CAP
+  }
+  const band = bandForEmployeeCount(prospectiveEmployeeCount)
+  return band?.maxEmployees ?? SANITY_CEILING_EMPLOYEES
 }
 
 function normalizeEmail(email) {
@@ -85,9 +98,16 @@ exports.addEmployee = onCall(async (request) => {
       )
     }
     const currentCount = Number(company.currentEmployeeCount) || 0
-    const cap = capForTier(company.subscriptionTier)
+    const cap = capForTier(company.subscriptionTier, currentCount + 1)
 
     if (currentCount >= cap) {
+      if (!company.subscriptionTier && cap === SANITY_CEILING_EMPLOYEES) {
+        throw new HttpsError(
+          'failed-precondition',
+          `Your roster has grown past ${SANITY_CEILING_EMPLOYEES} employees without a subscription — contact Rectifia to set up billing before adding more.`,
+          { code: 'headcount_cap_reached', currentTier: null, cap }
+        )
+      }
       throw new HttpsError(
         'failed-precondition',
         `Adding this employee would exceed your plan's ${cap}-employee cap`,
@@ -113,3 +133,4 @@ exports.addEmployee = onCall(async (request) => {
 
 exports.capForTier = capForTier
 exports.NO_TIER_CAP = NO_TIER_CAP
+exports.SANITY_CEILING_EMPLOYEES = SANITY_CEILING_EMPLOYEES
