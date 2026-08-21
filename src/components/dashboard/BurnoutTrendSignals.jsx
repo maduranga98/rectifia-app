@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useFeatureFlag } from '../../hooks/useFeatureFlag'
 import {
   formatSignalDate,
   getBurnoutTrendSummary,
@@ -34,6 +35,7 @@ function formatRate(rate) {
 // discipline patternService.js's describeSignal holds pattern signals to.
 function BurnoutTrendSignals({ companyId }) {
   const { t } = useTranslation()
+  const { enabled: burnoutTrendDetectionEnabled } = useFeatureFlag('burnoutTrendDetection')
   const [signals, setSignals] = useState([])
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -57,8 +59,10 @@ function BurnoutTrendSignals({ companyId }) {
   }, [companyId])
 
   useEffect(() => {
-    if (companyId) refresh()
-  }, [companyId, refresh])
+    if (companyId && burnoutTrendDetectionEnabled) refresh()
+  }, [companyId, burnoutTrendDetectionEnabled, refresh])
+
+  if (!burnoutTrendDetectionEnabled) return null
 
   const windowDays = summary?.windowDays ?? signals[0]?.windowDays ?? 180
 
