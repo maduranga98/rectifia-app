@@ -37,7 +37,7 @@ const PROGRESSIVE_PRICING = {
   label: 'Enterprise',
   baseFee: 250,
   brackets: [
-    { label: 'First 1,000', uptoEmployees: 1000, ratePerEmployee: 1.1 },
+    { label: 'Next 500 (501-1,000)', uptoEmployees: 1000, ratePerEmployee: 1.1 },
     { label: 'Next 1,500 (1,001-2,500)', uptoEmployees: 2500, ratePerEmployee: 0.85 },
     { label: 'Next 2,500 (2,501-5,000)', uptoEmployees: 5000, ratePerEmployee: 0.65 },
     { label: 'Above 5,000', uptoEmployees: Infinity, ratePerEmployee: 0.5 },
@@ -172,13 +172,14 @@ function calculateFlatBandPrice(employeeCount) {
 }
 
 function calculateProgressivePrice(employeeCount) {
+  const scalePrice = PUBLISHED_BANDS.find((band) => band.tier === 'scale').monthlyPrice
   const breakdown = [
-    { label: 'Base fee', employees: null, ratePerEmployee: null, amount: PROGRESSIVE_PRICING.baseFee },
+    { label: 'Scale (first 500)', employees: PROGRESSIVE_THRESHOLD_EMPLOYEES, amount: scalePrice },
   ]
 
-  let remaining = employeeCount
-  let previousCeiling = 0
-  let total = PROGRESSIVE_PRICING.baseFee
+  let remaining = employeeCount - PROGRESSIVE_THRESHOLD_EMPLOYEES
+  let previousCeiling = PROGRESSIVE_THRESHOLD_EMPLOYEES
+  let total = scalePrice
 
   for (const bracket of PROGRESSIVE_PRICING.brackets) {
     if (remaining <= 0) break

@@ -40,7 +40,7 @@ export const PROGRESSIVE_PRICING = {
   label: 'Enterprise',
   baseFee: 250,
   brackets: [
-    { label: 'First 1,000', uptoEmployees: 1000, ratePerEmployee: 1.1 },
+    { label: 'Next 500 (501-1,000)', uptoEmployees: 1000, ratePerEmployee: 1.1 },
     { label: 'Next 1,500 (1,001-2,500)', uptoEmployees: 2500, ratePerEmployee: 0.85 },
     { label: 'Next 2,500 (2,501-5,000)', uptoEmployees: 5000, ratePerEmployee: 0.65 },
     { label: 'Above 5,000', uptoEmployees: Infinity, ratePerEmployee: 0.5 },
