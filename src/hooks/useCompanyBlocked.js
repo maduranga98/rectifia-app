@@ -18,8 +18,13 @@ import { getCompany } from '../services/companyService'
 // checks in addEmployee.js/bulkAddEmployees.js for the server-side check
 // that is. `blocked` starts false so a slow read never flashes the notice on
 // before resolving.
+//
+// Also exposes the fetched `company` document itself, so callers that need
+// another field off the same read (RosterSetupNotice's roster/estimate/
+// subscription checks in Admin.jsx) don't have to fetch it a second time.
 export function useCompanyBlocked() {
   const { companyId } = useAuth()
+  const [company, setCompany] = useState(null)
   const [blocked, setBlocked] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -33,9 +38,10 @@ export function useCompanyBlocked() {
 
     setLoading(true)
     getCompany(companyId)
-      .then((company) => {
+      .then((fetchedCompany) => {
         if (cancelled) return
-        setBlocked(company?.accessBlocked === true)
+        setCompany(fetchedCompany)
+        setBlocked(fetchedCompany?.accessBlocked === true)
       })
       .catch(() => {
         // A failed read resolves to "not blocked" rather than hiding a
@@ -52,5 +58,5 @@ export function useCompanyBlocked() {
     }
   }, [companyId])
 
-  return { blocked, loading }
+  return { blocked, loading, company }
 }
