@@ -1,7 +1,7 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
-const { capForTier } = require('./addEmployee')
+const { capForTier, SANITY_CEILING_EMPLOYEES } = require('./addEmployee')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -75,7 +75,6 @@ exports.bulkAddEmployees = onCall(async (request) => {
     )
   }
   const currentCount = Number(company.currentEmployeeCount) || 0
-  const cap = capForTier(company.subscriptionTier)
 
   const employeesCollection = companyRef.collection(EMPLOYEES_SUBCOLLECTION)
   const existingSnapshot = await employeesCollection.get()
@@ -94,8 +93,16 @@ exports.bulkAddEmployees = onCall(async (request) => {
     .filter((row) => row.name)
 
   const newRowCount = validRows.filter((row) => !(row.email && byEmail.has(row.email))).length
+  const cap = capForTier(company.subscriptionTier, currentCount + newRowCount)
 
   if (currentCount + newRowCount > cap) {
+    if (!company.subscriptionTier && cap === SANITY_CEILING_EMPLOYEES) {
+      throw new HttpsError(
+        'failed-precondition',
+        `Your roster has grown past ${SANITY_CEILING_EMPLOYEES} employees without a subscription — contact Rectifia to set up billing before importing more.`,
+        { code: 'headcount_cap_reached', currentTier: null, cap }
+      )
+    }
     throw new HttpsError(
       'failed-precondition',
       `Importing ${newRowCount} new employee${newRowCount === 1 ? '' : 's'} would exceed your plan's ${cap}-employee cap`,
