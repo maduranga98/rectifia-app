@@ -4,7 +4,7 @@ import { listCompanies } from '../services/companyService'
 import { signOutUser } from '../services/authService'
 import { useAuth } from '../contexts/AuthContext'
 import CompanySetup from '../components/dashboard/CompanySetup'
-import CompanyBillingLink from '../components/dashboard/CompanyBillingLink'
+import CompanyBillingSummary from '../components/dashboard/CompanyBillingSummary'
 import CompanySuspensionControl from '../components/dashboard/CompanySuspensionControl'
 import ManualAssignmentQueue from '../components/dashboard/ManualAssignmentQueue'
 import FeatureFlagPanel from '../components/dashboard/FeatureFlagPanel'
@@ -61,10 +61,12 @@ function SuperAdminDashboardPage() {
     sectionParam === 'manualAssignment' || sectionParam === 'featureFlags' ? sectionParam : 'companies'
   const [section, setSection] = useState(initialSection)
   const [manualAssignmentCount, setManualAssignmentCount] = useState(null)
-  // Which company's billing-link panel (CompanyBillingLink.jsx) is expanded
+  // Which company's billing panel (CompanyBillingSummary.jsx - a live Stripe
+  // read-only summary, with CompanyBillingLink.jsx's manual-link form
+  // collapsed inside it for the missed-webhook recovery case) is expanded
   // inline on its card - at most one at a time, toggled by its own "Billing"
   // button. There is no separate company detail route yet, so this is the
-  // closest thing to one for the one action a Super Admin needs there.
+  // closest thing to one for the billing actions a Super Admin needs there.
   const [billingCompanyId, setBillingCompanyId] = useState(null)
   // Which company's suspend/reactivate panel (CompanySuspensionControl.jsx)
   // is expanded inline - same one-at-a-time pattern as billingCompanyId
@@ -280,7 +282,7 @@ function SuperAdminDashboardPage() {
                 </div>
                 {billingCompanyId === company.id && (
                   <div className="mt-4 border-t border-line-soft pt-4">
-                    <CompanyBillingLink company={company} onLinked={loadCompanies} />
+                    <CompanyBillingSummary company={company} onLinked={loadCompanies} />
                   </div>
                 )}
                 {suspensionCompanyId === company.id && (

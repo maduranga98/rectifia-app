@@ -101,6 +101,8 @@ const { stripeWebhook } = require('./src/billing/stripeWebhook')
 const { requestQuote } = require('./src/billing/requestQuote')
 const { autoGenerateQuoteOnGrowth } = require('./src/billing/autoGenerateQuoteOnGrowth')
 const { linkCompanySubscription } = require('./src/billing/linkCompanySubscription')
+const { getCompanyBillingSummary } = require('./src/billing/getCompanyBillingSummary')
+const { listCompanyPaymentHistory } = require('./src/billing/listCompanyPaymentHistory')
 const { createCheckoutSession } = require('./src/billing/createCheckoutSession')
 const { updatePulseCheckSubscription } = require('./src/billing/updatePulseCheckSubscription')
 const { upgradeSubscriptionTier } = require('./src/billing/upgradeSubscriptionTier')
@@ -305,6 +307,16 @@ exports.autoGenerateQuoteOnGrowth = autoGenerateQuoteOnGrowth
 // firestore.rules' superAdminBillingFieldsLocked() for why no other client
 // write, including a direct Super Admin write, can touch these fields.
 exports.linkCompanySubscription = linkCompanySubscription
+// Super Admin's read-only counterparts to the linking action above: a live
+// Stripe price summary for any company (getCompanyBillingSummary, mirroring
+// getSubscriptionSummary.js's shape but not scoped to the caller's own
+// company) and that company's recent invoice history
+// (listCompanyPaymentHistory). Both are pure Stripe reads - neither writes
+// Firestore nor caches price/invoice data there. See
+// src/components/dashboard/CompanyBillingSummary.jsx for the panel that
+// renders them.
+exports.getCompanyBillingSummary = getCompanyBillingSummary
+exports.listCompanyPaymentHistory = listCompanyPaymentHistory
 // Self-serve billing for a company at or below the 500-employee self-serve
 // ceiling with no negotiated deal: createCheckoutSession starts real Stripe
 // Checkout (Core, optionally with Pulse Check, as one subscription);
