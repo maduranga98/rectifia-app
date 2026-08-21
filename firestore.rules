@@ -755,6 +755,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Resolves companies/{companyId}.featureFlags.burnoutTrendDetection the
+    // same way functions/src/utils/featureFlags.js's resolveFlag() does for
+    // this key: an explicit boolean wins, anything else (missing map,
+    // missing key, non-boolean) falls back to the registry default of
+    // false. burnoutTrendDetection defaults off unlike patternDetection, and
+    // is a supported independent override of it (see that file's comment on
+    // the two keys) - a company can run patternDetection while keeping this
+    // one off, so this collection's own read rule must check this flag
+    // itself rather than assuming patternDetection's gate already covers it.
+    function burnoutTrendDetectionEnabled(companyId) {
+      return get(/databases/$(database)/documents/companies/$(companyId))
+        .data.get('featureFlags', {}).get('burnoutTrendDetection', false) == true;
+    }
+
     // Department-level burnout report volume (functions/src/patterns/
     // detectBurnoutTrends.js) - a structurally different, weaker signal than
     // patternSignals above and deliberately its own collection so the two can
@@ -768,16 +782,26 @@ service cloud.firestore {
     // aggregate sentiment - department burnout volume is a more sensitive
     // signal than that and any widening is a decision for later, not a side
     // effect of adding this collection.
+    //
+    // Gated on burnoutTrendDetectionEnabled() in addition to role: the flag
+    // is the layer that actually matters here (the UI's own check in
+    // BurnoutTrendSignals.jsx is UX only), since a company can have
+    // patternDetection on and this flag off and still reach PatternsPage.
+    // detectBurnoutTrends.js keeps writing/updating these documents
+    // regardless of the flag (stop updating, don't delete) - this rule only
+    // stops them from being read while the flag is off, not from existing.
     match /burnoutTrendSignals/{signalId} {
-      allow read: if isHrCoordinator(resource.data.companyId);
+      allow read: if isHrCoordinator(resource.data.companyId)
+        && burnoutTrendDetectionEnabled(resource.data.companyId);
       allow write: if false;
     }
 
     // Per-company run summary for burnoutTrendSignals, doc id == companyId.
     // Same "counts and thresholds only, names no department" shape as
-    // patternSignalSummaries above and for the same reason.
+    // patternSignalSummaries above, and the same flag gate as
+    // burnoutTrendSignals above for the same reason.
     match /burnoutTrendSummaries/{companyId} {
-      allow read: if isHrCoordinator(companyId);
+      allow read: if isHrCoordinator(companyId) && burnoutTrendDetectionEnabled(companyId);
       allow write: if false;
     }
 
