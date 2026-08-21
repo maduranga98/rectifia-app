@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { SkeletonStats } from '../../components/ui/Loading'
 import BillingQuote from '../../components/dashboard/BillingQuote'
+import { MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES } from '../../config/pricingConfig'
 
 function formatCurrency(amount, currency = 'USD') {
   return new Intl.NumberFormat('en-US', {
@@ -53,11 +54,14 @@ function billingStatusLabel(t, status) {
   return status.replace(/_/g, ' ')
 }
 
-// Company Admin's billing home. Pilot v1 has a handful of founding customers
-// on individually negotiated discounts, no SOC 2 report or reference
-// customers yet, and self-serve published-rate billing doesn't represent
-// what any real customer actually pays - so this page is READ-ONLY plus one
-// request action, never a place to start or change a subscription:
+// Company Admin's billing home. Self-serve subscribe (via BillingQuote.jsx's
+// SubscribeCard) is now the primary path for most companies - this page is
+// no longer read-only plus one request action; the request-a-quote flow
+// below is the fallback for whoever BillingQuote.jsx doesn't offer
+// self-serve to. Pilot v1 has a handful of founding customers on
+// individually negotiated discounts, no SOC 2 report or reference customers
+// yet, and self-serve published-rate billing doesn't represent what any
+// real customer actually pays for those legacy accounts:
 //
 //  - Subscription status, as last set (manually, after negotiating a price)
 //    on the company doc's billingStatus/subscriptionTier, or reconciled by
@@ -167,6 +171,12 @@ function BillingPage({ companyId }) {
   const hasQuote = Boolean(quote?.quote)
   const pulseCheckAddOnPrice = quote?.pulseCheckAddOnPrice ?? null
   const employeeCount = quote?.employeeCount ?? 0
+  // Mirrors BillingQuote.jsx's own self-serve gate (same realHeadcount count,
+  // via getCompanyQuote's employeeCount here) so the request-a-quote card
+  // below only shows when BillingQuote.jsx genuinely didn't render a
+  // Subscribe card - no roster/declared-count quote yet, or above the
+  // self-serve ceiling.
+  const selfServeAvailable = hasQuote && employeeCount <= MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5">
@@ -212,7 +222,7 @@ function BillingPage({ companyId }) {
 
           <BillingQuote companyId={companyId} />
 
-          {!hasStripeSubscription && (
+          {!hasStripeSubscription && !selfServeAvailable && (
             <Card padded={false} className="p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
