@@ -4,6 +4,7 @@ import { auth, functions } from './firebase'
 const inviteStaffCallable = httpsCallable(functions, 'inviteStaff')
 const updateStaffDepartmentsCallable = httpsCallable(functions, 'updateStaffDepartments')
 const removeStaffMemberCallable = httpsCallable(functions, 'removeStaffMember')
+const resendStaffInviteCallable = httpsCallable(functions, 'resendStaffInvite')
 
 // Invites a new staff member: creates their auth account, stamps either a
 // fixed role or a customRoleId (never both) plus companyId as custom claims,
@@ -53,5 +54,20 @@ export async function removeStaffMember({ companyId, staffId }) {
     throw new Error('companyId and staffId are required')
   }
   const result = await removeStaffMemberCallable({ companyId, staffId })
+  return result.data
+}
+
+// Re-sends the set-your-password invitation for a staff member still stuck
+// in status: 'invited' - never re-creates their account or re-issues custom
+// claims (see functions/src/staff/resendStaffInvite.js), just mints a fresh
+// action link and emails it again. Only a Company Admin for the company can
+// call this (re-checked server-side); the server also refuses if the target
+// has already accepted, is suspended, or was resent within the last minute -
+// those all surface here as an ordinary thrown Error.
+export async function resendStaffInvite({ companyId, staffId }) {
+  if (!companyId || !staffId) {
+    throw new Error('companyId and staffId are required')
+  }
+  const result = await resendStaffInviteCallable({ companyId, staffId })
   return result.data
 }
