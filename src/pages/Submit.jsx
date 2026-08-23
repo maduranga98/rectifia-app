@@ -10,7 +10,7 @@ import CaseNotificationOptIn from '../components/intake/CaseNotificationOptIn'
 import { uploadStagedEvidence, StagedEvidenceStatus } from '../components/intake/CaseCredentialsHandoff'
 import { CATEGORIES } from '../data/categories'
 import { resolveCompanySlug, submitCase } from '../services/caseAccessService'
-import { downloadSimplePdf, RECTIFIA_BRAND_COLOR } from '../utils/simplePdf'
+import { generateCaseReceiptPdf } from '../utils/generateCaseReceiptPdf'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
 import Icon from '../components/ui/Icon'
@@ -223,32 +223,18 @@ function Submit() {
     }
   }
 
-  // Same three values as the screen itself, saved somewhere a reporter can
-  // find again after closing the tab. Same privacy constraint as
-  // CaseCredentialsHandoff's downloadDetails(): no company name, no report
-  // category, and a filename that doesn't announce what the file is to
-  // anything indexing a Downloads folder.
+  // The branded receipt: Case ID, passcode, and a scannable QR code for the
+  // tracking URL, laid out as a single-page PDF built entirely client-side
+  // (see generateCaseReceiptPdf.js). completed.passcode is passed straight
+  // through and never touches state, storage, or a log anywhere else - once
+  // the PDF blob exists this call's stack frame is the only place it lived.
   async function downloadCredentialsPdf() {
-    if (!completed) return
-    await downloadSimplePdf(
-      [
-        // Rectifia's own wordmark, not the reporting company's - same
-        // privacy constraint as the rest of this document, see the comment
-        // above this function.
-        { text: 'RECTIFIA', bold: true, color: RECTIFIA_BRAND_COLOR },
-        { rule: true, color: RECTIFIA_BRAND_COLOR },
-        '',
-        { text: t('submit.pdf.heading'), bold: true },
-        '',
-        t('submit.filed.caseId') + `: ${completed.caseId}`,
-        t('submit.filed.passcode') + `: ${completed.passcode}`,
-        trackingUrl ? t('submit.pdf.trackLine', { url: trackingUrl }) : null,
-        '',
-        t('submit.pdf.keepPrivate1'),
-        t('submit.pdf.keepPrivate2'),
-      ].filter((line) => line !== null),
-      'personal-notes.pdf'
-    )
+    if (!completed || !trackingUrl) return
+    await generateCaseReceiptPdf({
+      caseId: completed.caseId,
+      passcode: completed.passcode,
+      trackingUrl,
+    })
   }
 
   const COPY = [
