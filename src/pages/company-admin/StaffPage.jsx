@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { listStaff, updateStaffStatus } from '../../services/routingService'
 import { getCompany } from '../../services/companyService'
-import { removeStaffMember, updateStaffDepartments } from '../../services/staffService'
+import { removeStaffMember, resendStaffInvite, updateStaffDepartments } from '../../services/staffService'
 import { assignStaffRole, listCustomRoles } from '../../services/roleService'
 import { useAuth } from '../../contexts/AuthContext'
 import { useCompanyBlocked } from '../../hooks/useCompanyBlocked'
@@ -73,6 +73,10 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
   const [roleEditSelection, setRoleEditSelection] = useState({ role: '', customRoleId: '' })
   // The staff id whose destructive removal confirm is currently open.
   const [removingId, setRemovingId] = useState(null)
+  // The staff id whose invite was just resent, shown as a brief inline
+  // confirmation next to that row's Resend invite button - cleared on a
+  // timer, same pattern Submit.jsx uses for its "Copied" confirmation.
+  const [resentId, setResentId] = useState(null)
 
   const customRoleNames = Object.fromEntries(customRoles.map((r) => [r.id, r.name]))
 
@@ -207,6 +211,28 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
     }
   }
 
+  async function handleResendInvite(member) {
+    setError(null)
+    setResentId(null)
+    setPendingId(member.id)
+    try {
+      await resendStaffInvite({ companyId, staffId: member.id })
+      setResentId(member.id)
+      setTimeout(() => setResentId(null), 3000)
+      await refresh()
+    } catch (err) {
+      // The callable's status is 'resource-exhausted' (or
+      // 'functions/resource-exhausted', depending on how the SDK surfaces
+      // it) for the 60-second resend cooldown specifically - shown as its
+      // own translated copy rather than the server's raw English message,
+      // the same way PulseCheck.jsx maps that same code.
+      const code = String(err?.code ?? '').replace(/^functions\//, '')
+      setError(code === 'resource-exhausted' ? t('staffPage.resendCooldown') : err.message)
+    } finally {
+      setPendingId(null)
+    }
+  }
+
   const inviteButton = isCompanyAdmin ? (
     <Button
       variant={showInvite ? 'secondary' : 'primary'}
@@ -284,6 +310,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                   {staff.map((s) => {
                     const status = s.status ?? 'active'
                     const suspended = status === 'suspended'
+                    const invited = status === 'invited'
                     const lastActiveAdmin = isLastActiveAdmin(s)
                     const isManager = s.role === ROLES.MANAGER
                     const assignedDepartments = Array.isArray(s.departments) ? s.departments : []
@@ -315,8 +342,15 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                               ? t(`roles.${s.role}`, { defaultValue: ROLE_LABELS[s.role] ?? s.role })
                               : customRoleNames[s.customRoleId] ?? t('staffPage.customRole')}
                           </Badge>
-                          <Badge tone={suspended ? 'tone-critical' : 'tone-low'} dot>
-                            {suspended ? t('staffPage.suspended') : t('staffPage.active')}
+                          <Badge
+                            tone={invited ? 'tone-high' : suspended ? 'tone-critical' : 'tone-low'}
+                            dot
+                          >
+                            {invited
+                              ? t('staffPage.invited')
+                              : suspended
+                                ? t('staffPage.suspended')
+                                : t('staffPage.active')}
                           </Badge>
 
                           {isManager && (
@@ -339,6 +373,22 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                             >
                               {editingRole ? t('common.cancel') : t('staffPage.changeRole')}
                             </Button>
+                          )}
+
+                          {isCompanyAdmin && invited && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => handleResendInvite(s)}
+                              loading={pendingId === s.id}
+                              loadingLabel={t('staffPage.resending')}
+                            >
+                              {t('staffPage.resendInvite')}
+                            </Button>
+                          )}
+
+                          {isCompanyAdmin && invited && resentId === s.id && (
+                            <span className="text-xs font-medium text-low">{t('staffPage.inviteResent')}</span>
                           )}
 
                           <Button
