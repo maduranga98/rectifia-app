@@ -44,6 +44,7 @@ const { scheduleTrialExpiration } = require('./src/company/scheduleTrialExpirati
 const { checkTrialExpirations } = require('./src/company/checkTrialExpirations')
 const { inviteStaff } = require('./src/staff/inviteStaff')
 const { createCompanyAdmin } = require('./src/company/createCompanyAdmin')
+const { resendCompanyAdminInvite } = require('./src/company/resendCompanyAdminInvite')
 const { resolveCompanySlug } = require('./src/company/resolveCompanySlug')
 const { acceptInvite } = require('./src/staff/acceptInvite')
 const { updateStaffDepartments } = require('./src/staff/updateStaffDepartments')
@@ -187,6 +188,11 @@ exports.scheduleTrialExpiration = scheduleTrialExpiration
 exports.checkTrialExpirations = checkTrialExpirations
 exports.inviteStaff = inviteStaff
 exports.createCompanyAdmin = createCompanyAdmin
+// Re-mints the Company Admin's set-your-password link. The original expires
+// (it is a Firebase password-reset action code), so without this a Super
+// Admin whose invite went stale had no way to get the admin in other than
+// handing over a password out of band.
+exports.resendCompanyAdminInvite = resendCompanyAdminInvite
 exports.resolveCompanySlug = resolveCompanySlug
 exports.acceptInvite = acceptInvite
 exports.updateStaffDepartments = updateStaffDepartments

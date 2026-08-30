@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import CompanySetup from '../components/dashboard/CompanySetup'
 import CompanyBillingSummary from '../components/dashboard/CompanyBillingSummary'
 import CompanySuspensionControl from '../components/dashboard/CompanySuspensionControl'
+import CompanyAdminInvite from '../components/dashboard/CompanyAdminInvite'
 import ManualAssignmentQueue from '../components/dashboard/ManualAssignmentQueue'
 import FeatureFlagPanel from '../components/dashboard/FeatureFlagPanel'
 import AppShell from '../components/shared/AppShell'
@@ -72,6 +73,10 @@ function SuperAdminDashboardPage() {
   // is expanded inline - same one-at-a-time pattern as billingCompanyId
   // above, and its own toggle so opening one doesn't close the other.
   const [suspensionCompanyId, setSuspensionCompanyId] = useState(null)
+  // Which company's Company Admin invite panel (CompanyAdminInvite.jsx - the
+  // re-send for a set-your-password link that expired) is expanded inline.
+  // Same one-at-a-time pattern as the two above.
+  const [adminInviteCompanyId, setAdminInviteCompanyId] = useState(null)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -267,6 +272,18 @@ function SuperAdminDashboardPage() {
                   </Button>
                   <Button
                     size="sm"
+                    variant="secondary"
+                    icon="mail"
+                    onClick={() =>
+                      setAdminInviteCompanyId((current) =>
+                        current === company.id ? null : company.id
+                      )
+                    }
+                  >
+                    {adminInviteCompanyId === company.id ? 'Hide admin invite' : 'Admin invite'}
+                  </Button>
+                  <Button
+                    size="sm"
                     variant={company.suspended ? 'secondary' : 'dangerGhost'}
                     icon="shield"
                     onClick={() =>
@@ -283,6 +300,11 @@ function SuperAdminDashboardPage() {
                 {billingCompanyId === company.id && (
                   <div className="mt-4 border-t border-line-soft pt-4">
                     <CompanyBillingSummary company={company} onLinked={loadCompanies} />
+                  </div>
+                )}
+                {adminInviteCompanyId === company.id && (
+                  <div className="mt-4 border-t border-line-soft pt-4">
+                    <CompanyAdminInvite company={company} />
                   </div>
                 )}
                 {suspensionCompanyId === company.id && (

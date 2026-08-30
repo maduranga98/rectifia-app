@@ -282,6 +282,26 @@ export async function createCompanyAdmin({ companyId, email }) {
   return result.data
 }
 
+const resendCompanyAdminInviteCallable = httpsCallable(functions, 'resendCompanyAdminInvite')
+
+// Mints and emails a fresh set-your-password link for a Company Admin who
+// still hasn't accepted. The link handed over at registration is a Firebase
+// password-reset action code and expires, so this is what a Super Admin uses
+// instead of handing over a password when the first one goes stale. Returns
+// { email, inviteLink, emailDelivered }; the callable refuses (and says so)
+// once that admin has set a password, since "Forgot password" is theirs to
+// use from then on.
+export async function resendCompanyAdminInvite({ companyId, staffId } = {}) {
+  if (!companyId) {
+    throw new Error('companyId is required')
+  }
+  const result = await resendCompanyAdminInviteCallable({
+    companyId,
+    ...(staffId ? { staffId } : {}),
+  })
+  return result.data
+}
+
 // Company-level metadata only (name, subscriptionTier, case-count fields) -
 // used by SuperAdminDashboardPage, which per Module 2's no-case-content-
 // access rule must never read from `cases`, `caseMetadata`, or any

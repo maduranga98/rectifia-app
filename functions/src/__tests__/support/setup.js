@@ -38,6 +38,7 @@ const REDIRECTS = {
   'firebase-functions/params': `${here}aliasParamsCjs.cjs`,
   'firebase-functions': `${here}aliasLoggerCjs.cjs`,
   '@anthropic-ai/sdk': `${here}aliasAnthropicCjs.cjs`,
+  nodemailer: `${here}aliasNodemailerCjs.cjs`,
 }
 
 const originalResolveFilename = Module._resolveFilename
