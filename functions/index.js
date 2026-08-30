@@ -105,6 +105,7 @@ const { linkCompanySubscription } = require('./src/billing/linkCompanySubscripti
 const { getCompanyBillingSummary } = require('./src/billing/getCompanyBillingSummary')
 const { listCompanyPaymentHistory } = require('./src/billing/listCompanyPaymentHistory')
 const { createCheckoutSession } = require('./src/billing/createCheckoutSession')
+const { syncCheckoutSession } = require('./src/billing/syncCheckoutSession')
 const { updatePulseCheckSubscription } = require('./src/billing/updatePulseCheckSubscription')
 const { upgradeSubscriptionTier } = require('./src/billing/upgradeSubscriptionTier')
 const { updateDeclaredHeadcount } = require('./src/billing/updateDeclaredHeadcount')
@@ -332,6 +333,15 @@ exports.listCompanyPaymentHistory = listCompanyPaymentHistory
 // the requestQuote.js -> linkCompanySubscription.js path. See
 // functions/src/billing/createCheckoutSession.js for the full rationale.
 exports.createCheckoutSession = createCheckoutSession
+// The return leg of createCheckoutSession above: Stripe redirects a Company
+// Admin back to /admin/billing?checkout=success, and BillingPage.jsx calls
+// this to reconcile companies/{companyId} with Stripe right then, instead of
+// showing the just-paying subscriber an unchanged "Subscribe" card until
+// stripeWebhook.js's separate, asynchronous delivery happens to land. Runs
+// the exact same reconciliation the webhook does and never writes anything
+// to Stripe beyond backfilling the companyId metadata the webhook keys off.
+// See functions/src/billing/syncCheckoutSession.js.
+exports.syncCheckoutSession = syncCheckoutSession
 exports.updatePulseCheckSubscription = updatePulseCheckSubscription
 exports.upgradeSubscriptionTier = upgradeSubscriptionTier
 // The declared-count counterpart of upgradeSubscriptionTier.js: lets a

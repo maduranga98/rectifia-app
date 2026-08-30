@@ -569,7 +569,12 @@ function SubscribeCard({ companyId, employeeCount, source }) {
   )
 }
 
-function BillingQuote({ companyId }) {
+// `reloadToken` is BillingPage.jsx's way of telling this component that the
+// company doc changed underneath it - specifically on the return leg of
+// self-serve checkout, where the subscription lands on the company doc after
+// this component has already read it. Without that, a subscriber who just
+// paid keeps seeing the SubscribeCard below until the next full page load.
+function BillingQuote({ companyId, reloadToken = 0 }) {
   const { t } = useTranslation()
   const TIER_LABELS = {
     starter: t('billingQuote.tierLabels.starter'),
@@ -613,7 +618,7 @@ function BillingQuote({ companyId }) {
 
   useEffect(() => {
     if (companyId) refresh()
-  }, [companyId, refresh])
+  }, [companyId, refresh, reloadToken])
 
   if (loading && !current) {
     return <SkeletonStats count={2} />

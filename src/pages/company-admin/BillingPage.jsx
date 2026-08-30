@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { getCompany } from '../../services/companyService'
-import { getCompanyQuote, openBillingPortal, requestQuote } from '../../services/billingService'
+import {
+  getCompanyQuote,
+  openBillingPortal,
+  requestQuote,
+  syncCheckoutSession,
+} from '../../services/billingService'
 import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
@@ -41,6 +47,24 @@ const BILLING_TONE = {
 // combination is expected, not a data-integrity problem - only the four
 // statuses below should ever co-occur with a live stripeSubscriptionId.
 const PAYING_BILLING_STATUSES = ['active', 'trialing', 'past_due', 'unpaid']
+
+// Stripe hands a paying Company Admin straight back to
+// /admin/billing?checkout=success (createCheckoutSession.js sets that
+// success_url), which routinely happens BEFORE stripeWebhook.js has been
+// delivered the checkout.session.completed event that writes the
+// subscription onto the company doc. Re-reading the company doc on that
+// return is therefore not enough on its own - it reads the pre-checkout
+// state and the page shows the subscriber the same "Subscribe" card they
+// just paid on, as if nothing happened. So the return leg calls
+// syncCheckoutSession() (which reconciles the company doc from Stripe
+// directly, exactly as the webhook would) and retries on this schedule
+// while Stripe is still creating the subscription: ~18s total, spread out
+// rather than hammered, since the usual case resolves on the first attempt.
+const CHECKOUT_SYNC_RETRY_DELAYS_MS = [0, 2000, 3000, 5000, 8000]
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 // 'unbilled' means "genuinely has no subscription yet" - the status a
 // company is created with now (see companyService.js's createCompany),
@@ -97,6 +121,23 @@ function BillingPage({ companyId }) {
   const [actionPending, setActionPending] = useState(false)
   const [quoteRequested, setQuoteRequested] = useState(false)
   const [includePulseCheck, setIncludePulseCheck] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const checkoutOutcome = searchParams.get('checkout')
+  // 'syncing' | 'confirmed' | 'pending' | 'cancelled' | null - the return
+  // leg of self-serve checkout, see CHECKOUT_SYNC_RETRY_DELAYS_MS above.
+  // Seeded from the landing URL rather than set from inside the effect
+  // below: the banner must be on screen for the subscriber's very first
+  // paint after Stripe redirects them back, not one render later.
+  const [checkoutState, setCheckoutState] = useState(() => {
+    if (checkoutOutcome === 'success') return 'syncing'
+    if (checkoutOutcome === 'cancelled') return 'cancelled'
+    return null
+  })
+  // Bumped once the subscription lands so BillingQuote re-reads too - it
+  // keeps its own copy of the company doc and would otherwise go on
+  // rendering its SubscribeCard until the next full page load.
+  const [reloadToken, setReloadToken] = useState(0)
+  const checkoutHandledRef = useRef(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -115,6 +156,80 @@ function BillingPage({ companyId }) {
   useEffect(() => {
     if (companyId) refresh()
   }, [companyId, refresh])
+
+  // One attempt at reconciling the company doc with Stripe. Returns true
+  // once a subscription exists (and reloads everything this page and
+  // BillingQuote render from it), false while Stripe hasn't produced one
+  // yet. Throws only on a real call failure.
+  const attemptCheckoutSync = useCallback(async () => {
+    const result = await syncCheckoutSession(companyId)
+    if (!result?.synced) return false
+    setReloadToken((token) => token + 1)
+    await refresh()
+    return true
+  }, [companyId, refresh])
+
+  useEffect(() => {
+    // Guarded by a ref, not by the query param: the param is cleared once
+    // this resolves (below), which re-runs this effect, and re-running the
+    // retry loop from a URL change would double up the calls.
+    if (!companyId || !checkoutOutcome || checkoutHandledRef.current) return
+    checkoutHandledRef.current = true
+
+    if (checkoutOutcome !== 'success') {
+      // 'cancelled' (createCheckoutSession.js's cancel_url) or anything
+      // unrecognised: nothing was charged and nothing needs reconciling -
+      // the banner, if any, is already seeded above.
+      setSearchParams({}, { replace: true })
+      return
+    }
+
+    let abandoned = false
+    ;(async () => {
+      for (const waitMs of CHECKOUT_SYNC_RETRY_DELAYS_MS) {
+        if (waitMs) await delay(waitMs)
+        if (abandoned) return
+        try {
+          if (await attemptCheckoutSync()) {
+            if (!abandoned) setCheckoutState('confirmed')
+            return
+          }
+        } catch (err) {
+          // A failing sync call is worth surfacing rather than retrying
+          // silently - the payment itself already went through, so the
+          // subscriber needs to know the app couldn't confirm it yet.
+          if (!abandoned) {
+            setActionError(err.message)
+            setCheckoutState('pending')
+          }
+          return
+        }
+      }
+      // Stripe accepted the payment but hasn't produced a subscription
+      // within the retry window. The webhook will still land; the manual
+      // re-check below is what turns that into something the subscriber can
+      // act on instead of a page that looks unchanged.
+      if (!abandoned) setCheckoutState('pending')
+    })().finally(() => {
+      if (!abandoned) setSearchParams({}, { replace: true })
+    })
+
+    return () => {
+      abandoned = true
+    }
+  }, [companyId, checkoutOutcome, attemptCheckoutSync, setSearchParams])
+
+  async function handleCheckAgain() {
+    setActionPending(true)
+    setActionError(null)
+    try {
+      setCheckoutState((await attemptCheckoutSync()) ? 'confirmed' : 'pending')
+    } catch (err) {
+      setActionError(err.message)
+    } finally {
+      setActionPending(false)
+    }
+  }
 
   const billingStatus = company?.billingStatus ?? 'unknown'
   // The single source of truth for "is this an active paying customer" -
@@ -183,6 +298,41 @@ function BillingPage({ companyId }) {
       {error && <Alert variant="error">{error}</Alert>}
       {actionError && <Alert variant="error">{actionError}</Alert>}
 
+      {checkoutState === 'syncing' && (
+        <Alert variant="info" title={t('billingPage.checkout.syncing.title')}>
+          {t('billingPage.checkout.syncing.body')}
+        </Alert>
+      )}
+
+      {checkoutState === 'confirmed' && (
+        <Alert variant="success" title={t('billingPage.checkout.confirmed.title')}>
+          {t('billingPage.checkout.confirmed.body')}
+        </Alert>
+      )}
+
+      {checkoutState === 'pending' && (
+        <Alert variant="warning" title={t('billingPage.checkout.pending.title')}>
+          <div className="flex flex-col items-start gap-3">
+            <p>{t('billingPage.checkout.pending.body')}</p>
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={actionPending}
+              loadingLabel={t('billingPage.checkout.checking')}
+              onClick={handleCheckAgain}
+            >
+              {t('billingPage.checkout.checkAgain')}
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {checkoutState === 'cancelled' && (
+        <Alert variant="info" title={t('billingPage.checkout.cancelled.title')}>
+          {t('billingPage.checkout.cancelled.body')}
+        </Alert>
+      )}
+
       {loading && !company ? (
         <SkeletonStats count={2} />
       ) : (
@@ -220,7 +370,7 @@ function BillingPage({ companyId }) {
             </div>
           </Card>
 
-          <BillingQuote companyId={companyId} />
+          <BillingQuote companyId={companyId} reloadToken={reloadToken} />
 
           {!hasStripeSubscription && !selfServeAvailable && (
             <Card padded={false} className="p-5">
