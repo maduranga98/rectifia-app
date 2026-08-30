@@ -72,6 +72,7 @@
     "forgotPassword": "Forgot your password?",
     "errors": {
       "invalidCredentials": "Incorrect email or password",
+      "accountSuspended": "This account has been suspended by your Company Admin. Contact them to have it reactivated.",
       "generic": "Could not sign in right now. Please try again."
     }
   },
@@ -1879,6 +1880,7 @@
   },
   "staffPage": {
     "cannotSuspendLastAdmin": "Cannot suspend the last active Company Admin",
+    "cannotSuspendSelf": "You cannot change your own account status",
     "cannotMoveLastAdmin": "Cannot move the last active Company Admin off that role",
     "chooseARole": "Choose a fixed role or a custom role",
     "inviteStaff": "Invite staff",

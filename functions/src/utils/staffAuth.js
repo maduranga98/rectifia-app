@@ -142,6 +142,24 @@ async function loadCallerRole(firestore, companyId, uid, action = 'staff_role_ch
     })
     throw new HttpsError('permission-denied', 'You are not a staff member of this company')
   }
+  // A suspended account is refused here, at the one chokepoint every
+  // privileged callable already passes through. functions/src/staff/
+  // setStaffStatus.js disables the Firebase Auth user and revokes its refresh
+  // tokens, so a suspended member normally cannot reach a callable at all -
+  // this is the defense-in-depth backstop for the window where an already
+  // minted ID token is still presentable, and for any staff doc suspended by
+  // some other path (a console edit, a future writer) that never touched Auth.
+  if ((snapshot.data().status ?? 'active') === 'suspended') {
+    await logPrivilegedAction(firestore, {
+      uid,
+      companyId,
+      role: snapshot.data().role ?? null,
+      action,
+      outcome: 'denied:permission-denied',
+      detail: 'account_suspended',
+    })
+    throw new HttpsError('permission-denied', 'This account has been suspended by your Company Admin')
+  }
   return snapshot.data().role
 }
 

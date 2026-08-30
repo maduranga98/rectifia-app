@@ -20,7 +20,7 @@ function LoginPage() {
   const [error, setError] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
-  const { user: currentUser, loading } = useAuth()
+  const { user: currentUser, loading, suspended } = useAuth()
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -34,11 +34,20 @@ function LoginPage() {
       // one, belongs on /admin, not /dashboard).
       navigate(location.state?.from?.pathname ?? '/', { replace: true })
     } catch (err) {
-      setError(
-        err?.code?.startsWith('auth/')
-          ? t('login.errors.invalidCredentials')
-          : t('login.errors.generic')
-      )
+      // A suspended staff account is disabled in Firebase Auth by
+      // functions/src/staff/setStaffStatus.js, so sign-in fails with
+      // auth/user-disabled. Naming that case is not credential disclosure -
+      // the password was already correct - and without it the person is told
+      // their working password is wrong.
+      if (err?.code === 'auth/user-disabled') {
+        setError(t('login.errors.accountSuspended'))
+      } else {
+        setError(
+          err?.code?.startsWith('auth/')
+            ? t('login.errors.invalidCredentials')
+            : t('login.errors.generic')
+        )
+      }
     } finally {
       setSubmitting(false)
     }
@@ -87,6 +96,10 @@ function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
+        {/* An account suspended while its session was open is signed out by
+            AuthContext and lands back here; say why rather than showing a
+            blank form. */}
+        {!error && suspended && <Alert variant="error">{t('login.errors.accountSuspended')}</Alert>}
         {error && <Alert variant="error">{error}</Alert>}
 
         <Button

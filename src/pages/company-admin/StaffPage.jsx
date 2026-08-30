@@ -52,7 +52,7 @@ const ASSIGNABLE_FIXED_ROLES = [ROLES.HR_COORDINATOR, ROLES.CASE_HANDLER, ROLES.
 // out of reach here too rather than offering a control that always fails.
 function StaffPage({ companyId, initialTab = 'roster' }) {
   const { t } = useTranslation()
-  const { role } = useAuth()
+  const { role, user } = useAuth()
   const { blocked: companyBlocked } = useCompanyBlocked()
   const isCompanyAdmin = role === ROLES.COMPANY_ADMIN
   const [activeTab, setActiveTab] = useState(initialTab === 'roles' && isCompanyAdmin ? 'roles' : 'roster')
@@ -116,6 +116,13 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
     const current = member.status ?? 'active'
     if (isLastActiveAdmin(member)) {
       setError(t('staffPage.cannotSuspendLastAdmin'))
+      return
+    }
+    // setStaffStatus refuses a self-flip server-side (suspending yourself
+    // takes your own admin seat out of the company); mirror it here so the
+    // page never fires a call it knows will be rejected.
+    if (member.id === user?.uid) {
+      setError(t('staffPage.cannotSuspendSelf'))
       return
     }
     setError(null)
@@ -312,6 +319,7 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                     const suspended = status === 'suspended'
                     const invited = status === 'invited'
                     const lastActiveAdmin = isLastActiveAdmin(s)
+                    const isSelf = s.id === user?.uid
                     const isManager = s.role === ROLES.MANAGER
                     const assignedDepartments = Array.isArray(s.departments) ? s.departments : []
                     const editingDepartments = editingId === s.id
@@ -395,8 +403,14 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
                             variant={suspended ? 'secondary' : 'dangerGhost'}
                             size="sm"
                             onClick={() => handleToggleStatus(s)}
-                            disabled={lastActiveAdmin || pendingId === s.id}
-                            title={lastActiveAdmin ? t('staffPage.cannotSuspendLastAdmin') : undefined}
+                            disabled={lastActiveAdmin || isSelf || pendingId === s.id}
+                            title={
+                              lastActiveAdmin
+                                ? t('staffPage.cannotSuspendLastAdmin')
+                                : isSelf
+                                  ? t('staffPage.cannotSuspendSelf')
+                                  : undefined
+                            }
                           >
                             {suspended ? t('staffPage.reactivate') : t('staffPage.suspend')}
                           </Button>

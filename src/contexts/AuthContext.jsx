@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, firestore } from '../services/firebase'
 import { getUserClaims, checkSuperAdmin } from '../services/authService'
@@ -29,6 +29,29 @@ async function loadCustomRolePermissions(companyId, customRoleId) {
   }
 }
 
+// Reads the signed-in staff member's own roster row to see whether their
+// account has been suspended. Suspension is enforced server-side - the
+// setStaffStatus callable disables the Firebase Auth user and revokes its
+// refresh tokens, and staffAuth.loadCallerRole refuses a suspended caller -
+// so this is not the gate; it is what makes the lockout immediate and legible
+// in the UI instead of waiting for the Firebase SDK to fail its next token
+// refresh (up to an hour) on a session that was open when the admin hit
+// suspend.
+//
+// A read failure resolves to 'active' deliberately: this check is a
+// convenience layer over the server-side gates, so a transient Firestore
+// error must not sign a legitimate staff member out of their own dashboard.
+async function loadOwnStaffStatus(companyId, uid) {
+  if (!companyId || !uid) return 'active'
+  try {
+    const snapshot = await getDoc(doc(firestore, 'companies', companyId, 'staff', uid))
+    if (!snapshot.exists()) return 'active'
+    return snapshot.data().status ?? 'active'
+  } catch {
+    return 'active'
+  }
+}
+
 const AuthContext = createContext(null)
 
 // Tracks the signed-in Firebase user, their role/companyId custom claims,
@@ -51,6 +74,10 @@ export function AuthProvider({ children }) {
   const [permissions, setPermissions] = useState([])
   const [customRoleName, setCustomRoleName] = useState(null)
   const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  // Set when a signed-in staff account is found suspended and signed out
+  // below, so LoginPage can say why the session ended rather than silently
+  // returning them to an empty form.
+  const [suspended, setSuspended] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -68,6 +95,19 @@ export function AuthProvider({ children }) {
             getUserClaims(firebaseUser),
             checkSuperAdmin(firebaseUser.uid),
           ])
+          // A super admin is not a company staff account and has no roster row
+          // to suspend, so the check only applies to staff.
+          if (!superAdmin && (await loadOwnStaffStatus(claims.companyId, firebaseUser.uid)) === 'suspended') {
+            setSuspended(true)
+            // Drop the user from context before the sign-out round-trip so no
+            // render in between sees a suspended account as signed in.
+            setUser(null)
+            await signOut(auth)
+            // The sign-out re-enters this listener with a null user, which is
+            // what clears the rest of the state - nothing more to do here.
+            return
+          }
+          setSuspended(false)
           const resolved = claims.customRoleId
             ? await loadCustomRolePermissions(claims.companyId, claims.customRoleId)
             : { permissions: [], name: null }
@@ -143,6 +183,7 @@ export function AuthProvider({ children }) {
         customRoleName,
         hasPermission,
         isSuperAdmin,
+        suspended,
         loading,
         refreshClaims,
       }}
