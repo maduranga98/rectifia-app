@@ -50,6 +50,7 @@ const { acceptInvite } = require('./src/staff/acceptInvite')
 const { updateStaffDepartments } = require('./src/staff/updateStaffDepartments')
 const { removeStaffMember } = require('./src/staff/removeStaffMember')
 const { resendStaffInvite } = require('./src/staff/resendStaffInvite')
+const { setStaffStatus } = require('./src/staff/setStaffStatus')
 const { createCustomRole, updateCustomRole, deleteCustomRole, seedDefaultCustomRoles } = require('./src/roles/customRoles')
 const { assignStaffRole } = require('./src/roles/assignStaffRole')
 const { submitPulseResponse, analyzePulseResponse } = require('./src/intake/analyzePulseResponse')
@@ -198,6 +199,7 @@ exports.acceptInvite = acceptInvite
 exports.updateStaffDepartments = updateStaffDepartments
 exports.removeStaffMember = removeStaffMember
 exports.resendStaffInvite = resendStaffInvite
+exports.setStaffStatus = setStaffStatus
 // Composable custom-role layer: Company Admin builds named roles from a
 // fixed permission-module allowlist (src/config/permissionModules.js /
 // functions/src/utils/permissionResolver.js) and assigns them to staff who

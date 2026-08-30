@@ -532,16 +532,20 @@ service cloud.firestore {
       allow read: if isCompanyStaff(companyId) || isSuperAdmin();
       allow create: if false;
       // Neither a Company Admin nor a staffManagement custom-role holder may
-      // touch `role`, `customRoleId`, or `departments` through this direct
-      // write path - those are the fields that carry authorization, and they
-      // may only change alongside the matching Auth custom claim, which only
+      // touch `role`, `customRoleId`, `departments`, or `status` through this
+      // direct write path. The first three carry authorization and may only
+      // change alongside the matching Auth custom claim, which only
       // functions/src/roles/assignStaffRole.js and inviteStaff.js (Admin SDK)
-      // can set. A direct client write to either field would desync this
-      // doc's mirror from the actual claim the rest of the app trusts; the
-      // hasOnly() below closes that path for every writer, not only a
-      // staffManagement holder.
+      // can set. `status` is off this list for the same class of reason:
+      // suspension is only real if the Firebase Auth user is disabled and its
+      // refresh tokens revoked, which no client write can do - a direct flip
+      // to 'suspended' here greyed out the roster row while the account kept
+      // signing in and working. It now goes through the setStaffStatus
+      // callable (functions/src/staff/setStaffStatus.js) instead, which does
+      // both. The hasOnly() below closes that path for every writer, not only
+      // a staffManagement holder.
       allow update: if (isCompanyAdmin(companyId) || hasCustomPermission(companyId, 'staffManagement'))
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'department', 'jobTitle']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['department', 'jobTitle']);
       allow delete: if isCompanyAdmin(companyId);
     }
 

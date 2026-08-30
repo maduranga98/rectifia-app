@@ -6,13 +6,13 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  updateDoc,
   where,
 } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { firestore, functions } from './firebase'
 
 const reassignCaseCallable = httpsCallable(functions, 'reassignCase')
+const setStaffStatusCallable = httpsCallable(functions, 'setStaffStatus')
 
 // Must stay in lockstep with routingRuleId() in
 // functions/src/intake/routeCase.js - both sides need to land on the same
@@ -64,14 +64,21 @@ export async function listCaseHandlers(companyId) {
   return staff.filter((member) => member.role === 'caseHandler')
 }
 
-// Flips a staff member between 'active' and 'suspended'. Same plain-write
-// tradeoff as routingRules above - status isn't a custom claim, so this
-// doesn't touch auth or the role/companyId claims inviteStaff.js stamps.
+// Flips a staff member between 'active' and 'suspended'. This was a plain
+// client write of the `status` field, which was not a suspension at all: no
+// rule and no callable read that field, so the account kept its Firebase Auth
+// user and its role/companyId claims and went on signing in and working with
+// only the roster row greyed out. firestore.rules no longer permits the
+// direct write; setStaffStatus (functions/src/staff/setStaffStatus.js)
+// disables the Auth user and revokes its refresh tokens alongside the doc
+// update, so suspension actually ends access - immediately, not on the
+// suspended account's next hourly token refresh.
 export async function updateStaffStatus(companyId, staffId, status) {
   if (!['active', 'suspended'].includes(status)) {
     throw new Error('status must be active or suspended')
   }
-  await updateDoc(doc(firestore, 'companies', companyId, 'staff', staffId), { status })
+  const result = await setStaffStatusCallable({ companyId, staffId, status })
+  return result.data
 }
 
 const CASE_METADATA_COLLECTION = 'caseMetadata'
