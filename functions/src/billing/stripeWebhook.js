@@ -2,9 +2,7 @@ const { onRequest } = require('firebase-functions/v2/https')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const { stripeSecretKey, stripeWebhookSecret, getStripeClient } = require('./stripeClient')
-const { applySubscriptionState } = require('./applySubscriptionState')
-const { LINE_ITEM_TAG, RECTIFIA_TIER_METADATA_KEY } = require('./lineItemTags')
-const { applyTierFeatureFlags } = require('../utils/featureFlags')
+const { applySubscriptionState, syncSelfServeTier } = require('./applySubscriptionState')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -12,25 +10,6 @@ if (!admin.apps.length) {
 
 const COMPANIES_COLLECTION = 'companies'
 const NOTIFICATIONS_COLLECTION = 'notifications'
-
-// Self-serve subscriptions (createCheckoutSession.js, upgradeSubscriptionTier.js)
-// tag the Core item's product with rectifiaTier alongside rectifiaLineItem -
-// see lineItemTags.js. applySubscriptionState() doesn't write
-// company.subscriptionTier itself (that field is also set by hand, via
-// linkCompanySubscription.js, for a manually-negotiated subscription whose
-// Core product carries no rectifiaTier tag at all), so this is the one other
-// place that keeps it in sync: whenever the tag is present, write it;
-// whenever it's absent (a Quote-derived or Dashboard-created subscription),
-// do nothing and leave subscriptionTier exactly as a human last set it.
-async function syncSelfServeTier(firestore, companyId, subscription) {
-  const items = subscription.items?.data ?? []
-  const coreItem = items.find((item) => item.price?.product?.metadata?.rectifiaLineItem === LINE_ITEM_TAG.CORE)
-  const tier = coreItem?.price?.product?.metadata?.[RECTIFIA_TIER_METADATA_KEY]
-  if (tier) {
-    await firestore.collection(COMPANIES_COLLECTION).doc(companyId).update({ subscriptionTier: tier })
-    await applyTierFeatureFlags(firestore, companyId, tier)
-  }
-}
 
 async function handleCheckoutCompleted(stripe, firestore, session) {
   if (session.mode !== 'subscription' || !session.subscription) return
@@ -158,20 +137,22 @@ async function handleInvoicePaymentFailed(stripe, firestore, invoice, eventId) {
 // completed, customer.subscription.updated, customer.subscription.deleted,
 // invoice.payment_failed.
 //
-// Pilot v1 has no self-serve subscription creation anywhere in this app -
-// BillingPage.jsx is read-only plus a "Request a quote" button
-// (requestQuote.js), and every real subscription is created by hand once
-// sales has negotiated a company's actual (usually discounted) price. This
-// webhook's job doesn't change because of that: whatever subscription a
-// human sets up still needs its status, item IDs, and Pulse Check
-// entitlement flag kept in sync here exactly the same way, including when a
-// manually-created subscription later lapses (past_due/unpaid/canceled) -
-// this is the only place billingStatus updates after that initial manual
-// setup, and it's read by the Super Admin billing-status view in
-// SuperAdminDashboardPage.jsx. What changed is only that nothing in this
-// codebase calls stripe.checkout.sessions.create or
-// stripe.subscriptions.create anymore - this endpoint reacts to Stripe
-// state, it never causes it.
+// Self-serve checkout (createCheckoutSession.js) and manually-negotiated
+// subscriptions (requestQuote.js -> linkCompanySubscription.js) both end up
+// here: whatever created a subscription, its status, item IDs, Pulse Check
+// entitlement flag and self-serve tier are kept in sync by this endpoint,
+// including when a subscription later lapses (past_due/unpaid/canceled).
+// This is the only place billingStatus updates on Stripe's own initiative,
+// and it's read by the Super Admin billing-status view in
+// SuperAdminDashboardPage.jsx.
+//
+// Delivery here is asynchronous and not guaranteed to be prompt, so it is
+// NOT the only path that reconciles a brand-new subscription:
+// syncCheckoutSession.js runs the same reconciliation on demand when a
+// subscriber lands back on the billing page from Checkout. The two are
+// deliberately idempotent against each other - both call
+// applySubscriptionState() + syncSelfServeTier() on a freshly retrieved
+// subscription, so whichever runs second rewrites identical state.
 //
 // Every other event type is acknowledged (200) and ignored - acknowledging
 // an event this handler doesn't act on is correct; only a verification

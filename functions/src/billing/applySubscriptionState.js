@@ -1,5 +1,6 @@
 const admin = require('firebase-admin')
-const { LINE_ITEM_TAG } = require('./lineItemTags')
+const { LINE_ITEM_TAG, RECTIFIA_TIER_METADATA_KEY } = require('./lineItemTags')
+const { applyTierFeatureFlags } = require('../utils/featureFlags')
 
 const COMPANIES_COLLECTION = 'companies'
 
@@ -76,4 +77,31 @@ async function applySubscriptionState(firestore, companyId, subscription) {
   await firestore.collection(COMPANIES_COLLECTION).doc(companyId).update(update)
 }
 
-module.exports = { applySubscriptionState }
+// Self-serve subscriptions (createCheckoutSession.js,
+// upgradeSubscriptionTier.js) tag the Core item's product with rectifiaTier
+// alongside rectifiaLineItem - see lineItemTags.js.
+// applySubscriptionState() above deliberately doesn't write
+// company.subscriptionTier itself (that field is also set by hand, via
+// linkCompanySubscription.js, for a manually-negotiated subscription whose
+// Core product carries no rectifiaTier tag at all), so this is the one other
+// place that keeps it in sync: whenever the tag is present, write it;
+// whenever it's absent (a Quote-derived or Dashboard-created subscription),
+// do nothing and leave subscriptionTier exactly as a human last set it.
+//
+// Lives beside applySubscriptionState() rather than inside stripeWebhook.js
+// because both callers of that function - the webhook and
+// syncCheckoutSession.js, which reconciles the same state on the caller's
+// return from Checkout without waiting for a webhook - must pair it with
+// exactly this tier sync, or a self-serve subscriber's plan features would
+// depend on which of the two paths happened to land first.
+async function syncSelfServeTier(firestore, companyId, subscription) {
+  const items = subscription.items?.data ?? []
+  const coreItem = items.find((item) => item.price?.product?.metadata?.rectifiaLineItem === LINE_ITEM_TAG.CORE)
+  const tier = coreItem?.price?.product?.metadata?.[RECTIFIA_TIER_METADATA_KEY]
+  if (tier) {
+    await firestore.collection(COMPANIES_COLLECTION).doc(companyId).update({ subscriptionTier: tier })
+    await applyTierFeatureFlags(firestore, companyId, tier)
+  }
+}
+
+module.exports = { applySubscriptionState, syncSelfServeTier }

@@ -126,3 +126,20 @@ export async function updateDeclaredHeadcount(companyId, newCount) {
   const result = await updateDeclaredHeadcountCallable({ companyId, newCount, attested: true })
   return result.data
 }
+
+const syncCheckoutSessionCallable = httpsCallable(functions, 'syncCheckoutSession')
+
+// The return leg of createCheckoutSession() above. Stripe redirects the
+// Company Admin back to /admin/billing?checkout=success the instant payment
+// is accepted, which is typically BEFORE the Stripe webhook that writes the
+// subscription onto the company doc has been delivered - so the page they
+// land on would otherwise still show the "Subscribe" card they just paid on.
+// BillingPage.jsx calls this on that return to reconcile the company doc with
+// Stripe immediately. Returns { synced: true, billingStatus } once a
+// subscription exists, or { synced: false, reason } while Stripe is still
+// creating it (the caller retries a few times). Safe to call more than once:
+// it applies the same idempotent state the webhook does.
+export async function syncCheckoutSession(companyId) {
+  const result = await syncCheckoutSessionCallable({ companyId })
+  return result.data
+}

@@ -1344,6 +1344,26 @@
     }
   },
   "billingPage": {
+    "checkout": {
+      "syncing": {
+        "title": "Confirming your subscription...",
+        "body": "Payment accepted. We're activating your plan - this usually takes a few seconds."
+      },
+      "confirmed": {
+        "title": "Subscription active",
+        "body": "Your plan is set up and your subscription details below are up to date. An invoice receipt is on its way from Stripe."
+      },
+      "pending": {
+        "title": "Payment received - still activating",
+        "body": "Stripe has your payment, but your subscription hasn't finished activating yet. It normally completes within a minute. Check again below, or reload this page shortly - if it still hasn't appeared, contact Rectifia support and nothing will be charged twice."
+      },
+      "cancelled": {
+        "title": "Checkout cancelled",
+        "body": "No payment was taken and nothing has changed. You can start again whenever you are ready."
+      },
+      "checkAgain": "Check again",
+      "checking": "Checking..."
+    },
     "subscriptionStatus": "Subscription status",
     "statusLabels": {
       "unbilled": "Not yet billed"
