@@ -25,6 +25,7 @@ export default defineConfig({
       { find: /^firebase-functions\/params$/, replacement: `${testSupportDir}aliasParamsCjs.cjs` },
       { find: /^firebase-functions$/, replacement: `${testSupportDir}aliasLoggerCjs.cjs` },
       { find: /^@anthropic-ai\/sdk$/, replacement: `${testSupportDir}aliasAnthropicCjs.cjs` },
+      { find: /^nodemailer$/, replacement: `${testSupportDir}aliasNodemailerCjs.cjs` },
     ],
   },
   test: {
