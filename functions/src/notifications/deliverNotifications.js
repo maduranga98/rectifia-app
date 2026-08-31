@@ -143,6 +143,30 @@ async function buildEmailForNotification(firestore, data, { getCompanyName }) {
         'To accept the invitation, set your password using the link below:',
         data.inviteLink || '',
         '',
+        `Already set your password? Sign in any time at ${appBaseUrl.value()}/login`,
+        '',
+        "If you weren't expecting this invitation, you can safely ignore this email.",
+      ].join('\n')
+      return { recipients: [data.recipientEmail], subject, text, html: null }
+    }
+
+    // A resend queued by staff/resendStaffInvite.js. Without this case the
+    // switch fell through to `default: return null`, which the caller reads
+    // as "unknown type" and parks the doc back at 'pending' WITHOUT spending
+    // an attempt - so a resend whose SMTP send failed was re-claimed and
+    // re-parked on every 15-minute run forever and never actually retried.
+    case 'staffInviteResend': {
+      if (!data.recipientEmail) throw new Error('no_recipient')
+      const companyName = (await getCompanyName(data.companyId)) || 'your organization'
+      const subject = `Reminder: your invitation to join ${companyName} on Rectifia`
+      const text = [
+        `This is a reminder that you've been invited to join ${companyName} on Rectifia.`,
+        '',
+        'To accept the invitation, set your password using the link below:',
+        data.inviteLink || '',
+        '',
+        `Already set your password? Sign in any time at ${appBaseUrl.value()}/login`,
+        '',
         "If you weren't expecting this invitation, you can safely ignore this email.",
       ].join('\n')
       return { recipients: [data.recipientEmail], subject, text, html: null }

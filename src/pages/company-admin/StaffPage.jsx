@@ -77,6 +77,11 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
   // confirmation next to that row's Resend invite button - cleared on a
   // timer, same pattern Submit.jsx uses for its "Copied" confirmation.
   const [resentId, setResentId] = useState(null)
+  // Set when a resend went through but SMTP delivery failed - the callable
+  // reports that as `emailDelivered: false` rather than throwing (see
+  // functions/src/staff/resendStaffInvite.js), so without this the row would
+  // show "Invite resent" for an email that never left the building.
+  const [resendUndeliveredId, setResendUndeliveredId] = useState(null)
 
   const customRoleNames = Object.fromEntries(customRoles.map((r) => [r.id, r.name]))
 
@@ -221,11 +226,19 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
   async function handleResendInvite(member) {
     setError(null)
     setResentId(null)
+    setResendUndeliveredId(null)
     setPendingId(member.id)
     try {
-      await resendStaffInvite({ companyId, staffId: member.id })
-      setResentId(member.id)
-      setTimeout(() => setResentId(null), 3000)
+      const result = await resendStaffInvite({ companyId, staffId: member.id })
+      if (result?.emailDelivered === false) {
+        // Deliberately not auto-dismissed the way the success chip is: a
+        // failed delivery is something the admin has to act on, so it stays
+        // until the next resend attempt.
+        setResendUndeliveredId(member.id)
+      } else {
+        setResentId(member.id)
+        setTimeout(() => setResentId(null), 3000)
+      }
       await refresh()
     } catch (err) {
       // The callable's status is 'resource-exhausted' (or
@@ -397,6 +410,12 @@ function StaffPage({ companyId, initialTab = 'roster' }) {
 
                           {isCompanyAdmin && invited && resentId === s.id && (
                             <span className="text-xs font-medium text-low">{t('staffPage.inviteResent')}</span>
+                          )}
+
+                          {isCompanyAdmin && invited && resendUndeliveredId === s.id && (
+                            <span className="text-xs font-medium text-high">
+                              {t('staffPage.inviteResendNotDelivered')}
+                            </span>
                           )}
 
                           <Button
