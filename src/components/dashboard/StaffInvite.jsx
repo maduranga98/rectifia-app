@@ -40,6 +40,9 @@ function StaffInvite({ companyId, onInvited }) {
   const [selectedDepartments, setSelectedDepartments] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  // A created-but-undelivered invite: not an error (the account exists), not a
+  // success (nobody received anything) - its own state so it reads as neither.
+  const [warning, setWarning] = useState(null)
   const [success, setSuccess] = useState(null)
 
   const isManager = roleType === 'fixed' && role === ROLES.MANAGER
@@ -96,16 +99,28 @@ function StaffInvite({ companyId, onInvited }) {
     }
     setSubmitting(true)
     setError(null)
+    setWarning(null)
     setSuccess(null)
     try {
-      await inviteStaff({
+      const result = await inviteStaff({
         companyId,
         email: email.trim(),
         ...(roleType === 'custom' ? { customRoleId } : { role }),
         actorId: auth.currentUser?.uid,
         departments: isManager ? selectedDepartments : undefined,
       })
-      setSuccess(t('staffInvite.inviteSent', { email: email.trim() }))
+      // The callable deliberately does NOT throw when SMTP delivery fails -
+      // the account, claims, and staff doc are all created and the invite
+      // link is recoverable, so it reports the outcome as `emailDelivered`
+      // instead (see functions/src/staff/inviteStaff.js). Treating that as a
+      // plain success is what made a failed invite look sent: the admin saw
+      // "Invite sent" and waited for an email that was never delivered. Say
+      // so instead, and point at the resend button on the roster.
+      if (result?.emailDelivered === false) {
+        setWarning(t('staffInvite.inviteNotDelivered', { email: email.trim() }))
+      } else {
+        setSuccess(t('staffInvite.inviteSent', { email: email.trim() }))
+      }
       setEmail('')
       setSelectedDepartments([])
       onInvited?.()
@@ -201,6 +216,7 @@ function StaffInvite({ companyId, onInvited }) {
         )}
 
         {error && <Alert variant="error">{error}</Alert>}
+        {warning && <Alert variant="warning">{warning}</Alert>}
         {success && <Alert variant="success">{success}</Alert>}
 
         <Button
