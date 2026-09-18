@@ -54,15 +54,44 @@ function getTransporter() {
 
 // Sends one email. Throws on failure so the caller can decide whether a
 // delivery failure should fail the whole operation or just be logged.
+//
+// Callers that swallow the throw (inviteStaff, resendStaffInvite,
+// createCompanyAdmin, ...) only record err.message, which for an SMTP
+// rejection is a generic "Invalid login" with no way to tell a wrong password
+// from a sender the server won't accept. So the diagnostic detail nodemailer
+// carries on the error is logged here, where it is still attached: `code`
+// (EAUTH / ECONNECTION / EENVELOPE), `responseCode` (535 auth, 550 relay/
+// sender rejected) and the server's own `response` line. The sending identity
+// goes with it, because the usual cause is SMTP_USER/SMTP_FROM disagreeing
+// with the account the SMTP_PASSWORD secret belongs to. No message body or
+// password is logged.
 async function sendMail({ to, subject, text, html }) {
   const transporter = getTransporter()
-  const info = await transporter.sendMail({
-    from: smtpFrom.value(),
-    to,
-    subject,
-    text,
-    html,
-  })
+  const from = smtpFrom.value()
+  let info
+  try {
+    info = await transporter.sendMail({
+      from,
+      to,
+      subject,
+      text,
+      html,
+    })
+  } catch (err) {
+    logger.error('email delivery failed', {
+      to,
+      subject,
+      from,
+      smtpUser: smtpUser.value(),
+      smtpHost: smtpHost.value(),
+      smtpPort: smtpPort.value(),
+      code: err.code,
+      responseCode: err.responseCode,
+      response: err.response,
+      error: err.message,
+    })
+    throw err
+  }
   logger.info('email sent', { to, subject, messageId: info.messageId })
   return info
 }
