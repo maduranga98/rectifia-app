@@ -92,7 +92,55 @@ async function sendMail({ to, subject, text, html }) {
     })
     throw err
   }
-  logger.info('email sent', { to, subject, messageId: info.messageId })
+  // A resolved sendMail() is NOT proof the recipient got anything. SMTP
+  // accepts or refuses each RCPT TO separately, and nodemailer resolves as
+  // long as at least one was accepted - the refused ones come back in
+  // `info.rejected` with no exception raised anywhere. That is exactly the
+  // shape of "no errors in the logs, but the invitee never received it": the
+  // caller recorded status 'sent', the admin saw a success, and the server had
+  // already declined the address. So the envelope result is checked here
+  // rather than trusted, and a recipient the server did not accept is treated
+  // as the delivery failure it is.
+  const accepted = Array.isArray(info.accepted) ? info.accepted : []
+  const rejected = Array.isArray(info.rejected) ? info.rejected : []
+  const pending = Array.isArray(info.pending) ? info.pending : []
+
+  if (accepted.length === 0 || rejected.length > 0 || pending.length > 0) {
+    // `response` is the server's own last line (e.g. "550 5.1.1 unknown
+    // recipient", "450 greylisted") and is the only thing that says why.
+    logger.error('email not accepted for delivery', {
+      to,
+      subject,
+      from,
+      smtpUser: smtpUser.value(),
+      smtpHost: smtpHost.value(),
+      accepted,
+      rejected,
+      pending,
+      response: info.response,
+      messageId: info.messageId,
+    })
+    const err = new Error(
+      `SMTP did not accept delivery to ${rejected.concat(pending).join(', ') || to}: ${info.response || 'no recipients accepted'}`,
+    )
+    err.code = 'EENVELOPE'
+    err.response = info.response
+    err.rejected = rejected
+    throw err
+  }
+
+  // `response` is kept on the success path too. A 250 here is only the relay
+  // taking custody - if mail is accepted and still never arrives, the next
+  // question is what the relay did with it, and the queue id in this line is
+  // what the mail provider needs to answer that.
+  logger.info('email sent', {
+    to,
+    subject,
+    from,
+    accepted,
+    messageId: info.messageId,
+    response: info.response,
+  })
   return info
 }
 
