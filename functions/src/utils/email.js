@@ -92,15 +92,23 @@ async function sendMail({ to, subject, text, html }) {
     })
     throw err
   }
-  // A resolved sendMail() is NOT proof the recipient got anything. SMTP
-  // accepts or refuses each RCPT TO separately, and nodemailer resolves as
-  // long as at least one was accepted - the refused ones come back in
-  // `info.rejected` with no exception raised anywhere. That is exactly the
-  // shape of "no errors in the logs, but the invitee never received it": the
-  // caller recorded status 'sent', the admin saw a success, and the server had
-  // already declined the address. So the envelope result is checked here
-  // rather than trusted, and a recipient the server did not accept is treated
-  // as the delivery failure it is.
+  // A resolved sendMail() is NOT proof every recipient was accepted. SMTP
+  // answers each RCPT TO separately, and nodemailer resolves as long as at
+  // least ONE was accepted - the refused ones come back in `info.rejected`
+  // with no exception raised. It throws only when they were ALL refused.
+  //
+  // Scope, measured rather than assumed (both 9.0.4 and 10.0.10 behave the
+  // same): every call site in this codebase passes a single address, so today
+  // a refused recipient does throw and is already logged. This check is what
+  // keeps that true - the moment one caller passes two addresses, or a
+  // comma-separated list, a silent partial rejection becomes reachable and
+  // would be recorded as 'sent'. It also covers the no-recipients-accepted
+  // case that a future transport could resolve rather than throw.
+  //
+  // Note for anyone debugging "no errors, but it never arrived": that symptom
+  // is NOT this. A single rejected invitee raises EENVELOPE. Silence with no
+  // delivery means the relay accepted the message (a 250, logged below) and it
+  // died after handoff - SPF/DKIM/DMARC on the From domain, or spam filing.
   const accepted = Array.isArray(info.accepted) ? info.accepted : []
   const rejected = Array.isArray(info.rejected) ? info.rejected : []
   const pending = Array.isArray(info.pending) ? info.pending : []

@@ -1,16 +1,18 @@
-// WHY THIS MATTERS: the second half of "invitations aren't sending" was a
-// report of NO errors at all - the admin saw a success, the notifications doc
-// said 'sent', the logs were clean, and the invitee still received nothing.
+// WHY THIS MATTERS: SMTP answers each RCPT TO separately, and nodemailer's
+// sendMail resolves as long as at least ONE recipient was accepted - the ones
+// the server declined come back in `info.rejected` with no exception thrown.
+// It throws only when they were all refused. sendMail() used to return any
+// resolved call as a plain success, so a partially refused send was recorded
+// as delivered.
 //
-// That gap is in SMTP itself, not in this codebase's error handling. The
-// protocol accepts or refuses each RCPT TO separately, and nodemailer's
-// sendMail resolves as long as at least one recipient was accepted: the ones
-// the server declined come back in `info.rejected` with no exception thrown
-// anywhere. sendMail() used to return that as a plain success, so a refused
-// address was recorded as delivered.
+// Honest scope: every call site in this codebase currently passes a single
+// address, where a refusal does throw and is already logged - so this is a
+// guard, not the explanation for an invitation that never arrived. It stops
+// the silent case becoming reachable the first time a caller passes two
+// addresses or a comma-separated list, which is a one-word change away.
 //
-// These tests pin that a resolved SMTP call is no longer trusted on its own -
-// the envelope result decides.
+// These tests pin that a resolved SMTP call is not trusted on its own - the
+// envelope result decides.
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createRequire } from 'node:module'
 import { sendMail } from '../email.js'
