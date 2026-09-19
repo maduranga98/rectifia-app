@@ -84,12 +84,27 @@ async function main() {
     await transporter.verify()
     console.log('\n  OK    connected and authenticated')
   } catch (err) {
+    // The hint has to follow the actual failure: a timeout never reached the
+    // server, so pointing at the password would send someone rotating a
+    // secret that was never the problem.
+    // Nodemailer normalises transport errors to its own codes and wraps a
+    // refused connection as ESOCKET rather than the raw ECONNREFUSED, so the
+    // reliable signal is the positive one: only EAUTH (or a 535) means the
+    // server actually rejected the credentials. Everything else stopped short
+    // of authenticating.
+    const isAuthFailure = err.code === 'EAUTH' || err.responseCode === 535
+    const hint = isAuthFailure
+      ? '\n\n        A 535 here means SMTP_PASSWORD is not the password for' +
+        `\n        ${user}. That is the secret to update in Secret Manager.`
+      : `\n\n        The connection never reached ${host}:${port}, so this says` +
+        '\n        nothing about the password. Check the host and port, and' +
+        '\n        whether outbound SMTP is blocked from where you are running' +
+        '\n        this (corporate networks and cloud shells commonly block 465).'
     fail(
-      `could not authenticate: ${err.message}` +
+      `could not connect or authenticate: ${err.message}` +
         `\n        code ${err.code || '-'}  responseCode ${err.responseCode || '-'}` +
         `\n        ${err.response || ''}` +
-        '\n\n        A 535 here means SMTP_PASSWORD is not the password for' +
-        `\n        ${user}. That is the secret to update in Secret Manager.`,
+        hint,
     )
   }
 
