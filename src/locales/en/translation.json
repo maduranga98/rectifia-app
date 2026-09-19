@@ -107,7 +107,9 @@
       "invalid": "This invite link is not valid.",
       "tooShort": "Password must be at least 8 characters",
       "mismatch": "Passwords do not match",
-      "setPasswordFailed": "Could not set your password. Please try again."
+      "setPasswordFailed": "Could not set your password. Please try again.",
+      "alreadyUsed": "This invite link has already been used, and the password you entered doesn\u2019t match the one on the account. Sign in with the password you set, or use \u201cForgot password\u201d to reset it.",
+      "signInFailed": "Your password was set, but we couldn\u2019t sign you in just now. Please sign in with your new password."
     }
   },
   "publicEntry": {
