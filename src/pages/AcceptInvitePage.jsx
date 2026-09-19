@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { verifyInviteCode, acceptInvite, signIn, markInviteAccepted } from '../services/authService'
+import {
+  verifyInviteCode,
+  acceptInvite,
+  signIn,
+  markInviteAccepted,
+  isSpentActionCode,
+} from '../services/authService'
 import AuthLayout from '../components/shared/AuthLayout'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
@@ -23,6 +29,11 @@ function AcceptInvitePage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState(null)
+  // Set alongside formError when the failure is one the user cannot fix by
+  // resubmitting this form - their password is already set, so the way forward
+  // is the sign-in page, not another attempt. Without it the generic "try
+  // again" copy invites a retry that can only ever fail (see handleSubmit).
+  const [offerSignIn, setOfferSignIn] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -48,9 +59,21 @@ function AcceptInvitePage() {
     }
   }, [token, t])
 
+  // Three server round-trips have to land for an invite to be accepted, and the
+  // first one is destructive: confirmPasswordReset consumes the oobCode that is
+  // this page's entire URL. Before, all three shared one try/catch, so a
+  // failure in step two or three showed "could not set your password" even
+  // though the password had in fact been set - and the retry that copy invites
+  // re-entered at step one against a code Firebase had already burned, giving a
+  // 400 and the same message forever. The account was fine and reachable from
+  // /login the whole time; nothing on screen said so.
+  //
+  // So each step is now judged on its own, and only step one is allowed to end
+  // the attempt with a retryable error.
   async function handleSubmit(e) {
     e.preventDefault()
     setFormError(null)
+    setOfferSignIn(false)
     if (password.length < 8) {
       setFormError(t('acceptInvite.errors.tooShort'))
       return
@@ -60,21 +83,62 @@ function AcceptInvitePage() {
       return
     }
     setSubmitting(true)
+
+    // Step 1 - set the password, burning the oobCode.
+    let passwordJustSet = false
     try {
       await acceptInvite(token, password)
-      // Invites create both company staff and Company Admins (never a super
-      // admin - that account type is created directly by Lumora), so this
-      // hands off to RootRedirect via "/" rather than a hardcoded route -
-      // it already knows a Company Admin belongs on /admin/overview and
-      // everyone else on /dashboard.
-      await signIn(email, password)
-      await markInviteAccepted()
-      navigate('/', { replace: true })
-    } catch {
-      setFormError(t('acceptInvite.errors.setPasswordFailed'))
-    } finally {
-      setSubmitting(false)
+      passwordJustSet = true
+    } catch (err) {
+      if (!isSpentActionCode(err)) {
+        setFormError(t('acceptInvite.errors.setPasswordFailed'))
+        setSubmitting(false)
+        return
+      }
+      // The code is spent. Either the link genuinely expired, or this is the
+      // retry described above and the password is already what they typed -
+      // which the sign-in below settles for us, so don't decide it here.
     }
+
+    // Step 2 - sign in. This is what actually gets them into the app, so a
+    // failure here is worth naming precisely: it means either the earlier
+    // attempt set a different password (spent code, wrong password) or the
+    // password took but the session didn't (fixable from /login).
+    try {
+      await signIn(email, password)
+    } catch {
+      setFormError(
+        passwordJustSet
+          ? t('acceptInvite.errors.signInFailed')
+          : t('acceptInvite.errors.alreadyUsed')
+      )
+      setOfferSignIn(true)
+      setSubmitting(false)
+      return
+    }
+
+    // Step 3 - flip the staff doc from 'invited' to 'active'. Deliberately
+    // best-effort: it is bookkeeping the roster reads, not a gate on anything
+    // this user can do (firestore.rules and every callable authorize off the
+    // role/companyId custom claims, which were stamped at invite time and are
+    // on the token they now hold). Blocking a signed-in admin at their own
+    // front door over it - which is what the shared catch used to do when this
+    // call came back 401 - trades a cosmetic roster status for the entire
+    // account. An admin who lands here as 'invited' is corrected by their next
+    // acceptance-free sign-in path or by a Super Admin resend; being locked out
+    // is not self-correcting.
+    try {
+      await markInviteAccepted()
+    } catch (err) {
+      console.warn('Invite accepted but staff status was not updated', err)
+    }
+
+    // Invites create both company staff and Company Admins (never a super
+    // admin - that account type is created directly by Lumora), so this
+    // hands off to RootRedirect via "/" rather than a hardcoded route -
+    // it already knows a Company Admin belongs on /admin/overview and
+    // everyone else on /dashboard.
+    navigate('/', { replace: true })
   }
 
   if (checking) {
@@ -125,7 +189,19 @@ function AcceptInvitePage() {
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
 
-        {formError && <Alert variant="error">{formError}</Alert>}
+        {formError && (
+          <Alert variant="error">
+            {formError}
+            {offerSignIn && (
+              <>
+                {' '}
+                <Link to="/login" className="font-medium underline">
+                  {t('acceptInvite.notAvailable.goToSignIn')}
+                </Link>
+              </>
+            )}
+          </Alert>
+        )}
 
         <Button
           type="submit"

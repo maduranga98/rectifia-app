@@ -44,9 +44,38 @@ export async function acceptInvite(oobCode, newPassword) {
 // now that the invitee is signed in with their new password. Only callable
 // by the authenticated owner of that staff doc - the function re-checks
 // request.auth server-side, this is not a client-side-only gate.
+//
+// The function reads companyId off request.auth.token, so the call is worthless
+// without a current ID token that actually carries the claim. Two things can
+// leave the SDK holding one that doesn't: the token cached from a sign-in that
+// raced the auth instance finishing its own initialization, and (for an account
+// whose claims were stamped after its last sign-in) a token minted before the
+// stamp. A forced refresh fixes both, so an 'unauthenticated' answer is retried
+// exactly once behind getIdToken(true) rather than surfaced immediately - the
+// retry is against the server's own verdict, not a blind one, and a second
+// failure propagates.
 export async function markInviteAccepted() {
-  const result = await acceptInviteCallable()
-  return result.data
+  try {
+    const result = await acceptInviteCallable()
+    return result.data
+  } catch (err) {
+    if (err?.code !== 'functions/unauthenticated' || !auth.currentUser) {
+      throw err
+    }
+    await auth.currentUser.getIdToken(true)
+    const result = await acceptInviteCallable()
+    return result.data
+  }
+}
+
+// True when Firebase rejected an action code because it is expired or already
+// consumed. confirmPasswordReset burns the invite's oobCode, so a user who gets
+// past that step and then trips on a later one cannot retry the form: the
+// second attempt fails here instead. AcceptInvitePage uses this to tell "the
+// link is spent" apart from "the password could not be set", which need
+// opposite advice (sign in vs. try again).
+export function isSpentActionCode(err) {
+  return err?.code === 'auth/expired-action-code' || err?.code === 'auth/invalid-action-code'
 }
 
 // Role + companyId live only in Firebase Auth custom claims (stamped by
