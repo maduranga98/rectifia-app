@@ -26,21 +26,76 @@
 // Usage:
 //   SMTP_PASSWORD='...' node scripts/checkSmtp.js you@example.com
 //
-// Reads SMTP_HOST/PORT/USER/FROM from the environment, falling back to the
-// same defaults email.js uses. To test exactly what a given project deploys,
-// source its env file first:
-//   set -a; . .env.rectifia-59a1e; set +a
-//   SMTP_PASSWORD='...' node scripts/checkSmtp.js you@example.com
+// To test exactly what a given project deploys, point it at that project's
+// env file - the same one firebase-functions/params reads at deploy time:
+//   SMTP_PASSWORD='...' node scripts/checkSmtp.js you@example.com \
+//     --smtp-env=.env.rectifia-59a1e
+//
+// The flag is --smtp-env and not the more obvious --env-file because node
+// itself owns that name: it consumes --env-file= even when it appears after
+// the script path, and aborts with its own bare "not found" if the path is
+// wrong, before this script ever runs.
+//
+// The file is parsed here rather than sourced. `set -a; . .env.<project>` is
+// the obvious thing to reach for and it does NOT work on these files: a value
+// like `SMTP_FROM=Rectifia <hello@rectifia.com>` is perfectly valid dotenv,
+// which takes KEY=VALUE literally, but bash reads the unquoted `<` as a
+// redirect and dies with a syntax error. Quoting the file to placate bash
+// would be the wrong fix - the quotes would then become part of the value
+// Firebase deploys. So the parser below handles it instead.
+//
+// Anything already set in the real environment wins over the file, so a
+// single SMTP_USER=... on the command line can override one field for a
+// one-off test without editing anything.
 
+const fs = require('node:fs')
+const path = require('node:path')
 const nodemailer = require('nodemailer')
+
+const args = process.argv.slice(2)
+const envFileArg = args.find((arg) => arg.startsWith('--smtp-env='))
+const to = args.find((arg) => !arg.startsWith('--'))
+
+// Minimal dotenv reader, matching how firebase-functions/params reads these
+// files: KEY=VALUE per line, # comments and blanks skipped, the value taken
+// verbatim to the end of the line. Surrounding quotes are stripped if present
+// (dotenv treats them as delimiters, not content) but are not required.
+function loadEnvFile(file) {
+  let contents
+  try {
+    contents = fs.readFileSync(file, 'utf8')
+  } catch (err) {
+    console.error(`\n  FAIL  could not read ${path.resolve(file)}: ${err.message}\n`)
+    process.exit(1)
+  }
+  for (const line of contents.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq === -1) continue
+    const key = trimmed.slice(0, eq).trim()
+    let value = trimmed.slice(eq + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"') && value.length > 1) ||
+      (value.startsWith("'") && value.endsWith("'") && value.length > 1)
+    ) {
+      value = value.slice(1, -1)
+    }
+    // The real environment wins - see the header note.
+    if (process.env[key] === undefined) process.env[key] = value
+  }
+  console.log(`\n  ---   loaded ${path.resolve(file)}`)
+}
+
+if (envFileArg) {
+  loadEnvFile(envFileArg.slice('--smtp-env='.length))
+}
 
 const host = process.env.SMTP_HOST || 'mail.spacemail.com'
 const port = Number(process.env.SMTP_PORT || '465')
 const user = process.env.SMTP_USER || 'hello@rectifia.com'
 const from = process.env.SMTP_FROM || 'Rectifia <hello@rectifia.com>'
 const pass = process.env.SMTP_PASSWORD
-
-const to = process.argv[2]
 
 function fail(message) {
   console.error(`\n  FAIL  ${message}\n`)
@@ -53,6 +108,12 @@ async function main() {
   }
   if (!to) {
     fail('Pass a recipient address: node scripts/checkSmtp.js you@example.com')
+  }
+  if (!process.env.SMTP_USER && !envFileArg) {
+    console.log(
+      '\n  ---   no --smtp-env given; using email.js defaults.' +
+        '\n        Add --smtp-env=.env.rectifia-59a1e to test what deploys.',
+    )
   }
 
   console.log('\nSMTP check')
