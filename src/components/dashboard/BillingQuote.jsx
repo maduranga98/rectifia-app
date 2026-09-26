@@ -39,7 +39,7 @@ function formatCurrencyFromCents(cents, currency) {
   return formatCurrency(cents / 100, (currency || 'usd').toUpperCase())
 }
 
-// The bracket receipt: "First 1,000 @ $1.10 = $1,100", one row per
+// The bracket receipt: "Next 500 @ $1.05 = $525", one row per
 // contributing band or bracket. Same shape for a flat-band tier (one row, no
 // per-employee rate shown) and a progressive tier (base fee plus each
 // slice) - transparency into how the number was built, never a case count.
