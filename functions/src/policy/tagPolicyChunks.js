@@ -3,6 +3,7 @@ const { defineSecret } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const Anthropic = require('@anthropic-ai/sdk')
+const { wrapUntrusted, untrustedInputRules } = require('../intake/prompts/untrustedInput')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -49,7 +50,9 @@ You are given one passage. Decide which of these case categories it is relevant 
 - retaliation: adverse treatment after someone raised a concern or supported someone who did.
 - burnout: sustained work-related exhaustion affecting health.
 
-Return zero or more categories - a general "reporting procedure" clause may apply to all of them, a definitions clause about physical contact may apply only to harassment, and a passage about office logistics applies to none. Do not force a category onto an irrelevant passage. Also return a single plain-sentence summary of what the passage says.`
+Return zero or more categories - a general "reporting procedure" clause may apply to all of them, a definitions clause about physical contact may apply only to harassment, and a passage about office logistics applies to none. Do not force a category onto an irrelevant passage. Also return a single plain-sentence summary of what the passage says.
+
+${untrustedInputRules(['passage'], 'the company that uploaded the policy document')}`
 
 async function tagChunk({ apiKey, text }) {
   const client = new Anthropic({ apiKey })
@@ -60,7 +63,7 @@ async function tagChunk({ apiKey, text }) {
     output_config: {
       format: { type: 'json_schema', schema: TAG_SCHEMA },
     },
-    messages: [{ role: 'user', content: `Passage:\n${text}` }],
+    messages: [{ role: 'user', content: `Passage:\n${wrapUntrusted('passage', text)}` }],
   })
 
   if (response.stop_reason === 'refusal') {
