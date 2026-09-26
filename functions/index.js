@@ -1,3 +1,12 @@
+// Must run before any function module is required: options are read when each
+// function is defined. maxInstances caps how far a single function can scale
+// out, which bounds the cost of an abuse spike on the unauthenticated
+// callables (several of which trigger paid Claude calls) instead of letting
+// Cloud Run autoscale to its default ceiling. Raise per function if real
+// traffic ever needs it.
+const { setGlobalOptions } = require('firebase-functions/v2')
+setGlobalOptions({ maxInstances: 20 })
+
 const { validateCaseAccess } = require('./src/intake/generateCaseAccess')
 const { submitCase } = require('./src/intake/submitCase')
 const { createCaseOnBehalf } = require('./src/intake/createCaseOnBehalf')

@@ -130,7 +130,14 @@ export function slugifyCompanyName(name) {
 // handles. Run functions/scripts/backfillCompanySlugs.js once to populate
 // companySlugs for every pre-existing company and this check becomes a pure
 // safety net rather than the thing actually doing the work.
-async function reserveUniqueSlug(transaction, name, companyId) {
+//
+// That safety-net query needs `list` on the companies collection, which only a
+// Super Admin has: letting a Company Admin list companies (even one at a time)
+// let them page through every other tenant's company doc. So a Company Admin
+// caller (assignCompanySlug) passes checkLegacyCompanies: false and relies on
+// the registry alone - which is why backfillCompanySlugs.js is a required
+// one-time step, not an optional cleanup.
+async function reserveUniqueSlug(transaction, name, companyId, { checkLegacyCompanies = true } = {}) {
   const base = slugifyCompanyName(name) || 'company'
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`
@@ -141,12 +148,14 @@ async function reserveUniqueSlug(transaction, name, companyId) {
     // reads before any of its writes).
     const existingReservation = await transaction.get(slugRef)
     if (existingReservation.exists()) continue
-    // eslint-disable-next-line no-await-in-loop -- same candidate-by-candidate
-    // dependency as above.
-    const existingCompany = await getDocs(
-      query(collection(firestore, COMPANIES_COLLECTION), where('slug', '==', candidate), limit(1))
-    )
-    if (!existingCompany.empty) continue
+    if (checkLegacyCompanies) {
+      // eslint-disable-next-line no-await-in-loop -- same candidate-by-candidate
+      // dependency as above.
+      const existingCompany = await getDocs(
+        query(collection(firestore, COMPANIES_COLLECTION), where('slug', '==', candidate), limit(1))
+      )
+      if (!existingCompany.empty) continue
+    }
     transaction.set(slugRef, { companyId, reservedAt: serverTimestamp() })
     return candidate
   }
@@ -378,7 +387,9 @@ export async function assignCompanySlug(companyId, name) {
       return existing.slug
     }
 
-    const slug = await reserveUniqueSlug(transaction, name ?? existing.name, companyId)
+    const slug = await reserveUniqueSlug(transaction, name ?? existing.name, companyId, {
+      checkLegacyCompanies: false,
+    })
     transaction.update(companyRef, { slug })
     return slug
   })

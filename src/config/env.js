@@ -11,7 +11,8 @@ export const env = {
   },
   useEmulators: import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true",
   vapidPublicKey: import.meta.env.VITE_VAPID_PUBLIC_KEY,
-  // App Check config (recaptchaSiteKey / appCheckDebugToken) removed for
-  // testing along with the App Check initialization in
-  // src/services/firebase.js. Restore both together.
+  // App Check (see src/services/firebase.js). The site key is public by
+  // design; the debug token is only honoured in dev/emulator builds.
+  recaptchaSiteKey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+  appCheckDebugToken: import.meta.env.VITE_APPCHECK_DEBUG_TOKEN,
 };

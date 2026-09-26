@@ -177,7 +177,7 @@ async function openTransition(firestore, endpoint, request) {
 // treats it through the exact same path it already knows. Nothing here can
 // read back what it just wrote.
 exports.upgradeToConfidential = onCall(
-  { ...PUBLIC_CALLABLE_OPTIONS, secrets: [encryptionKeySecret] },
+  { ...PUBLIC_CALLABLE_OPTIONS, secrets: [...PUBLIC_CALLABLE_OPTIONS.secrets, encryptionKeySecret] },
   async (request) => {
     const { caseId, identity } = request.data || {}
     const firestore = admin.firestore()
@@ -262,7 +262,7 @@ exports.upgradeToConfidential = onCall(
 // before the field is shown (Blueprint §8) - the encryption is a real
 // protection but it is not the same promise as "there is nothing to protect".
 exports.addContactEmail = onCall(
-  { ...PUBLIC_CALLABLE_OPTIONS, secrets: [encryptionKeySecret] },
+  { ...PUBLIC_CALLABLE_OPTIONS, secrets: [...PUBLIC_CALLABLE_OPTIONS.secrets, encryptionKeySecret] },
   async (request) => {
     const { caseId, email } = request.data || {}
     const firestore = admin.firestore()

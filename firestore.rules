@@ -281,14 +281,14 @@ service cloud.firestore {
     // explicit field allowlist (pulseCheckCadence, jurisdictions, departments -
     // see companyAdminEditableFields above), never a blanket company-doc write.
     //
-    // Reading someone else's company doc stays off-limits: `get` is still the
-    // requester's own company (or any, for a Super Admin). `list` is opened up
-    // one document at a time, and only for a Company Admin - a leftover allowance
-    // from when slug-taken checks queried this collection directly; slug
-    // allocation now goes through the companySlugs registry below instead
-    // (reserveUniqueSlug), but this is kept as a narrow, harmless allowance
-    // rather than removed as an unrelated cleanup. A collection-wide dump of
-    // the company list has no such limit, so it is still denied. Slug writes
+    // Reading someone else's company doc stays off-limits: `get` is the
+    // requester's own company (or any, for a Super Admin), and `list` is Super
+    // Admin only. A Company Admin used to be allowed a `limit <= 1` list for a
+    // slug-taken check, but a one-document limit is not a scope: paging with
+    // startAfter one doc at a time dumped every tenant's company doc (billing
+    // status, Stripe ids, departments). Slug allocation for a Company Admin now
+    // relies on the companySlugs registry alone (reserveUniqueSlug's
+    // checkLegacyCompanies: false). Slug writes
     // are narrower still: they fall outside the
     // companyAdminEditableFields allowlist, so the only Company Admin path that
     // can touch slug is claimsMissingSlug() above - any other role has no update
@@ -296,8 +296,7 @@ service cloud.firestore {
     // its own Company Admin (once) or a Super Admin.
     match /companies/{companyId} {
       allow get: if isSuperAdmin() || isCompanyStaff(companyId);
-      allow list: if isSuperAdmin()
-        || (isAnyCompanyAdmin() && request.query.limit <= 1);
+      allow list: if isSuperAdmin();
       allow create: if isSuperAdmin() && isValidCompanyCreate();
       allow update: if (isSuperAdmin()
           || (isCompanyAdmin(companyId) && (companyAdminEditableFields() || claimsMissingSlug()))
