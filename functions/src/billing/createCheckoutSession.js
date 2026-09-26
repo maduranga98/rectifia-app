@@ -2,7 +2,6 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin')
 const { requireAuthUid, loadCallerRole, logPrivilegedAction } = require('../utils/staffAuth')
 const {
-  PROGRESSIVE_THRESHOLD_EMPLOYEES,
   MANUAL_SALES_REVIEW_THRESHOLD_EMPLOYEES,
   calculateMonthlyPrice,
   calculatePulseCheckAddOnPrice,

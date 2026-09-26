@@ -40,7 +40,7 @@ export const PROGRESSIVE_PRICING = {
   label: 'Enterprise',
   baseFee: 250,
   brackets: [
-    { label: 'Next 500 (501-1,000)', uptoEmployees: 1000, ratePerEmployee: 1.1 },
+    { label: 'Next 500 (501-1,000)', uptoEmployees: 1000, ratePerEmployee: 1.05 },
     { label: 'Next 1,500 (1,001-2,500)', uptoEmployees: 2500, ratePerEmployee: 0.85 },
     { label: 'Next 2,500 (2,501-5,000)', uptoEmployees: 5000, ratePerEmployee: 0.65 },
     { label: 'Above 5,000', uptoEmployees: Infinity, ratePerEmployee: 0.5 },
@@ -193,7 +193,7 @@ export const PLAN_TIER_SUMMARIES = PLAN_TIER_ORDER.map((tier) => {
     minEmployees: PUBLISHED_BANDS[PUBLISHED_BANDS.length - 1].maxEmployees + 1,
     maxEmployees: null,
     monthlyPrice: null,
-    // e.g. "From $250 + $1.10/employee" - the base fee plus the first (most
+    // e.g. "From $250 + $1.05/employee" - the base fee plus the first (most
     // expensive) marginal bracket, which is what the cheapest possible
     // enterprise quote (the smallest qualifying headcount) actually is.
     startingAt: {

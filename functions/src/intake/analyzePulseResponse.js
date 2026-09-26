@@ -11,6 +11,7 @@ const { PUBLIC_CALLABLE_OPTIONS, enforceRateLimit } = require('../utils/rateLimi
 const { resolveQuestionSet, validateAnswers, describeAnswers } = require('../pulse/questionSet')
 const { CORE_QUESTION_IDS } = require('../pulse/coreQuestions')
 const { isFeatureEnabled } = require('../utils/featureFlags')
+const { wrapUntrusted, untrustedInputRules } = require('./prompts/untrustedInput')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -235,14 +236,15 @@ async function analyzeWithClaude(answers, questionSet, history) {
       'only. Base sentimentScore and trendFlag on the standard questions alone - they are the only ones ' +
       'every employee across every period answers identically, so they are the only comparable ones.\n\n' +
       'Prior responses are shown with the wording that was in front of the employee at the time. If a ' +
-      'note says the wording changed, do not read the change in wording as a change in mood.',
+      'note says the wording changed, do not read the change in wording as a change in mood.\n\n' +
+      untrustedInputRules(['current_response', 'prior_responses'], 'the employee (their free-text answers)'),
     output_config: {
       format: { type: 'json_schema', schema: ANALYSIS_OUTPUT_SCHEMA },
     },
     messages: [
       {
         role: 'user',
-        content: `Current response:\n${describeAnswers(questionSet, answers)}\n\n${historyText}`,
+        content: `Current response:\n${wrapUntrusted('current_response', describeAnswers(questionSet, answers))}\n\n${wrapUntrusted('prior_responses', historyText)}`,
       },
     ],
   })

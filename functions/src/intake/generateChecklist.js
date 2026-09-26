@@ -6,6 +6,7 @@ const Anthropic = require('@anthropic-ai/sdk')
 const { requireAuthUid, loadCaseForHandler } = require('../utils/staffAuth')
 const { getPolicyContext } = require('../policy/retrievePolicyContext')
 const { formatPolicyContext } = require('./prompts/scoringPrompt')
+const { wrapUntrusted, untrustedInputRules } = require('./prompts/untrustedInput')
 
 if (!admin.apps.length) {
   admin.initializeApp()
@@ -68,7 +69,9 @@ Rules, no exceptions:
 - Only raise a contradiction_flag item for a contradiction that is actually present in the thread text given to you - never speculate one into existence.
 - Ground every interview_question and document_request in the specific facts of this case category and what has already been said; avoid generic boilerplate that would apply to any case.
 - Each item's rationale should explain why it matters to the investigation, not what conclusion it points toward.
-- Produce as many items as are genuinely useful; do not pad the list to hit a target size.`
+- Produce as many items as are genuinely useful; do not pad the list to hit a target size.
+
+${untrustedInputRules(['reporter_responses', 'case_thread'], 'the reporter and the case investigators')}`
 
 function formatResponses(responses) {
   return responses
@@ -113,7 +116,7 @@ async function generateChecklistWithClaude({ apiKey, category, responses, transc
     messages: [
       {
         role: 'user',
-        content: `Category: ${category}\n\nQuestionnaire responses:\n${formatResponses(responses)}\n\nCase thread so far:\n${transcript}`,
+        content: `Category: ${category}\n\nQuestionnaire responses:\n${wrapUntrusted('reporter_responses', formatResponses(responses))}\n\nCase thread so far:\n${wrapUntrusted('case_thread', transcript)}`,
       },
     ],
   })

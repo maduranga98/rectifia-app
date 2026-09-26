@@ -1,5 +1,5 @@
 const { HttpsError } = require('firebase-functions/v2/https')
-const { defineInt, defineString, defineBoolean } = require('firebase-functions/params')
+const { defineInt, defineSecret } = require('firebase-functions/params')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
 const crypto = require('crypto')
@@ -169,7 +169,26 @@ const maxReporterMessagesPerCase = defineInt('MAX_REPORTER_MESSAGES_PER_CASE', {
 // before". If you ever find yourself wanting to widen any of the four
 // properties above to make a limit sharper, the answer is a different limit,
 // not a sharper fingerprint.
-const fingerprintSalt = defineString('RATE_LIMIT_SALT', { default: 'rectifia-dev-salt' })
+// A Secret Manager secret, not a plain param: a salt committed to the repo (or
+// left at a well-known default) lets anyone who reads rateLimits brute-force
+// the ~16M IPv4 /24s back out of a stored fingerprint, which defeats the
+// "Salted" property above. Set it once with a long random value:
+//   openssl rand -hex 32 | firebase functions:secrets:set RATE_LIMIT_SALT --data-file=-
+// Every callable that can fingerprint an anonymous caller declares it via
+// PUBLIC_CALLABLE_OPTIONS.secrets below.
+const fingerprintSalt = defineSecret('RATE_LIMIT_SALT')
+
+function saltValue() {
+  const value = fingerprintSalt.value()
+  if (!value) {
+    // Only reachable if a function that fingerprints anonymous callers forgot
+    // to declare the secret - a programming error, so fail closed rather than
+    // silently hashing with an empty (i.e. public) salt.
+    logger.error('rateLimit: RATE_LIMIT_SALT is not available to this function')
+    throw new HttpsError('internal', 'Service temporarily unavailable')
+  }
+  return value
+}
 
 function coarsenIp(ip) {
   if (!ip) return 'unknown'
@@ -183,13 +202,17 @@ function coarsenIp(ip) {
   return `${octets[0]}.${octets[1]}.${octets[2]}.0`
 }
 
+// The client's own X-Forwarded-For value is attacker-controlled: Google's front
+// end APPENDS the address it actually saw to whatever the client sent, so only
+// the LAST entry is trustworthy. Reading the first entry (as this used to)
+// let a caller mint a fresh rate-limit bucket per request by sending a random
+// header, which made every per-network limit here meaningless.
 function callerIp(request) {
   const forwarded = request?.rawRequest?.headers?.['x-forwarded-for']
-  if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0].trim()
-  }
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    return String(forwarded[0]).split(',')[0].trim()
+  const raw = Array.isArray(forwarded) ? forwarded.join(',') : forwarded
+  if (typeof raw === 'string' && raw.length > 0) {
+    const hops = raw.split(',').map((hop) => hop.trim()).filter(Boolean)
+    if (hops.length > 0) return hops[hops.length - 1]
   }
   return request?.rawRequest?.ip ?? null
 }
@@ -202,14 +225,18 @@ function utcDateStamp() {
 // already has a durable identity in the system, so there is nothing to protect
 // by coarsening, and a per-account limit is both fairer and more accurate than
 // a per-network one.
+//
+// A uid is not a secret, so that branch needs no salt - which also means
+// authenticated callables using the limiter don't have to declare the
+// RATE_LIMIT_SALT secret.
 function callerFingerprint(request) {
   const uid = request?.auth?.uid
-  const basis = uid ? `uid:${uid}` : `net:${coarsenIp(callerIp(request))}`
-  return crypto
-    .createHmac('sha256', `${fingerprintSalt.value()}:${utcDateStamp()}`)
-    .update(basis)
-    .digest('hex')
-    .slice(0, 32)
+  const digest = uid
+    ? crypto.createHash('sha256').update(`uid:${uid}:${utcDateStamp()}`)
+    : crypto
+        .createHmac('sha256', `${saltValue()}:${utcDateStamp()}`)
+        .update(`net:${coarsenIp(callerIp(request))}`)
+  return digest.digest('hex').slice(0, 32)
 }
 
 // ---------------------------------------------------------------------------
@@ -299,14 +326,12 @@ async function enforceCaseMessageCap(caseRef) {
 // Applied to every callable a reporter or a roster employee can reach without
 // signing in.
 //
-// TESTING: App Check enforcement is currently OFF. With enforceAppCheck true
-// these calls are rejected before the handler runs unless they carry a valid
-// attestation token; with it false anything that can reach the endpoint gets
-// through, and the fixed-window counter below is the only control left on
-// callables that have no Firebase Auth to fall back on. Flip this back to true
-// (and restore the client half in src/services/firebase.js) before any
-// deployment that takes real reports.
-const PUBLIC_CALLABLE_OPTIONS = { enforceAppCheck: false }
+// enforceAppCheck rejects a call before the handler runs unless it carries a
+// valid App Check attestation token (initialized in src/services/firebase.js),
+// so the fixed-window counter above is a second control, not the only one.
+// Callables that need their own secrets must merge them with these, e.g.
+// `{ ...PUBLIC_CALLABLE_OPTIONS, secrets: [...PUBLIC_CALLABLE_OPTIONS.secrets, other] }`.
+const PUBLIC_CALLABLE_OPTIONS = { enforceAppCheck: true, secrets: [fingerprintSalt] }
 
 module.exports = {
   RATE_LIMITS_COLLECTION,
@@ -315,5 +340,6 @@ module.exports = {
   enforceRateLimit,
   enforceCaseMessageCap,
   callerFingerprint,
+  callerIp,
   tooManyRequests,
 }

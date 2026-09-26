@@ -1,7 +1,7 @@
 const { onSchedule } = require('firebase-functions/v2/scheduler')
 const { logger } = require('firebase-functions')
 const admin = require('firebase-admin')
-const { signatureHash, departmentTierHash } = require('./subjectSignature')
+const { departmentTierHash } = require('./subjectSignature')
 const {
   MIN_POPULATION_FLOOR,
   SUPPRESSED_NO_DIRECTORY_DATA,

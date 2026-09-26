@@ -7,6 +7,7 @@ const { scoreWithClaude } = require('./scoreCase')
 const { notifyCrisisContact } = require('./routeCase')
 const { getPolicyContext } = require('../policy/retrievePolicyContext')
 const { formatPolicyContext } = require('./prompts/scoringPrompt')
+const { wrapUntrusted, untrustedInputRules } = require('./prompts/untrustedInput')
 const { isFeatureEnabled } = require('../utils/featureFlags')
 
 if (!admin.apps.length) {
@@ -44,7 +45,9 @@ Rules, no exceptions:
 - Never suggest a conclusion, an outcome, what the company should do, or what the reporter should do next. You are not an advisor - you exist only to fill gaps in the account.
 - Never repeat a question that has already been asked and answered in the conversation.
 - If the evidence is already reasonably well-substantiated, or a prior question already covers the remaining gap, set hasFollowUp to false and leave question empty. Do not ask a question just to ask one.
-- Ask at most one question per turn.`
+- Ask at most one question per turn.
+
+${untrustedInputRules(['case_thread'], 'the reporter and the case investigators')}`
 
 function buildTranscript(messages) {
   return messages
@@ -70,7 +73,7 @@ async function generateFollowUp({ apiKey, category, evidenceScore, reasoning, tr
     messages: [
       {
         role: 'user',
-        content: `Category: ${category}\nCurrent evidenceScore: ${evidenceScore}\nCurrent evidence assessment: ${reasoning}\n\nConversation so far:\n${transcript}`,
+        content: `Category: ${category}\nCurrent evidenceScore: ${evidenceScore}\nCurrent evidence assessment: ${reasoning}\n\nConversation so far:\n${wrapUntrusted('case_thread', transcript)}`,
       },
     ],
   })

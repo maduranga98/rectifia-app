@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app'
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check'
 import {
   initializeAuth,
   browserLocalPersistence,
@@ -15,21 +16,33 @@ import { env } from '../config/env'
 
 const app = initializeApp(env.firebase)
 
-// TESTING: App Check is removed for now. This file used to initialize it here
-// - before anything else touches a Firebase service - so that every subsequent
-// call carried a reCAPTCHA v3 attestation token.
+// App Check must be initialized before anything else touches a Firebase
+// service, so that every subsequent call carries a reCAPTCHA v3 attestation
+// token.
 //
-// What that bought, and what is therefore missing while it is off: the
-// reporter-facing callables (submitCase, validateCaseAccess, getCaseThread,
-// postReporterMessage, ...) have no Firebase Auth to gate them, because a
-// whistleblower has no account by design. App Check was what established that
-// a call came from this web app at all rather than from a script pointed at
-// the callable endpoint. The functions side is off to match
+// The reporter-facing callables (submitCase, validateCaseAccess,
+// getCaseThread, postReporterMessage, ...) have no Firebase Auth to gate them,
+// because a whistleblower has no account by design. App Check is what
+// establishes that a call came from this web app at all rather than from a
+// script pointed at the callable endpoint; the functions side enforces it
 // (PUBLIC_CALLABLE_OPTIONS in functions/src/utils/rateLimit.js).
 //
-// To restore: re-add initializeAppCheck with a ReCaptchaV3Provider over
-// VITE_RECAPTCHA_SITE_KEY, set self.FIREBASE_APPCHECK_DEBUG_TOKEN from
-// VITE_APPCHECK_DEBUG_TOKEN in dev, and flip enforceAppCheck back to true.
+// In development (or against the emulators) set VITE_APPCHECK_DEBUG_TOKEN and
+// register the same token in the Firebase console's App Check debug tokens.
+if (env.appCheckDebugToken && (import.meta.env.DEV || env.useEmulators)) {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = env.appCheckDebugToken
+}
+if (env.recaptchaSiteKey) {
+  initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider(env.recaptchaSiteKey),
+    isTokenAutoRefreshEnabled: true,
+  })
+} else if (!import.meta.env.DEV) {
+  // Fail loudly in the console rather than silently: every public callable
+  // rejects calls without an App Check token, so a build missing this key
+  // cannot take reports.
+  console.error('VITE_RECAPTCHA_SITE_KEY is not set - App Check is disabled and public endpoints will reject requests')
+}
 
 // getAuth() picks indexedDBLocalPersistence on its own in a browser and gives
 // no fallback if that store misbehaves. It does misbehave: an invite link

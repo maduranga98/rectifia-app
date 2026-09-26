@@ -63,16 +63,14 @@ async function findLatestExport() {
   // last one is also the most recent.
   const latest = files.sort((a, b) => (a.name < b.name ? 1 : -1))[0]
 
-  let readable = false
   try {
     const [metadata] = await latest.getMetadata()
     // A real read of the bytes, not just a metadata HEAD - the smallest
     // possible proof this object isn't a zero-byte or access-denied stub.
     await latest.download()
-    readable = true
     return {
       found: true,
-      readable,
+      readable: true,
       exportedAt: metadata.timeCreated ? new Date(metadata.timeCreated).getTime() : null,
       objectName: latest.name,
       reason: null,
