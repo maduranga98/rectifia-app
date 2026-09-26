@@ -335,7 +335,7 @@ function drawBrandBand(doc) {
   try {
     doc.image(LOGO_PATH, left, bandHeight / 2 - 23, { height: 46 })
     textX = left + 58
-  } catch (err) {
+  } catch {
     // Logo omitted; wordmark still renders below at the default position.
   }
 

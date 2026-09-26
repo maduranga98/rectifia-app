@@ -40,7 +40,6 @@ if (!admin.apps.length) {
 //     removeContactEmail deletes the ciphertext outright. That withdrawal
 //     right is what makes offering the channel acceptable in the first place.
 
-const CASES_COLLECTION = 'cases'
 const MESSAGES_SUBCOLLECTION = 'messages'
 const MAX_EMAIL_LENGTH = 254
 
