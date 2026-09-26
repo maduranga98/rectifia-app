@@ -9,10 +9,26 @@ service cloud.firestore {
     function hasRole(companyId, role) {
       return request.auth != null
         && request.auth.token.companyId == companyId
-        && request.auth.token.role == role;
+        && request.auth.token.role == role
+        && isActiveStaffMember(companyId);
     }
     function isCompanyStaff(companyId) {
-      return request.auth != null && request.auth.token.companyId == companyId;
+      return request.auth != null
+        && request.auth.token.companyId == companyId
+        && isActiveStaffMember(companyId);
+    }
+
+    // Custom claims live in the ID token, and an ID token stays valid for up to
+    // an hour after setStaffStatus / removeStaffMember revoke the account's
+    // refresh tokens - rules never see that revocation. Checking the roster
+    // row on every claim-based grant closes that window: a suspended or
+    // removed staff member loses Firestore access the moment their row
+    // changes, not when their token happens to expire. Rules cache the get()
+    // per request, so every role check in one evaluation costs a single read.
+    function isActiveStaffMember(companyId) {
+      let staffPath = /databases/$(database)/documents/companies/$(companyId)/staff/$(request.auth.uid);
+      return exists(staffPath)
+        && get(staffPath).data.get('status', 'active') != 'suspended';
     }
     function isCompanyAdmin(companyId) { return hasRole(companyId, 'companyAdmin'); }
     function isHrCoordinator(companyId) { return hasRole(companyId, 'hrCoordinator'); }
@@ -42,6 +58,7 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.companyId == companyId
         && request.auth.token.customRoleId != null
+        && isActiveStaffMember(companyId)
         && key in get(/databases/$(database)/documents/companies/$(companyId)/customRoles/$(request.auth.token.customRoleId)).data.permissions;
     }
 
@@ -528,7 +545,11 @@ service cloud.firestore {
     // title) - it is not case content, so this does not widen the
     // no-case-content-access rule.
     match /companies/{companyId}/staff/{staffId} {
-      allow read: if isCompanyStaff(companyId) || isSuperAdmin();
+      // The own-row clause is not redundant with isCompanyStaff: a suspended
+      // account fails isCompanyStaff, but AuthContext.loadOwnStaffStatus must
+      // still be able to read its own row to see 'suspended' and sign out.
+      allow read: if isCompanyStaff(companyId) || isSuperAdmin()
+        || (request.auth != null && request.auth.uid == staffId);
       allow create: if false;
       // Neither a Company Admin nor a staffManagement custom-role holder may
       // touch `role`, `customRoleId`, `departments`, or `status` through this
