@@ -288,7 +288,7 @@ function Admin() {
       ) : (
         <>
           {companyBlocked && section !== 'billing' && <AccessBlockedNotice />}
-          {section !== 'billing' && <RosterSetupNotice company={company} />}
+          {section !== 'billing' && section !== 'overview' && <RosterSetupNotice company={company} />}
           <Routes>
           <Route index element={toIndex} />
           <Route path="overview" element={gated(<OverviewPage companyId={companyId} />)} />

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Trans, useTranslation } from 'react-i18next'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { getCompanyStats } from '../../services/companyStatsService'
@@ -12,6 +12,7 @@ import Alert from '../../components/ui/Alert'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
+import Icon from '../../components/ui/Icon'
 import EmptyState from '../../components/ui/EmptyState'
 import StatTile from '../../components/ui/StatTile'
 import { SkeletonList, SkeletonStats } from '../../components/ui/Loading'
@@ -218,7 +219,6 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
       ) : (
         <div className="flex flex-col gap-6">
           <p className="text-sm text-muted">{t('overviewPage.reportingLinks.postBody')}</p>
-
           <ShareableLink
             heading={t('overviewPage.reportingLinks.fileReport.heading')}
             description={t('overviewPage.reportingLinks.fileReport.description')}
@@ -228,6 +228,63 @@ function ReportingLinkCard({ company, onSlugGenerated }) {
           />
         </div>
       )}
+    </Card>
+  )
+}
+
+// One "finish setting up" card instead of stacked warning banners. Each row
+// is a task with its own action; the card disappears once every task is done,
+// so a fully configured company sees none of it. The crisis-contact row is the
+// one that matters most: a crisis-flagged report bypasses normal routing and
+// notifies that contact directly, so with none set it reaches no one.
+function SetupChecklist({ items }) {
+  const { t } = useTranslation()
+  const done = items.filter((i) => i.done).length
+  if (done === items.length) return null
+
+  return (
+    <Card
+      title={t('overviewPage.setup.title')}
+      description={t('overviewPage.setup.progress', { done, total: items.length })}
+      actions={
+        <div className="h-1.5 w-24 overflow-hidden rounded-full bg-line-soft" aria-hidden="true">
+          <div
+            className="h-full rounded-full bg-navy transition-[width] duration-500"
+            style={{ width: `${Math.round((done / items.length) * 100)}%` }}
+          />
+        </div>
+      }
+      padded={false}
+    >
+      <ul className="divide-y divide-line-soft">
+        {items.map((item) => (
+          <li key={item.key} className="flex items-center gap-3 px-5 py-3">
+            <span
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                item.done ? 'bg-low/15 text-low' : item.urgent ? 'bg-gold/15 text-gold-600' : 'bg-navy-50 text-navy-300'
+              }`}
+            >
+              <Icon name={item.done ? 'check' : item.urgent ? 'alert' : item.icon} className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className={`text-sm font-medium ${item.done ? 'text-muted line-through' : 'text-charcoal'}`}>
+                {item.title}
+              </p>
+              {!item.done && <p className="text-xs text-muted">{item.description}</p>}
+            </div>
+            {!item.done &&
+              (item.to.startsWith('#') ? (
+                <a href={item.to} className="btn btn-secondary shrink-0 px-2.5 py-1.5 text-xs">
+                  {item.action}
+                </a>
+              ) : (
+                <Link to={item.to} className="btn btn-secondary shrink-0 px-2.5 py-1.5 text-xs">
+                  {item.action}
+                </Link>
+              ))}
+          </li>
+        ))}
+      </ul>
     </Card>
   )
 }
@@ -302,10 +359,47 @@ function OverviewPage({ companyId }) {
   const handlerEntries = Object.entries(stats?.byHandler ?? {}).sort(([, a], [, b]) => b - a)
 
   const firstLoad = loading && !stats && staff.length === 0
+  const hasStats = Boolean(stats)
+
+  const setupItems = company
+    ? [
+        {
+          key: 'crisis',
+          icon: 'shield',
+          urgent: true,
+          done: Boolean(company.crisisContact),
+          title: t('overviewPage.setup.crisis.title'),
+          description: t('overviewPage.setup.crisis.description'),
+          action: t('overviewPage.setup.crisis.action'),
+          to: '/admin/settings',
+        },
+        {
+          key: 'team',
+          icon: 'staff',
+          done:
+            (company.currentEmployeeCount ?? 0) > 0 ||
+            company.employeeCount != null ||
+            Boolean(company.stripeSubscriptionId),
+          title: t('overviewPage.setup.team.title'),
+          description: t('overviewPage.setup.team.description'),
+          action: t('overviewPage.setup.team.action'),
+          to: '/admin/employees',
+        },
+        {
+          key: 'link',
+          icon: 'routing',
+          done: Boolean(company.slug),
+          title: t('overviewPage.setup.link.title'),
+          description: t('overviewPage.setup.link.description'),
+          action: t('overviewPage.setup.link.action'),
+          to: '#reporting-links',
+        },
+      ]
+    : []
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <p className="max-w-2xl text-sm text-muted">{t('overviewPage.intro')}</p>
         <Button icon="refresh" onClick={refresh} loading={loading} loadingLabel={t('overviewPage.refreshing')}>
           {t('overviewPage.refresh')}
@@ -314,23 +408,66 @@ function OverviewPage({ companyId }) {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      {/* Persistent while crisisContact is unset: a crisis-flagged report
-          bypasses normal routing and notifies this contact directly, so with
-          none configured the highest-severity path silently reaches no one.
-          Only shown once the company doc has loaded, so it never flashes during
-          the initial fetch. */}
-      {!firstLoad && company && !company.crisisContact && (
-        <Alert variant="warning" title={t('overviewPage.noCrisisContact.title')}>
-          <Trans
-            i18nKey="overviewPage.noCrisisContact.body"
-            components={{
-              link: <Link to="/admin/settings" className="font-medium underline" />,
-            }}
-          />
-        </Alert>
-      )}
+      {!firstLoad && company && <SetupChecklist items={setupItems} />}
 
       <section className="flex flex-col gap-3">
+        <SectionHeading hint={t('overviewPage.caseOverviewHint')}>
+          {t('overviewPage.caseOverviewHeading')}
+        </SectionHeading>
+
+        {firstLoad ? (
+          <SkeletonStats />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile label={t('overviewPage.stats.openCases')} value={stats?.openCount ?? 0} tone="tone-info" icon="cases" />
+            <StatTile label={t('overviewPage.stats.closedCases')} value={stats?.closedCount ?? 0} tone="tone-neutral" icon="check" />
+            <StatTile
+              label={t('overviewPage.stats.overdueDeadlines')}
+              value={stats?.overdueCount ?? 0}
+              tone={stats?.overdueCount > 0 ? 'tone-critical' : 'tone-neutral'}
+              icon="alert"
+            />
+            <StatTile
+              label={t('overviewPage.stats.approachingDeadlines')}
+              hint={t('overviewPage.stats.approachingDeadlinesHint')}
+              value={stats?.approachingDeadlineCount ?? 0}
+              tone={stats?.approachingDeadlineCount > 0 ? 'tone-high' : 'tone-neutral'}
+              icon="clock"
+            />
+          </div>
+        )}
+
+        {!firstLoad && !hasStats && (
+          <p className="flex items-center gap-2 text-xs text-muted">
+            <Icon name="cases" className="h-3.5 w-3.5" />
+            {t('overviewPage.noActivity.description')}
+          </p>
+        )}
+
+        {hasStats && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card title={t('overviewPage.byPriority.title')}>
+              {priorityEntries.length === 0 ? (
+                <p className="text-sm text-muted">{t('overviewPage.byPriority.empty')}</p>
+              ) : (
+                <BreakdownList entries={priorityEntries} toneFor={(key) => PRIORITY_TONE[key] ?? 'tone-neutral'} />
+              )}
+            </Card>
+            <Card title={t('overviewPage.byCategory.title')}>
+              {categoryEntries.length === 0 ? (
+                <p className="text-sm text-muted">{t('overviewPage.byCategory.empty')}</p>
+              ) : (
+                <BreakdownList
+                  entries={categoryEntries}
+                  labelFor={(key) => t(`categories.${key}.label`, { defaultValue: categoryLabelById.get(key) ?? key })}
+                />
+              )}
+            </Card>
+          </div>
+        )}
+      </section>
+
+      <section id="reporting-links" className="flex scroll-mt-4 flex-col gap-3">
         <SectionHeading hint={t('overviewPage.reportingLinksHint')}>
           {t('overviewPage.reportingLinksHeading')}
         </SectionHeading>
@@ -342,69 +479,6 @@ function OverviewPage({ companyId }) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <SectionHeading hint={t('overviewPage.caseOverviewHint')}>
-          {t('overviewPage.caseOverviewHeading')}
-        </SectionHeading>
-
-        {firstLoad ? (
-          <SkeletonStats />
-        ) : !stats ? (
-          <Card padded={false}>
-            <EmptyState
-              icon="cases"
-              title={t('overviewPage.noActivity.title')}
-              description={t('overviewPage.noActivity.description')}
-            />
-          </Card>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <StatTile label={t('overviewPage.stats.openCases')} value={stats.openCount ?? 0} tone="tone-info" icon="cases" />
-              <StatTile label={t('overviewPage.stats.closedCases')} value={stats.closedCount ?? 0} tone="tone-neutral" icon="check" />
-              <StatTile
-                label={t('overviewPage.stats.overdueDeadlines')}
-                value={stats.overdueCount ?? 0}
-                tone={stats.overdueCount > 0 ? 'tone-critical' : 'tone-neutral'}
-                icon="alert"
-              />
-              <StatTile
-                label={t('overviewPage.stats.approachingDeadlines')}
-                hint={t('overviewPage.stats.approachingDeadlinesHint')}
-                value={stats.approachingDeadlineCount ?? 0}
-                tone={stats.approachingDeadlineCount > 0 ? 'tone-high' : 'tone-neutral'}
-                icon="clock"
-              />
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Card title={t('overviewPage.byPriority.title')}>
-                {priorityEntries.length === 0 ? (
-                  <p className="text-sm text-muted">{t('overviewPage.byPriority.empty')}</p>
-                ) : (
-                  <BreakdownList
-                    entries={priorityEntries}
-                    toneFor={(key) => PRIORITY_TONE[key] ?? 'tone-neutral'}
-                  />
-                )}
-              </Card>
-              <Card title={t('overviewPage.byCategory.title')}>
-                {categoryEntries.length === 0 ? (
-                  <p className="text-sm text-muted">{t('overviewPage.byCategory.empty')}</p>
-                ) : (
-                  <BreakdownList
-                    entries={categoryEntries}
-                    labelFor={(key) =>
-                      t(`categories.${key}.label`, { defaultValue: categoryLabelById.get(key) ?? key })
-                    }
-                  />
-                )}
-              </Card>
-            </div>
-          </>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
         <SectionHeading hint={t('overviewPage.staffRoutingHint')}>
           {t('overviewPage.staffRoutingHeading')}
         </SectionHeading>
@@ -412,8 +486,8 @@ function OverviewPage({ companyId }) {
         {firstLoad ? (
           <SkeletonStats count={3} />
         ) : (
-          <>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
               <StatTile label={t('overviewPage.stats.activeStaff')} value={activeStaffCount} tone="tone-info" icon="staff" />
               <StatTile label={t('overviewPage.stats.caseHandlers')} value={caseHandlerCount} tone="tone-neutral" icon="shield" />
               <StatTile
@@ -425,7 +499,11 @@ function OverviewPage({ companyId }) {
               />
             </div>
 
-            <Card title={t('overviewPage.byHandler.title')} padded={handlerEntries.length > 0}>
+            <Card
+              title={t('overviewPage.byHandler.title')}
+              padded={handlerEntries.length > 0}
+              className="lg:col-span-2"
+            >
               {handlerEntries.length === 0 ? (
                 <EmptyState
                   compact
@@ -434,13 +512,10 @@ function OverviewPage({ companyId }) {
                   description={t('overviewPage.byHandler.empty.description')}
                 />
               ) : (
-                <BreakdownList
-                  entries={handlerEntries}
-                  labelFor={(key) => staffNameById.get(key) ?? key}
-                />
+                <BreakdownList entries={handlerEntries} labelFor={(key) => staffNameById.get(key) ?? key} />
               )}
             </Card>
-          </>
+          </div>
         )}
       </section>
 
@@ -454,11 +529,12 @@ function OverviewPage({ companyId }) {
         ) : pulseSummaries.length === 0 ? (
           // Departments below the minimum-response privacy floor are withheld
           // server-side, so an empty result means either no responses yet or
-          // none of them has reached the threshold. Either way the message
-          // names the floor instead of implying there is no data, and shows no
-          // counts - a count would itself reveal how few people responded.
+          // none of them has reached the threshold. The message names the floor
+          // and shows no counts - a count would itself reveal how few people
+          // responded.
           <Card padded={false}>
             <EmptyState
+              compact
               icon="pulse"
               title={t('overviewPage.pulseEmpty.title')}
               description={t('overviewPage.pulseEmpty.description')}

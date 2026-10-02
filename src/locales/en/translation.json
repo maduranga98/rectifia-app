@@ -1830,6 +1830,25 @@
     "intro": "Aggregate case activity, staffing, and wellbeing signals for your company. Case content itself is never shown to this role - only counts.",
     "refresh": "Refresh",
     "refreshing": "Refreshing",
+    "setup": {
+      "title": "Finish setting up",
+      "progress": "{{done}} of {{total}} complete",
+      "crisis": {
+        "title": "Set a crisis contact",
+        "description": "Reports with crisis language currently reach no one.",
+        "action": "Open settings"
+      },
+      "team": {
+        "title": "Add your team",
+        "description": "Add employees or a headcount estimate to see pricing before your trial ends.",
+        "action": "Add employees"
+      },
+      "link": {
+        "title": "Create your reporting link",
+        "description": "Give employees a QR code and link to file reports.",
+        "action": "Go to link"
+      }
+    },
     "noCrisisContact": {
       "title": "No crisis contact configured",
       "body": "Reports flagged with crisis language currently have no recipient - the notification is generated but reaches no one. Set a named crisis contact on the <link>Settings</link> page."
