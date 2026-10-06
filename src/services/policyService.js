@@ -189,42 +189,88 @@ export async function getPolicyDownloadUrl(policyId) {
   return data.downloadUrl
 }
 
+// Relevance rules - a mirror of functions/src/policy/retrievePolicyContext.js,
+// which Cloud Functions cannot share with the web app. KEEP IN SYNC BY HAND.
+// They only decide which passages are shown/offered as advisory context.
+const GENERIC_JURISDICTION = 'Generic'
+export const NON_PRIMARY_HEADING_RULES = {
+  allow: ['how to report', 'investigation process', 'confidentiality'],
+  deny: ['outcome', 'consequence'],
+}
+
+function policyAppliesToJurisdictions(policy, companyJurisdictions) {
+  const list = Array.isArray(policy.jurisdictions)
+    ? policy.jurisdictions.filter((j) => typeof j === 'string' && j.trim())
+    : []
+  const policyList = list.length > 0 ? list : [GENERIC_JURISDICTION]
+  if (policyList.includes(GENERIC_JURISDICTION)) return true
+  return policyList.some((j) => companyJurisdictions.includes(j))
+}
+
+function isProceduralHeading(headingPath) {
+  const headings = (Array.isArray(headingPath) ? headingPath : []).map((h) => String(h).toLowerCase())
+  if (headings.some((h) => NON_PRIMARY_HEADING_RULES.deny.some((phrase) => h.includes(phrase)))) {
+    return false
+  }
+  return headings.some((h) => NON_PRIMARY_HEADING_RULES.allow.some((phrase) => h.includes(phrase)))
+}
+
+function isPrimaryCategory(chunks, category) {
+  const counts = new Map()
+  for (const chunk of chunks) {
+    for (const c of Array.isArray(chunk.categories) ? chunk.categories : []) {
+      counts.set(c, (counts.get(c) ?? 0) + 1)
+    }
+  }
+  const max = Math.max(0, ...counts.values())
+  return max > 0 && counts.get(category) === max
+}
+
 // Reads the policy clauses tagged with a category for a company, as they exist
-// now - used by the investigation view to show what grounding a category can
-// draw on. This is a live view of the active policy; a case's own recorded
-// provenance (case.policyCitations) is what PolicyReferences shows as "used on
-// this case", which may differ if the policy changed after the case was scored.
+// now, applying the same jurisdiction filter and cross-category guard as
+// retrieval - so this list can only ever differ from a case's recorded
+// provenance (case.policyCitations) because the policy changed since scoring.
+// companies/{id} is readable by company staff (firestore.rules), which is how
+// the company's jurisdictions are obtained here.
 export async function listPolicyCitations(companyId, category) {
   if (!companyId || !category) return []
-  const policiesSnapshot = await getDocs(
-    query(
-      collection(firestore, POLICIES_COLLECTION),
-      where('companyId', '==', companyId),
-      where('status', '==', 'active')
-    )
-  )
+  const [companySnapshot, policiesSnapshot] = await Promise.all([
+    getDoc(doc(firestore, 'companies', companyId)),
+    getDocs(
+      query(
+        collection(firestore, POLICIES_COLLECTION),
+        where('companyId', '==', companyId),
+        where('status', '==', 'active')
+      )
+    ),
+  ])
+  const companyJurisdictions = companySnapshot.exists() ? companySnapshot.data().jurisdictions ?? [] : []
   const results = []
   for (const policyDoc of policiesSnapshot.docs) {
     const policy = policyDoc.data()
+    if (!policyAppliesToJurisdictions(policy, companyJurisdictions)) continue
     // eslint-disable-next-line no-await-in-loop
-    const chunksSnapshot = await getDocs(
-      query(
-        collection(firestore, POLICIES_COLLECTION, policyDoc.id, 'chunks'),
-        where('categories', 'array-contains', category)
+    const chunksSnapshot = await getDocs(collection(firestore, POLICIES_COLLECTION, policyDoc.id, 'chunks'))
+    const chunks = chunksSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }))
+    const primary = isPrimaryCategory(chunks, category)
+    chunks
+      .filter(
+        (chunk) =>
+          Array.isArray(chunk.categories) &&
+          chunk.categories.includes(category) &&
+          (primary || isProceduralHeading(chunk.headingPath))
       )
-    )
-    chunksSnapshot.docs.forEach((chunkDoc) => {
-      const chunk = chunkDoc.data()
-      results.push({
-        policyId: policyDoc.id,
-        chunkId: chunkDoc.id,
-        title: policy.title ?? null,
-        version: typeof policy.version === 'number' ? policy.version : null,
-        headingPath: Array.isArray(chunk.headingPath) ? chunk.headingPath : [],
-        order: typeof chunk.order === 'number' ? chunk.order : null,
-        summary: chunk.summary ?? '',
+      .forEach((chunk) => {
+        results.push({
+          policyId: policyDoc.id,
+          chunkId: chunk.id,
+          title: policy.title ?? null,
+          version: typeof policy.version === 'number' ? policy.version : null,
+          headingPath: Array.isArray(chunk.headingPath) ? chunk.headingPath : [],
+          order: typeof chunk.order === 'number' ? chunk.order : null,
+          summary: chunk.summary ?? '',
+        })
       })
-    })
   }
   return results
 }
