@@ -49,7 +49,7 @@ function PolicyReferences({ caseData }) {
   const primaryDocuments = documents.filter((document) => document.clauses.length >= 2)
   const incidentalDocuments = documents.filter((document) => document.clauses.length === 1)
 
-  const [liveDocuments, setLiveDocuments] = useState([])
+  const [liveEntries, setLiveEntries] = useState([])
   const [liveLoading, setLiveLoading] = useState(true)
   const [liveError, setLiveError] = useState(null)
 
@@ -60,7 +60,7 @@ function PolicyReferences({ caseData }) {
     listPolicyCitations(caseData?.companyId, caseData?.category)
       .then((entries) => {
         if (cancelled) return
-        setLiveDocuments(groupByDocument(entries, t))
+        setLiveEntries(entries)
       })
       .catch((err) => {
         if (cancelled) return
@@ -75,6 +75,13 @@ function PolicyReferences({ caseData }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [caseData?.companyId, caseData?.category])
+
+  // Only clauses that were not part of the snapshot recorded at scoring time.
+  const snapshotChunkIds = new Set(citations.map((entry) => entry.chunkId))
+  const liveDocuments = groupByDocument(
+    liveEntries.filter((entry) => !snapshotChunkIds.has(entry.chunkId)),
+    t
+  )
 
   async function handleOpen(policyId) {
     setError(null)
@@ -189,25 +196,18 @@ function PolicyReferences({ caseData }) {
           </>
         )}
 
+        {(liveError || (!liveLoading && liveDocuments.length > 0)) && (
         <div className="border-t border-line-soft px-5 py-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">{t('policyReferences.allRelated')}</p>
           <p className="mt-1 text-xs text-muted/80">{t('policyReferences.allRelatedDescription')}</p>
 
-          {liveLoading && (
-            <p className="mt-3 text-xs text-muted">{t('common.loading')}</p>
-          )}
-
-          {!liveLoading && liveError && (
+          {liveError && (
             <div className="mt-3">
               <Alert variant="error">{liveError}</Alert>
             </div>
           )}
 
-          {!liveLoading && !liveError && liveDocuments.length === 0 && (
-            <p className="mt-3 text-xs text-muted">{t('policyReferences.allRelatedEmpty')}</p>
-          )}
-
-          {!liveLoading && !liveError && liveDocuments.length > 0 && (
+          {!liveLoading && !liveError && (
             <ul className="mt-3 divide-y divide-line-soft">
               {liveDocuments.map((document) => (
                 <li key={document.policyId} className="flex flex-col gap-2 py-4">
@@ -243,6 +243,7 @@ function PolicyReferences({ caseData }) {
             </ul>
           )}
         </div>
+        )}
       </div>
     </Card>
   )
